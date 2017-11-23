@@ -3,6 +3,7 @@
 1. <a href="#1-overview">overview</a>
 2. <a href="#2-download">download</a>
 3. <a href="#3-build">build</a>
+3. <a href="#4-benchmark">benchmark</a>
 
 ## 1. overview ##
 
