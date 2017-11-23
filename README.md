@@ -11,11 +11,11 @@ medusa
 
 ## 2. download ##
 
-    git clone --recursive git@github.com:alperakcan/mbus.git
+    git clone --recursive https://github.com/SecureIndustries/medusa.git
 
 or
 
-    git clone git@github.com:alperakcan/mbus.git
+    git clone https://github.com/SecureIndustries/medusa.git
     cd mbus
     git submodule update --init --recursive
 
