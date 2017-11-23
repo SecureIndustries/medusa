@@ -1020,6 +1020,19 @@ int main (int argc, char *argv[])
 
 	while (1) {
 		TAILQ_FOREACH_SAFE(client, &clients, clients, nclient) {
+			if (client_get_state(client) == client_state_connecting ||
+			    client_get_state(client) == client_state_requesting ||
+			    client_get_state(client) == client_state_parsing){
+				unsigned long current;
+				current = clock_get();
+				if (clock_after(current, client_get_connect_timestamp(client) + options.timeout)) {
+					errorf("client: %p, state: %d timeout", client, client_get_state(client));
+					client_disconnect(client);
+					client_reset(client);
+					client_set_state(client, client_state_disconnecting);
+				}
+			}
+
 			if (client_get_state(client) == client_state_connected) {
 				debugf("client: %p, state: connected", client);
 				client_set_state(client, client_state_requesting);
