@@ -32,6 +32,8 @@
 #define OPTIONS_DEFAULT_TIMELIMIT	30000
 #define OPTIONS_DEFAULT_TIMEOUT		30000
 #define OPTIONS_DEFAULT_KEEPALIVE	0
+#define OPTIONS_DEFAULT_INTERVAL	0
+#define OPTIONS_DEFAULT_VERBOSE		0
 
 #define OPTION_HELP			'h'
 #define OPTION_REQUESTS			'n'
@@ -39,6 +41,8 @@
 #define OPTION_TIMELIMIT		't'
 #define OPTION_TIMEOUT			's'
 #define OPTION_KEEPALIVE		'k'
+#define OPTION_INTERVAL			'i'
+#define OPTION_VERBOSE			'v'
 static struct option longopts[] = {
 	{ "help",		no_argument,		NULL,	OPTION_HELP		},
 	{ "requests",		required_argument,	NULL,	OPTION_REQUESTS		},
@@ -46,6 +50,8 @@ static struct option longopts[] = {
 	{ "timelimit",		required_argument,	NULL,	OPTION_TIMELIMIT	},
 	{ "timeout",		required_argument,	NULL,	OPTION_TIMEOUT		},
 	{ "keepalive",		required_argument,	NULL,	OPTION_KEEPALIVE	},
+	{ "interval",		required_argument,	NULL,	OPTION_INTERVAL		},
+	{ "verbose",		required_argument,	NULL,	OPTION_VERBOSE		},
 	{ NULL,			0,			NULL,	0			},
 };
 static void usage (const char *pname)
@@ -61,6 +67,8 @@ static void usage (const char *pname)
 	fprintf(stdout, "  -t, --timelimit  : milliseconds to max. to spend on benchmarking (default: %d)\n", OPTIONS_DEFAULT_TIMELIMIT);
 	fprintf(stdout, "  -s, --timeout    : milliseconds to max. wait for each response (default: %d)\n", OPTIONS_DEFAULT_TIMEOUT);
 	fprintf(stdout, "  -k, --keepalive  : use http keepalive feature (default: %d)\n", OPTIONS_DEFAULT_KEEPALIVE);
+	fprintf(stdout, "  -i, --interval   : milliseconds interval between requests (default: %d)\n", OPTION_INTERVAL);
+	fprintf(stdout, "  -v, --verbose    : set verbose level (default: %d)\n", OPTION_VERBOSE);
 	fprintf(stdout, "  -h, --help       : this text\n");
 }
 
@@ -69,6 +77,7 @@ struct options {
 	long long concurrency;
 	long long timelimit;
 	long long timeout;
+	long long interval;
 	int keepalive;
 	const char *url;
 };
@@ -99,7 +108,8 @@ enum client_state {
 	client_state_parsing,
 	client_state_parsed,
 	client_state_disconnecting,
-	client_state_disconnected
+	client_state_disconnected,
+	client_state_connect,
 };
 
 TAILQ_HEAD(clients, client);
@@ -109,27 +119,97 @@ struct client {
 	enum client_state state;
 	long long requests;
 	long long request_offset;
+	unsigned long connect_timestamp;
 	struct buffer incoming;
 	http_parser http_parser;
 };
 
+enum debug_level {
+	debug_level_assert,
+	debug_level_error,
+	debug_level_info,
+	debug_level_debug
+};
+static int g_debug_level = debug_level_error;
+
 #define debugf(fmt...) { \
-	fprintf(stderr, "debug: "); \
-	fprintf(stderr, fmt); \
-	fprintf(stderr, " (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__); \
+	if (g_debug_level >= debug_level_debug) { \
+		fprintf(stderr, "debug: "); \
+		fprintf(stderr, fmt); \
+		fprintf(stderr, " (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__); \
+	} \
 }
 
 #define infof(fmt...) { \
-	fprintf(stderr, "info: "); \
-	fprintf(stderr, fmt); \
-	fprintf(stderr, " (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__); \
+	if (g_debug_level >= debug_level_info) { \
+		fprintf(stderr, "info: "); \
+		fprintf(stderr, fmt); \
+		fprintf(stderr, " (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__); \
+	} \
 }
 
 #define errorf(fmt...) { \
-	fprintf(stderr, "error: "); \
-	fprintf(stderr, fmt); \
-	fprintf(stderr, " (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__); \
+	if (g_debug_level >= debug_level_error) { \
+		fprintf(stderr, "error: "); \
+		fprintf(stderr, fmt); \
+		fprintf(stderr, " (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__); \
+	} \
 }
+
+
+#if defined(__APPLE__) && defined(__MACH__)
+
+#include <time.h>
+#include <errno.h>
+#include <sys/sysctl.h>
+
+static __attribute__ ((unused)) unsigned long clock_get (void)
+{
+    struct timeval boottime;
+    size_t len = sizeof(boottime);
+    int mib[2] = { CTL_KERN, KERN_BOOTTIME };
+    if (sysctl(mib, 2, &boottime, &len, NULL, 0) < 0) {
+        return 0;
+    }
+    time_t bsec = boottime.tv_sec, csec = time(NULL);
+
+    return ((unsigned long) difftime(csec, bsec)) * 1000;
+}
+
+#else
+
+#include <time.h>
+#include <sys/sysinfo.h>
+
+static __attribute__ ((unused)) unsigned long clock_get (void)
+{
+#if defined(CLOCK_MONOTONIC_RAW)
+	struct timespec ts;
+	unsigned long long tsec;
+	unsigned long long tusec;
+	unsigned long long _clock;
+	if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts) < 0) {
+		return 0;
+	}
+	tsec = ((unsigned long long) ts.tv_sec) * 1000;
+	tusec = ((unsigned long long) ts.tv_nsec) / 1000 / 1000;
+	_clock = tsec + tusec;
+	return _clock;
+#else
+	struct sysinfo info;
+	sysinfo(&info);
+	return info.uptime * 1000;
+#endif
+}
+
+#endif
+
+static inline int clock_after (unsigned long a, unsigned long b)
+{
+	return (((long)((b) - (a)) < 0)) ? 1 : 0;
+}
+#define clock_before(a,b)        clock_after(b,a)
+
 
 static __attribute__ ((unused)) void * buffer_get_base (struct buffer *buffer)
 {
@@ -137,6 +217,26 @@ static __attribute__ ((unused)) void * buffer_get_base (struct buffer *buffer)
 		return NULL;
 	}
 	return buffer->buffer;
+}
+
+static __attribute__ ((unused)) long long buffer_get_offset (struct buffer *buffer)
+{
+	if (buffer == NULL) {
+		return -1;
+	}
+	return buffer->offset;
+}
+
+static __attribute__ ((unused)) int buffer_set_offset (struct buffer *buffer, long long offset)
+{
+	if (buffer == NULL) {
+		return -1;
+	}
+	if (offset > buffer->length) {
+		return -1;
+	}
+	buffer->offset = offset;
+	return 0;
 }
 
 static __attribute__ ((unused)) long long buffer_get_length (struct buffer *buffer)
@@ -235,6 +335,20 @@ static __attribute__ ((unused)) int buffer_printf (struct buffer *buffer, const 
 	buffer->length += rc;
 	return 0;
 bail:	return -1;
+}
+
+static __attribute__ ((unused)) int buffer_shift (struct buffer *buffer, unsigned int length)
+{
+	if (length == 0) {
+		return 0;
+	}
+	if (length > buffer->length) {
+		errorf("invalid length");
+		return -1;
+	}
+	memmove(buffer->buffer, buffer->buffer + length, buffer->length - length);
+	buffer->length -= length;
+	return 0;
 }
 
 static __attribute__ ((unused)) int buffer_reset (struct buffer *buffer)
@@ -473,6 +587,31 @@ bail:	if (url != NULL) {
 	return NULL;
 }
 
+static __attribute__ ((unused)) unsigned long client_get_connect_timestamp (struct client *client)
+{
+	if (client == NULL) {
+		return -1;
+	}
+	return client->connect_timestamp;
+}
+
+static __attribute__ ((unused)) int client_set_connect_timestamp (struct client *client, unsigned long connect_timestamp)
+{
+	if (client == NULL) {
+		return -1;
+	}
+	client->connect_timestamp = connect_timestamp;
+	return 0;
+}
+
+static __attribute__ ((unused)) long long client_get_requests (struct client *client)
+{
+	if (client == NULL) {
+		return -1;
+	}
+	return client->requests;
+}
+
 static __attribute__ ((unused)) int client_set_requests (struct client *client, long long requests)
 {
 	if (client == NULL) {
@@ -551,6 +690,7 @@ static __attribute__ ((unused)) int client_connect (struct client *client, const
 	struct addrinfo hints;
 	struct addrinfo *result;
 	struct addrinfo *res;
+	result = NULL;
 	if (client == NULL) {
 		errorf("client is invalid");
 		goto bail;
@@ -634,16 +774,26 @@ bail:	if (client != NULL) {
 	return -1;
 }
 
-static __attribute__ ((unused)) void client_reset (struct client *client)
+static __attribute__ ((unused)) int client_disconnect (struct client *client)
 {
 	if (client == NULL) {
-		return;
+		return -1;
 	}
 	if (client->fd >= 0) {
 		shutdown(client->fd, SHUT_RDWR);
 		close(client->fd);
 		client->fd = -1;
 	}
+	return 0;
+}
+
+static __attribute__ ((unused)) void client_reset (struct client *client)
+{
+	if (client == NULL) {
+		return;
+	}
+	client->request_offset = 0;
+	client->http_parser.data = client;
 	http_parser_init(&client->http_parser, HTTP_RESPONSE);
 	buffer_reset(&client->incoming);
 }
@@ -672,6 +822,7 @@ static __attribute__ ((unused)) struct client * client_create (void)
 	memset(client, 0, sizeof(struct client));
 	client->fd = -1;
 	client->state = client_state_disconnected;
+	client->http_parser.data = client;
 	http_parser_init(&client->http_parser, HTTP_RESPONSE);
 	buffer_init(&client->incoming);
 	return client;
@@ -681,6 +832,46 @@ bail:	if (client != NULL) {
 	return NULL;
 }
 
+static __attribute__ ((unused)) int http_parser_on_message_begin (http_parser *http_parser)
+{
+	struct client *client;
+	client = http_parser->data;
+	(void) client;
+	debugf("client: %p, message-begin", client);
+	return 0;
+}
+
+static __attribute__ ((unused)) int http_parser_on_message_complete (http_parser *http_parser)
+{
+	struct client *client;
+	client = http_parser->data;
+	debugf("client: %p, message-complete", client);
+	client_set_state(client, client_state_parsed);
+	return 0;
+}
+
+static __attribute__ ((unused)) int http_parser_on_header_field (http_parser *http_parser, const char *at, size_t length)
+{
+	struct client *client;
+	client = http_parser->data;
+	(void) client;
+	(void) at;
+	(void) length;
+	debugf("client: %p, header-field: %.*s", client, (int) length, at);
+	return 0;
+}
+
+static __attribute__ ((unused)) int http_parser_on_header_value (http_parser *http_parser, const char *at, size_t length)
+{
+	struct client *client;
+	client = http_parser->data;
+	(void) client;
+	(void) at;
+	(void) length;
+	debugf("client: %p, header-value: %.*s", client, (int) length, at);
+	return 0;
+}
+
 int main (int argc, char *argv[])
 {
 	int c;
@@ -688,6 +879,7 @@ int main (int argc, char *argv[])
 	int ret;
 
 	struct options options;
+	long long nclients;
 	struct clients clients;
 
 	long long i;
@@ -714,9 +906,11 @@ int main (int argc, char *argv[])
 	url = NULL;
 	request = NULL;
 	pollfds = NULL;
+
+	nclients = 0;
 	TAILQ_INIT(&clients);
 
-	while ((c = getopt_long(argc, argv, "hn:c:t:s:k:", longopts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "hn:c:t:s:k:i:v:", longopts, NULL)) != -1) {
 		switch (c) {
 			case OPTION_HELP:
 				usage(argv[0]);
@@ -735,6 +929,12 @@ int main (int argc, char *argv[])
 				break;
 			case OPTION_KEEPALIVE:
 				options.keepalive = !!atoi(optarg);
+				break;
+			case OPTION_INTERVAL:
+				options.interval = atoll(optarg);
+				break;
+			case OPTION_VERBOSE:
+				g_debug_level = atoi(optarg);
 				break;
 			default:
 				fprintf(stderr, "invalid option: %s\n", argv[optind - 1]);
@@ -756,6 +956,7 @@ int main (int argc, char *argv[])
 	fprintf(stdout, "  concurrency: %lld\n", options.concurrency);
 	fprintf(stdout, "  timelimit  : %lld\n", options.timelimit);
 	fprintf(stdout, "  timeout    : %lld\n", options.timeout);
+	fprintf(stdout, "  interval   : %lld\n", options.interval);
 	fprintf(stdout, "  keepalive  : %d\n", options.keepalive);
 	fprintf(stdout, "  url        : %s\n", options.url);
 	fprintf(stdout, "\n");
@@ -779,20 +980,25 @@ int main (int argc, char *argv[])
 	}
 	rc = buffer_printf(request,
 			"GET /%s HTTP/1.0\r\n"
+			"%s"
 			"Host: %s\r\n"
 			"User-Agent: %s\r\n"
 			"Accept: */*\r\n"
 			"\r\n",
 			url_get_path(url),
+			(options.keepalive) ? "Connection: Keep-Alive\r\n" : "",
 			url_get_host(url),
 			"medusa-server-benchmark");
 	if (rc != 0) {
 		errorf("can not build request");
 		goto bail;
 	}
-	fprintf(stdout, "---\n");
-	fprintf(stdout, "%s", (char *) buffer_get_base(request));
-	fprintf(stdout, "---\n");
+
+	if (g_debug_level >= debug_level_info) {
+		fprintf(stdout, "---\n");
+		fprintf(stdout, "%s", (char *) buffer_get_base(request));
+		fprintf(stdout, "---\n");
+	}
 
 	for (i = 0; i < options.concurrency; i++) {
 		client = client_create();
@@ -802,6 +1008,7 @@ int main (int argc, char *argv[])
 		}
 		client_set_requests(client, options.requests);
 		TAILQ_INSERT_TAIL(&clients, client, clients);
+		nclients += 1;
 	}
 
 	pollfds = malloc(sizeof(struct pollfd) * options.concurrency);
@@ -812,43 +1019,94 @@ int main (int argc, char *argv[])
 	memset(pollfds, 0, sizeof(struct pollfd) * options.concurrency);
 
 	while (1) {
-		TAILQ_FOREACH(client, &clients, clients) {
-			if (client_get_state(client) == client_state_connecting) {
-				debugf("client: %p, state: connecting", client);
-			}
+		TAILQ_FOREACH_SAFE(client, &clients, clients, nclient) {
 			if (client_get_state(client) == client_state_connected) {
 				debugf("client: %p, state: connected", client);
 				client_set_state(client, client_state_requesting);
-			}
-			if (client_get_state(client) == client_state_requesting) {
-				debugf("client: %p, state: requesting", client);
 			}
 			if (client_get_state(client) == client_state_requested) {
 				debugf("client: %p, state: requested", client);
 				client_set_state(client, client_state_parsing);
 			}
 			if (client_get_state(client) == client_state_parsing) {
-				debugf("client: %p, state: parsing", client);
+				size_t nparsed;
+				http_parser_settings settings;
+				debugf("client: %p, state: parsing (size: %lld, length: %lld, offset: %lld)",
+						client,
+						buffer_get_size(&client->incoming),
+						buffer_get_length(&client->incoming),
+						buffer_get_offset(&client->incoming));
+				if (buffer_get_length(&client->incoming) - buffer_get_offset(&client->incoming) > 0) {
+					http_parser_settings_init(&settings);
+					settings.on_message_begin    = http_parser_on_message_begin;
+					settings.on_header_field     = http_parser_on_header_field;
+					settings.on_header_value     = http_parser_on_header_value;
+					settings.on_message_complete = http_parser_on_message_complete;
+					nparsed = http_parser_execute(&client->http_parser, &settings,
+							buffer_get_base(&client->incoming) + buffer_get_offset(&client->incoming),
+							buffer_get_length(&client->incoming) - buffer_get_offset(&client->incoming));
+					if (nparsed > 0) {
+#if 1
+						buffer_shift(&client->incoming, nparsed);
+#else
+						buffer_set_offset(&client->incoming, buffer_get_offset(&client->incoming) + nparsed);
+#endif
+					}
+				}
 			}
 			if (client_get_state(client) == client_state_parsed) {
 				debugf("client: %p, state: parsed", client);
 				client_set_state(client, client_state_disconnecting);
 			}
 			if (client_get_state(client) == client_state_disconnecting) {
-				debugf("client: %p, state: disconnecting", client);
-				client_reset(client);
-				client_set_state(client, client_state_disconnected);
+				if (client_get_requests(client) <= 0) {
+					debugf("client: %p, state: finished", client);
+					TAILQ_REMOVE(&clients, client, clients);
+					nclients -= 1;
+					client_destroy(client);
+					continue;
+				}
+				if (client_get_fd(client) < 0 ||
+				    options.keepalive == 0) {
+					debugf("client: %p, state: disconnecting", client);
+					client_disconnect(client);
+					client_reset(client);
+					client_set_state(client, client_state_disconnected);
+					debugf("client: %p, state: disconnected", client);
+				} else {
+					client_set_state(client, client_state_disconnected);
+					debugf("client: %p, state: keep-alive", client);
+				}
 			}
 			if (client_get_state(client) == client_state_disconnected) {
-				debugf("client: %p, state: disconnected", client);
-				client_reset(client);
-				rc = client_connect(client, url_get_host(url), url_get_port(url));
-				if (rc != 0) {
-					errorf("can not connect client: %p to %s:%d", client, url_get_host(url), url_get_port(url));
-					client_set_state(client, client_state_disconnected);
-					goto bail;
+				unsigned long current;
+				current = clock_get();
+				if (clock_after(current, client_get_connect_timestamp(client) + options.interval)) {
+					if (client_get_fd(client) >= 0 &&
+					    options.keepalive != 0) {
+						client_reset(client);
+						client_set_requests(client, client_get_requests(client) - 1);
+						client_set_state(client, client_state_requesting);
+						client_set_connect_timestamp(client, clock_get());
+					} else {
+						rc = client_connect(client, url_get_host(url), url_get_port(url));
+						if (rc != 0) {
+							errorf("can not connect client: %p to %s:%d", client, url_get_host(url), url_get_port(url));
+							client_set_state(client, client_state_disconnecting);
+							goto bail;
+						}
+						client_reset(client);
+						client_set_state(client, client_state_connecting);
+						client_set_requests(client, client_get_requests(client) - 1);
+						client_set_connect_timestamp(client, clock_get());
+					}
 				}
-				client_set_state(client, client_state_connecting);
+			}
+			if (client_get_state(client) == client_state_connecting) {
+				debugf("client: %p, state: connecting", client);
+			}
+			if (client_get_state(client) == client_state_requesting) {
+				debugf("client: %p, state: requesting", client);
 			}
 		}
 		npollfds = 0;
@@ -868,11 +1126,22 @@ int main (int argc, char *argv[])
 				pollfds[npollfds].events = POLLIN;
 				pollfds[npollfds].revents = 0;
 				npollfds += 1;
+			} else if (client_get_state(client) == client_state_disconnected) {
 			} else {
 				errorf("unknown client: %p, state: %d", client, client_get_state(client));
 				goto bail;
 			}
 		}
+		if (nclients <= 0) {
+			debugf("no more clients");
+			break;
+		}
+#if 0
+		debugf("npollfds: %lld", npollfds);
+		for (i = 0; i < npollfds; i++) {
+			debugf("  %lld - fd: %d, events: 0x%08x, revents: 0x%08x", i, pollfds[i].fd, pollfds[i].events, pollfds[i].revents);
+		}
+#endif
 		rc = poll(pollfds, npollfds, 100);
 		if (rc < 0) {
 			errorf("poll failed with: %d", rc);
@@ -909,9 +1178,10 @@ int main (int argc, char *argv[])
 					} else if (errno == EAGAIN) {
 					} else if (errno == EWOULDBLOCK) {
 					} else {
-						errorf("connection reset by server");
-						client_set_state(client, client_state_disconnected);
-						goto out;
+						errorf("connection reset by server, rc: %d, errno: %d, %s", rc, errno, strerror(errno));
+						client_set_state(client, client_state_disconnecting);
+						client_disconnect(client);
+						continue;
 					}
 				} else {
 					rc = buffer_set_length(&client->incoming, buffer_get_length(&client->incoming) + read_rc);
@@ -962,6 +1232,8 @@ int main (int argc, char *argv[])
 			}
 		}
 	}
+
+	fprintf(stdout, "done\n");
 
 out:	TAILQ_FOREACH_SAFE(client, &clients, clients, nclient) {
 		TAILQ_REMOVE(&clients, client, clients);
