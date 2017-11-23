@@ -18,6 +18,8 @@
 #include <netinet/tcp.h>
 #include <errno.h>
 
+#include "http-parser.h"
+
 #if !defined(TAILQ_FOREACH_SAFE)
 #define	TAILQ_FOREACH_SAFE(var, head, field, next)		\
 	for ((var) = ((head)->tqh_first);			\
@@ -94,6 +96,8 @@ enum client_state {
 	client_state_connected,
 	client_state_requesting,
 	client_state_requested,
+	client_state_parsing,
+	client_state_parsed,
 	client_state_disconnecting,
 	client_state_disconnected
 };
@@ -105,6 +109,8 @@ struct client {
 	enum client_state state;
 	long long requests;
 	long long request_offset;
+	struct buffer incoming;
+	http_parser http_parser;
 };
 
 #define debugf(fmt...) { \
@@ -139,6 +145,26 @@ static __attribute__ ((unused)) long long buffer_get_length (struct buffer *buff
 		return -1;
 	}
 	return buffer->length;
+}
+
+static __attribute__ ((unused)) int buffer_set_length (struct buffer *buffer, long long length)
+{
+	if (buffer == NULL) {
+		return -1;
+	}
+	if (length > buffer->size) {
+		return -1;
+	}
+	buffer->length = length;
+	return 0;
+}
+
+static __attribute__ ((unused)) long long buffer_get_size (struct buffer *buffer)
+{
+	if (buffer == NULL) {
+		return -1;
+	}
+	return buffer->size;
 }
 
 static __attribute__ ((unused)) int buffer_resize (struct buffer *buffer, long long size)
@@ -209,6 +235,44 @@ static __attribute__ ((unused)) int buffer_printf (struct buffer *buffer, const 
 	buffer->length += rc;
 	return 0;
 bail:	return -1;
+}
+
+static __attribute__ ((unused)) int buffer_reset (struct buffer *buffer)
+{
+	if (buffer == NULL) {
+		return -1;
+	}
+	buffer->length = 0;
+	buffer->offset = 0;
+	return 0;
+}
+
+static __attribute__ ((unused)) void buffer_uninit (struct buffer *buffer)
+{
+	if (buffer == NULL) {
+		return;
+	}
+	if (--buffer->refcount > 0) {
+		return;
+	}
+	if (buffer->buffer != NULL) {
+		free(buffer->buffer);
+	}
+	memset(buffer, 0, sizeof(struct buffer));
+}
+
+static __attribute__ ((unused)) int buffer_init (struct buffer *buffer)
+{
+	if (buffer == NULL) {
+		goto bail;
+	}
+	memset(buffer, 0, sizeof(struct buffer));
+	buffer->refcount = 1;
+	return 0;
+bail:	if (buffer != NULL) {
+		buffer_uninit(buffer);
+	}
+	return -1;
 }
 
 static __attribute__ ((unused)) void buffer_destroy (struct buffer *buffer)
@@ -570,6 +634,20 @@ bail:	if (client != NULL) {
 	return -1;
 }
 
+static __attribute__ ((unused)) void client_reset (struct client *client)
+{
+	if (client == NULL) {
+		return;
+	}
+	if (client->fd >= 0) {
+		shutdown(client->fd, SHUT_RDWR);
+		close(client->fd);
+		client->fd = -1;
+	}
+	http_parser_init(&client->http_parser, HTTP_RESPONSE);
+	buffer_reset(&client->incoming);
+}
+
 static __attribute__ ((unused)) void client_destroy (struct client *client)
 {
 	if (client == NULL) {
@@ -579,6 +657,7 @@ static __attribute__ ((unused)) void client_destroy (struct client *client)
 		shutdown(client->fd, SHUT_RDWR);
 		close(client->fd);
 	}
+	buffer_uninit(&client->incoming);
 	free(client);
 }
 
@@ -593,6 +672,8 @@ static __attribute__ ((unused)) struct client * client_create (void)
 	memset(client, 0, sizeof(struct client));
 	client->fd = -1;
 	client->state = client_state_disconnected;
+	http_parser_init(&client->http_parser, HTTP_RESPONSE);
+	buffer_init(&client->incoming);
 	return client;
 bail:	if (client != NULL) {
 		client_destroy(client);
@@ -670,13 +751,18 @@ int main (int argc, char *argv[])
 
 	fprintf(stdout, "medusa server benchmark\n");
 	fprintf(stdout, "\n");
-	fprintf(stdout, "options\n");
+	fprintf(stdout, "options:\n");
 	fprintf(stdout, "  requests   : %lld\n", options.requests);
 	fprintf(stdout, "  concurrency: %lld\n", options.concurrency);
 	fprintf(stdout, "  timelimit  : %lld\n", options.timelimit);
 	fprintf(stdout, "  timeout    : %lld\n", options.timeout);
 	fprintf(stdout, "  keepalive  : %d\n", options.keepalive);
 	fprintf(stdout, "  url        : %s\n", options.url);
+	fprintf(stdout, "\n");
+	fprintf(stdout, "memory:\n");
+	fprintf(stdout, "  url   : %zd bytes\n", sizeof(struct url));
+	fprintf(stdout, "  buffer: %zd bytes\n", sizeof(struct buffer));
+	fprintf(stdout, "  client: %zd bytes\n", sizeof(struct client));
 
 	url = url_create(options.url);
 	if (url == NULL) {
@@ -727,12 +813,39 @@ int main (int argc, char *argv[])
 
 	while (1) {
 		TAILQ_FOREACH(client, &clients, clients) {
+			if (client_get_state(client) == client_state_connecting) {
+				debugf("client: %p, state: connecting", client);
+			}
+			if (client_get_state(client) == client_state_connected) {
+				debugf("client: %p, state: connected", client);
+				client_set_state(client, client_state_requesting);
+			}
+			if (client_get_state(client) == client_state_requesting) {
+				debugf("client: %p, state: requesting", client);
+			}
+			if (client_get_state(client) == client_state_requested) {
+				debugf("client: %p, state: requested", client);
+				client_set_state(client, client_state_parsing);
+			}
+			if (client_get_state(client) == client_state_parsing) {
+				debugf("client: %p, state: parsing", client);
+			}
+			if (client_get_state(client) == client_state_parsed) {
+				debugf("client: %p, state: parsed", client);
+				client_set_state(client, client_state_disconnecting);
+			}
+			if (client_get_state(client) == client_state_disconnecting) {
+				debugf("client: %p, state: disconnecting", client);
+				client_reset(client);
+				client_set_state(client, client_state_disconnected);
+			}
 			if (client_get_state(client) == client_state_disconnected) {
+				debugf("client: %p, state: disconnected", client);
+				client_reset(client);
 				rc = client_connect(client, url_get_host(url), url_get_port(url));
 				if (rc != 0) {
 					errorf("can not connect client: %p to %s:%d", client, url_get_host(url), url_get_port(url));
 					client_set_state(client, client_state_disconnected);
-					client_set_request_offset(client, 0);
 					goto bail;
 				}
 				client_set_state(client, client_state_connecting);
@@ -741,23 +854,16 @@ int main (int argc, char *argv[])
 		npollfds = 0;
 		TAILQ_FOREACH(client, &clients, clients) {
 			if (client_get_state(client) == client_state_connecting) {
-				debugf("client: %p, state: connecting", client);
 				pollfds[npollfds].fd = client_get_fd(client);
 				pollfds[npollfds].events = POLLOUT;
 				pollfds[npollfds].revents = 0;
 				npollfds += 1;
-			} else if (client_get_state(client) == client_state_connected) {
-				debugf("client: %p, state: connected", client);
-				client_set_state(client, client_state_requesting);
-				client_set_request_offset(client, 0);
 			} else if (client_get_state(client) == client_state_requesting) {
-				debugf("client: %p, state: requesting", client);
 				pollfds[npollfds].fd = client_get_fd(client);
 				pollfds[npollfds].events = POLLOUT;
 				pollfds[npollfds].revents = 0;
 				npollfds += 1;
-			} else if (client_get_state(client) == client_state_requested) {
-				debugf("client: %p, state: requested", client);
+			} else if (client_get_state(client) == client_state_parsing) {
 				pollfds[npollfds].fd = client_get_fd(client);
 				pollfds[npollfds].events = POLLIN;
 				pollfds[npollfds].revents = 0;
@@ -789,8 +895,31 @@ int main (int argc, char *argv[])
 				goto bail;
 			}
 			if (pollfds[i].revents & POLLIN) {
-				errorf("not implemented yet");
-				goto bail;
+				ssize_t read_rc;
+				rc = buffer_resize(&client->incoming, buffer_get_length(&client->incoming) + 1024);
+				if (rc != 0) {
+					errorf("can not reserve client buffer");
+					goto bail;
+				}
+				read_rc = read(client_get_fd(client),
+					       buffer_get_base(&client->incoming) + buffer_get_length(&client->incoming),
+					       buffer_get_size(&client->incoming) - buffer_get_length(&client->incoming));
+				if (read_rc <= 0) {
+					if (errno == EINTR) {
+					} else if (errno == EAGAIN) {
+					} else if (errno == EWOULDBLOCK) {
+					} else {
+						errorf("connection reset by server");
+						client_set_state(client, client_state_disconnected);
+						goto out;
+					}
+				} else {
+					rc = buffer_set_length(&client->incoming, buffer_get_length(&client->incoming) + read_rc);
+					if (rc != 0) {
+						errorf("can not set buffer length: %lld + %zd / %lld", buffer_get_length(&client->incoming), read_rc, buffer_get_size(&client->incoming));
+						goto bail;
+					}
+				}
 			} else if (pollfds[i].revents & POLLOUT) {
 				if (client_get_state(client) == client_state_connecting) {
 					rc = client_get_fd_error(client);
@@ -802,7 +931,9 @@ int main (int argc, char *argv[])
 					}
 				} else if (client_get_state(client) == client_state_requesting) {
 					ssize_t write_rc;
-					write_rc = write(client_get_fd(client), buffer_get_base(request) + client_get_request_offset(client), buffer_get_length(request) - client_get_request_offset(client));
+					write_rc = write(client_get_fd(client),
+							buffer_get_base(request) + client_get_request_offset(client),
+							buffer_get_length(request) - client_get_request_offset(client));
 					if (write_rc <= 0) {
 						if (errno == EINTR) {
 						} else if (errno == EAGAIN) {
@@ -822,12 +953,11 @@ int main (int argc, char *argv[])
 						}
 					}
 				} else {
-					errorf("client: %p, state: %d", client, client_get_state(client));
-					errorf("not implemented yet");
+					errorf("invalid client: %p, state: %d", client, client_get_state(client));
 					goto bail;
 				}
 			} else if (pollfds[i].revents != 0) {
-				errorf("not implemented yet");
+				errorf("invalid client: %p, state: %d", client, client_get_state(client));
 				goto bail;
 			}
 		}
