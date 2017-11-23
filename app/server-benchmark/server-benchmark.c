@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <getopt.h>
 
-#include <poll.h>
+#include <sys/epoll.h>
 #include <sys/queue.h>
 
 #include <fcntl.h>
@@ -890,8 +890,9 @@ int main (int argc, char *argv[])
 	struct client *client;
 	struct client *nclient;
 
-	long long npollfds;
-	struct pollfd *pollfds;
+	int efd;
+	int nevents;
+	struct epoll_event *events;
 
 	ret = 0;
 
@@ -905,7 +906,9 @@ int main (int argc, char *argv[])
 
 	url = NULL;
 	request = NULL;
-	pollfds = NULL;
+
+	efd = -1;
+	events = NULL;
 
 	nclients = 0;
 	TAILQ_INIT(&clients);
@@ -1011,12 +1014,18 @@ int main (int argc, char *argv[])
 		nclients += 1;
 	}
 
-	pollfds = malloc(sizeof(struct pollfd) * options.concurrency);
-	if (pollfds == NULL) {
+	efd = epoll_create1(0);
+	if (efd < 0) {
+		errorf("can not create epoll");
+		goto bail;
+	}
+
+	events = malloc(sizeof(struct epoll_event) * nclients);
+	if (events == NULL) {
 		errorf("can not allocate memory");
 		goto bail;
 	}
-	memset(pollfds, 0, sizeof(struct pollfd) * options.concurrency);
+	memset(events, 0, sizeof(struct epoll_event) * nclients);
 
 	while (1) {
 		TAILQ_FOREACH_SAFE(client, &clients, clients, nclient) {
@@ -1034,12 +1043,28 @@ int main (int argc, char *argv[])
 			}
 
 			if (client_get_state(client) == client_state_connected) {
+				struct epoll_event event;
 				debugf("client: %p, state: connected", client);
 				client_set_state(client, client_state_requesting);
+				event.events = EPOLLOUT;
+				event.data.ptr = client;
+				rc = epoll_ctl(efd, EPOLL_CTL_MOD, client_get_fd(client), &event);
+				if (rc != 0) {
+					errorf("can not add client to poll");
+					goto bail;
+				}
 			}
 			if (client_get_state(client) == client_state_requested) {
+				struct epoll_event event;
 				debugf("client: %p, state: requested", client);
 				client_set_state(client, client_state_parsing);
+				event.events = EPOLLIN;
+				event.data.ptr = client;
+				rc = epoll_ctl(efd, EPOLL_CTL_MOD, client_get_fd(client), &event);
+				if (rc != 0) {
+					errorf("can not add client to poll");
+					goto bail;
+				}
 			}
 			if (client_get_state(client) == client_state_parsing) {
 				size_t nparsed;
@@ -1093,6 +1118,7 @@ int main (int argc, char *argv[])
 			}
 			if (client_get_state(client) == client_state_disconnected) {
 				unsigned long current;
+				struct epoll_event event;
 				current = clock_get();
 				if (clock_after(current, client_get_connect_timestamp(client) + options.interval)) {
 					if (client_get_fd(client) >= 0 &&
@@ -1101,6 +1127,13 @@ int main (int argc, char *argv[])
 						client_set_requests(client, client_get_requests(client) - 1);
 						client_set_state(client, client_state_requesting);
 						client_set_connect_timestamp(client, clock_get());
+						event.events = EPOLLOUT;
+						event.data.ptr = client;
+						rc = epoll_ctl(efd, EPOLL_CTL_MOD, client_get_fd(client), &event);
+						if (rc != 0) {
+							errorf("can not add client to poll");
+							goto bail;
+						}
 					} else {
 						rc = client_connect(client, url_get_host(url), url_get_port(url));
 						if (rc != 0) {
@@ -1112,6 +1145,13 @@ int main (int argc, char *argv[])
 						client_set_state(client, client_state_connecting);
 						client_set_requests(client, client_get_requests(client) - 1);
 						client_set_connect_timestamp(client, clock_get());
+						event.events = EPOLLOUT;
+						event.data.ptr = client;
+						rc = epoll_ctl(efd, EPOLL_CTL_ADD, client_get_fd(client), &event);
+						if (rc != 0) {
+							errorf("can not add client to poll");
+							goto bail;
+						}
 					}
 				}
 			}
@@ -1122,61 +1162,34 @@ int main (int argc, char *argv[])
 				debugf("client: %p, state: requesting", client);
 			}
 		}
-		npollfds = 0;
-		TAILQ_FOREACH(client, &clients, clients) {
-			if (client_get_state(client) == client_state_connecting) {
-				pollfds[npollfds].fd = client_get_fd(client);
-				pollfds[npollfds].events = POLLOUT;
-				pollfds[npollfds].revents = 0;
-				npollfds += 1;
-			} else if (client_get_state(client) == client_state_requesting) {
-				pollfds[npollfds].fd = client_get_fd(client);
-				pollfds[npollfds].events = POLLOUT;
-				pollfds[npollfds].revents = 0;
-				npollfds += 1;
-			} else if (client_get_state(client) == client_state_parsing) {
-				pollfds[npollfds].fd = client_get_fd(client);
-				pollfds[npollfds].events = POLLIN;
-				pollfds[npollfds].revents = 0;
-				npollfds += 1;
-			} else if (client_get_state(client) == client_state_disconnected) {
-			} else {
-				errorf("unknown client: %p, state: %d", client, client_get_state(client));
-				goto bail;
-			}
-		}
+
 		if (nclients <= 0) {
 			debugf("no more clients");
 			break;
 		}
-#if 0
-		debugf("npollfds: %lld", npollfds);
-		for (i = 0; i < npollfds; i++) {
-			debugf("  %lld - fd: %d, events: 0x%08x, revents: 0x%08x", i, pollfds[i].fd, pollfds[i].events, pollfds[i].revents);
-		}
-#endif
-		rc = poll(pollfds, npollfds, 100);
-		if (rc < 0) {
-			errorf("poll failed with: %d", rc);
+		nevents = epoll_wait(efd, events, nclients, 1000);
+		if (nevents < 0) {
+			errorf("poll failed with: %d, error: %d, %s", rc, errno, strerror(errno));
 			goto bail;
 		}
-		if (rc == 0) {
+		if (nevents == 0) {
 			continue;
 		}
-		for (i = 0; i < npollfds; i++) {
-			if (pollfds[i].revents == 0) {
+		for (i = 0; i < nevents; i++) {
+			if ((events[i].events & EPOLLERR) ||
+			    (events[i].events & EPOLLHUP)) {
+				debugf("epoll events is invalid");
+				client_disconnect(client);
+				client_reset(client);
+				client_set_state(client, client_state_disconnecting);
 				continue;
 			}
-			TAILQ_FOREACH(client, &clients, clients) {
-				if (client_get_fd(client) == pollfds[i].fd) {
-					break;
-				}
-			}
+			client = events[i].data.ptr;
 			if (client == NULL) {
-				errorf("can not find client for fd: %d", pollfds[i].fd);
+				errorf("epoll events is invalid");
 				goto bail;
 			}
-			if (pollfds[i].revents & POLLIN) {
+			if (events[i].events & EPOLLIN) {
 				ssize_t read_rc;
 				rc = buffer_resize(&client->incoming, buffer_get_length(&client->incoming) + 1024);
 				if (rc != 0) {
@@ -1203,7 +1216,7 @@ int main (int argc, char *argv[])
 						goto bail;
 					}
 				}
-			} else if (pollfds[i].revents & POLLOUT) {
+			} else if (events[i].events & EPOLLOUT) {
 				if (client_get_state(client) == client_state_connecting) {
 					rc = client_get_fd_error(client);
 					if (rc == 0) {
@@ -1239,7 +1252,7 @@ int main (int argc, char *argv[])
 					errorf("invalid client: %p, state: %d", client, client_get_state(client));
 					goto bail;
 				}
-			} else if (pollfds[i].revents != 0) {
+			} else if (events[i].events != 0) {
 				errorf("invalid client: %p, state: %d", client, client_get_state(client));
 				goto bail;
 			}
@@ -1258,8 +1271,11 @@ out:	TAILQ_FOREACH_SAFE(client, &clients, clients, nclient) {
 	if (request != NULL) {
 		buffer_destroy(request);
 	}
-	if (pollfds != NULL) {
-		free(pollfds);
+	if (events != NULL) {
+		free(events);
+	}
+	if (efd >= 0) {
+		close(efd);
 	}
 	return ret;
 bail:	ret = -1;
