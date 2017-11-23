@@ -125,7 +125,7 @@ struct client {
 	fprintf(stderr, " (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__); \
 }
 
-static __attribute__ ((unused)) void * buffer_base (struct buffer *buffer)
+static __attribute__ ((unused)) void * buffer_get_base (struct buffer *buffer)
 {
 	if (buffer == NULL) {
 		return NULL;
@@ -133,7 +133,7 @@ static __attribute__ ((unused)) void * buffer_base (struct buffer *buffer)
 	return buffer->buffer;
 }
 
-static __attribute__ ((unused)) long long buffer_length (struct buffer *buffer)
+static __attribute__ ((unused)) long long buffer_get_length (struct buffer *buffer)
 {
 	if (buffer == NULL) {
 		return -1;
@@ -171,7 +171,7 @@ static __attribute__ ((unused)) int buffer_resize (struct buffer *buffer, long l
 
 static __attribute__ ((unused)) int buffer_grow (struct buffer *buffer, long long size)
 {
-	return buffer_resize(buffer, buffer_length(buffer) + size);
+	return buffer_resize(buffer, buffer_get_length(buffer) + size);
 }
 
 static __attribute__ ((unused)) int buffer_printf (struct buffer *buffer, const char *format, ...)
@@ -200,7 +200,7 @@ static __attribute__ ((unused)) int buffer_printf (struct buffer *buffer, const 
 		goto bail;
 	}
 	va_start(va, format);
-	rc = vsnprintf(buffer_base(buffer) + buffer_length(buffer), size + 1, format, va);
+	rc = vsnprintf(buffer_get_base(buffer) + buffer_get_length(buffer), size + 1, format, va);
 	va_end(va);
 	if (rc <= 0) {
 		errorf("can not allocate memory");
@@ -705,7 +705,7 @@ int main (int argc, char *argv[])
 		goto bail;
 	}
 	fprintf(stdout, "---\n");
-	fprintf(stdout, "%s", (char *) buffer_base(request));
+	fprintf(stdout, "%s", (char *) buffer_get_base(request));
 	fprintf(stdout, "---\n");
 
 	for (i = 0; i < options.concurrency; i++) {
@@ -802,7 +802,7 @@ int main (int argc, char *argv[])
 					}
 				} else if (client_get_state(client) == client_state_requesting) {
 					ssize_t write_rc;
-					write_rc = write(client_get_fd(client), buffer_base(request) + client_get_request_offset(client), buffer_length(request) - client_get_request_offset(client));
+					write_rc = write(client_get_fd(client), buffer_get_base(request) + client_get_request_offset(client), buffer_get_length(request) - client_get_request_offset(client));
 					if (write_rc <= 0) {
 						if (errno == EINTR) {
 						} else if (errno == EAGAIN) {
@@ -817,7 +817,7 @@ int main (int argc, char *argv[])
 							errorf("can not set request buffer offset");
 							goto bail;
 						}
-						if (client_get_request_offset(client) == buffer_length(request)) {
+						if (client_get_request_offset(client) == buffer_get_length(request)) {
 							client_set_state(client, client_state_requested);
 						}
 					}
