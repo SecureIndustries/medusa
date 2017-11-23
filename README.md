@@ -32,9 +32,7 @@ or
 
 ## 4. benchmark
 
-C connections to URL
-each connection sends N requests
-with interval I milliseconds between requests
-using keep-alive K feature
+C connections to URL, each connection sends N requests with interval I
+milliseconds between requests using keep-alive K feature.
 
     medusa-server-benchmark -c C -n N -i I -k K -v 0 URL
