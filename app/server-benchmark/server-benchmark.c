@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <getopt.h>
 
@@ -71,7 +72,7 @@ struct options {
 };
 
 struct url {
-	int refcount;
+	long long refcount;
 	char *uri;
 	char *scheme;
 	char *host;
@@ -79,10 +80,20 @@ struct url {
 	char *path;
 };
 
+struct buffer {
+	void *buffer;
+	long long offset;
+	long long length;
+	long long size;
+	long long refcount;
+};
+
 enum client_state {
 	client_state_unknown,
 	client_state_connecting,
 	client_state_connected,
+	client_state_requesting,
+	client_state_requested,
 	client_state_disconnecting,
 	client_state_disconnected
 };
@@ -93,6 +104,7 @@ struct client {
 	int fd;
 	enum client_state state;
 	long long requests;
+	long long request_offset;
 };
 
 #define debugf(fmt...) { \
@@ -111,6 +123,123 @@ struct client {
 	fprintf(stderr, "error: "); \
 	fprintf(stderr, fmt); \
 	fprintf(stderr, " (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__); \
+}
+
+static __attribute__ ((unused)) void * buffer_base (struct buffer *buffer)
+{
+	if (buffer == NULL) {
+		return NULL;
+	}
+	return buffer->buffer;
+}
+
+static __attribute__ ((unused)) long long buffer_length (struct buffer *buffer)
+{
+	if (buffer == NULL) {
+		return -1;
+	}
+	return buffer->length;
+}
+
+static __attribute__ ((unused)) int buffer_resize (struct buffer *buffer, long long size)
+{
+	void *data;
+	if (buffer == NULL) {
+		return -1;
+	}
+	if (buffer->size >= size) {
+		return 0;
+	}
+	data = realloc(buffer->buffer, size);
+	if (data == NULL) {
+		data = malloc(size);
+		if (data == NULL) {
+			errorf("can not allocate memory");
+			return -1;
+		}
+		if (buffer->length > 0) {
+			memcpy(data, buffer->buffer, buffer->length);
+		}
+		free(buffer->buffer);
+		buffer->buffer = data;
+	} else {
+		buffer->buffer = data;
+	}
+	buffer->size = size;
+	return 0;
+}
+
+static __attribute__ ((unused)) int buffer_grow (struct buffer *buffer, long long size)
+{
+	return buffer_resize(buffer, buffer_length(buffer) + size);
+}
+
+static __attribute__ ((unused)) int buffer_printf (struct buffer *buffer, const char *format, ...)
+{
+	int rc;
+	long long size;
+	va_list va;
+	if (buffer == NULL) {
+		errorf("buffer is invalid");
+		goto bail;
+	}
+	if (format == NULL) {
+		errorf("format is invalid");
+		goto bail;
+	}
+	va_start(va, format);
+	size = vsnprintf(NULL, 0, format, va);
+	va_end(va);
+	if (size < 0) {
+		errorf("can not allocate memory");
+		goto bail;
+	}
+	rc = buffer_grow(buffer, size + 1);
+	if (rc != 0) {
+		errorf("can not grow buffer");
+		goto bail;
+	}
+	va_start(va, format);
+	rc = vsnprintf(buffer_base(buffer) + buffer_length(buffer), size + 1, format, va);
+	va_end(va);
+	if (rc <= 0) {
+		errorf("can not allocate memory");
+		goto bail;
+	}
+	buffer->length += rc;
+	return 0;
+bail:	return -1;
+}
+
+static __attribute__ ((unused)) void buffer_destroy (struct buffer *buffer)
+{
+	if (buffer == NULL) {
+		return;
+	}
+	if (--buffer->refcount > 0) {
+		return;
+	}
+	if (buffer->buffer != NULL) {
+		free(buffer->buffer);
+	}
+	free(buffer);
+}
+
+static __attribute__ ((unused)) struct buffer * buffer_create (void)
+{
+	struct buffer *buffer;
+	buffer = malloc(sizeof(struct buffer));
+	if (buffer == NULL) {
+		errorf("can not allocate memory");
+		goto bail;
+	}
+	memset(buffer, 0, sizeof(struct buffer));
+	buffer->refcount = 1;
+	return buffer;
+bail:	if (buffer != NULL) {
+		buffer_destroy(buffer);
+	}
+	return NULL;
 }
 
 static __attribute__ ((unused)) const char * url_get_uri (struct url *url)
@@ -289,6 +418,23 @@ static __attribute__ ((unused)) int client_set_requests (struct client *client, 
 	return 0;
 }
 
+static __attribute__ ((unused)) long long client_get_request_offset (struct client *client)
+{
+	if (client == NULL) {
+		return -1;
+	}
+	return client->request_offset;
+}
+
+static __attribute__ ((unused)) int client_set_request_offset (struct client *client, long long offset)
+{
+	if (client == NULL) {
+		return -1;
+	}
+	client->request_offset = offset;
+	return 0;
+}
+
 static __attribute__ ((unused)) int client_get_fd_error (struct client *client)
 {
 	int rc;
@@ -464,9 +610,13 @@ int main (int argc, char *argv[])
 	struct clients clients;
 
 	long long i;
+
 	struct url *url;
+	struct buffer *request;
+
 	struct client *client;
 	struct client *nclient;
+
 	long long npollfds;
 	struct pollfd *pollfds;
 
@@ -481,6 +631,7 @@ int main (int argc, char *argv[])
 	options.url = NULL;
 
 	url = NULL;
+	request = NULL;
 	pollfds = NULL;
 	TAILQ_INIT(&clients);
 
@@ -518,6 +669,7 @@ int main (int argc, char *argv[])
 
 
 	fprintf(stdout, "medusa server benchmark\n");
+	fprintf(stdout, "\n");
 	fprintf(stdout, "options\n");
 	fprintf(stdout, "  requests   : %lld\n", options.requests);
 	fprintf(stdout, "  concurrency: %lld\n", options.concurrency);
@@ -531,6 +683,31 @@ int main (int argc, char *argv[])
 		errorf("url is invalid");
 		goto bail;
 	}
+	fprintf(stdout, "\n");
+	fprintf(stdout, "benchmarking %s ...\n", url_get_uri(url));
+
+	request = buffer_create();
+	if (request == NULL) {
+		errorf("can not create request");
+		goto bail;
+	}
+	rc = buffer_printf(request,
+			"GET /%s HTTP/1.0\r\n"
+			"Host: %s\r\n"
+			"User-Agent: %s\r\n"
+			"Accept: */*\r\n"
+			"\r\n",
+			url_get_path(url),
+			url_get_host(url),
+			"medusa-server-benchmark");
+	if (rc != 0) {
+		errorf("can not build request");
+		goto bail;
+	}
+	fprintf(stdout, "---\n");
+	fprintf(stdout, "%s", (char *) buffer_base(request));
+	fprintf(stdout, "---\n");
+
 	for (i = 0; i < options.concurrency; i++) {
 		client = client_create();
 		if (client == NULL) {
@@ -555,6 +732,7 @@ int main (int argc, char *argv[])
 				if (rc != 0) {
 					errorf("can not connect client: %p to %s:%d", client, url_get_host(url), url_get_port(url));
 					client_set_state(client, client_state_disconnected);
+					client_set_request_offset(client, 0);
 					goto bail;
 				}
 				client_set_state(client, client_state_connecting);
@@ -563,12 +741,29 @@ int main (int argc, char *argv[])
 		npollfds = 0;
 		TAILQ_FOREACH(client, &clients, clients) {
 			if (client_get_state(client) == client_state_connecting) {
+				debugf("client: %p, state: connecting", client);
 				pollfds[npollfds].fd = client_get_fd(client);
 				pollfds[npollfds].events = POLLOUT;
 				pollfds[npollfds].revents = 0;
 				npollfds += 1;
-			} else 	if (client_get_state(client) == client_state_connected) {
-				errorf("not implemented yet");
+			} else if (client_get_state(client) == client_state_connected) {
+				debugf("client: %p, state: connected", client);
+				client_set_state(client, client_state_requesting);
+				client_set_request_offset(client, 0);
+			} else if (client_get_state(client) == client_state_requesting) {
+				debugf("client: %p, state: requesting", client);
+				pollfds[npollfds].fd = client_get_fd(client);
+				pollfds[npollfds].events = POLLOUT;
+				pollfds[npollfds].revents = 0;
+				npollfds += 1;
+			} else if (client_get_state(client) == client_state_requested) {
+				debugf("client: %p, state: requested", client);
+				pollfds[npollfds].fd = client_get_fd(client);
+				pollfds[npollfds].events = POLLIN;
+				pollfds[npollfds].revents = 0;
+				npollfds += 1;
+			} else {
+				errorf("unknown client: %p, state: %d", client, client_get_state(client));
 				goto bail;
 			}
 		}
@@ -605,6 +800,27 @@ int main (int argc, char *argv[])
 						errorf("client: %p failed to connect: %d", client, rc);
 						goto bail;
 					}
+				} else if (client_get_state(client) == client_state_requesting) {
+					ssize_t write_rc;
+					write_rc = write(client_get_fd(client), buffer_base(request) + client_get_request_offset(client), buffer_length(request) - client_get_request_offset(client));
+					if (write_rc <= 0) {
+						if (errno == EINTR) {
+						} else if (errno == EAGAIN) {
+						} else if (errno == EWOULDBLOCK) {
+						} else {
+							errorf("can not write client: %p request: %d, %s", client, errno, strerror(errno));
+							goto bail;
+						}
+					} else {
+						rc = client_set_request_offset(client, client_get_request_offset(client) + write_rc);
+						if (rc != 0) {
+							errorf("can not set request buffer offset");
+							goto bail;
+						}
+						if (client_get_request_offset(client) == buffer_length(request)) {
+							client_set_state(client, client_state_requested);
+						}
+					}
 				} else {
 					errorf("client: %p, state: %d", client, client_get_state(client));
 					errorf("not implemented yet");
@@ -623,6 +839,9 @@ out:	TAILQ_FOREACH_SAFE(client, &clients, clients, nclient) {
 	}
 	if (url != NULL) {
 		url_destroy(url);
+	}
+	if (request != NULL) {
+		buffer_destroy(request);
 	}
 	if (pollfds != NULL) {
 		free(pollfds);
