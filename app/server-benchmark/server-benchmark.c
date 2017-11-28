@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <time.h>
 
 #include <sys/epoll.h>
 #include <sys/queue.h>
@@ -12,6 +13,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -27,9 +29,9 @@
 		(var) = (next))
 #endif
 
-#define OPTIONS_DEFAULT_REQUESTS	0
-#define OPTIONS_DEFAULT_CONCURRENCY	0
-#define OPTIONS_DEFAULT_TIMELIMIT	30000
+#define OPTIONS_DEFAULT_REQUESTS	1
+#define OPTIONS_DEFAULT_CONCURRENCY	1
+#define OPTIONS_DEFAULT_TIMELIMIT	300000
 #define OPTIONS_DEFAULT_TIMEOUT		30000
 #define OPTIONS_DEFAULT_KEEPALIVE	0
 #define OPTIONS_DEFAULT_INTERVAL	0
@@ -70,6 +72,12 @@ static void usage (const char *pname)
 	fprintf(stdout, "  -i, --interval   : milliseconds interval between requests (default: %d)\n", OPTION_INTERVAL);
 	fprintf(stdout, "  -v, --verbose    : set verbose level (default: %d)\n", OPTION_VERBOSE);
 	fprintf(stdout, "  -h, --help       : this text\n");
+	fprintf(stdout, "\n");
+	fprintf(stdout, "tuning:\n");
+	fprintf(stdout, "  change local port range:\n");
+	fprintf(stdout, "    echo \"MIN MAX\" > /proc/sys/net/ipv4/ip_local_port_range\n");
+	fprintf(stdout, "  allow tcp timewait ports to be used\n");
+	fprintf(stdout, "    echo \"1\" >  /proc/sys/net/ipv4/tcp_tw_reuse\n");
 }
 
 struct options {
@@ -156,31 +164,6 @@ static int g_debug_level = debug_level_error;
 	} \
 }
 
-
-#if defined(__APPLE__) && defined(__MACH__)
-
-#include <time.h>
-#include <errno.h>
-#include <sys/sysctl.h>
-
-static __attribute__ ((unused)) unsigned long clock_get (void)
-{
-    struct timeval boottime;
-    size_t len = sizeof(boottime);
-    int mib[2] = { CTL_KERN, KERN_BOOTTIME };
-    if (sysctl(mib, 2, &boottime, &len, NULL, 0) < 0) {
-        return 0;
-    }
-    time_t bsec = boottime.tv_sec, csec = time(NULL);
-
-    return ((unsigned long) difftime(csec, bsec)) * 1000;
-}
-
-#else
-
-#include <time.h>
-#include <sys/sysinfo.h>
-
 static __attribute__ ((unused)) unsigned long clock_get (void)
 {
 #if defined(CLOCK_MONOTONIC_RAW)
@@ -196,17 +179,13 @@ static __attribute__ ((unused)) unsigned long clock_get (void)
 	_clock = tsec + tusec;
 	return _clock;
 #else
-	struct sysinfo info;
-	sysinfo(&info);
-	return info.uptime * 1000;
+	#error "clock is invalid"
 #endif
 }
 
-#endif
-
 static inline int clock_after (unsigned long a, unsigned long b)
 {
-	return (((long)((b) - (a)) < 0)) ? 1 : 0;
+	return (((long) ((b) - (a)) < 0)) ? 1 : 0;
 }
 #define clock_before(a,b)        clock_after(b,a)
 
@@ -587,6 +566,78 @@ bail:	if (url != NULL) {
 	return NULL;
 }
 
+static __attribute__ ((unused))  char * read_proc_file (const char *file)
+{
+	int fd;
+	ssize_t rc;
+	char *buffer;
+	#define PROC_FILE_BUFFER_SIZE (64 * 1024)
+	fd = open(file, O_RDONLY);
+	if (fd < 0) {
+		printf("open failed for: %s\n", file);
+		return NULL;
+	}
+	buffer = malloc(PROC_FILE_BUFFER_SIZE);
+	if (buffer == NULL) {
+		printf("malloc failed\n");
+		close(fd);
+		return NULL;
+	}
+	rc = read(fd, buffer, PROC_FILE_BUFFER_SIZE - 1);
+	if (rc < 0) {
+		printf("read failed\n");
+		close(fd);
+		free(buffer);
+		return NULL;
+	}
+	buffer[rc] = '\0';
+	close(fd);
+	return buffer;
+}
+
+static __attribute__ ((unused)) int get_ip_local_port_range (int *min, int *max)
+{
+	int rc;
+	char *buffer;
+	buffer = NULL;
+	if (min == NULL) {
+		errorf("min is invalid");
+		goto bail;
+	}
+	if (max == NULL) {
+		errorf("max is invalid");
+		goto bail;
+	}
+	*min = 0;
+	*max = 0;
+	buffer = read_proc_file("/proc/sys/net/ipv4/ip_local_port_range");
+	if (buffer == NULL) {
+		errorf("can not read file");
+		goto bail;
+	}
+	rc = sscanf(buffer, "%d %d", min, max);
+	if (rc != 2) {
+		errorf("can not parse buffer");
+		goto bail;
+	}
+	if (*max <= *min) {
+		errorf("range is invalid");
+		goto bail;
+	}
+	free(buffer);
+	return 0;
+bail:	if (buffer != NULL) {
+		free(buffer);
+	}
+	if (min != NULL) {
+		*min = 0;
+	}
+	if (max != NULL) {
+		*max = 0;
+	}
+	return -1;
+}
+
 static __attribute__ ((unused)) unsigned long client_get_connect_timestamp (struct client *client)
 {
 	if (client == NULL) {
@@ -689,15 +740,18 @@ static __attribute__ ((unused)) int client_connect (struct client *client, const
 	struct sockaddr_in sin;
 	if (client == NULL) {
 		errorf("client is invalid");
+		rc = -EIO;
 		goto bail;
 	}
 	if (address == NULL) {
 		errorf("address is invalid");
+		rc = -EIO;
 		goto bail;
 	}
 	if (port <= 0 ||
 	    port >= 0xffff) {
 		errorf("port is invalid");
+		rc = -EIO;
 		goto bail;
 	}
 	if (client->fd >= 0) {
@@ -708,17 +762,20 @@ static __attribute__ ((unused)) int client_connect (struct client *client, const
 	client->fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (client->fd < 0) {
 		errorf("can not open socket");
+		rc = -EIO;
 		goto bail;
 	}
 	flags = fcntl(client->fd, F_GETFL, 0);
 	if (flags < 0) {
 		errorf("can not get flags");
+		rc = -EIO;
 		goto bail;
 	}
 	flags = flags | O_NONBLOCK;
 	rc = fcntl(client->fd, F_SETFL, flags);
 	if (rc != 0) {
 		errorf("can not set flags");
+		rc = -EIO;
 		goto bail;
 	}
 	memset(&sin, 0, sizeof(sin));
@@ -742,7 +799,7 @@ bail:	if (client != NULL) {
 			client->fd = -1;
 		}
 	}
-	return -EIO;
+	return rc;
 }
 
 static __attribute__ ((unused)) int client_disconnect (struct client *client)
@@ -863,6 +920,9 @@ int main (int argc, char *argv[])
 	int port;
 	const char *path;
 
+	int port_range_min;
+	int port_range_max;
+
 	struct client *client;
 	struct client *nclient;
 
@@ -927,6 +987,17 @@ int main (int argc, char *argv[])
 	}
 	options.url = argv[optind++];
 
+	rc = get_ip_local_port_range(&port_range_min, &port_range_max);
+	if (rc != 0) {
+		errorf("can not get local port range");
+		goto bail;
+	}
+	if (options.concurrency > port_range_max - port_range_min) {
+		errorf("local port range (%d - %d = %d) is not enough for requested concurrency (%lld)", port_range_min, port_range_max, port_range_max - port_range_min, options.concurrency);
+		errorf("set local port range with");
+		errorf("echo \"MIN MAX\" > /proc/sys/net/ipv4/ip_local_port_range");
+		goto bail;
+	}
 
 	fprintf(stdout, "medusa server benchmark\n");
 	fprintf(stdout, "\n");
@@ -943,6 +1014,9 @@ int main (int argc, char *argv[])
 	fprintf(stdout, "  url   : %zd bytes\n", sizeof(struct url));
 	fprintf(stdout, "  buffer: %zd bytes\n", sizeof(struct buffer));
 	fprintf(stdout, "  client: %zd bytes\n", sizeof(struct client));
+	fprintf(stdout, "port range:\n");
+	fprintf(stdout, "  minimum: %d\n", port_range_min);
+	fprintf(stdout, "  maximum: %d\n", port_range_max);
 
 	url = url_create(options.url);
 	if (url == NULL) {
