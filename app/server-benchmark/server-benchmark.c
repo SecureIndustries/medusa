@@ -685,12 +685,8 @@ static __attribute__ ((unused)) int client_set_state (struct client *client, enu
 static __attribute__ ((unused)) int client_connect (struct client *client, const char *address, int port)
 {
 	int rc;
-	int opt;
 	int flags;
-	struct addrinfo hints;
-	struct addrinfo *result;
-	struct addrinfo *res;
-	result = NULL;
+	struct sockaddr_in sin;
 	if (client == NULL) {
 		errorf("client is invalid");
 		goto bail;
@@ -714,12 +710,6 @@ static __attribute__ ((unused)) int client_connect (struct client *client, const
 		errorf("can not open socket");
 		goto bail;
 	}
-	opt = 1;
-	rc = setsockopt(client->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-	if (rc < 0) {
-		errorf("setsockopt reuseaddr failed");
-		goto bail;
-	}
 	flags = fcntl(client->fd, F_GETFL, 0);
 	if (flags < 0) {
 		errorf("can not get flags");
@@ -731,35 +721,18 @@ static __attribute__ ((unused)) int client_connect (struct client *client, const
 		errorf("can not set flags");
 		goto bail;
 	}
-	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = PF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-	rc = getaddrinfo(address, NULL, &hints, &result);
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_family = AF_INET;
+	inet_pton(AF_INET, address, &sin.sin_addr);
+	sin.sin_port = htons(port);
+	rc = connect(client->fd, (struct sockaddr *) &sin, sizeof(sin));
 	if (rc != 0) {
-		errorf("getaddrinfo failed for: %s", address);
-		goto bail;
-	}
-	for (res = result; res; res = res->ai_next) {
-		char str[INET_ADDRSTRLEN];
-		struct sockaddr_in *sockaddr_in;
-		if (res->ai_family != AF_INET) {
-			continue;
+		if (errno == EINPROGRESS) {
+		} else {
+			rc = -errno;
+			goto bail;
 		}
-		inet_ntop(AF_INET, &(((struct sockaddr_in *) res->ai_addr)->sin_addr), str, sizeof(str));
-		sockaddr_in = (struct sockaddr_in *) res->ai_addr;
-		sockaddr_in->sin_port = htons(port);
-		rc = connect(client->fd, res->ai_addr, res->ai_addrlen);
-		if (rc != 0) {
-			if (errno != EINPROGRESS) {
-				continue;
-			} else {
-				rc = -errno;
-			}
-		}
-		break;
 	}
-	freeaddrinfo(result);
-
 	return 0;
 bail:	if (client != NULL) {
 		if (client->fd >= 0) {
@@ -767,9 +740,6 @@ bail:	if (client != NULL) {
 			close(client->fd);
 			client->fd = -1;
 		}
-	}
-	if (result != NULL) {
-		freeaddrinfo(result);
 	}
 	return -1;
 }
@@ -887,6 +857,11 @@ int main (int argc, char *argv[])
 	struct url *url;
 	struct buffer *request;
 
+	const char *scheme;
+	char address[INET_ADDRSTRLEN];
+	int port;
+	const char *path;
+
 	struct client *client;
 	struct client *nclient;
 
@@ -973,8 +948,50 @@ int main (int argc, char *argv[])
 		errorf("url is invalid");
 		goto bail;
 	}
+	port = 0;
+	address[0] = '\0';
+	{
+		int rc;
+		struct addrinfo hints;
+		struct addrinfo *result;
+		struct addrinfo *res;
+		result = NULL;
+		memset(&hints, 0, sizeof(struct addrinfo));
+		hints.ai_family = PF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		rc = getaddrinfo(url_get_host(url), NULL, &hints, &result);
+		if (rc != 0) {
+			errorf("getaddrinfo failed for: %s", url_get_host(url));
+			goto bail;
+		}
+		for (res = result; res; res = res->ai_next) {
+			if (res->ai_family != AF_INET) {
+				continue;
+			}
+			if (inet_ntop(AF_INET, &(((struct sockaddr_in *) res->ai_addr)->sin_addr), address, sizeof(address)) == NULL) {
+				port = 0;
+				address[0] = '\0';
+				continue;
+			}
+			break;
+		}
+		freeaddrinfo(result);
+	}
+
+	if (strlen(address) == 0) {
+		errorf("can not resolve host: %s", url_get_host(url));
+		goto bail;
+	}
+	scheme = (url_get_scheme(url) == NULL) ? "http" : url_get_scheme(url);
+	port = (url_get_port(url) == 0) ? 80 : url_get_port(url);
+	path = (url_get_path(url) == NULL || strlen(url_get_path(url)) == 0) ? "" : url_get_path(url);
+
 	fprintf(stdout, "\n");
-	fprintf(stdout, "benchmarking %s ...\n", url_get_uri(url));
+	fprintf(stdout, "benchmarking %s://%s:%d/%s ...\n",
+			scheme,
+			address,
+			port,
+			path);
 
 	request = buffer_create();
 	if (request == NULL) {
@@ -988,9 +1005,9 @@ int main (int argc, char *argv[])
 			"User-Agent: %s\r\n"
 			"Accept: */*\r\n"
 			"\r\n",
-			url_get_path(url),
+			path,
 			(options.keepalive) ? "Connection: Keep-Alive\r\n" : "",
-			url_get_host(url),
+			address,
 			"medusa-server-benchmark");
 	if (rc != 0) {
 		errorf("can not build request");
@@ -1135,9 +1152,9 @@ int main (int argc, char *argv[])
 							goto bail;
 						}
 					} else {
-						rc = client_connect(client, url_get_host(url), url_get_port(url));
+						rc = client_connect(client, address, port);
 						if (rc != 0) {
-							errorf("can not connect client: %p to %s:%d", client, url_get_host(url), url_get_port(url));
+							errorf("can not connect client: %p to %s:%d", client, address, port);
 							client_set_state(client, client_state_disconnecting);
 							goto bail;
 						}
