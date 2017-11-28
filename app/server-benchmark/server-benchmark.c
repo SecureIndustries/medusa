@@ -728,12 +728,13 @@ static __attribute__ ((unused)) int client_connect (struct client *client, const
 	rc = connect(client->fd, (struct sockaddr *) &sin, sizeof(sin));
 	if (rc != 0) {
 		if (errno == EINPROGRESS) {
+			rc = 0;
 		} else {
 			rc = -errno;
 			goto bail;
 		}
 	}
-	return 0;
+	return rc;
 bail:	if (client != NULL) {
 		if (client->fd >= 0) {
 			shutdown(client->fd, SHUT_RDWR);
@@ -741,7 +742,7 @@ bail:	if (client != NULL) {
 			client->fd = -1;
 		}
 	}
-	return -1;
+	return -EIO;
 }
 
 static __attribute__ ((unused)) int client_disconnect (struct client *client)
@@ -1154,7 +1155,7 @@ int main (int argc, char *argv[])
 					} else {
 						rc = client_connect(client, address, port);
 						if (rc != 0) {
-							errorf("can not connect client: %p to %s:%d", client, address, port);
+							errorf("can not connect client: %p to %s:%d, rc: %d, %s", client, address, port, rc, strerror(-rc));
 							client_set_state(client, client_state_disconnecting);
 							goto bail;
 						}
