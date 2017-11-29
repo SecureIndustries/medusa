@@ -107,6 +107,13 @@ struct buffer {
 	long long refcount;
 };
 
+TAILQ_HEAD(ports, port);
+struct port {
+	TAILQ_ENTRY(port) ports;
+	int port;
+	int error;
+};
+
 enum client_state {
 	client_state_unknown,
 	client_state_connecting,
@@ -125,6 +132,8 @@ struct client {
 	TAILQ_ENTRY(client) clients;
 	int fd;
 	enum client_state state;
+	struct port *port;
+	struct ports *ports;
 	long long requests;
 	long long request_offset;
 	unsigned long connect_timestamp;
@@ -638,6 +647,71 @@ bail:	if (buffer != NULL) {
 	return -1;
 }
 
+static __attribute__ ((unused)) int port_get_number (struct port *port)
+{
+	if (port == NULL) {
+		return -1;
+	}
+	return port->port;
+}
+
+static __attribute__ ((unused)) void port_destroy (struct port *port)
+{
+	if (port == NULL) {
+		return;
+	}
+	free(port);
+}
+
+static __attribute__ ((unused)) struct port * port_create (int number)
+{
+	struct port *port;
+	port = malloc(sizeof(struct port));
+	if (port == NULL) {
+		errorf("can not allocate memory");
+		goto bail;
+	}
+	memset(port, 0, sizeof(struct port));
+	port->port = number;
+	return port;
+bail:	if (port != NULL) {
+		port_destroy(port);
+	}
+	return NULL;
+}
+
+static __attribute__ ((unused)) struct port * ports_pop (struct ports *ports)
+{
+	struct port *port;
+	struct port *nport;
+	if (ports == NULL) {
+		return NULL;
+	}
+	if (TAILQ_EMPTY(ports)) {
+		return NULL;
+	}
+	TAILQ_FOREACH_SAFE(port, ports, ports, nport) {
+		if (port->error >= 1) {
+			continue;
+		}
+		TAILQ_REMOVE(ports, port, ports);
+		return port;
+	}
+	return NULL;
+}
+
+static __attribute__ ((unused)) int ports_push (struct ports *ports, struct port *port)
+{
+	if (ports == NULL) {
+		return -1;
+	}
+	if (port == NULL) {
+		return -1;
+	}
+	TAILQ_INSERT_TAIL(ports, port, ports);
+	return 0;
+}
+
 static __attribute__ ((unused)) unsigned long client_get_connect_timestamp (struct client *client)
 {
 	if (client == NULL) {
@@ -733,6 +807,22 @@ static __attribute__ ((unused)) int client_set_state (struct client *client, enu
 	return 0;
 }
 
+static __attribute__ ((unused)) int client_disconnect (struct client *client)
+{
+	if (client == NULL) {
+		return -1;
+	}
+	if (client->fd >= 0) {
+		shutdown(client->fd, SHUT_RDWR);
+		close(client->fd);
+		client->fd = -1;
+	}
+	if (client->port != NULL) {
+		ports_push(client->ports, client->port);
+	}
+	return 0;
+}
+
 static __attribute__ ((unused)) int client_connect (struct client *client, const char *address, int port)
 {
 	int rc;
@@ -754,11 +844,7 @@ static __attribute__ ((unused)) int client_connect (struct client *client, const
 		rc = -EIO;
 		goto bail;
 	}
-	if (client->fd >= 0) {
-		shutdown(client->fd, SHUT_RDWR);
-		close(client->fd);
-		client->fd = -1;
-	}
+	client_disconnect(client);
 	client->fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (client->fd < 0) {
 		errorf("can not open socket");
@@ -778,6 +864,38 @@ static __attribute__ ((unused)) int client_connect (struct client *client, const
 		rc = -EIO;
 		goto bail;
 	}
+	{
+		int opt = 1;
+		struct port *lport;
+		struct sockaddr_in laddr;
+		memset(&laddr, 0, sizeof(laddr));
+		laddr.sin_family = AF_INET;
+		laddr.sin_addr.s_addr = htonl(INADDR_ANY);
+		while (1) {
+			lport = ports_pop(client->ports);
+			if (lport == NULL) {
+				errorf("can not get local port");
+				rc = -EIO;
+				goto bail;
+			}
+			laddr.sin_port = htons(port_get_number(lport));
+			rc = setsockopt(client->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+			if (rc < 0) {
+				errorf("setsockopt reuseport failed");
+				goto bail;
+			}
+			rc = bind(client->fd, (struct sockaddr*) &laddr, sizeof(laddr));
+			if (rc != 0) {
+				errorf("can not bind to port: %d, error: %d, %s", port_get_number(lport), errno, strerror(errno));
+				lport->error += 1;
+				ports_push(client->ports, lport);
+				continue;
+			}
+			lport->error = 0;
+			break;
+		}
+		client->port = lport;
+	}
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
 	inet_pton(AF_INET, address, &sin.sin_addr);
@@ -794,25 +912,10 @@ static __attribute__ ((unused)) int client_connect (struct client *client, const
 	return rc;
 bail:	if (client != NULL) {
 		if (client->fd >= 0) {
-			shutdown(client->fd, SHUT_RDWR);
-			close(client->fd);
-			client->fd = -1;
+			client_disconnect(client);
 		}
 	}
 	return rc;
-}
-
-static __attribute__ ((unused)) int client_disconnect (struct client *client)
-{
-	if (client == NULL) {
-		return -1;
-	}
-	if (client->fd >= 0) {
-		shutdown(client->fd, SHUT_RDWR);
-		close(client->fd);
-		client->fd = -1;
-	}
-	return 0;
 }
 
 static __attribute__ ((unused)) void client_reset (struct client *client)
@@ -831,15 +934,12 @@ static __attribute__ ((unused)) void client_destroy (struct client *client)
 	if (client == NULL) {
 		return;
 	}
-	if (client->fd >= 0) {
-		shutdown(client->fd, SHUT_RDWR);
-		close(client->fd);
-	}
+	client_disconnect(client);
 	buffer_uninit(&client->incoming);
 	free(client);
 }
 
-static __attribute__ ((unused)) struct client * client_create (void)
+static __attribute__ ((unused)) struct client * client_create (struct ports *ports)
 {
 	struct client *client;
 	client = malloc(sizeof(struct client));
@@ -849,6 +949,7 @@ static __attribute__ ((unused)) struct client * client_create (void)
 	}
 	memset(client, 0, sizeof(struct client));
 	client->fd = -1;
+	client->ports = ports;
 	client->state = client_state_disconnected;
 	client->http_parser.data = client;
 	http_parser_init(&client->http_parser, HTTP_RESPONSE);
@@ -915,11 +1016,15 @@ int main (int argc, char *argv[])
 	struct url *url;
 	struct buffer *request;
 
-	const char *scheme;
-	char address[INET_ADDRSTRLEN];
-	int port;
-	const char *path;
+	const char *url_scheme;
+	char url_address[INET_ADDRSTRLEN];
+	int url_port;
+	const char *url_path;
 
+	int p;
+	struct port *port;
+	struct port *nport;
+	struct ports ports;
 	int port_range_min;
 	int port_range_max;
 
@@ -945,6 +1050,10 @@ int main (int argc, char *argv[])
 
 	efd = -1;
 	events = NULL;
+
+	TAILQ_INIT(&ports);
+	port_range_min = 0;
+	port_range_max = 0;
 
 	nclients = 0;
 	TAILQ_INIT(&clients);
@@ -998,6 +1107,14 @@ int main (int argc, char *argv[])
 		errorf("echo \"MIN MAX\" > /proc/sys/net/ipv4/ip_local_port_range");
 		goto bail;
 	}
+	for (p = port_range_min; p < port_range_max; p++) {
+		port = port_create(p);
+		if (port == NULL) {
+			errorf("can not create port");
+			goto bail;
+		}
+		TAILQ_INSERT_TAIL(&ports, port, ports);
+	}
 
 	fprintf(stdout, "medusa server benchmark\n");
 	fprintf(stdout, "\n");
@@ -1023,8 +1140,8 @@ int main (int argc, char *argv[])
 		errorf("url is invalid");
 		goto bail;
 	}
-	port = 0;
-	address[0] = '\0';
+	url_port = 0;
+	url_address[0] = '\0';
 	{
 		int rc;
 		struct addrinfo hints;
@@ -1043,9 +1160,9 @@ int main (int argc, char *argv[])
 			if (res->ai_family != AF_INET) {
 				continue;
 			}
-			if (inet_ntop(AF_INET, &(((struct sockaddr_in *) res->ai_addr)->sin_addr), address, sizeof(address)) == NULL) {
-				port = 0;
-				address[0] = '\0';
+			if (inet_ntop(AF_INET, &(((struct sockaddr_in *) res->ai_addr)->sin_addr), url_address, sizeof(url_address)) == NULL) {
+				url_port = 0;
+				url_address[0] = '\0';
 				continue;
 			}
 			break;
@@ -1053,20 +1170,20 @@ int main (int argc, char *argv[])
 		freeaddrinfo(result);
 	}
 
-	if (strlen(address) == 0) {
+	if (strlen(url_address) == 0) {
 		errorf("can not resolve host: %s", url_get_host(url));
 		goto bail;
 	}
-	scheme = (url_get_scheme(url) == NULL) ? "http" : url_get_scheme(url);
-	port = (url_get_port(url) == 0) ? 80 : url_get_port(url);
-	path = (url_get_path(url) == NULL || strlen(url_get_path(url)) == 0) ? "" : url_get_path(url);
+	url_scheme = (url_get_scheme(url) == NULL) ? "http" : url_get_scheme(url);
+	url_port = (url_get_port(url) == 0) ? 80 : url_get_port(url);
+	url_path = (url_get_path(url) == NULL || strlen(url_get_path(url)) == 0) ? "" : url_get_path(url);
 
 	fprintf(stdout, "\n");
 	fprintf(stdout, "benchmarking %s://%s:%d/%s ...\n",
-			scheme,
-			address,
-			port,
-			path);
+			url_scheme,
+			url_address,
+			url_port,
+			url_path);
 
 	request = buffer_create();
 	if (request == NULL) {
@@ -1080,9 +1197,9 @@ int main (int argc, char *argv[])
 			"User-Agent: %s\r\n"
 			"Accept: */*\r\n"
 			"\r\n",
-			path,
+			url_path,
 			(options.keepalive) ? "Connection: Keep-Alive\r\n" : "",
-			address,
+			url_address,
 			"medusa-server-benchmark");
 	if (rc != 0) {
 		errorf("can not build request");
@@ -1096,7 +1213,7 @@ int main (int argc, char *argv[])
 	}
 
 	for (i = 0; i < options.concurrency; i++) {
-		client = client_create();
+		client = client_create(&ports);
 		if (client == NULL) {
 			errorf("can not create client");
 			goto bail;
@@ -1227,9 +1344,9 @@ int main (int argc, char *argv[])
 							goto bail;
 						}
 					} else {
-						rc = client_connect(client, address, port);
+						rc = client_connect(client, url_address, url_port);
 						if (rc != 0) {
-							errorf("can not connect client: %p to %s:%d, rc: %d, %s", client, address, port, rc, strerror(-rc));
+							errorf("can not connect client: %p to %s:%d, rc: %d, %s", client, url_address, url_port, rc, strerror(-rc));
 							client_set_state(client, client_state_disconnecting);
 							goto bail;
 						}
@@ -1364,6 +1481,10 @@ int main (int argc, char *argv[])
 out:	TAILQ_FOREACH_SAFE(client, &clients, clients, nclient) {
 		TAILQ_REMOVE(&clients, client, clients);
 		client_destroy(client);
+	}
+	TAILQ_FOREACH_SAFE(port, &ports, ports, nport) {
+		TAILQ_REMOVE(&ports, port, ports);
+		port_destroy(port);
 	}
 	if (url != NULL) {
 		url_destroy(url);
