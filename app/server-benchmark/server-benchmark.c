@@ -69,15 +69,15 @@ static void usage (const char *pname)
 	fprintf(stdout, "  -t, --timelimit  : milliseconds to max. to spend on benchmarking (default: %d)\n", OPTIONS_DEFAULT_TIMELIMIT);
 	fprintf(stdout, "  -s, --timeout    : milliseconds to max. wait for each response (default: %d)\n", OPTIONS_DEFAULT_TIMEOUT);
 	fprintf(stdout, "  -k, --keepalive  : use http keepalive feature (default: %d)\n", OPTIONS_DEFAULT_KEEPALIVE);
-	fprintf(stdout, "  -i, --interval   : milliseconds interval between requests (default: %d)\n", OPTION_INTERVAL);
-	fprintf(stdout, "  -v, --verbose    : set verbose level (default: %d)\n", OPTION_VERBOSE);
+	fprintf(stdout, "  -i, --interval   : milliseconds interval between requests (default: %d)\n", OPTIONS_DEFAULT_INTERVAL);
+	fprintf(stdout, "  -v, --verbose    : set verbose level (default: %d)\n", OPTIONS_DEFAULT_VERBOSE);
 	fprintf(stdout, "  -h, --help       : this text\n");
 	fprintf(stdout, "\n");
 	fprintf(stdout, "tuning:\n");
 	fprintf(stdout, "  change local port range:\n");
 	fprintf(stdout, "    echo \"MIN MAX\" > /proc/sys/net/ipv4/ip_local_port_range\n");
 	fprintf(stdout, "  allow tcp timewait ports to be used\n");
-	fprintf(stdout, "    echo \"1\" >  /proc/sys/net/ipv4/tcp_tw_reuse\n");
+	fprintf(stdout, "    echo \"1\" > /proc/sys/net/ipv4/tcp_tw_reuse\n");
 }
 
 struct options {
@@ -1291,12 +1291,17 @@ int main (int argc, char *argv[])
 				read_rc = read(client_get_fd(client),
 					       buffer_get_base(&client->incoming) + buffer_get_length(&client->incoming),
 					       buffer_get_size(&client->incoming) - buffer_get_length(&client->incoming));
-				if (read_rc <= 0) {
+				if (read_rc == 0) {
+					errorf("connection reset by server");
+					client_set_state(client, client_state_disconnecting);
+					client_disconnect(client);
+					continue;
+				} else if (read_rc < 0) {
 					if (errno == EINTR) {
 					} else if (errno == EAGAIN) {
 					} else if (errno == EWOULDBLOCK) {
 					} else {
-						errorf("connection reset by server, rc: %d, errno: %d, %s", rc, errno, strerror(errno));
+						errorf("connection reset by server, rc: %d, error: %d, %s", rc, errno, strerror(errno));
 						client_set_state(client, client_state_disconnecting);
 						client_disconnect(client);
 						continue;
@@ -1322,12 +1327,15 @@ int main (int argc, char *argv[])
 					write_rc = write(client_get_fd(client),
 							buffer_get_base(request) + client_get_request_offset(client),
 							buffer_get_length(request) - client_get_request_offset(client));
-					if (write_rc <= 0) {
+					if (write_rc == 0) {
+						errorf("can not write to client: %p", client);
+						goto bail;
+					} else if (write_rc < 0) {
 						if (errno == EINTR) {
 						} else if (errno == EAGAIN) {
 						} else if (errno == EWOULDBLOCK) {
 						} else {
-							errorf("can not write client: %p request: %d, %s", client, errno, strerror(errno));
+							errorf("can not write client: %p error: %d, %s", client, errno, strerror(errno));
 							goto bail;
 						}
 					} else {
