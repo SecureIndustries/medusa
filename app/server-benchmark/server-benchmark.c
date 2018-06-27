@@ -66,7 +66,7 @@ static void usage (const char *pname)
 	fprintf(stdout, "options:\n");
 	fprintf(stdout, "  -n, --requests   : number of requests to perform (default: %d)\n", OPTIONS_DEFAULT_REQUESTS);
 	fprintf(stdout, "  -c, --concurrency: number of multiple requests to make at a time (default: %d)\n", OPTIONS_DEFAULT_CONCURRENCY);
-	fprintf(stdout, "  -t, --timelimit  : milliseconds to max. to spend on benchmarking (default: %d)\n", OPTIONS_DEFAULT_TIMELIMIT);
+	fprintf(stdout, "  -t, --timelimit  : milliseconds to spend on benchmarking (default: %d)\n", OPTIONS_DEFAULT_TIMELIMIT);
 	fprintf(stdout, "  -s, --timeout    : milliseconds to max. wait for each response (default: %d)\n", OPTIONS_DEFAULT_TIMEOUT);
 	fprintf(stdout, "  -k, --keepalive  : use http keepalive feature (default: %d)\n", OPTIONS_DEFAULT_KEEPALIVE);
 	fprintf(stdout, "  -i, --interval   : milliseconds interval between requests (default: %d)\n", OPTIONS_DEFAULT_INTERVAL);
