@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <sys/queue.h>
+#include "queue.h"
 
 #include "subject.h"
 #include "monitor.h"
@@ -18,9 +18,10 @@
 
 struct medusa_monitor {
 	struct medusa_subjects subjects;
+	struct medusa_monitor_backend *backend;
 };
 
-struct medusa_monitor * medusa_monitor_create (struct medusa_monitor_create_options *options)
+struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_options *options)
 {
 	struct medusa_monitor *monitor;
 	(void) options;
@@ -40,8 +41,17 @@ bail:	if (monitor != NULL) {
 
 void medusa_monitor_destroy (struct medusa_monitor *monitor)
 {
+	struct medusa_subject *subject;
+	struct medusa_subject *nsubject;
 	if (monitor == NULL) {
 		return;
+	}
+	TAILQ_FOREACH_SAFE(subject, &monitor->subjects, subjects, nsubject) {
+		TAILQ_REMOVE(&monitor->subjects, subject, subjects);
+		medusa_subject_destroy(subject);
+	}
+	if (monitor->backend != NULL) {
+		monitor->backend->destroy(monitor->backend);
 	}
 	free(monitor);
 }
