@@ -2,6 +2,7 @@
 struct medusa_monitor;
 
 enum {
+	medusa_monitor_backend_default,
 	medusa_monitor_backend_epoll,
 	medusa_monitor_backend_kqueue,
 	medusa_monitor_backend_poll,
