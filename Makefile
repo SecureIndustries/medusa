@@ -12,5 +12,5 @@ test_depends-y = \
 
 include Makefile.lib
 
-tests: test
+tests: all
 	@${Q}+${MAKE} -C test tests
