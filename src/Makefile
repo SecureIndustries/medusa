@@ -32,4 +32,15 @@ libmedusa-monitor.so_files-y = \
 	monitor-select.c \
 	subject.c
 
+dist.dir = ../dist
+dist.base = medusa
+
+dist.include-y = \
+	monitor.h \
+	subject.h
+
+dist.lib-y = \
+	libmedusa-monitor.a \
+	libmedusa-monitor.so
+
 include ../Makefile.lib
