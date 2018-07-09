@@ -5,6 +5,8 @@ struct medusa_subject_io {
 
 struct medusa_subject_timer {
         struct medusa_timerspec timerspec;
+        struct medusa_timespec timespec;
+        unsigned int position;
 };
 
 struct medusa_subject_signal {

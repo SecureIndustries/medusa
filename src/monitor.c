@@ -5,8 +5,10 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/time.h>
 
 #include "queue.h"
+#include "pqueue.h"
 
 #include "time.h"
 #include "event.h"
@@ -29,6 +31,7 @@ struct medusa_monitor {
         struct medusa_poll_backend *poll;
         struct medusa_timer_backend *timer;
         struct medusa_subjects subjects;
+        struct pqueue_head timer_pq;
         int break_fds[2];
 };
 
@@ -90,6 +93,25 @@ static int monitor_timer_subject_callback (struct medusa_subject *subject, unsig
 bail:   return -1;
 }
 
+static int monitor_timer_subject_compare (void *a, void *b)
+{
+        struct medusa_subject *sa = a;
+        struct medusa_subject *sb = b;
+        if (medusa_timespec_compare(&sa->u.timer.timespec, &sb->u.timer.timespec, <)) {
+                return -1;
+        }
+        if (medusa_timespec_compare(&sa->u.timer.timespec, &sb->u.timer.timespec, >)) {
+                return 1;
+        }
+        return 0;
+}
+
+static void monitor_timer_subject_position (void *entry, unsigned int position)
+{
+        struct medusa_subject *subject = entry;
+        subject->u.timer.position = position;
+}
+
 int medusa_monitor_init_options_default (struct medusa_monitor_init_options *options)
 {
         if (options == NULL) {
@@ -112,6 +134,7 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
         }
         memset(monitor, 0, sizeof(struct medusa_monitor));
         TAILQ_INIT(&monitor->subjects);
+        pqueue_init(&monitor->timer_pq, 0, 64, monitor_timer_subject_compare, monitor_timer_subject_position);
         monitor->running = 1;
         monitor->break_fds[0] = -1;
         monitor->break_fds[1] = -1;
@@ -240,6 +263,7 @@ void medusa_monitor_destroy (struct medusa_monitor *monitor)
         if (monitor->break_fds[1] >= 0) {
                 close(monitor->break_fds[1]);
         }
+        pqueue_uninit(&monitor->timer_pq);
         free(monitor);
 }
 
