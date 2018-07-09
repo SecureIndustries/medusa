@@ -6,8 +6,12 @@
 
 static const unsigned int backends[] = {
         medusa_monitor_backend_default,
+#if defined(__LINUX__)
         medusa_monitor_backend_epoll,
+#endif
+#if defined(__APPLE__)
         medusa_monitor_backend_kqueue,
+#endif
         medusa_monitor_backend_poll,
         medusa_monitor_backend_select
 };

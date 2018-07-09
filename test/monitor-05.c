@@ -12,18 +12,19 @@
 
 static const unsigned int g_backends[] = {
         medusa_monitor_backend_default,
+#if defined(__LINUX__)
         medusa_monitor_backend_epoll,
+#endif
+#if defined(__APPLE__)
         medusa_monitor_backend_kqueue,
+#endif
         medusa_monitor_backend_poll,
         medusa_monitor_backend_select
 };
 
-static int subject_callback (void *context, struct medusa_monitor *monitor, struct medusa_subject *subject, unsigned int events)
+static int subject_callback (void *context, struct medusa_subject *subject, unsigned int events)
 {
         if (context != NULL) {
-                goto bail;
-        }
-        if (monitor == NULL) {
                 goto bail;
         }
         if (subject == NULL) {

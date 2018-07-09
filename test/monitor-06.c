@@ -23,19 +23,15 @@ static const unsigned int g_backends[] = {
 #if defined(__APPLE__)
         medusa_monitor_backend_kqueue,
 #endif
-//        medusa_monitor_backend_poll,
+        medusa_monitor_backend_poll,
 //        medusa_monitor_backend_select
 };
 
-static int subject_callback (void *context, struct medusa_monitor *monitor, struct medusa_subject *subject, unsigned int events)
+static int subject_callback (void *context, struct medusa_subject *subject, unsigned int events)
 {
         int rc;
         if (context == NULL) {
                 fprintf(stderr, "context is invalid\n");
-                goto bail;
-        }
-        if (monitor == NULL) {
-                fprintf(stderr, "monitor is invalid\n");
                 goto bail;
         }
         if (subject == NULL) {

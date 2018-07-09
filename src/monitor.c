@@ -152,6 +152,7 @@ int medusa_monitor_add (struct medusa_monitor *monitor, struct medusa_subject *s
                 goto bail;
         }
         TAILQ_INSERT_TAIL(&monitor->subjects, subject, subjects);
+        subject->private.monitor = monitor;
         return 0;
 bail:   return -1;
 }
@@ -199,6 +200,7 @@ int medusa_monitor_del (struct medusa_monitor *monitor, struct medusa_subject *s
         if (rc != 0) {
                 goto bail;
         }
+        subject->private.monitor = NULL;
         TAILQ_REMOVE(&monitor->subjects, subject, subjects);
         medusa_subject_destroy(subject);
         return 0;
