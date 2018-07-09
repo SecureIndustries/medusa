@@ -15,7 +15,6 @@ int medusa_subject_retain (struct medusa_subject *subject)
                 goto bail;
         }
         subject->refcount += 1;
-        fprintf(stderr, "subject: %p, refcount: %lld\n", subject, subject->refcount);
         return 0;
 bail:   return -1;
 }
@@ -117,7 +116,6 @@ void medusa_subject_destroy (struct medusa_subject *subject)
         if (subject == NULL) {
                 return;
         }
-        fprintf(stderr, "subject: %p, refcount: %lld\n", subject, subject->refcount);
         if (--subject->refcount > 0) {
                 return;
         }
