@@ -57,6 +57,18 @@ static int private_del (struct medusa_monitor_backend *backend, struct medusa_su
 bail:   return -1;
 }
 
+static int private_run (struct medusa_monitor_backend *backend, struct medusa_timespec *timespec)
+{
+        struct private *private = (struct private *) backend;
+        if (private == NULL) {
+                goto bail;
+        }
+        (void) timespec;
+        return -1;
+        return 0;
+bail:   return -1;
+}
+
 static void private_destroy (struct medusa_monitor_backend *backend)
 {
         struct private *private = (struct private *) backend;
@@ -79,6 +91,7 @@ struct medusa_monitor_backend * medusa_monitor_poll_create (const struct medusa_
         private->backend.add     = private_add;
         private->backend.mod     = private_mod;
         private->backend.del     = private_del;
+        private->backend.run     = private_run;
         private->backend.destroy = private_destroy;
         return &private->backend;
 bail:   if (private != NULL) {

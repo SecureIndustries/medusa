@@ -95,6 +95,7 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
         } else {
                 goto bail;
         }
+        monitor->backend->monitor = monitor;
         return monitor;
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);
@@ -110,6 +111,7 @@ void medusa_monitor_destroy (struct medusa_monitor *monitor)
                 return;
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->subjects, subjects, nsubject) {
+                monitor->backend->del(monitor->backend, subject);
                 TAILQ_REMOVE(&monitor->subjects, subject, subjects);
                 medusa_subject_destroy(subject);
         }
@@ -168,10 +170,15 @@ bail:   return -1;
 
 int medusa_monitor_del (struct medusa_monitor *monitor, struct medusa_subject *subject)
 {
+        int rc;
         if (monitor == NULL) {
                 goto bail;
         }
         if (subject == NULL) {
+                goto bail;
+        }
+        rc = monitor->backend->del(monitor->backend, subject);
+        if (rc != 0) {
                 goto bail;
         }
         TAILQ_REMOVE(&monitor->subjects, subject, subjects);
@@ -180,10 +187,36 @@ int medusa_monitor_del (struct medusa_monitor *monitor, struct medusa_subject *s
 bail:   return -1;
 }
 
-int medusa_monitor_run (struct medusa_monitor *monitor, unsigned int flags)
+int medusa_monitor_run (struct medusa_monitor *monitor, unsigned int flags, ...)
 {
+        int rc;
+        va_list ap;
+        struct medusa_timespec *timeout;
+        struct medusa_timespec timeout_nowait;
         if (monitor == NULL) {
                 goto bail;
+        }
+        timeout = NULL;
+        timeout_nowait.seconds = 0;
+        timeout_nowait.nanoseconds = 0;
+        va_start(ap, flags);
+        if (flags & medusa_monitor_run_timeout) {
+                timeout = va_arg(ap, struct medusa_timespec *);
+        }
+        va_end(ap);
+
+        if (flags & medusa_monitor_run_nowait) {
+                timeout = &timeout_nowait;
+        }
+
+        while (1) {
+                rc = monitor->backend->run(monitor->backend, timeout);
+                if (rc != 0) {
+                        goto bail;
+                }
+                if (flags & medusa_monitor_run_once) {
+                        break;
+                }
         }
         (void) flags;
         return 0;

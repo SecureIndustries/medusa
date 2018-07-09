@@ -36,6 +36,7 @@ dist.dir = ../dist
 dist.base = medusa
 
 dist.include-y = \
+	event.h \
 	monitor.h \
 	queue.h \
 	subject.h \
