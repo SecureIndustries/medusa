@@ -21,7 +21,7 @@ struct medusa_subject {
                 struct medusa_subject_signal signal;
         } u;
         struct {
-                int (*function) (void *context, struct medusa_subject *subject, unsigned int events);
+                int (*function) (struct medusa_subject *subject, unsigned int events);
                 void *context;
         } callback;
         struct {

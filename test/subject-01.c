@@ -4,9 +4,8 @@
 #include "medusa/time.h"
 #include "medusa/subject.h"
 
-static int callback (void *context, struct medusa_subject *subject, unsigned int events)
+static int callback (struct medusa_subject *subject, unsigned int events)
 {
-        (void) context;
         (void) subject;
         (void) events;
         return 0;

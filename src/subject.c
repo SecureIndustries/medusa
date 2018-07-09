@@ -82,7 +82,7 @@ bail:   if (subject != NULL) {
         return -1;
 }
 
-int medusa_subject_init_io (struct medusa_subject *subject, int fd, int (*callback) (void *context, struct medusa_subject *subject, unsigned int events), void *context)
+int medusa_subject_init_io (struct medusa_subject *subject, int fd, int (*callback) (struct medusa_subject *subject, unsigned int events), void *context)
 {
         struct medusa_subject_init_options options;
         options.type = medusa_subject_type_io;
@@ -92,7 +92,7 @@ int medusa_subject_init_io (struct medusa_subject *subject, int fd, int (*callba
         return medusa_subject_init(subject, &options);
 }
 
-int medusa_subject_init_timer (struct medusa_subject *subject, struct medusa_timerspec timerspec, int (*callback) (void *context, struct medusa_subject *subject, unsigned int events), void *context)
+int medusa_subject_init_timer (struct medusa_subject *subject, struct medusa_timerspec timerspec, int (*callback) (struct medusa_subject *subject, unsigned int events), void *context)
 {
         struct medusa_subject_init_options options;
         options.type = medusa_subject_type_timer;
@@ -102,7 +102,7 @@ int medusa_subject_init_timer (struct medusa_subject *subject, struct medusa_tim
         return medusa_subject_init(subject, &options);
 }
 
-int medusa_subject_init_signal (struct medusa_subject *subject, int number, int (*callback) (void *context, struct medusa_subject *subject, unsigned int events), void *context)
+int medusa_subject_init_signal (struct medusa_subject *subject, int number, int (*callback) (struct medusa_subject *subject, unsigned int events), void *context)
 {
         struct medusa_subject_init_options options;
         options.type = medusa_subject_type_signal;
@@ -121,7 +121,7 @@ void medusa_subject_destroy (struct medusa_subject *subject)
                 return;
         }
         if (subject->callback.function != NULL) {
-                subject->callback.function(subject->callback.context, subject, medusa_event_destroy);
+                subject->callback.function(subject, medusa_event_destroy);
         }
         free(subject);
 }
@@ -145,7 +145,7 @@ bail:   if (subject != NULL) {
         return NULL;
 }
 
-struct medusa_subject * medusa_subject_create_io (int fd, int (*callback) (void *context, struct medusa_subject *subject, unsigned int events), void *context)
+struct medusa_subject * medusa_subject_create_io (int fd, int (*callback) (struct medusa_subject *subject, unsigned int events), void *context)
 {
         struct medusa_subject_init_options options;
         options.type = medusa_subject_type_io;
@@ -155,7 +155,7 @@ struct medusa_subject * medusa_subject_create_io (int fd, int (*callback) (void 
         return medusa_subject_create(&options);
 }
 
-struct medusa_subject * medusa_subject_create_timer (struct medusa_timerspec timerspec, int (*callback) (void *context, struct medusa_subject *subject, unsigned int events), void *context)
+struct medusa_subject * medusa_subject_create_timer (struct medusa_timerspec timerspec, int (*callback) (struct medusa_subject *subject, unsigned int events), void *context)
 {
         struct medusa_subject_init_options options;
         options.type = medusa_subject_type_timer;
@@ -165,7 +165,7 @@ struct medusa_subject * medusa_subject_create_timer (struct medusa_timerspec tim
         return medusa_subject_create(&options);
 }
 
-struct medusa_subject * medusa_subject_create_signal (int number, int (*callback) (void *context, struct medusa_subject *subject, unsigned int events), void *context)
+struct medusa_subject * medusa_subject_create_signal (int number, int (*callback) (struct medusa_subject *subject, unsigned int events), void *context)
 {
         struct medusa_subject_init_options options;
         options.type = medusa_subject_type_signal;
@@ -184,7 +184,7 @@ unsigned int medusa_subject_get_type (const struct medusa_subject *subject)
 bail:   return 0;
 }
 
-int (*medusa_subject_get_callback_function (const struct medusa_subject *subject)) (void *context, struct medusa_subject *subject, unsigned int events)
+int (*medusa_subject_get_callback_function (const struct medusa_subject *subject)) (struct medusa_subject *subject, unsigned int events)
 {
         if (subject == NULL) {
                 goto bail;

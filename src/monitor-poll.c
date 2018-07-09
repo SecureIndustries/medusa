@@ -224,7 +224,7 @@ static int internal_run (struct medusa_monitor_backend *backend, struct medusa_t
                         events |= medusa_event_nval;
                 }
                 subject = internal->subjects[internal->pfds[i].fd];
-                rc = medusa_subject_get_callback_function(subject)(medusa_subject_get_callback_context(subject), subject, events);
+                rc = medusa_subject_get_callback_function(subject)(subject, events);
                 if (rc != 0) {
                         goto bail;
                 }
