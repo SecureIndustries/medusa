@@ -36,7 +36,11 @@ static const struct medusa_monitor_init_options g_init_options = {
         .poll = {
                 .type = medusa_monitor_poll_default,
                 .u    = { }
-        }
+        },
+        .timer = {
+                .type = medusa_monitor_timer_default,
+                .u    = { }
+        },
 };
 
 static int fd_set_blocking (int fd, int on)
@@ -63,6 +67,22 @@ static int monitor_break_subject_callback (struct medusa_subject *subject, unsig
                 monitor = medusa_subject_get_monitor(subject);
                 rc = read(monitor->break_fds[0], &monitor->running, sizeof(monitor->running));
                 if (rc != sizeof(monitor->running)) {
+                        goto bail;
+                }
+        }
+        return 0;
+bail:   return -1;
+}
+
+static int monitor_timer_subject_callback (struct medusa_subject *subject, unsigned int events)
+{
+        int rc;
+        int fd;
+        unsigned char value;
+        if (events & medusa_event_in) {
+                fd = medusa_subject_io_get_fd(subject);
+                rc = read(fd, &value, sizeof(value));
+                if (rc != sizeof(value)) {
                         goto bail;
                 }
         }
@@ -141,6 +161,22 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
                 goto bail;
         }
         monitor->poll->monitor = monitor;
+        if (options->timer.type == medusa_monitor_timer_default) {
+                do {
+                        monitor->timer = medusa_timer_timerfd_create(NULL);
+                        if (monitor->timer != NULL) {
+                                break;
+                        }
+                } while (0);
+        } else if (options->timer.type == medusa_monitor_timer_timerfd) {
+                monitor->timer = medusa_timer_timerfd_create(NULL);
+                if (monitor->timer == NULL) {
+                        goto bail;
+                }
+        } else {
+                goto bail;
+        }
+        monitor->timer->monitor = monitor;
         rc = pipe(monitor->break_fds);
         if (rc != 0) {
                 goto bail;
@@ -154,6 +190,16 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
                 goto bail;
         }
         subject = medusa_subject_create_io(monitor->break_fds[0], monitor_break_subject_callback, NULL);
+        if (subject == NULL) {
+                goto bail;
+        }
+        rc = medusa_monitor_add(monitor, subject, medusa_event_in);
+        if (rc != 0) {
+                medusa_subject_destroy(subject);
+                goto bail;
+        }
+        medusa_subject_destroy(subject);
+        subject = medusa_subject_create_io(monitor->timer->fd(monitor->timer), monitor_timer_subject_callback, NULL);
         if (subject == NULL) {
                 goto bail;
         }
@@ -184,6 +230,9 @@ void medusa_monitor_destroy (struct medusa_monitor *monitor)
         }
         if (monitor->poll != NULL) {
                 monitor->poll->destroy(monitor->poll);
+        }
+        if (monitor->timer != NULL) {
+                monitor->timer->destroy(monitor->timer);
         }
         if (monitor->break_fds[0] >= 0) {
                 close(monitor->break_fds[0]);

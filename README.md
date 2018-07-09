@@ -16,7 +16,7 @@ medusa
 or
 
     git clone https://github.com/SecureIndustries/medusa.git
-    cd mbus
+    cd medusa
     git submodule update --init --recursive
 
 ## 3. build ##
@@ -24,11 +24,10 @@ or
     apt install gcc
     apt install make
     apt install pkg-config
-    apt install libssl-dev
-    apt install libreadline-dev
 
     cd medusa
     make
+    make tests
 
 ## 4. benchmark
 

@@ -16,6 +16,13 @@ enum {
 };
 
 enum {
+        medusa_monitor_timer_default,
+        medusa_monitor_timer_timerfd,
+#define medusa_monitor_timer_default    medusa_monitor_timer_default
+#define medusa_monitor_timer_timerfd    medusa_monitor_timer_timerfd
+};
+
+enum {
         medusa_monitor_run_once         = 0x00000001,
         medusa_monitor_run_nowait       = 0x00000002,
         medusa_monitor_run_timeout      = 0x00000004
@@ -43,7 +50,12 @@ struct medusa_monitor_init_options {
                 } u;
         } poll;
         struct {
+                unsigned int type;
+                union {
+                        struct {
 
+                        } timerfd;
+                } u;
         } timer;
 };
 
