@@ -120,7 +120,9 @@ void medusa_subject_destroy (struct medusa_subject *subject)
         if (--subject->refcount > 0) {
                 return;
         }
-        subject->callback.function(subject->callback.context, NULL, subject, medusa_event_destroy);
+        if (subject->callback.function != NULL) {
+                subject->callback.function(subject->callback.context, NULL, subject, medusa_event_destroy);
+        }
         free(subject);
 }
 
