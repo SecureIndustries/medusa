@@ -158,10 +158,28 @@ bail:   return -1;
 
 int medusa_monitor_mod (struct medusa_monitor *monitor, struct medusa_subject *subject, ...)
 {
+        int rc;
+        unsigned int events;
         if (monitor == NULL) {
                 goto bail;
         }
         if (subject == NULL) {
+                goto bail;
+        }
+        if (medusa_subject_get_type(subject) == medusa_subject_type_io) {
+                va_list ap;
+                va_start(ap, subject);
+                events = va_arg(ap, unsigned int);
+                va_end(ap);
+                rc = monitor->backend->mod(monitor->backend, subject, events);
+                if (rc != 0) {
+                        goto bail;
+                }
+        } else if (medusa_subject_get_type(subject) == medusa_subject_type_timer) {
+                events = medusa_event_in;
+        } else if (medusa_subject_get_type(subject) == medusa_subject_type_signal) {
+                events = 0;
+        } else {
                 goto bail;
         }
         return 0;

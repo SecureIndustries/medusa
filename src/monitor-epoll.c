@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <sys/epoll.h>
 
@@ -67,6 +68,9 @@ bail:   return -1;
 
 static int private_mod (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
 {
+        int rc;
+        int fd;
+        struct epoll_event ev;
         struct private *private = (struct private *) backend;
         if (private == NULL) {
                 goto bail;
@@ -74,10 +78,32 @@ static int private_mod (struct medusa_monitor_backend *backend, struct medusa_su
         if (subject == NULL) {
                 goto bail;
         }
+        if (medusa_subject_get_type(subject) != medusa_subject_type_io) {
+                goto bail;
+        }
+        fd = medusa_subject_io_get_fd(subject);
+        if (fd < 0) {
+                goto bail;
+        }
         if (events == 0) {
                 goto bail;
         }
-        return -1;
+        ev.events = 0;
+        if (events & medusa_event_in) {
+                ev.events |= EPOLLIN;
+        }
+        if (events & medusa_event_out) {
+                ev.events |= EPOLLOUT;
+        }
+        if (events & medusa_event_pri) {
+                ev.events |= EPOLLPRI;
+        }
+        ev.data.ptr = subject;
+        rc = epoll_ctl(private->fd, EPOLL_CTL_MOD, fd, &ev);
+        if (rc != 0) {
+                fprintf(stderr, "errno: %d, %s", errno, strerror(errno));
+                goto bail;
+        }
         return 0;
 bail:   return -1;
 }
