@@ -10,16 +10,16 @@
 #include "medusa/subject.h"
 #include "medusa/monitor.h"
 
-static const unsigned int g_backends[] = {
-        medusa_monitor_backend_default,
+static const unsigned int g_polls[] = {
+        medusa_monitor_poll_default,
 #if defined(__LINUX__)
-        medusa_monitor_backend_epoll,
+        medusa_monitor_poll_epoll,
 #endif
 #if defined(__APPLE__)
-        medusa_monitor_backend_kqueue,
+        medusa_monitor_poll_kqueue,
 #endif
-        medusa_monitor_backend_poll,
-        medusa_monitor_backend_select
+        medusa_monitor_poll_poll,
+        medusa_monitor_poll_select
 };
 
 static int subject_callback (struct medusa_subject *subject, unsigned int events)
@@ -34,7 +34,7 @@ static int subject_callback (struct medusa_subject *subject, unsigned int events
 bail:   return -1;
 }
 
-static int test_backend (unsigned int backend)
+static int test_poll (unsigned int poll)
 {
         int rc;
 
@@ -46,7 +46,7 @@ static int test_backend (unsigned int backend)
         monitor = NULL;
 
         memset(&options, 0, sizeof(struct medusa_monitor_init_options));
-        options.backend.type = backend;
+        options.poll.type = poll;
 
         monitor = medusa_monitor_create(&options);
         if (monitor == NULL) {
@@ -110,8 +110,8 @@ int main (int argc, char *argv[])
         unsigned int i;
         (void) argc;
         (void) argv;
-        for (i = 0; i < sizeof(g_backends) / sizeof(g_backends[0]); i++) {
-                rc = test_backend(g_backends[i]);
+        for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
+                rc = test_poll(g_polls[i]);
                 if (rc != 0) {
                         return -1;
                 }

@@ -15,13 +15,13 @@
 #include "poll-epoll.h"
 
 struct internal {
-        struct medusa_monitor_backend backend;
+        struct medusa_poll_backend backend;
         int fd;
         int maxevents;
         struct epoll_event *events;
 };
 
-static int internal_add (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
+static int internal_add (struct medusa_poll_backend *backend, struct medusa_subject *subject, unsigned int events)
 {
         int rc;
         int fd;
@@ -66,7 +66,7 @@ static int internal_add (struct medusa_monitor_backend *backend, struct medusa_s
 bail:   return -1;
 }
 
-static int internal_mod (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
+static int internal_mod (struct medusa_poll_backend *backend, struct medusa_subject *subject, unsigned int events)
 {
         int rc;
         int fd;
@@ -108,7 +108,7 @@ static int internal_mod (struct medusa_monitor_backend *backend, struct medusa_s
 bail:   return -1;
 }
 
-static int internal_del (struct medusa_monitor_backend *backend, struct medusa_subject *subject)
+static int internal_del (struct medusa_poll_backend *backend, struct medusa_subject *subject)
 {
         int rc;
         int fd;
@@ -138,7 +138,7 @@ static int internal_del (struct medusa_monitor_backend *backend, struct medusa_s
 bail:   return -1;
 }
 
-static int internal_run (struct medusa_monitor_backend *backend, struct medusa_timespec *timespec)
+static int internal_run (struct medusa_poll_backend *backend, struct medusa_timespec *timespec)
 {
         int i;
         int rc;
@@ -200,7 +200,7 @@ out:    return 0;
 bail:   return -1;
 }
 
-static void internal_destroy (struct medusa_monitor_backend *backend)
+static void internal_destroy (struct medusa_poll_backend *backend)
 {
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
@@ -215,7 +215,7 @@ static void internal_destroy (struct medusa_monitor_backend *backend)
         free(internal);
 }
 
-struct medusa_monitor_backend * medusa_monitor_epoll_create (const struct medusa_monitor_epoll_init_options *options)
+struct medusa_poll_backend * medusa_monitor_epoll_create (const struct medusa_monitor_epoll_init_options *options)
 {
         struct internal *internal;
         (void) options;

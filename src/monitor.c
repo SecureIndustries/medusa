@@ -26,15 +26,15 @@
 
 struct medusa_monitor {
         int running;
-        struct medusa_monitor_backend *backend;
+        struct medusa_poll_backend *poll;
         struct medusa_timer_backend *timer;
         struct medusa_subjects subjects;
         int break_fds[2];
 };
 
 static const struct medusa_monitor_init_options g_init_options = {
-        .backend = {
-                .type = medusa_monitor_backend_default,
+        .poll = {
+                .type = medusa_monitor_poll_default,
                 .u    = { }
         }
 };
@@ -98,49 +98,49 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
         if (options == NULL) {
                 options = &g_init_options;
         }
-        if (options->backend.type == medusa_monitor_backend_default) {
+        if (options->poll.type == medusa_monitor_poll_default) {
                 do {
-                        monitor->backend = medusa_monitor_epoll_create(NULL);
-                        if (monitor->backend != NULL) {
+                        monitor->poll = medusa_monitor_epoll_create(NULL);
+                        if (monitor->poll != NULL) {
                                 break;
                         }
-                        monitor->backend = medusa_monitor_kqueue_create(NULL);
-                        if (monitor->backend != NULL) {
+                        monitor->poll = medusa_monitor_kqueue_create(NULL);
+                        if (monitor->poll != NULL) {
                                 break;
                         }
-                        monitor->backend = medusa_monitor_poll_create(NULL);
-                        if (monitor->backend != NULL) {
+                        monitor->poll = medusa_monitor_poll_create(NULL);
+                        if (monitor->poll != NULL) {
                                 break;
                         }
-                        monitor->backend = medusa_monitor_select_create(NULL);
-                        if (monitor->backend != NULL) {
+                        monitor->poll = medusa_monitor_select_create(NULL);
+                        if (monitor->poll != NULL) {
                                 break;
                         }
                 } while (0);
-        } else if (options->backend.type == medusa_monitor_backend_epoll) {
-                monitor->backend = medusa_monitor_epoll_create(NULL);
-                if (monitor->backend == NULL) {
+        } else if (options->poll.type == medusa_monitor_poll_epoll) {
+                monitor->poll = medusa_monitor_epoll_create(NULL);
+                if (monitor->poll == NULL) {
                         goto bail;
                 }
-        } else if (options->backend.type == medusa_monitor_backend_kqueue) {
-                monitor->backend = medusa_monitor_kqueue_create(NULL);
-                if (monitor->backend == NULL) {
+        } else if (options->poll.type == medusa_monitor_poll_kqueue) {
+                monitor->poll = medusa_monitor_kqueue_create(NULL);
+                if (monitor->poll == NULL) {
                         goto bail;
                 }
-        } else if (options->backend.type == medusa_monitor_backend_poll) {
-                monitor->backend = medusa_monitor_poll_create(NULL);
-                if (monitor->backend == NULL) {
+        } else if (options->poll.type == medusa_monitor_poll_poll) {
+                monitor->poll = medusa_monitor_poll_create(NULL);
+                if (monitor->poll == NULL) {
                         goto bail;
                 }
-        } else if (options->backend.type == medusa_monitor_backend_select) {
-                monitor->backend = medusa_monitor_select_create(NULL);
-                if (monitor->backend == NULL) {
+        } else if (options->poll.type == medusa_monitor_poll_select) {
+                monitor->poll = medusa_monitor_select_create(NULL);
+                if (monitor->poll == NULL) {
                         goto bail;
                 }
         } else {
                 goto bail;
         }
-        monitor->backend->monitor = monitor;
+        monitor->poll->monitor = monitor;
         rc = pipe(monitor->break_fds);
         if (rc != 0) {
                 goto bail;
@@ -178,12 +178,12 @@ void medusa_monitor_destroy (struct medusa_monitor *monitor)
                 return;
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->subjects, subjects, nsubject) {
-                monitor->backend->del(monitor->backend, subject);
+                monitor->poll->del(monitor->poll, subject);
                 TAILQ_REMOVE(&monitor->subjects, subject, subjects);
                 medusa_subject_destroy(subject);
         }
-        if (monitor->backend != NULL) {
-                monitor->backend->destroy(monitor->backend);
+        if (monitor->poll != NULL) {
+                monitor->poll->destroy(monitor->poll);
         }
         if (monitor->break_fds[0] >= 0) {
                 close(monitor->break_fds[0]);
@@ -209,7 +209,7 @@ int medusa_monitor_add (struct medusa_monitor *monitor, struct medusa_subject *s
                 va_start(ap, subject);
                 events = va_arg(ap, unsigned int);
                 va_end(ap);
-                rc = monitor->backend->add(monitor->backend, subject, events);
+                rc = monitor->poll->add(monitor->poll, subject, events);
                 if (rc != 0) {
                         goto bail;
                 }
@@ -245,7 +245,7 @@ int medusa_monitor_mod (struct medusa_monitor *monitor, struct medusa_subject *s
                 va_start(ap, subject);
                 events = va_arg(ap, unsigned int);
                 va_end(ap);
-                rc = monitor->backend->mod(monitor->backend, subject, events);
+                rc = monitor->poll->mod(monitor->poll, subject, events);
                 if (rc != 0) {
                         goto bail;
                 }
@@ -269,7 +269,7 @@ int medusa_monitor_del (struct medusa_monitor *monitor, struct medusa_subject *s
         if (subject == NULL) {
                 goto bail;
         }
-        rc = monitor->backend->del(monitor->backend, subject);
+        rc = monitor->poll->del(monitor->poll, subject);
         if (rc != 0) {
                 goto bail;
         }
@@ -333,7 +333,7 @@ int medusa_monitor_run (struct medusa_monitor *monitor, unsigned int flags, ...)
         }
 
         while (monitor->running) {
-                rc = monitor->backend->run(monitor->backend, timeout);
+                rc = monitor->poll->run(monitor->poll, timeout);
                 if (rc != 0) {
                         goto bail;
                 }

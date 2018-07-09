@@ -3,16 +3,16 @@ struct medusa_subject;
 struct medusa_monitor;
 
 enum {
-        medusa_monitor_backend_default,
-        medusa_monitor_backend_epoll,
-        medusa_monitor_backend_kqueue,
-        medusa_monitor_backend_poll,
-        medusa_monitor_backend_select
-#define medusa_monitor_backend_default medusa_monitor_backend_default
-#define medusa_monitor_backend_epoll   medusa_monitor_backend_epoll
-#define medusa_monitor_backend_kqueue  medusa_monitor_backend_kqueue
-#define medusa_monitor_backend_poll    medusa_monitor_backend_poll
-#define medusa_monitor_backend_select  medusa_monitor_backend_select
+        medusa_monitor_poll_default,
+        medusa_monitor_poll_epoll,
+        medusa_monitor_poll_kqueue,
+        medusa_monitor_poll_poll,
+        medusa_monitor_poll_select
+#define medusa_monitor_poll_default     medusa_monitor_poll_default
+#define medusa_monitor_poll_epoll       medusa_monitor_poll_epoll
+#define medusa_monitor_poll_kqueue      medusa_monitor_poll_kqueue
+#define medusa_monitor_poll_poll        medusa_monitor_poll_poll
+#define medusa_monitor_poll_select      medusa_monitor_poll_select
 };
 
 enum {
@@ -41,7 +41,7 @@ struct medusa_monitor_init_options {
 
                         } select;
                 } u;
-        } backend;
+        } poll;
         struct {
 
         } timer;
