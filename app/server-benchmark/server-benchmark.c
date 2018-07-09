@@ -139,7 +139,6 @@ struct client {
         struct ports *ports;
         struct buffer *request;
         long long requests;
-        long long request_offset;
         unsigned long connect_timestamp;
         struct buffer incoming;
         http_parser http_parser;
@@ -203,65 +202,6 @@ static int clock_after (unsigned long a, unsigned long b)
         return (((long) ((b) - (a)) < 0)) ? 1 : 0;
 }
 #define clock_before(a,b)        clock_after(b,a)
-
-
-static void * buffer_get_base (struct buffer *buffer)
-{
-        if (buffer == NULL) {
-                return NULL;
-        }
-        return buffer->buffer;
-}
-
-static long long buffer_get_offset (struct buffer *buffer)
-{
-        if (buffer == NULL) {
-                return -1;
-        }
-        return buffer->offset;
-}
-
-#if 0
-static int buffer_set_offset (struct buffer *buffer, long long offset)
-{
-        if (buffer == NULL) {
-                return -1;
-        }
-        if (offset > buffer->length) {
-                return -1;
-        }
-        buffer->offset = offset;
-        return 0;
-}
-#endif
-
-static long long buffer_get_length (struct buffer *buffer)
-{
-        if (buffer == NULL) {
-                return -1;
-        }
-        return buffer->length;
-}
-
-static int buffer_set_length (struct buffer *buffer, long long length)
-{
-        if (buffer == NULL) {
-                return -1;
-        }
-        if (length > buffer->size) {
-                return -1;
-        }
-        buffer->length = length;
-        return 0;
-}
-
-static long long buffer_get_size (struct buffer *buffer)
-{
-        if (buffer == NULL) {
-                return -1;
-        }
-        return buffer->size;
-}
 
 static int buffer_resize (struct buffer *buffer, long long size)
 {
@@ -594,14 +534,6 @@ bail:   if (buffer != NULL) {
         return -1;
 }
 
-static int port_get_number (struct port *port)
-{
-        if (port == NULL) {
-                return -1;
-        }
-        return port->port;
-}
-
 static void port_destroy (struct port *port)
 {
         if (port == NULL) {
@@ -659,31 +591,6 @@ static int ports_push (struct ports *ports, struct port *port)
         return 0;
 }
 
-static unsigned long client_get_connect_timestamp (struct client *client)
-{
-        if (client == NULL) {
-                return -1;
-        }
-        return client->connect_timestamp;
-}
-
-static long long client_get_request_offset (struct client *client)
-{
-        if (client == NULL) {
-                return -1;
-        }
-        return client->request_offset;
-}
-
-static int client_set_request_offset (struct client *client, long long offset)
-{
-        if (client == NULL) {
-                return -1;
-        }
-        client->request_offset = offset;
-        return 0;
-}
-
 static int client_get_fd_error (struct client *client)
 {
         int rc;
@@ -704,15 +611,6 @@ static int client_get_fd_error (struct client *client)
                 return 0;
         }
         return -error;
-}
-
-static int client_set_state (struct client *client, enum client_state state)
-{
-        if (client == NULL) {
-                return -1;
-        }
-        client->state = state;
-        return 0;
 }
 
 static int client_disconnect (struct client *client)
@@ -794,7 +692,7 @@ static int client_connect (struct client *client, const char *address, int port)
                                 rc = -EIO;
                                 goto bail;
                         }
-                        laddr.sin_port = htons(port_get_number(lport));
+                        laddr.sin_port = htons(lport->port);
                         rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
                         if (rc < 0) {
                                 errorf("setsockopt reuseport failed");
@@ -802,7 +700,7 @@ static int client_connect (struct client *client, const char *address, int port)
                         }
                         rc = bind(fd, (struct sockaddr*) &laddr, sizeof(laddr));
                         if (rc != 0) {
-                                errorf("can not bind to port: %d, error: %d, %s", port_get_number(lport), errno, strerror(errno));
+                                errorf("can not bind to port: %d, error: %d, %s", lport->port, errno, strerror(errno));
                                 lport->error += 1;
                                 ports_push(client->ports, lport);
                                 continue;
@@ -881,7 +779,7 @@ static int http_parser_on_message_complete (http_parser *http_parser)
         struct client *client;
         client = http_parser->data;
         debugf("client: %p, message-complete", client);
-        client_set_state(client, client_state_parsed);
+        client->state = client_state_parsed;
         return 0;
 }
 
@@ -918,15 +816,15 @@ static int client_subject_callback (void *context, struct medusa_monitor *monito
                 client->state = client_state_disconnecting;
         } else if (events & medusa_event_in) {
                 ssize_t read_rc;
-                rc = buffer_resize(&client->incoming, buffer_get_length(&client->incoming) + 1024);
+                rc = buffer_resize(&client->incoming, client->incoming.length + 1024);
                 if (rc != 0) {
                         errorf("can not reserve client buffer");
                         client->state = client_state_disconnecting;
                         goto bail;
                 }
                 read_rc = read(medusa_subject_io_get_fd(subject),
-                               buffer_get_base(&client->incoming) + buffer_get_length(&client->incoming),
-                               buffer_get_size(&client->incoming) - buffer_get_length(&client->incoming));
+                               client->incoming.buffer + client->incoming.length,
+                               client->incoming.size - client->incoming.length);
                 if (read_rc == 0) {
                         errorf("connection reset by server (state: %d)", client->state);
                         client->state = client_state_disconnecting;
@@ -941,18 +839,13 @@ static int client_subject_callback (void *context, struct medusa_monitor *monito
                                 goto out;
                         }
                 } else {
-                        rc = buffer_set_length(&client->incoming, buffer_get_length(&client->incoming) + read_rc);
-                        if (rc != 0) {
-                                errorf("can not set buffer length: %lld + %zd / %lld", buffer_get_length(&client->incoming), read_rc, buffer_get_size(&client->incoming));
-                                client->state = client_state_disconnecting;
-                                goto bail;
-                        }
+                        client->incoming.length += read_rc;
                 }
         } else if (events & medusa_event_out) {
                 if (client->state == client_state_connecting) {
                         rc = client_get_fd_error(client);
                         if (rc == 0) {
-                                client_set_state(client, client_state_connected);
+                                client->state = client_state_connected;
                         } else {
                                 errorf("client: %p failed to connect: %d", client, rc);
                                 client->state = client_state_disconnecting;
@@ -961,8 +854,8 @@ static int client_subject_callback (void *context, struct medusa_monitor *monito
                 } else if (client->state == client_state_requesting) {
                         ssize_t write_rc;
                         write_rc = write(medusa_subject_io_get_fd(subject),
-                                        buffer_get_base(client->request) + client_get_request_offset(client),
-                                        buffer_get_length(client->request) - client_get_request_offset(client));
+                                        client->request->buffer + client->request->offset,
+                                        client->request->length - client->request->offset);
                         if (write_rc == 0) {
                                 errorf("can not write to client: %p", client);
                                 client->state = client_state_disconnecting;
@@ -977,19 +870,14 @@ static int client_subject_callback (void *context, struct medusa_monitor *monito
                                         goto bail;
                                 }
                         } else {
-                                rc = client_set_request_offset(client, client_get_request_offset(client) + write_rc);
-                                if (rc != 0) {
-                                        errorf("can not set request buffer offset");
-                                        client->state = client_state_disconnecting;
-                                        goto bail;
-                                }
-                                if (client_get_request_offset(client) == buffer_get_length(client->request)) {
+                                client->request->offset += write_rc;
+                                if (client->request->offset == client->request->length) {
                                         client->state = client_state_requested;
                                 }
                         }
                 } else {
                         errorf("invalid client: %p, state: %d", client, client->state);
-                        client_set_state(client, client_state_requested);
+                        client->state = client_state_requested;
                         goto bail;
                 }
         } else if (events & medusa_event_destroy) {
@@ -997,7 +885,7 @@ static int client_subject_callback (void *context, struct medusa_monitor *monito
                 close(medusa_subject_io_get_fd(subject));
         } else if (events != 0) {
                 errorf("invalid client: %p, state: %d", client, client->state);
-                client_set_state(client, client_state_requested);
+                client->state = client_state_requested;
                 goto bail;
         }
 out:    return 0;
@@ -1208,7 +1096,7 @@ int main (int argc, char *argv[])
 
         if (g_debug_level >= debug_level_info) {
                 fprintf(stdout, "---\n");
-                fprintf(stdout, "%s", (char *) buffer_get_base(request));
+                fprintf(stdout, "%s", (char *) request->buffer);
                 fprintf(stdout, "---\n");
         }
 
@@ -1236,7 +1124,7 @@ int main (int argc, char *argv[])
                             client->state == client_state_parsing){
                                 unsigned long current;
                                 current = clock_get();
-                                if (clock_after(current, client_get_connect_timestamp(client) + options.timeout)) {
+                                if (clock_after(current, client->connect_timestamp + options.timeout)) {
                                         errorf("client: %p, state: %d timeout", client, client->state);
                                         client->state = client_state_disconnecting;
                                 }
@@ -1270,23 +1158,23 @@ int main (int argc, char *argv[])
                                 http_parser_settings settings;
                                 debugf("client: %p, state: parsing (size: %lld, length: %lld, offset: %lld)",
                                                 client,
-                                                buffer_get_size(&client->incoming),
-                                                buffer_get_length(&client->incoming),
-                                                buffer_get_offset(&client->incoming));
-                                if (buffer_get_length(&client->incoming) - buffer_get_offset(&client->incoming) > 0) {
+                                                client->incoming.size,
+                                                client->incoming.length,
+                                                client->incoming.offset);
+                                if (client->incoming.length - client->incoming.offset > 0) {
                                         http_parser_settings_init(&settings);
                                         settings.on_message_begin    = http_parser_on_message_begin;
                                         settings.on_header_field     = http_parser_on_header_field;
                                         settings.on_header_value     = http_parser_on_header_value;
                                         settings.on_message_complete = http_parser_on_message_complete;
                                         nparsed = http_parser_execute(&client->http_parser, &settings,
-                                                        buffer_get_base(&client->incoming) + buffer_get_offset(&client->incoming),
-                                                        buffer_get_length(&client->incoming) - buffer_get_offset(&client->incoming));
+                                                        client->incoming.buffer + client->incoming.offset,
+                                                        client->incoming.length - client->incoming.offset);
                                         if (nparsed > 0) {
 #if 1
                                                 buffer_shift(&client->incoming, nparsed);
 #else
-                                                buffer_set_offset(&client->incoming, buffer_get_offset(&client->incoming) + nparsed);
+                                                client->incoming.offset += nparsed;
 #endif
                                         }
                                 }
@@ -1332,7 +1220,7 @@ int main (int argc, char *argv[])
                                         }
                                         client->state = client_state_disconnected;
                                 }
-                                client->request_offset = 0;
+                                client->request->offset = 0;
                                 client->http_parser.data = client;
                                 http_parser_init(&client->http_parser, HTTP_RESPONSE);
                                 buffer_reset(&client->incoming);
@@ -1341,8 +1229,8 @@ int main (int argc, char *argv[])
                                 unsigned long current;
                                 current = clock_get();
                                 debugf("client disconnected");
-                                if (clock_after(current, client_get_connect_timestamp(client) + options.interval)) {
-                                        client->request_offset = 0;
+                                if (clock_after(current, client->connect_timestamp + options.interval)) {
+                                        client->request->offset = 0;
                                         client->http_parser.data = client;
                                         http_parser_init(&client->http_parser, HTTP_RESPONSE);
                                         buffer_reset(&client->incoming);
