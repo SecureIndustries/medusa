@@ -19,7 +19,8 @@ define test-defaults
     $1_ldflags-y = \
     	-Wl,-Bstatic \
     	-lmedusa-monitor \
-		-Wl,-Bdynamic
+		-Wl,-Bdynamic \
+		-lpthread
 
 	$1_depends-y = \
 		../dist/lib/libmedusa-monitor.a

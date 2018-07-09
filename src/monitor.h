@@ -42,6 +42,9 @@ struct medusa_monitor_init_options {
                         } select;
                 } u;
         } backend;
+        struct {
+
+        } timer;
 };
 
 int medusa_monitor_init_options_default (struct medusa_monitor_init_options *options);
@@ -54,3 +57,5 @@ int medusa_monitor_mod (struct medusa_monitor *monitor, struct medusa_subject *s
 int medusa_monitor_del (struct medusa_monitor *monitor, struct medusa_subject *subject);
 
 int medusa_monitor_run (struct medusa_monitor *monitor, unsigned int flags, ...);
+int medusa_monitor_break (struct medusa_monitor *monitor);
+int medusa_monitor_continue (struct medusa_monitor *monitor);

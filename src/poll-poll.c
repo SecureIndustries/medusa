@@ -3,29 +3,31 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <errno.h>
-
-#include <sys/epoll.h>
+#include <poll.h>
 
 #include "event.h"
 #include "time.h"
 #include "subject.h"
-#include "monitor-backend.h"
+#include "poll-backend.h"
 
-#include "monitor-epoll.h"
+#include "poll-poll.h"
+
+#define MAX(a, b)       (((a) > (b)) ? (a) : (b))
 
 struct internal {
         struct medusa_monitor_backend backend;
-        int fd;
-        int maxevents;
-        struct epoll_event *events;
+        struct pollfd *pfds;
+        int npfds;
+        int spfds;
+        struct medusa_subject **subjects;
+        int nsubjects;
 };
 
 static int internal_add (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
 {
         int rc;
         int fd;
-        struct epoll_event ev;
+        struct pollfd *pfd;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
@@ -43,34 +45,61 @@ static int internal_add (struct medusa_monitor_backend *backend, struct medusa_s
         if (events == 0) {
                 goto bail;
         }
-        ev.events = 0;
-        if (events & medusa_event_in) {
-                ev.events |= EPOLLIN;
+        if (internal->npfds + 1 >= internal->spfds) {
+                struct pollfd *tmp;
+                tmp = (struct pollfd *) realloc(internal->pfds, sizeof(struct pollfd) * (internal->spfds + 64));
+                if (tmp == NULL) {
+                        tmp = (struct pollfd *) malloc(sizeof(struct pollfd) * (internal->spfds + 64));
+                        if (tmp == NULL) {
+                                goto bail;
+                        }
+                        memcpy(tmp, internal->pfds, sizeof(struct pollfd) * internal->npfds);
+                        free(internal->pfds);
+                }
+                internal->pfds = tmp;
+                internal->spfds = internal->spfds + 64;
         }
-        if (events & medusa_event_out) {
-                ev.events |= EPOLLOUT;
-        }
-        if (events & medusa_event_pri) {
-                ev.events |= EPOLLPRI;
+        if (fd >= internal->nsubjects) {
+                struct medusa_subject **tmp;
+                tmp = (struct medusa_subject **) realloc(internal->subjects, sizeof(struct medusa_subject *) * MAX(fd, internal->nsubjects + 64));
+                if (tmp == NULL) {
+                        tmp = (struct medusa_subject **) malloc(sizeof(struct medusa_subject *) * MAX(fd, internal->nsubjects + 64));
+                        if (tmp == NULL) {
+                                goto bail;
+                        }
+                        memcpy(tmp, internal->subjects, sizeof(struct medusa_subject **) * internal->nsubjects);
+                        free(internal->subjects);
+                }
+                internal->subjects = tmp;
+                internal->nsubjects = MAX(fd, internal->nsubjects + 64);
         }
         rc = medusa_subject_retain(subject);
         if (rc != 0) {
                 goto bail;
         }
-        ev.data.ptr = subject;
-        rc = epoll_ctl(internal->fd, EPOLL_CTL_ADD, fd, &ev);
-        if (rc != 0) {
-                goto bail;
+        pfd = &internal->pfds[internal->npfds];
+        pfd->events = 0;
+        if (events & medusa_event_in) {
+                pfd->events |= POLLIN;
         }
+        if (events & medusa_event_out) {
+                pfd->events |= POLLOUT;
+        }
+        if (events & medusa_event_pri) {
+                pfd->events |= POLLPRI;
+        }
+        pfd->fd = fd;
+        internal->subjects[fd] = subject;
+        internal->npfds += 1;
         return 0;
 bail:   return -1;
 }
 
 static int internal_mod (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
 {
-        int rc;
+        int i;
         int fd;
-        struct epoll_event ev;
+        struct pollfd *pfd;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
@@ -88,21 +117,24 @@ static int internal_mod (struct medusa_monitor_backend *backend, struct medusa_s
         if (events == 0) {
                 goto bail;
         }
-        ev.events = 0;
+        for (i = 0; i < internal->npfds; i++) {
+                if (fd == internal->pfds[i].fd) {
+                        break;
+                }
+        }
+        if (i >= internal->npfds) {
+                goto bail;
+        }
+        pfd = &internal->pfds[i];
+        pfd->events = 0;
         if (events & medusa_event_in) {
-                ev.events |= EPOLLIN;
+                pfd->events |= POLLIN;
         }
         if (events & medusa_event_out) {
-                ev.events |= EPOLLOUT;
+                pfd->events |= POLLOUT;
         }
         if (events & medusa_event_pri) {
-                ev.events |= EPOLLPRI;
-        }
-        ev.data.ptr = subject;
-        rc = epoll_ctl(internal->fd, EPOLL_CTL_MOD, fd, &ev);
-        if (rc != 0) {
-                fprintf(stderr, "errno: %d, %s", errno, strerror(errno));
-                goto bail;
+                pfd->events |= POLLPRI;
         }
         return 0;
 bail:   return -1;
@@ -110,9 +142,8 @@ bail:   return -1;
 
 static int internal_del (struct medusa_monitor_backend *backend, struct medusa_subject *subject)
 {
-        int rc;
+        int i;
         int fd;
-        struct epoll_event ev;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
@@ -127,12 +158,17 @@ static int internal_del (struct medusa_monitor_backend *backend, struct medusa_s
         if (fd < 0) {
                 goto bail;
         }
-        ev.events = 0;
-        ev.data.ptr = subject;
-        rc = epoll_ctl(internal->fd, EPOLL_CTL_DEL, fd, &ev);
-        if (rc != 0) {
+        for (i = 0; i < internal->npfds; i++) {
+                if (fd == internal->pfds[i].fd) {
+                        break;
+                }
+        }
+        if (i >= internal->npfds) {
                 goto bail;
         }
+        memmove(&internal->pfds[i], &internal->pfds[i + 1], sizeof(struct pollfd) * (internal->npfds - i - 1));
+        internal->npfds -= 1;
+        internal->subjects[fd] = NULL;
         medusa_subject_destroy(subject);
         return 0;
 bail:   return -1;
@@ -145,7 +181,6 @@ static int internal_run (struct medusa_monitor_backend *backend, struct medusa_t
         int count;
         int timeout;
         unsigned int events;
-        struct epoll_event *event;
         struct medusa_subject *subject;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
@@ -156,43 +191,42 @@ static int internal_run (struct medusa_monitor_backend *backend, struct medusa_t
         } else {
                 timeout = timespec->seconds * 1000 + timespec->nanoseconds / 1000000;
         }
-        count = epoll_wait(internal->fd, internal->events, internal->maxevents, timeout);
+        for (i = 0; i < internal->npfds; i++) {
+                internal->pfds[i].revents = 0;
+        }
+        count = poll(internal->pfds, internal->npfds, timeout);
         if (count == 0) {
                 goto out;
         }
         if (count < 0) {
                 goto bail;
         }
-        for (i = 0; i < count; i++) {
-                event = &internal->events[i];
-                subject = (struct medusa_subject *) event->data.ptr;
+        for (i = 0; i < internal->npfds; i++) {
+                if (internal->pfds[i].revents == 0) {
+                        continue;
+                }
                 events = 0;
-                if (event->events & EPOLLIN) {
+                if (internal->pfds[i].revents & POLLIN) {
                         events |= medusa_event_in;
                 }
-                if (event->events & EPOLLOUT) {
+                if (internal->pfds[i].revents & POLLOUT) {
                         events |= medusa_event_out;
                 }
-                if (event->events & EPOLLPRI) {
+                if (internal->pfds[i].revents & POLLPRI) {
                         events |= medusa_event_pri;
                 }
-                if (event->events & EPOLLHUP) {
+                if (internal->pfds[i].revents & POLLHUP) {
                         events |= medusa_event_hup;
                 }
-                if (event->events & EPOLLERR) {
+                if (internal->pfds[i].revents & POLLERR) {
                         events |= medusa_event_err;
                 }
+                if (internal->pfds[i].revents & POLLNVAL) {
+                        events |= medusa_event_nval;
+                }
+                subject = internal->subjects[internal->pfds[i].fd];
                 rc = medusa_subject_get_callback_function(subject)(subject, events);
                 if (rc != 0) {
-                        goto bail;
-                }
-        }
-        if (count == internal->maxevents) {
-                free(internal->events);
-                internal->maxevents += 64;
-                internal->events = (struct epoll_event *) malloc(sizeof(struct epoll_event) * internal->maxevents);
-                if (internal->events == NULL) {
-                        internal->maxevents = 0;
                         goto bail;
                 }
         }
@@ -206,16 +240,16 @@ static void internal_destroy (struct medusa_monitor_backend *backend)
         if (internal == NULL) {
                 return;
         }
-        if (internal->fd >= 0) {
-                close(internal->fd);
+        if (internal->subjects != NULL) {
+                free(internal->subjects);
         }
-        if (internal->events != NULL) {
-                free(internal->events);
+        if (internal->pfds != NULL) {
+                free(internal->pfds);
         }
         free(internal);
 }
 
-struct medusa_monitor_backend * medusa_monitor_epoll_create (const struct medusa_monitor_epoll_init_options *options)
+struct medusa_monitor_backend * medusa_monitor_poll_create (const struct medusa_monitor_poll_init_options *options)
 {
         struct internal *internal;
         (void) options;
@@ -224,16 +258,7 @@ struct medusa_monitor_backend * medusa_monitor_epoll_create (const struct medusa
                 goto bail;
         }
         memset(internal, 0, sizeof(struct internal));
-        internal->fd = epoll_create1(0);
-        if (internal->fd < 0) {
-                goto bail;
-        }
-        internal->maxevents = 64;
-        internal->events = (struct epoll_event *) malloc(sizeof(struct epoll_event) * internal->maxevents);
-        if (internal->events == NULL) {
-                goto bail;
-        }
-        internal->backend.name    = "epoll";
+        internal->backend.name    = "poll";
         internal->backend.add     = internal_add;
         internal->backend.mod     = internal_mod;
         internal->backend.del     = internal_del;

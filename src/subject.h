@@ -53,4 +53,5 @@ struct medusa_subject * medusa_subject_create_signal (int number, int (*callback
 unsigned int medusa_subject_get_type (const struct medusa_subject *subject);
 int (*medusa_subject_get_callback_function (const struct medusa_subject *subject)) (struct medusa_subject *subject, unsigned int events);
 void * medusa_subject_get_callback_context (const struct medusa_subject *subject);
+struct medusa_monitor * medusa_subject_get_monitor (const struct medusa_subject *subject);
 int medusa_subject_io_get_fd (const struct medusa_subject *subject);

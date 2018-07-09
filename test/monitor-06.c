@@ -95,7 +95,7 @@ static int test_backend (unsigned int backend)
         subject[0] = NULL;
         subject[1] = NULL;
 
-        length = rand() % 10000;
+        length = rand() % 100000;
         write_length = length;
         write_finished = 0;
         read_length = 0;

@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "queue.h"
 
@@ -13,15 +15,21 @@
 
 #include "subject-private.h"
 
-#include "monitor-epoll.h"
-#include "monitor-kqueue.h"
-#include "monitor-poll.h"
-#include "monitor-select.h"
-#include "monitor-backend.h"
+#include "poll-epoll.h"
+#include "poll-kqueue.h"
+#include "poll-poll.h"
+#include "poll-select.h"
+#include "poll-backend.h"
+
+#include "timer-timerfd.h"
+#include "timer-backend.h"
 
 struct medusa_monitor {
-        struct medusa_subjects subjects;
+        int running;
         struct medusa_monitor_backend *backend;
+        struct medusa_timer_backend *timer;
+        struct medusa_subjects subjects;
+        int break_fds[2];
 };
 
 static const struct medusa_monitor_init_options g_init_options = {
@@ -30,6 +38,37 @@ static const struct medusa_monitor_init_options g_init_options = {
                 .u    = { }
         }
 };
+
+static int fd_set_blocking (int fd, int on)
+{
+        int rc;
+        int flags;
+        flags = fcntl(fd, F_GETFL, 0);
+        if (flags < 0) {
+                return -1;
+        }
+        flags = on ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
+        rc = fcntl(fd, F_SETFL, flags);
+        if (rc != 0) {
+                return -1;
+        }
+        return 0;
+}
+
+static int monitor_break_subject_callback (struct medusa_subject *subject, unsigned int events)
+{
+        int rc;
+        struct medusa_monitor *monitor;
+        if (events & medusa_event_in) {
+                monitor = medusa_subject_get_monitor(subject);
+                rc = read(monitor->break_fds[0], &monitor->running, sizeof(monitor->running));
+                if (rc != sizeof(monitor->running)) {
+                        goto bail;
+                }
+        }
+        return 0;
+bail:   return -1;
+}
 
 int medusa_monitor_init_options_default (struct medusa_monitor_init_options *options)
 {
@@ -43,6 +82,8 @@ bail:   return -1;
 
 struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_options *options)
 {
+        int rc;
+        struct medusa_subject *subject;
         struct medusa_monitor *monitor;
         monitor = NULL;
         monitor = (struct medusa_monitor *) malloc(sizeof(struct medusa_monitor));
@@ -51,6 +92,9 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
         }
         memset(monitor, 0, sizeof(struct medusa_monitor));
         TAILQ_INIT(&monitor->subjects);
+        monitor->running = 1;
+        monitor->break_fds[0] = -1;
+        monitor->break_fds[1] = -1;
         if (options == NULL) {
                 options = &g_init_options;
         }
@@ -97,6 +141,28 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
                 goto bail;
         }
         monitor->backend->monitor = monitor;
+        rc = pipe(monitor->break_fds);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = fd_set_blocking(monitor->break_fds[0], 0);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = fd_set_blocking(monitor->break_fds[1], 0);
+        if (rc != 0) {
+                goto bail;
+        }
+        subject = medusa_subject_create_io(monitor->break_fds[0], monitor_break_subject_callback, NULL);
+        if (subject == NULL) {
+                goto bail;
+        }
+        rc = medusa_monitor_add(monitor, subject, medusa_event_in);
+        if (rc != 0) {
+                medusa_subject_destroy(subject);
+                goto bail;
+        }
+        medusa_subject_destroy(subject);
         return monitor;
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);
@@ -118,6 +184,12 @@ void medusa_monitor_destroy (struct medusa_monitor *monitor)
         }
         if (monitor->backend != NULL) {
                 monitor->backend->destroy(monitor->backend);
+        }
+        if (monitor->break_fds[0] >= 0) {
+                close(monitor->break_fds[0]);
+        }
+        if (monitor->break_fds[1] >= 0) {
+                close(monitor->break_fds[1]);
         }
         free(monitor);
 }
@@ -208,6 +280,36 @@ int medusa_monitor_del (struct medusa_monitor *monitor, struct medusa_subject *s
 bail:   return -1;
 }
 
+int medusa_monitor_break (struct medusa_monitor *monitor)
+{
+        int rc;
+        if (monitor == NULL) {
+                goto bail;
+        }
+        monitor->running = 0;
+        rc = write(monitor->break_fds[1], &monitor->running, sizeof(monitor->running));
+        if (rc != sizeof(monitor->running)) {
+                goto bail;
+        }
+        return 0;
+bail:   return -1;
+}
+
+int medusa_monitor_continue (struct medusa_monitor *monitor)
+{
+        int rc;
+        if (monitor == NULL) {
+                goto bail;
+        }
+        monitor->running = 1;
+        rc = write(monitor->break_fds[1], &monitor->running, sizeof(monitor->running));
+        if (rc != sizeof(monitor->running)) {
+                goto bail;
+        }
+        return 0;
+bail:   return -1;
+}
+
 int medusa_monitor_run (struct medusa_monitor *monitor, unsigned int flags, ...)
 {
         int rc;
@@ -230,7 +332,7 @@ int medusa_monitor_run (struct medusa_monitor *monitor, unsigned int flags, ...)
                 timeout = &timeout_nowait;
         }
 
-        while (1) {
+        while (monitor->running) {
                 rc = monitor->backend->run(monitor->backend, timeout);
                 if (rc != 0) {
                         goto bail;
@@ -239,7 +341,7 @@ int medusa_monitor_run (struct medusa_monitor *monitor, unsigned int flags, ...)
                         break;
                 }
         }
-        (void) flags;
+
         return 0;
 bail:   return -1;
 }

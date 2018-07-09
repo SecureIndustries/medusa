@@ -4,9 +4,9 @@
 
 #include "time.h"
 #include "subject.h"
-#include "monitor-backend.h"
+#include "poll-backend.h"
 
-#include "monitor-kqueue.h"
+#include "poll-select.h"
 
 struct internal {
         struct medusa_monitor_backend backend;
@@ -78,7 +78,7 @@ static void internal_destroy (struct medusa_monitor_backend *backend)
         free(internal);
 }
 
-struct medusa_monitor_backend * medusa_monitor_kqueue_create (const struct medusa_monitor_kqueue_init_options *options)
+struct medusa_monitor_backend * medusa_monitor_select_create (const struct medusa_monitor_select_init_options *options)
 {
         struct internal *internal;
         (void) options;
@@ -87,7 +87,7 @@ struct medusa_monitor_backend * medusa_monitor_kqueue_create (const struct medus
                 goto bail;
         }
         memset(internal, 0, sizeof(struct internal));
-        internal->backend.name    = "kqueue";
+        internal->backend.name    = "select";
         internal->backend.add     = internal_add;
         internal->backend.mod     = internal_mod;
         internal->backend.del     = internal_del;

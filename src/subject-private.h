@@ -25,7 +25,7 @@ struct medusa_subject {
                 void *context;
         } callback;
         struct {
-                long long refcount;
+                int refcount;
                 struct medusa_monitor *monitor;
         } internal;
 };

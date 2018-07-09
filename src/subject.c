@@ -190,7 +190,7 @@ int (*medusa_subject_get_callback_function (const struct medusa_subject *subject
                 goto bail;
         }
         return subject->callback.function;
-bail:   return 0;
+bail:   return NULL;
 }
 
 void * medusa_subject_get_callback_context (const struct medusa_subject *subject)
@@ -199,7 +199,16 @@ void * medusa_subject_get_callback_context (const struct medusa_subject *subject
                 goto bail;
         }
         return subject->callback.context;
-bail:   return 0;
+bail:   return NULL;
+}
+
+struct medusa_monitor * medusa_subject_get_monitor (const struct medusa_subject *subject)
+{
+        if (subject == NULL) {
+                goto bail;
+        }
+        return subject->internal.monitor;
+bail:   return NULL;
 }
 
 int medusa_subject_io_get_fd (const struct medusa_subject *subject)
