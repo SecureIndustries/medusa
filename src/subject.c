@@ -5,6 +5,7 @@
 
 #include <sys/queue.h>
 
+#include "time.h"
 #include "subject.h"
 #include "subject-private.h"
 
@@ -168,4 +169,13 @@ struct medusa_subject * medusa_subject_create_signal (int number, int (*callback
         options.callback.function = callback;
         options.callback.context = context;
         return medusa_subject_create(&options);
+}
+
+unsigned int medusa_subject_get_type (const struct medusa_subject *subject)
+{
+        if (subject == NULL) {
+                goto bail;
+        }
+        return subject->type;
+bail:   return 0;
 }

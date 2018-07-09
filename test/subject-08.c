@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <signal.h>
 
+#include "medusa/time.h"
 #include "medusa/subject.h"
 
 static int callback (void *context, struct medusa_subject *subject, unsigned int events)

@@ -1,7 +1,11 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
+#include <sys/epoll.h>
+
+#include "time.h"
 #include "subject.h"
 #include "monitor-backend.h"
 
@@ -9,6 +13,7 @@
 
 struct private {
         struct medusa_monitor_backend backend;
+        int fd;
 };
 
 static int private_add (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
@@ -62,6 +67,9 @@ static void private_destroy (struct medusa_monitor_backend *backend)
         if (private == NULL) {
                 return;
         }
+        if (private->fd >= 0) {
+                close(private->fd);
+        }
         free(private);
 }
 
@@ -74,6 +82,10 @@ struct medusa_monitor_backend * medusa_monitor_epoll_create (const struct medusa
                 goto bail;
         }
         memset(private, 0, sizeof(struct private));
+        private->fd = epoll_create1(0);
+        if (private->fd < 0) {
+                goto bail;
+        }
         private->backend.name    = "epoll";
         private->backend.add     = private_add;
         private->backend.mod     = private_mod;

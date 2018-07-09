@@ -37,7 +37,9 @@ dist.base = medusa
 
 dist.include-y = \
 	monitor.h \
-	subject.h
+	queue.h \
+	subject.h \
+	time.h
 
 dist.lib-y = \
 	libmedusa-monitor.a \

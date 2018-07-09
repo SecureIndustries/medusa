@@ -2,19 +2,12 @@
 struct medusa_subject;
 
 enum {
-        medusa_subject_type_io,
-        medusa_subject_type_timer,
-        medusa_subject_type_signal
-};
-
-struct medusa_timespec {
-        unsigned long long seconds;
-        unsigned long long nanoseconds;
-};
-
-struct medusa_timerspec {
-        struct medusa_timespec timespec;
-        struct medusa_timespec interval;
+        medusa_subject_type_io          = 1,
+        medusa_subject_type_timer       = 2,
+        medusa_subject_type_signal      = 3
+#define medusa_subject_type_io          medusa_subject_type_io
+#define medusa_subject_type_timer       medusa_subject_type_timer
+#define medusa_subject_type_signal      medusa_subject_type_signal
 };
 
 struct medusa_subject_io_init_options {
@@ -55,3 +48,5 @@ struct medusa_subject * medusa_subject_create (const struct medusa_subject_init_
 struct medusa_subject * medusa_subject_create_io (int fd, int (*callback) (void *context, struct medusa_subject *subject, unsigned int events), void *context);
 struct medusa_subject * medusa_subject_create_timer (struct medusa_timerspec timerspec, int (*callback) (void *context, struct medusa_subject *subject, unsigned int events), void *context);
 struct medusa_subject * medusa_subject_create_signal (int number, int (*callback) (void *context, struct medusa_subject *subject, unsigned int events), void *context);
+
+unsigned int medusa_subject_get_type (const struct medusa_subject *subject);

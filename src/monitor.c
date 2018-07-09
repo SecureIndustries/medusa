@@ -2,9 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "queue.h"
 
+#include "time.h"
+#include "event.h"
 #include "subject.h"
 #include "monitor.h"
 
@@ -21,10 +24,25 @@ struct medusa_monitor {
         struct medusa_monitor_backend *backend;
 };
 
+static const struct medusa_monitor_init_options g_init_options = {
+        .backend = {
+                .type = medusa_monitor_backend_default
+        }
+};
+
+int medusa_monitor_init_options_default (struct medusa_monitor_init_options *options)
+{
+        if (options == NULL) {
+                goto bail;
+        }
+        memcpy(options, &g_init_options, sizeof(struct medusa_monitor_init_options));
+        return 0;
+bail:   return -1;
+}
+
 struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_options *options)
 {
         struct medusa_monitor *monitor;
-        (void) options;
         monitor = NULL;
         monitor = malloc(sizeof(struct medusa_monitor));
         if (monitor == NULL) {
@@ -32,6 +50,51 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
         }
         memset(monitor, 0, sizeof(struct medusa_monitor));
         TAILQ_INIT(&monitor->subjects);
+        if (options == NULL) {
+                options = &g_init_options;
+        }
+        if (options->backend.type == medusa_monitor_backend_default) {
+                do {
+                        monitor->backend = medusa_monitor_epoll_create(NULL);
+                        if (monitor->backend != NULL) {
+                                break;
+                        }
+                        monitor->backend = medusa_monitor_kqueue_create(NULL);
+                        if (monitor->backend != NULL) {
+                                break;
+                        }
+                        monitor->backend = medusa_monitor_poll_create(NULL);
+                        if (monitor->backend != NULL) {
+                                break;
+                        }
+                        monitor->backend = medusa_monitor_select_create(NULL);
+                        if (monitor->backend != NULL) {
+                                break;
+                        }
+                } while (0);
+        } else if (options->backend.type == medusa_monitor_backend_epoll) {
+                monitor->backend = medusa_monitor_epoll_create(NULL);
+                if (monitor->backend == NULL) {
+                        goto bail;
+                }
+        } else if (options->backend.type == medusa_monitor_backend_kqueue) {
+                monitor->backend = medusa_monitor_kqueue_create(NULL);
+                if (monitor->backend == NULL) {
+                        goto bail;
+                }
+        } else if (options->backend.type == medusa_monitor_backend_poll) {
+                monitor->backend = medusa_monitor_poll_create(NULL);
+                if (monitor->backend == NULL) {
+                        goto bail;
+                }
+        } else if (options->backend.type == medusa_monitor_backend_select) {
+                monitor->backend = medusa_monitor_select_create(NULL);
+                if (monitor->backend == NULL) {
+                        goto bail;
+                }
+        } else {
+                goto bail;
+        }
         return monitor;
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);
@@ -56,13 +119,30 @@ void medusa_monitor_destroy (struct medusa_monitor *monitor)
         free(monitor);
 }
 
-int medusa_monitor_add (struct medusa_monitor *monitor, struct medusa_subject *subject)
+int medusa_monitor_add (struct medusa_monitor *monitor, struct medusa_subject *subject, ...)
 {
         int rc;
+        unsigned int events;
         if (monitor == NULL) {
                 goto bail;
         }
         if (subject == NULL) {
+                goto bail;
+        }
+        if (medusa_subject_get_type(subject) == medusa_subject_type_io) {
+                va_list ap;
+                va_start(ap, subject);
+                events = va_arg(ap, unsigned int);
+                va_end(ap);
+                rc = monitor->backend->add(monitor->backend, subject, events);
+                if (rc != 0) {
+                        goto bail;
+                }
+        } else if (medusa_subject_get_type(subject) == medusa_subject_type_timer) {
+                events = medusa_event_in;
+        } else if (medusa_subject_get_type(subject) == medusa_subject_type_signal) {
+                events = 0;
+        } else {
                 goto bail;
         }
         rc = medusa_subject_retain(subject);
@@ -74,7 +154,7 @@ int medusa_monitor_add (struct medusa_monitor *monitor, struct medusa_subject *s
 bail:   return -1;
 }
 
-int medusa_monitor_mod (struct medusa_monitor *monitor, struct medusa_subject *subject)
+int medusa_monitor_mod (struct medusa_monitor *monitor, struct medusa_subject *subject, ...)
 {
         if (monitor == NULL) {
                 goto bail;
@@ -96,6 +176,16 @@ int medusa_monitor_del (struct medusa_monitor *monitor, struct medusa_subject *s
         }
         TAILQ_REMOVE(&monitor->subjects, subject, subjects);
         medusa_subject_destroy(subject);
+        return 0;
+bail:   return -1;
+}
+
+int medusa_monitor_run (struct medusa_monitor *monitor, unsigned int flags)
+{
+        if (monitor == NULL) {
+                goto bail;
+        }
+        (void) flags;
         return 0;
 bail:   return -1;
 }

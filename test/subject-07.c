@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <signal.h>
 
+#include "medusa/time.h"
 #include "medusa/subject.h"
 
 int main (int argc, char *argv[])
