@@ -104,8 +104,7 @@ static int private_del (struct medusa_monitor_backend *backend, struct medusa_su
         fprintf(stderr, "deleting fd: %d\n", fd);
         ev.events = 0;
         ev.data.ptr = subject;
-        (void) ev;
-        rc = epoll_ctl(private->fd, EPOLL_CTL_DEL, fd, NULL);
+        rc = epoll_ctl(private->fd, EPOLL_CTL_DEL, fd, &ev);
         if (rc != 0) {
                 goto bail;
         }
