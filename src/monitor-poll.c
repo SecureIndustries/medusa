@@ -13,7 +13,7 @@
 
 #define MAX(a, b)       (((a) > (b)) ? (a) : (b))
 
-struct private {
+struct internal {
         struct medusa_monitor_backend backend;
         struct pollfd *pfds;
         int npfds;
@@ -22,13 +22,13 @@ struct private {
         int nsubjects;
 };
 
-static int private_add (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
+static int internal_add (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
 {
         int rc;
         int fd;
         struct pollfd *pfd;
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 goto bail;
         }
         if (subject == NULL) {
@@ -44,39 +44,39 @@ static int private_add (struct medusa_monitor_backend *backend, struct medusa_su
         if (events == 0) {
                 goto bail;
         }
-        if (private->npfds + 1 >= private->spfds) {
+        if (internal->npfds + 1 >= internal->spfds) {
                 struct pollfd *tmp;
-                tmp = realloc(private->pfds, sizeof(struct pollfd) * (private->spfds + 64));
+                tmp = (struct pollfd *) realloc(internal->pfds, sizeof(struct pollfd) * (internal->spfds + 64));
                 if (tmp == NULL) {
-                        tmp = malloc(sizeof(struct pollfd) * (private->spfds + 64));
+                        tmp = (struct pollfd *) malloc(sizeof(struct pollfd) * (internal->spfds + 64));
                         if (tmp == NULL) {
                                 goto bail;
                         }
-                        memcpy(tmp, private->pfds, sizeof(struct pollfd) * private->npfds);
-                        free(private->pfds);
+                        memcpy(tmp, internal->pfds, sizeof(struct pollfd) * internal->npfds);
+                        free(internal->pfds);
                 }
-                private->pfds = tmp;
-                private->spfds = private->spfds + 64;
+                internal->pfds = tmp;
+                internal->spfds = internal->spfds + 64;
         }
-        if (fd >= private->nsubjects) {
+        if (fd >= internal->nsubjects) {
                 struct medusa_subject **tmp;
-                tmp = realloc(private->subjects, sizeof(struct medusa_subject *) * MAX(fd, private->nsubjects + 64));
+                tmp = (struct medusa_subject **) realloc(internal->subjects, sizeof(struct medusa_subject *) * MAX(fd, internal->nsubjects + 64));
                 if (tmp == NULL) {
-                        tmp = malloc(sizeof(struct medusa_subject *) * MAX(fd, private->nsubjects + 64));
+                        tmp = (struct medusa_subject **) malloc(sizeof(struct medusa_subject *) * MAX(fd, internal->nsubjects + 64));
                         if (tmp == NULL) {
                                 goto bail;
                         }
-                        memcpy(tmp, private->subjects, sizeof(struct medusa_subject **) * private->nsubjects);
-                        free(private->subjects);
+                        memcpy(tmp, internal->subjects, sizeof(struct medusa_subject **) * internal->nsubjects);
+                        free(internal->subjects);
                 }
-                private->subjects = tmp;
-                private->nsubjects = MAX(fd, private->nsubjects + 64);
+                internal->subjects = tmp;
+                internal->nsubjects = MAX(fd, internal->nsubjects + 64);
         }
         rc = medusa_subject_retain(subject);
         if (rc != 0) {
                 goto bail;
         }
-        pfd = &private->pfds[private->npfds];
+        pfd = &internal->pfds[internal->npfds];
         pfd->events = 0;
         if (events & medusa_event_in) {
                 pfd->events |= POLLIN;
@@ -88,19 +88,19 @@ static int private_add (struct medusa_monitor_backend *backend, struct medusa_su
                 pfd->events |= POLLPRI;
         }
         pfd->fd = fd;
-        private->subjects[fd] = subject;
-        private->npfds += 1;
+        internal->subjects[fd] = subject;
+        internal->npfds += 1;
         return 0;
 bail:   return -1;
 }
 
-static int private_mod (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
+static int internal_mod (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
 {
         int i;
         int fd;
         struct pollfd *pfd;
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 goto bail;
         }
         if (subject == NULL) {
@@ -116,15 +116,15 @@ static int private_mod (struct medusa_monitor_backend *backend, struct medusa_su
         if (events == 0) {
                 goto bail;
         }
-        for (i = 0; i < private->npfds; i++) {
-                if (fd == private->pfds[i].fd) {
+        for (i = 0; i < internal->npfds; i++) {
+                if (fd == internal->pfds[i].fd) {
                         break;
                 }
         }
-        if (i >= private->npfds) {
+        if (i >= internal->npfds) {
                 goto bail;
         }
-        pfd = &private->pfds[i];
+        pfd = &internal->pfds[i];
         pfd->events = 0;
         if (events & medusa_event_in) {
                 pfd->events |= POLLIN;
@@ -139,12 +139,12 @@ static int private_mod (struct medusa_monitor_backend *backend, struct medusa_su
 bail:   return -1;
 }
 
-static int private_del (struct medusa_monitor_backend *backend, struct medusa_subject *subject)
+static int internal_del (struct medusa_monitor_backend *backend, struct medusa_subject *subject)
 {
         int i;
         int fd;
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 goto bail;
         }
         if (subject == NULL) {
@@ -157,23 +157,23 @@ static int private_del (struct medusa_monitor_backend *backend, struct medusa_su
         if (fd < 0) {
                 goto bail;
         }
-        for (i = 0; i < private->npfds; i++) {
-                if (fd == private->pfds[i].fd) {
+        for (i = 0; i < internal->npfds; i++) {
+                if (fd == internal->pfds[i].fd) {
                         break;
                 }
         }
-        if (i >= private->npfds) {
+        if (i >= internal->npfds) {
                 goto bail;
         }
-        memmove(&private->pfds[i], &private->pfds[i + 1], sizeof(struct pollfd) * (private->npfds - i - 1));
-        private->npfds -= 1;
-        private->subjects[fd] = NULL;
+        memmove(&internal->pfds[i], &internal->pfds[i + 1], sizeof(struct pollfd) * (internal->npfds - i - 1));
+        internal->npfds -= 1;
+        internal->subjects[fd] = NULL;
         medusa_subject_destroy(subject);
         return 0;
 bail:   return -1;
 }
 
-static int private_run (struct medusa_monitor_backend *backend, struct medusa_timespec *timespec)
+static int internal_run (struct medusa_monitor_backend *backend, struct medusa_timespec *timespec)
 {
         int i;
         int rc;
@@ -181,8 +181,8 @@ static int private_run (struct medusa_monitor_backend *backend, struct medusa_ti
         int timeout;
         unsigned int events;
         struct medusa_subject *subject;
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 goto bail;
         }
         if (timespec == NULL) {
@@ -190,10 +190,10 @@ static int private_run (struct medusa_monitor_backend *backend, struct medusa_ti
         } else {
                 timeout = timespec->seconds * 1000 + timespec->nanoseconds / 1000000;
         }
-        for (i = 0; i < private->npfds; i++) {
-                private->pfds[i].revents = 0;
+        for (i = 0; i < internal->npfds; i++) {
+                internal->pfds[i].revents = 0;
         }
-        count = poll(private->pfds, private->npfds, timeout);
+        count = poll(internal->pfds, internal->npfds, timeout);
         if (count == 0) {
                 goto out;
         }
@@ -201,29 +201,29 @@ static int private_run (struct medusa_monitor_backend *backend, struct medusa_ti
                 goto bail;
         }
         for (i = 0; i < count; i++) {
-                if (private->pfds[i].revents == 0) {
+                if (internal->pfds[i].revents == 0) {
                         continue;
                 }
                 events = 0;
-                if (private->pfds[i].revents & POLLIN) {
+                if (internal->pfds[i].revents & POLLIN) {
                         events |= medusa_event_in;
                 }
-                if (private->pfds[i].revents & POLLOUT) {
+                if (internal->pfds[i].revents & POLLOUT) {
                         events |= medusa_event_out;
                 }
-                if (private->pfds[i].revents & POLLPRI) {
+                if (internal->pfds[i].revents & POLLPRI) {
                         events |= medusa_event_pri;
                 }
-                if (private->pfds[i].revents & POLLHUP) {
+                if (internal->pfds[i].revents & POLLHUP) {
                         events |= medusa_event_hup;
                 }
-                if (private->pfds[i].revents & POLLERR) {
+                if (internal->pfds[i].revents & POLLERR) {
                         events |= medusa_event_err;
                 }
-                if (private->pfds[i].revents & POLLNVAL) {
+                if (internal->pfds[i].revents & POLLNVAL) {
                         events |= medusa_event_nval;
                 }
-                subject = private->subjects[private->pfds[i].fd];
+                subject = internal->subjects[internal->pfds[i].fd];
                 rc = medusa_subject_get_callback_function(subject)(medusa_subject_get_callback_context(subject), subject, events);
                 if (rc != 0) {
                         goto bail;
@@ -233,39 +233,39 @@ out:    return 0;
 bail:   return -1;
 }
 
-static void private_destroy (struct medusa_monitor_backend *backend)
+static void internal_destroy (struct medusa_monitor_backend *backend)
 {
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 return;
         }
-        if (private->subjects != NULL) {
-                free(private->subjects);
+        if (internal->subjects != NULL) {
+                free(internal->subjects);
         }
-        if (private->pfds != NULL) {
-                free(private->pfds);
+        if (internal->pfds != NULL) {
+                free(internal->pfds);
         }
-        free(private);
+        free(internal);
 }
 
 struct medusa_monitor_backend * medusa_monitor_poll_create (const struct medusa_monitor_poll_init_options *options)
 {
-        struct private *private;
+        struct internal *internal;
         (void) options;
-        private = malloc(sizeof(struct private));
-        if (private == NULL) {
+        internal = (struct internal *) malloc(sizeof(struct internal));
+        if (internal == NULL) {
                 goto bail;
         }
-        memset(private, 0, sizeof(struct private));
-        private->backend.name    = "poll";
-        private->backend.add     = private_add;
-        private->backend.mod     = private_mod;
-        private->backend.del     = private_del;
-        private->backend.run     = private_run;
-        private->backend.destroy = private_destroy;
-        return &private->backend;
-bail:   if (private != NULL) {
-                private_destroy(&private->backend);
+        memset(internal, 0, sizeof(struct internal));
+        internal->backend.name    = "poll";
+        internal->backend.add     = internal_add;
+        internal->backend.mod     = internal_mod;
+        internal->backend.del     = internal_del;
+        internal->backend.run     = internal_run;
+        internal->backend.destroy = internal_destroy;
+        return &internal->backend;
+bail:   if (internal != NULL) {
+                internal_destroy(&internal->backend);
         }
         return NULL;
 }

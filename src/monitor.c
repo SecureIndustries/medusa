@@ -26,7 +26,8 @@ struct medusa_monitor {
 
 static const struct medusa_monitor_init_options g_init_options = {
         .backend = {
-                .type = medusa_monitor_backend_default
+                .type = medusa_monitor_backend_default,
+                .u    = { }
         }
 };
 
@@ -44,7 +45,7 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
 {
         struct medusa_monitor *monitor;
         monitor = NULL;
-        monitor = malloc(sizeof(struct medusa_monitor));
+        monitor = (struct medusa_monitor *) malloc(sizeof(struct medusa_monitor));
         if (monitor == NULL) {
                 goto bail;
         }
@@ -152,7 +153,7 @@ int medusa_monitor_add (struct medusa_monitor *monitor, struct medusa_subject *s
                 goto bail;
         }
         TAILQ_INSERT_TAIL(&monitor->subjects, subject, subjects);
-        subject->private.monitor = monitor;
+        subject->internal.monitor = monitor;
         return 0;
 bail:   return -1;
 }
@@ -200,7 +201,7 @@ int medusa_monitor_del (struct medusa_monitor *monitor, struct medusa_subject *s
         if (rc != 0) {
                 goto bail;
         }
-        subject->private.monitor = NULL;
+        subject->internal.monitor = NULL;
         TAILQ_REMOVE(&monitor->subjects, subject, subjects);
         medusa_subject_destroy(subject);
         return 0;

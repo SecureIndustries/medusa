@@ -27,5 +27,5 @@ struct medusa_subject {
         struct {
                 long long refcount;
                 struct medusa_monitor *monitor;
-        } private;
+        } internal;
 };

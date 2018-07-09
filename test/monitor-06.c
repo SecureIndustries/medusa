@@ -48,7 +48,7 @@ static int subject_callback (void *context, struct medusa_subject *subject, unsi
         fprintf(stderr, "  events : 0x%08x\n", events);
         if (events & medusa_event_out) {
                 char value;
-                int *write_length = context;
+                int *write_length = (int *) context;
                 value = rand();
                 rc = write(medusa_subject_io_get_fd(subject), &value, sizeof(value));
                 if (rc != sizeof(value)) {
@@ -62,7 +62,7 @@ static int subject_callback (void *context, struct medusa_subject *subject, unsi
                 }
         } else if (events & medusa_event_in) {
                 char value;
-                int *read_length = context;
+                int *read_length = (int *) context;
                 rc = read(medusa_subject_io_get_fd(subject), &value, sizeof(value));
                 if (rc != sizeof(value)) {
                         if (errno != EAGAIN &&
@@ -99,8 +99,7 @@ static int test_backend (unsigned int backend)
         subject[0] = NULL;
         subject[1] = NULL;
 
-        length = rand() % 1000;
-        length = 1;
+        length = rand() % 10000;
         write_length = length;
         write_finished = 0;
         read_length = 0;

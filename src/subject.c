@@ -15,7 +15,7 @@ int medusa_subject_retain (struct medusa_subject *subject)
         if (subject == NULL) {
                 goto bail;
         }
-        subject->private.refcount += 1;
+        subject->internal.refcount += 1;
         return 0;
 bail:   return -1;
 }
@@ -40,7 +40,7 @@ int medusa_subject_init (struct medusa_subject *subject, const struct medusa_sub
                 goto bail;
         }
         memset(subject, 0, sizeof(struct medusa_subject));
-        subject->private.refcount = 1;
+        subject->internal.refcount = 1;
         switch (options->type) {
                 case medusa_subject_type_io:
                         if (options->u.io.fd < 0) {
@@ -117,7 +117,7 @@ void medusa_subject_destroy (struct medusa_subject *subject)
         if (subject == NULL) {
                 return;
         }
-        if (--subject->private.refcount > 0) {
+        if (--subject->internal.refcount > 0) {
                 return;
         }
         if (subject->callback.function != NULL) {
@@ -130,7 +130,7 @@ struct medusa_subject * medusa_subject_create (const struct medusa_subject_init_
 {
         int rc;
         struct medusa_subject *subject;
-        subject = malloc(sizeof(struct medusa_subject));
+        subject = (struct medusa_subject *) malloc(sizeof(struct medusa_subject));
         if (subject == NULL) {
                 goto bail;
         }

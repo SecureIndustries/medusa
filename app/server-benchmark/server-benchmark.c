@@ -103,7 +103,7 @@ struct url {
 };
 
 struct buffer {
-        void *buffer;
+        char *buffer;
         long long offset;
         long long length;
         long long size;
@@ -141,7 +141,7 @@ struct client {
         long long requests;
         unsigned long connect_timestamp;
         struct buffer incoming;
-        http_parser http_parser;
+        http_parser http_parse;
 };
 
 enum debug_level {
@@ -223,10 +223,8 @@ static int buffer_resize (struct buffer *buffer, long long size)
                         memcpy(data, buffer->buffer, buffer->length);
                 }
                 free(buffer->buffer);
-                buffer->buffer = data;
-        } else {
-                buffer->buffer = data;
         }
+        buffer->buffer = (char *) data;
         buffer->size = size;
         return 0;
 }
@@ -342,7 +340,7 @@ static void buffer_destroy (struct buffer *buffer)
 static struct buffer * buffer_create (void)
 {
         struct buffer *buffer;
-        buffer = malloc(sizeof(struct buffer));
+        buffer = (struct buffer *) malloc(sizeof(struct buffer));
         if (buffer == NULL) {
                 errorf("can not allocate memory");
                 goto bail;
@@ -389,7 +387,7 @@ static struct url * url_create (const char *uri)
                 errorf("uri is invalid");
                 goto bail;
         }
-        url = malloc(sizeof(struct url));
+        url = (struct url *) malloc(sizeof(struct url));
         if (url == NULL) {
                 errorf("can not allocate memory");
                 goto bail;
@@ -473,7 +471,7 @@ static  char * read_proc_file (const char *file)
                 printf("open failed for: %s\n", file);
                 return NULL;
         }
-        buffer = malloc(PROC_FILE_BUFFER_SIZE);
+        buffer = (char *) malloc(PROC_FILE_BUFFER_SIZE);
         if (buffer == NULL) {
                 printf("malloc failed\n");
                 close(fd);
@@ -545,7 +543,7 @@ static void port_destroy (struct port *port)
 static struct port * port_create (int number)
 {
         struct port *port;
-        port = malloc(sizeof(struct port));
+        port = (struct port *) malloc(sizeof(struct port));
         if (port == NULL) {
                 errorf("can not allocate memory");
                 goto bail;
@@ -745,7 +743,7 @@ static void client_destroy (struct client *client)
 static struct client * client_create (struct ports *ports, struct buffer *request)
 {
         struct client *client;
-        client = malloc(sizeof(struct client));
+        client = (struct client *) malloc(sizeof(struct client));
         if (client == NULL) {
                 errorf("can not allocate memory");
                 goto bail;
@@ -755,8 +753,8 @@ static struct client * client_create (struct ports *ports, struct buffer *reques
         client->request = request;
         client->ports = ports;
         client->state = client_state_disconnected;
-        client->http_parser.data = client;
-        http_parser_init(&client->http_parser, HTTP_RESPONSE);
+        client->http_parse.data = client;
+        http_parser_init(&client->http_parse, HTTP_RESPONSE);
         buffer_init(&client->incoming);
         return client;
 bail:   if (client != NULL) {
@@ -767,8 +765,7 @@ bail:   if (client != NULL) {
 
 static int http_parser_on_message_begin (http_parser *http_parser)
 {
-        struct client *client;
-        client = http_parser->data;
+        struct client *client = (struct client *) http_parser->data;
         (void) client;
         debugf("client: %p, message-begin", client);
         return 0;
@@ -776,8 +773,7 @@ static int http_parser_on_message_begin (http_parser *http_parser)
 
 static int http_parser_on_message_complete (http_parser *http_parser)
 {
-        struct client *client;
-        client = http_parser->data;
+        struct client *client = (struct client *) http_parser->data;
         debugf("client: %p, message-complete", client);
         client->state = client_state_parsed;
         return 0;
@@ -785,8 +781,7 @@ static int http_parser_on_message_complete (http_parser *http_parser)
 
 static int http_parser_on_header_field (http_parser *http_parser, const char *at, size_t length)
 {
-        struct client *client;
-        client = http_parser->data;
+        struct client *client = (struct client *) http_parser->data;
         (void) client;
         (void) at;
         (void) length;
@@ -796,8 +791,7 @@ static int http_parser_on_header_field (http_parser *http_parser, const char *at
 
 static int http_parser_on_header_value (http_parser *http_parser, const char *at, size_t length)
 {
-        struct client *client;
-        client = http_parser->data;
+        struct client *client = (struct client *) http_parser->data;
         (void) client;
         (void) at;
         (void) length;
@@ -808,7 +802,7 @@ static int http_parser_on_header_value (http_parser *http_parser, const char *at
 static int client_subject_callback (void *context, struct medusa_subject *subject, unsigned int events)
 {
         int rc;
-        struct client *client = context;
+        struct client *client = (struct client *) context;
         (void) subject;
         if ((events & medusa_event_err) ||
             (events & medusa_event_hup)) {
@@ -1166,7 +1160,7 @@ int main (int argc, char *argv[])
                                         settings.on_header_field     = http_parser_on_header_field;
                                         settings.on_header_value     = http_parser_on_header_value;
                                         settings.on_message_complete = http_parser_on_message_complete;
-                                        nparsed = http_parser_execute(&client->http_parser, &settings,
+                                        nparsed = http_parser_execute(&client->http_parse, &settings,
                                                         client->incoming.buffer + client->incoming.offset,
                                                         client->incoming.length - client->incoming.offset);
                                         if (nparsed > 0) {
@@ -1220,8 +1214,8 @@ int main (int argc, char *argv[])
                                         client->state = client_state_disconnected;
                                 }
                                 client->request->offset = 0;
-                                client->http_parser.data = client;
-                                http_parser_init(&client->http_parser, HTTP_RESPONSE);
+                                client->http_parse.data = client;
+                                http_parser_init(&client->http_parse, HTTP_RESPONSE);
                                 buffer_reset(&client->incoming);
                         }
                         if (client->state == client_state_disconnected) {
@@ -1230,8 +1224,8 @@ int main (int argc, char *argv[])
                                 debugf("client disconnected");
                                 if (clock_after(current, client->connect_timestamp + options.interval)) {
                                         client->request->offset = 0;
-                                        client->http_parser.data = client;
-                                        http_parser_init(&client->http_parser, HTTP_RESPONSE);
+                                        client->http_parse.data = client;
+                                        http_parser_init(&client->http_parse, HTTP_RESPONSE);
                                         buffer_reset(&client->incoming);
                                         if (client->subject != NULL &&
                                             options.keepalive != 0) {

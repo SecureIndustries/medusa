@@ -8,14 +8,14 @@
 
 #include "monitor-kqueue.h"
 
-struct private {
+struct internal {
         struct medusa_monitor_backend backend;
 };
 
-static int private_add (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
+static int internal_add (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
 {
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 goto bail;
         }
         if (subject == NULL) {
@@ -28,10 +28,10 @@ static int private_add (struct medusa_monitor_backend *backend, struct medusa_su
 bail:   return -1;
 }
 
-static int private_mod (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
+static int internal_mod (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
 {
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 goto bail;
         }
         if (subject == NULL) {
@@ -44,10 +44,10 @@ static int private_mod (struct medusa_monitor_backend *backend, struct medusa_su
 bail:   return -1;
 }
 
-static int private_del (struct medusa_monitor_backend *backend, struct medusa_subject *subject)
+static int internal_del (struct medusa_monitor_backend *backend, struct medusa_subject *subject)
 {
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 goto bail;
         }
         if (subject == NULL) {
@@ -57,10 +57,10 @@ static int private_del (struct medusa_monitor_backend *backend, struct medusa_su
 bail:   return -1;
 }
 
-static int private_run (struct medusa_monitor_backend *backend, struct medusa_timespec *timespec)
+static int internal_run (struct medusa_monitor_backend *backend, struct medusa_timespec *timespec)
 {
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 goto bail;
         }
         (void) timespec;
@@ -69,33 +69,33 @@ static int private_run (struct medusa_monitor_backend *backend, struct medusa_ti
 bail:   return -1;
 }
 
-static void private_destroy (struct medusa_monitor_backend *backend)
+static void internal_destroy (struct medusa_monitor_backend *backend)
 {
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 return;
         }
-        free(private);
+        free(internal);
 }
 
 struct medusa_monitor_backend * medusa_monitor_kqueue_create (const struct medusa_monitor_kqueue_init_options *options)
 {
-        struct private *private;
+        struct internal *internal;
         (void) options;
-        private = malloc(sizeof(struct private));
-        if (private == NULL) {
+        internal = (struct internal *) malloc(sizeof(struct internal));
+        if (internal == NULL) {
                 goto bail;
         }
-        memset(private, 0, sizeof(struct private));
-        private->backend.name    = "kqueue";
-        private->backend.add     = private_add;
-        private->backend.mod     = private_mod;
-        private->backend.del     = private_del;
-        private->backend.run     = private_run;
-        private->backend.destroy = private_destroy;
-        return &private->backend;
-bail:   if (private != NULL) {
-                private_destroy(&private->backend);
+        memset(internal, 0, sizeof(struct internal));
+        internal->backend.name    = "kqueue";
+        internal->backend.add     = internal_add;
+        internal->backend.mod     = internal_mod;
+        internal->backend.del     = internal_del;
+        internal->backend.run     = internal_run;
+        internal->backend.destroy = internal_destroy;
+        return &internal->backend;
+bail:   if (internal != NULL) {
+                internal_destroy(&internal->backend);
         }
         return NULL;
 }

@@ -14,20 +14,20 @@
 
 #include "monitor-epoll.h"
 
-struct private {
+struct internal {
         struct medusa_monitor_backend backend;
         int fd;
         int maxevents;
         struct epoll_event *events;
 };
 
-static int private_add (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
+static int internal_add (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
 {
         int rc;
         int fd;
         struct epoll_event ev;
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 goto bail;
         }
         if (subject == NULL) {
@@ -58,7 +58,7 @@ static int private_add (struct medusa_monitor_backend *backend, struct medusa_su
                 goto bail;
         }
         ev.data.ptr = subject;
-        rc = epoll_ctl(private->fd, EPOLL_CTL_ADD, fd, &ev);
+        rc = epoll_ctl(internal->fd, EPOLL_CTL_ADD, fd, &ev);
         if (rc != 0) {
                 goto bail;
         }
@@ -66,13 +66,13 @@ static int private_add (struct medusa_monitor_backend *backend, struct medusa_su
 bail:   return -1;
 }
 
-static int private_mod (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
+static int internal_mod (struct medusa_monitor_backend *backend, struct medusa_subject *subject, unsigned int events)
 {
         int rc;
         int fd;
         struct epoll_event ev;
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 goto bail;
         }
         if (subject == NULL) {
@@ -99,7 +99,7 @@ static int private_mod (struct medusa_monitor_backend *backend, struct medusa_su
                 ev.events |= EPOLLPRI;
         }
         ev.data.ptr = subject;
-        rc = epoll_ctl(private->fd, EPOLL_CTL_MOD, fd, &ev);
+        rc = epoll_ctl(internal->fd, EPOLL_CTL_MOD, fd, &ev);
         if (rc != 0) {
                 fprintf(stderr, "errno: %d, %s", errno, strerror(errno));
                 goto bail;
@@ -108,13 +108,13 @@ static int private_mod (struct medusa_monitor_backend *backend, struct medusa_su
 bail:   return -1;
 }
 
-static int private_del (struct medusa_monitor_backend *backend, struct medusa_subject *subject)
+static int internal_del (struct medusa_monitor_backend *backend, struct medusa_subject *subject)
 {
         int rc;
         int fd;
         struct epoll_event ev;
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 goto bail;
         }
         if (subject == NULL) {
@@ -129,7 +129,7 @@ static int private_del (struct medusa_monitor_backend *backend, struct medusa_su
         }
         ev.events = 0;
         ev.data.ptr = subject;
-        rc = epoll_ctl(private->fd, EPOLL_CTL_DEL, fd, &ev);
+        rc = epoll_ctl(internal->fd, EPOLL_CTL_DEL, fd, &ev);
         if (rc != 0) {
                 goto bail;
         }
@@ -138,7 +138,7 @@ static int private_del (struct medusa_monitor_backend *backend, struct medusa_su
 bail:   return -1;
 }
 
-static int private_run (struct medusa_monitor_backend *backend, struct medusa_timespec *timespec)
+static int internal_run (struct medusa_monitor_backend *backend, struct medusa_timespec *timespec)
 {
         int i;
         int rc;
@@ -147,8 +147,8 @@ static int private_run (struct medusa_monitor_backend *backend, struct medusa_ti
         unsigned int events;
         struct epoll_event *event;
         struct medusa_subject *subject;
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 goto bail;
         }
         if (timespec == NULL) {
@@ -156,7 +156,7 @@ static int private_run (struct medusa_monitor_backend *backend, struct medusa_ti
         } else {
                 timeout = timespec->seconds * 1000 + timespec->nanoseconds / 1000000;
         }
-        count = epoll_wait(private->fd, private->events, private->maxevents, timeout);
+        count = epoll_wait(internal->fd, internal->events, internal->maxevents, timeout);
         if (count == 0) {
                 goto out;
         }
@@ -164,8 +164,8 @@ static int private_run (struct medusa_monitor_backend *backend, struct medusa_ti
                 goto bail;
         }
         for (i = 0; i < count; i++) {
-                event = &private->events[i];
-                subject = event->data.ptr;
+                event = &internal->events[i];
+                subject = (struct medusa_subject *) event->data.ptr;
                 events = 0;
                 if (event->events & EPOLLIN) {
                         events |= medusa_event_in;
@@ -187,12 +187,12 @@ static int private_run (struct medusa_monitor_backend *backend, struct medusa_ti
                         goto bail;
                 }
         }
-        if (count == private->maxevents) {
-                free(private->events);
-                private->maxevents += 64;
-                private->events = malloc(sizeof(struct epoll_event) * private->maxevents);
-                if (private->events == NULL) {
-                        private->maxevents = 0;
+        if (count == internal->maxevents) {
+                free(internal->events);
+                internal->maxevents += 64;
+                internal->events = (struct epoll_event *) malloc(sizeof(struct epoll_event) * internal->maxevents);
+                if (internal->events == NULL) {
+                        internal->maxevents = 0;
                         goto bail;
                 }
         }
@@ -200,48 +200,48 @@ out:    return 0;
 bail:   return -1;
 }
 
-static void private_destroy (struct medusa_monitor_backend *backend)
+static void internal_destroy (struct medusa_monitor_backend *backend)
 {
-        struct private *private = (struct private *) backend;
-        if (private == NULL) {
+        struct internal *internal = (struct internal *) backend;
+        if (internal == NULL) {
                 return;
         }
-        if (private->fd >= 0) {
-                close(private->fd);
+        if (internal->fd >= 0) {
+                close(internal->fd);
         }
-        if (private->events != NULL) {
-                free(private->events);
+        if (internal->events != NULL) {
+                free(internal->events);
         }
-        free(private);
+        free(internal);
 }
 
 struct medusa_monitor_backend * medusa_monitor_epoll_create (const struct medusa_monitor_epoll_init_options *options)
 {
-        struct private *private;
+        struct internal *internal;
         (void) options;
-        private = malloc(sizeof(struct private));
-        if (private == NULL) {
+        internal = (struct internal *) malloc(sizeof(struct internal));
+        if (internal == NULL) {
                 goto bail;
         }
-        memset(private, 0, sizeof(struct private));
-        private->fd = epoll_create1(0);
-        if (private->fd < 0) {
+        memset(internal, 0, sizeof(struct internal));
+        internal->fd = epoll_create1(0);
+        if (internal->fd < 0) {
                 goto bail;
         }
-        private->maxevents = 64;
-        private->events = malloc(sizeof(struct epoll_event) * private->maxevents);
-        if (private->events == NULL) {
+        internal->maxevents = 64;
+        internal->events = (struct epoll_event *) malloc(sizeof(struct epoll_event) * internal->maxevents);
+        if (internal->events == NULL) {
                 goto bail;
         }
-        private->backend.name    = "epoll";
-        private->backend.add     = private_add;
-        private->backend.mod     = private_mod;
-        private->backend.del     = private_del;
-        private->backend.run     = private_run;
-        private->backend.destroy = private_destroy;
-        return &private->backend;
-bail:   if (private != NULL) {
-                private_destroy(&private->backend);
+        internal->backend.name    = "epoll";
+        internal->backend.add     = internal_add;
+        internal->backend.mod     = internal_mod;
+        internal->backend.del     = internal_del;
+        internal->backend.run     = internal_run;
+        internal->backend.destroy = internal_destroy;
+        return &internal->backend;
+bail:   if (internal != NULL) {
+                internal_destroy(&internal->backend);
         }
         return NULL;
 }
