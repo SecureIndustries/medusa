@@ -293,7 +293,7 @@ static int buffer_resize (struct buffer *buffer, long long size)
 
 static int buffer_grow (struct buffer *buffer, long long size)
 {
-        return buffer_resize(buffer, buffer_get_length(buffer) + size);
+        return buffer_resize(buffer, buffer->length + size);
 }
 
 static int buffer_printf (struct buffer *buffer, const char *format, ...)
@@ -322,7 +322,7 @@ static int buffer_printf (struct buffer *buffer, const char *format, ...)
                 goto bail;
         }
         va_start(va, format);
-        rc = vsnprintf(buffer_get_base(buffer) + buffer_get_length(buffer), size + 1, format, va);
+        rc = vsnprintf(buffer->buffer + buffer->length, size + 1, format, va);
         va_end(va);
         if (rc <= 0) {
                 errorf("can not allocate memory");
