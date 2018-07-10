@@ -36,6 +36,7 @@ int main (int argc, char *argv[])
         int count;
         struct entry *entries;
 
+        int p;
         struct entry *entry;
         struct pqueue_head pqueue;
 
@@ -74,13 +75,27 @@ int main (int argc, char *argv[])
         }
 
         fprintf(stderr, "del\n");
-        while (pqueue.count != 0) {
+        while (pqueue.count > (unsigned int) count / 2) {
                 i = rand() % count;
                 if (entries[i].del == 0) {
                         pqueue_del(&pqueue, entries[i].pos);
                         entries[i].del = 1;
-                        fprintf(stderr, "  %d = %d\n", i, entries[i].pri);
+                        fprintf(stderr, "  %d @ %d\n", entries[i].pri, entries[i].pos);
                 }
+        }
+
+        fprintf(stderr, "pop\n");
+        for (p = -1; pqueue.count > 0; ) {
+                entry = pqueue_pop(&pqueue);
+                if (entry == NULL) {
+                        return -1;
+                }
+                fprintf(stderr, "  %d @ %d\n", entry->pri, entry->pos);
+                if (entry->pri <= p) {
+                        fprintf(stderr, "  %d <= %d\n", entry->pri, p);
+                        return -1;
+                }
+                p = entry->pri;
         }
 
         entry = pqueue_pop(&pqueue);
@@ -90,4 +105,6 @@ int main (int argc, char *argv[])
 
         pqueue_uninit(&pqueue);
         free(entries);
+
+        fprintf(stderr, "finish\n");
 }

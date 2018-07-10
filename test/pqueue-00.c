@@ -35,6 +35,7 @@ int main (int argc, char *argv[])
         int count;
         struct entry *entries;
 
+        int p;
         struct entry *entry;
         struct pqueue_head pqueue;
 
@@ -66,20 +67,23 @@ int main (int argc, char *argv[])
                 if (entries[i].add == 0) {
                         pqueue_add(&pqueue, &entries[i]);
                         entries[i].add = 1;
-                        fprintf(stderr, "  %i = %d\n", i, entries[i].pri);
+                        fprintf(stderr, "  %d = %d\n", i, entries[i].pri);
                 }
         }
 
         fprintf(stderr, "pop\n");
-        for (i = 0; i < count; i++) {
+        for (p = -1, i = 0; i < count; i++) {
                 entry = pqueue_pop(&pqueue);
                 if (entry == NULL) {
+                        fprintf(stderr, "entry is invalid\n");
                         return -1;
                 }
-                fprintf(stderr, "  %i = %d\n", i, entry->pri);
-                if (entry->pri != i) {
+                fprintf(stderr, "  %d = %d\n", i, entry->pri);
+                if (entry->pri <= p) {
+                        fprintf(stderr, "  %d <= %d\n", entry->pri, p);
                         return -1;
                 }
+                p = entry->pri;
         }
         entry = pqueue_pop(&pqueue);
         if (entry != NULL) {
