@@ -50,7 +50,7 @@ int main (int argc, char *argv[])
 
         fprintf(stderr, "seed: %ld\n", seed);
 
-        count = rand() % 100000;
+        count = rand() % 10000;
         entries = malloc(sizeof(struct entry) * count);
         if (entries == NULL) {
                 return -1;

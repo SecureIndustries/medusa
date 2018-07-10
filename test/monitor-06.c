@@ -95,7 +95,7 @@ static int test_poll (unsigned int poll)
         subject[0] = NULL;
         subject[1] = NULL;
 
-        length = rand() % 100000;
+        length = rand() % 10000;
         write_length = length;
         write_finished = 0;
         read_length = 0;
