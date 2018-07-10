@@ -1,8 +1,10 @@
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #include <sys/timerfd.h>
 
@@ -43,26 +45,40 @@ static int internal_fd (struct medusa_timer_backend *backend)
 bail:   return -1;
 }
 
-static int internal_set (struct medusa_timer_backend *backend, struct medusa_timerspec *timerspec)
+static int internal_set (struct medusa_timer_backend *backend, struct medusa_timespec *timespec)
 {
+        int rc;
+        struct itimerspec itimerspec;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
         }
-        if (timerspec == NULL) {
+        if (timespec == NULL) {
+                itimerspec.it_value.tv_sec     = 0;
+                itimerspec.it_value.tv_nsec    = 0;
+                itimerspec.it_interval.tv_sec  = 0;
+                itimerspec.it_interval.tv_nsec = 0;
+        } else {
+                itimerspec.it_value.tv_sec     = timespec->seconds;
+                itimerspec.it_value.tv_nsec    = timespec->nanoseconds;
+                itimerspec.it_interval.tv_sec  = 0;
+                itimerspec.it_interval.tv_nsec = 0;
+        }
+        rc = timerfd_settime(internal->tfd, TFD_TIMER_ABSTIME, &itimerspec, NULL);
+        if (rc != 0) {
                 goto bail;
         }
         return 0;
 bail:   return -1;
 }
 
-static int internal_get (struct medusa_timer_backend *backend, struct medusa_timerspec *timerspec)
+static int internal_get (struct medusa_timer_backend *backend, struct medusa_timespec *timespec)
 {
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
         }
-        if (timerspec == NULL) {
+        if (timespec == NULL) {
                 goto bail;
         }
         return 0;
@@ -91,7 +107,7 @@ struct medusa_timer_backend * medusa_timer_timerfd_create (const struct medusa_t
                 goto bail;
         }
         memset(internal, 0, sizeof(struct internal));
-        internal->tfd = timerfd_create(CLOCK_MONOTONIC, 0);
+        internal->tfd = timerfd_create(CLOCK_BOOTTIME, 0);
         if (internal->tfd < 0) {
                 goto bail;
         }

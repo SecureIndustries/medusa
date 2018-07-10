@@ -16,6 +16,7 @@ libmedusa-monitor.a_cflags-y = \
 	-fvisibility=hidden
 
 libmedusa-monitor.a_files-y = \
+	clock.c \
 	monitor.c \
 	subject.c
 

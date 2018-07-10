@@ -1,4 +1,5 @@
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
@@ -15,10 +16,10 @@ static int callback (struct medusa_subject *subject, unsigned int events)
                 goto bail;
         }
         if (events & medusa_event_timeout) {
+                fprintf(stderr, "break\n");
                 return medusa_monitor_break(medusa_subject_get_monitor(subject));
-        } else {
-                goto bail;
         }
+        return 0;
 bail:   return -1;
 }
 
@@ -45,13 +46,14 @@ int main (int argc, char *argv[])
 
         monitor = medusa_monitor_create(NULL);
         if (monitor == NULL) {
+                fprintf(stderr, "can not create monitor\n");
                 return -1;
         }
         subject = medusa_subject_create_timer(
                         (struct medusa_timerspec) {
                                 .timespec = {
-                                        .seconds = 1,
-                                        .nanoseconds = 0
+                                        .seconds = 0,
+                                        .nanoseconds = 250000000
                                 },
                                 .interval = {
                                         .seconds = 0,
@@ -59,17 +61,21 @@ int main (int argc, char *argv[])
                                 }
                         }, callback, NULL);
         if (subject == NULL) {
+                fprintf(stderr, "can not create subject\n");
                 return -1;
         }
         rc = medusa_monitor_add(monitor, subject);
         if (rc != 0) {
+                fprintf(stderr, "can not add subject\n");
                 return -1;
         }
         rc = medusa_monitor_run(monitor, 0);
         if (rc != 0) {
+                fprintf(stderr, "can not run monitor\n");
                 return -1;
         }
         medusa_subject_destroy(subject);
         medusa_monitor_destroy(monitor);
+        fprintf(stderr, "finish\n");
         return 0;
 }

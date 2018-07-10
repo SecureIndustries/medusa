@@ -8,7 +8,7 @@
 #include "event.h"
 #include "time.h"
 #include "subject.h"
-#include "subject-private.h"
+#include "subject-struct.h"
 
 int medusa_subject_retain (struct medusa_subject *subject)
 {
