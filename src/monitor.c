@@ -136,7 +136,9 @@ static void monitor_timer_subject_callback (struct medusa_io *io, unsigned int e
                         }
                         timer->subject.flags &= ~medusa_subject_flag_poll;
                         timer->subject.monitor->timer.dirty = 1;
-                        timer->_fired = 1;
+                        if (timer->single_shot != 0) {
+                                timer->active = 0;
+                        }
                         rc = medusa_monitor_mod(timer->subject.monitor, &timer->subject);
                         if (rc != 0) {
                                 goto bail;
@@ -241,11 +243,6 @@ static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
                         }
                 } else if (subject->type == medusa_subject_type_timer) {
                         timer = (struct medusa_timer *) subject;
-                        if (timer->_fired) {
-                                if (timer->single_shot) {
-                                        timer->active = 0;
-                                }
-                        }
                         if (!medusa_timer_is_valid(timer)) {
                                 if (subject->flags & medusa_subject_flag_poll) {
                                         rc = pqueue_del(&monitor->timer.pqueue, timer->_position);
@@ -260,7 +257,7 @@ static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
                                 subject->flags &= ~medusa_subject_flag_poll;
                                 subject->flags |= medusa_subject_flag_rogue;
                         } else {
-                                if (timer->_fired) {
+                                if (medusa_timespec_isset(&timer->_timespec)) {
                                         medusa_timespec_add(&timer->_timespec, &timer->interval, &timer->_timespec);
                                 } else {
                                         medusa_timespec_clear(&timer->_timespec);

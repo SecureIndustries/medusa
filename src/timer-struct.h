@@ -11,5 +11,4 @@ struct medusa_timer {
 
         struct medusa_timespec _timespec;
         unsigned int _position;
-        int _fired;
 };
