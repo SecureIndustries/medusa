@@ -103,7 +103,7 @@ static int test_poll (unsigned int poll)
         write_finished = 0;
         read_length = 0;
 
-        memset(&options, 0, sizeof(struct medusa_monitor_init_options));
+        medusa_monitor_init_options_default(&options);
         options.poll.type = poll;
 
         monitor = medusa_monitor_create(&options);

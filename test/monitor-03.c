@@ -24,7 +24,7 @@ int main (int argc, char *argv[])
         (void) argc;
         (void) argv;
         for (i = 0; i < sizeof(polls) / sizeof(polls[0]); i++) {
-                memset(&options, 0, sizeof(struct medusa_monitor_init_options));
+                medusa_monitor_init_options_default(&options);
                 options.poll.type = polls[i];
                 monitor = medusa_monitor_create(&options);
                 if (monitor == NULL) {

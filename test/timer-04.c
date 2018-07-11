@@ -45,7 +45,8 @@ static int test_poll (unsigned int poll)
         count = 0;
         monitor = NULL;
 
-        memset(&options, 0, sizeof(struct medusa_monitor_init_options));
+        medusa_monitor_init_options_default(&options);
+        medusa_monitor_init_options_default(&options);
         options.poll.type = poll;
 
         monitor = medusa_monitor_create(&options);
