@@ -26,7 +26,8 @@ int medusa_timer_get_single_shot (const struct medusa_timer *timer);
 int medusa_timer_set_type (struct medusa_timer *timer, unsigned int type);
 unsigned int medusa_timer_get_type (const struct medusa_timer *timer);
 
-int medusa_timer_set_timeout_callback (struct medusa_timer *timer, void (*timeout) (struct medusa_timer *timer, void *context), void *context);
+int medusa_timer_set_timeout_callback (struct medusa_timer *timer, void (*timeout) (struct medusa_timer *timer), void *context);
+void * medusa_timer_get_timeout_context (const struct medusa_timer *timer);
 
 int medusa_timer_set_active (struct medusa_timer *timer, int active);
 int medusa_timer_get_active (const struct medusa_timer *timer);

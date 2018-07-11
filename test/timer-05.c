@@ -22,9 +22,9 @@ static const unsigned int g_polls[] = {
 //        MEDUSA_MONITOR_POLL_SELECT
 };
 
-static void timer_timeout_callback (struct medusa_timer *timer, void *context)
+static void timer_timeout_callback (struct medusa_timer *timer)
 {
-        int *count = context;
+        int *count = medusa_timer_get_timeout_context(timer);
         fprintf(stderr, "timeout: %d\n", *count);
         if ((*count)++ > 10) {
                 fprintf(stderr, "break\n");

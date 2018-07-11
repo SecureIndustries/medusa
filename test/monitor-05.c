@@ -28,10 +28,9 @@ static void io_activated_callback (struct medusa_io *io, unsigned int events)
         (void) events;
 }
 
-static void timer_timeout_callback (struct medusa_timer *timer, void *context)
+static void timer_timeout_callback (struct medusa_timer *timer)
 {
         (void) timer;
-        (void) context;
 }
 
 static int test_poll (unsigned int poll)
