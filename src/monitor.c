@@ -276,6 +276,20 @@ static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
                         }
                 }
         }
+        if (monitor->timer.dirty != 0) {
+                timer = pqueue_peek(&monitor->timer.pqueue);
+                if (timer == NULL) {
+                        rc = monitor->timer.backend->set(monitor->timer.backend, NULL);
+                        if (rc != 0) {
+                                goto bail;
+                        }
+                } else {
+                        rc = monitor->timer.backend->set(monitor->timer.backend, &timer->_timespec);
+                        if (rc != 0) {
+                                goto bail;
+                        }
+                }
+        }
         return 0;
 bail:   return -1;
 }
@@ -568,7 +582,6 @@ int medusa_monitor_run (struct medusa_monitor *monitor, unsigned int flags, ...)
 {
         int rc;
         va_list ap;
-        struct medusa_timer *timer;
         struct medusa_timespec *timeout;
         struct medusa_timespec timeout_nowait;
         struct medusa_timespec timeout_timespec;
@@ -597,20 +610,6 @@ int medusa_monitor_run (struct medusa_monitor *monitor, unsigned int flags, ...)
                 rc = medusa_monitor_apply_changes(monitor);
                 if (rc != 0) {
                         goto bail;
-                }
-                if (monitor->timer.dirty != 0) {
-                        timer = pqueue_peek(&monitor->timer.pqueue);
-                        if (timer == NULL) {
-                                rc = monitor->timer.backend->set(monitor->timer.backend, NULL);
-                                if (rc != 0) {
-                                        goto bail;
-                                }
-                        } else {
-                                rc = monitor->timer.backend->set(monitor->timer.backend, &timer->_timespec);
-                                if (rc != 0) {
-                                        goto bail;
-                                }
-                        }
                 }
                 rc = monitor->poll.backend->run(monitor->poll.backend, timeout);
                 if (rc != 0) {
