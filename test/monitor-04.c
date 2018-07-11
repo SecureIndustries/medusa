@@ -7,7 +7,8 @@
 
 #include "medusa/event.h"
 #include "medusa/time.h"
-#include "medusa/subject.h"
+#include "medusa/io.h"
+#include "medusa/timer.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
@@ -22,18 +23,6 @@ static const unsigned int g_polls[] = {
         medusa_monitor_poll_select
 };
 
-static int subject_callback (struct medusa_subject *subject, unsigned int events)
-{
-        if (subject == NULL) {
-                goto bail;
-        }
-        if (events == 0) {
-                goto bail;
-        }
-        return 0;
-bail:   return -1;
-}
-
 static int test_poll (unsigned int poll)
 {
         int rc;
@@ -41,9 +30,8 @@ static int test_poll (unsigned int poll)
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
-        struct medusa_subject *subject_io;
-        struct medusa_subject *subject_timer;
-        struct medusa_subject *subject_signal;
+        struct medusa_io *io;
+        struct medusa_timer *timer;
 
         monitor = NULL;
 
@@ -55,49 +43,24 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        subject_io = medusa_subject_create_io(STDIN_FILENO, subject_callback, NULL);
-        if (subject_io == NULL) {
+        io = medusa_io_create();
+        if (io == NULL) {
                 goto bail;
         }
-        rc = medusa_monitor_add(monitor, subject_io, medusa_event_out);
+        rc = medusa_monitor_add(monitor, (struct medusa_subject *) io);
         if (rc != 0) {
                 goto bail;
         }
 
-        subject_timer = medusa_subject_create_timer(
-                                (struct medusa_timerspec) {
-                                        .timespec = {
-                                                .seconds = 1,
-                                                .nanoseconds = 0
-                                        },
-                                        .interval = {
-                                                .seconds = 0,
-                                                .nanoseconds = 0
-                                        }
-                                },
-                                subject_callback,
-                                NULL
-                        );
-        if (subject_timer == NULL) {
+        timer = medusa_timer_create();
+        if (timer == NULL) {
                 goto bail;
         }
-        rc = medusa_monitor_add(monitor, subject_timer);
+        rc = medusa_monitor_add(monitor, (struct medusa_subject *) timer);
         if (rc != 0) {
                 goto bail;
         }
 
-        subject_signal = medusa_subject_create_signal(SIGINT, subject_callback, NULL);
-        if (subject_signal == NULL) {
-                goto bail;
-        }
-        rc = medusa_monitor_add(monitor, subject_signal);
-        if (rc != 0) {
-                goto bail;
-        }
-
-        medusa_subject_destroy(subject_signal);
-        medusa_subject_destroy(subject_timer);
-        medusa_subject_destroy(subject_io);
         medusa_monitor_destroy(monitor);
         return 0;
 bail:   if (monitor != NULL) {

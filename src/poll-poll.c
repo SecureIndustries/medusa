@@ -6,10 +6,12 @@
 #include <poll.h>
 
 #include "event.h"
+#include "queue.h"
 #include "time.h"
-#include "subject.h"
-#include "poll-backend.h"
+#include "subject-struct.h"
+#include "io-struct.h"
 
+#include "poll-backend.h"
 #include "poll-poll.h"
 
 #define MAX(a, b)       (((a) > (b)) ? (a) : (b))
@@ -19,30 +21,24 @@ struct internal {
         struct pollfd *pfds;
         int npfds;
         int spfds;
-        struct medusa_subject **subjects;
-        int nsubjects;
+        struct medusa_io **ios;
+        int nios;
 };
 
-static int internal_add (struct medusa_poll_backend *backend, struct medusa_subject *subject, unsigned int events)
+static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *io)
 {
-        int rc;
-        int fd;
         struct pollfd *pfd;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
         }
-        if (subject == NULL) {
+        if (io == NULL) {
                 goto bail;
         }
-        if (medusa_subject_get_type(subject) != medusa_subject_type_io) {
+        if (io->fd < 0) {
                 goto bail;
         }
-        fd = medusa_subject_io_get_fd(subject);
-        if (fd < 0) {
-                goto bail;
-        }
-        if (events == 0) {
+        if (io->events == 0) {
                 goto bail;
         }
         if (internal->npfds + 1 >= internal->spfds) {
@@ -59,66 +55,57 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_subj
                 internal->pfds = tmp;
                 internal->spfds = internal->spfds + 64;
         }
-        if (fd >= internal->nsubjects) {
-                struct medusa_subject **tmp;
-                tmp = (struct medusa_subject **) realloc(internal->subjects, sizeof(struct medusa_subject *) * MAX(fd, internal->nsubjects + 64));
+        if (io->fd >= internal->nios) {
+                struct medusa_io **tmp;
+                tmp = (struct medusa_io **) realloc(internal->ios, sizeof(struct medusa_io *) * MAX(io->fd, internal->nios + 64));
                 if (tmp == NULL) {
-                        tmp = (struct medusa_subject **) malloc(sizeof(struct medusa_subject *) * MAX(fd, internal->nsubjects + 64));
+                        tmp = (struct medusa_io **) malloc(sizeof(struct medusa_io *) * MAX(io->fd, internal->nios + 64));
                         if (tmp == NULL) {
                                 goto bail;
                         }
-                        memcpy(tmp, internal->subjects, sizeof(struct medusa_subject **) * internal->nsubjects);
-                        free(internal->subjects);
+                        memcpy(tmp, internal->ios, sizeof(struct medusa_io **) * internal->nios);
+                        free(internal->ios);
                 }
-                internal->subjects = tmp;
-                internal->nsubjects = MAX(fd, internal->nsubjects + 64);
-        }
-        rc = medusa_subject_retain(subject);
-        if (rc != 0) {
-                goto bail;
+                internal->ios = tmp;
+                internal->nios = MAX(io->fd, internal->nios + 64);
         }
         pfd = &internal->pfds[internal->npfds];
         pfd->events = 0;
-        if (events & medusa_event_in) {
+        if (io->events & medusa_event_in) {
                 pfd->events |= POLLIN;
         }
-        if (events & medusa_event_out) {
+        if (io->events & medusa_event_out) {
                 pfd->events |= POLLOUT;
         }
-        if (events & medusa_event_pri) {
+        if (io->events & medusa_event_pri) {
                 pfd->events |= POLLPRI;
         }
-        pfd->fd = fd;
-        internal->subjects[fd] = subject;
+        pfd->fd = io->fd;
+        internal->ios[io->fd] = io;
         internal->npfds += 1;
         return 0;
 bail:   return -1;
 }
 
-static int internal_mod (struct medusa_poll_backend *backend, struct medusa_subject *subject, unsigned int events)
+static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *io)
 {
         int i;
-        int fd;
         struct pollfd *pfd;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
         }
-        if (subject == NULL) {
+        if (io == NULL) {
                 goto bail;
         }
-        if (medusa_subject_get_type(subject) != medusa_subject_type_io) {
+        if (io->fd < 0) {
                 goto bail;
         }
-        fd = medusa_subject_io_get_fd(subject);
-        if (fd < 0) {
-                goto bail;
-        }
-        if (events == 0) {
+        if (io->events == 0) {
                 goto bail;
         }
         for (i = 0; i < internal->npfds; i++) {
-                if (fd == internal->pfds[i].fd) {
+                if (io->fd == internal->pfds[i].fd) {
                         break;
                 }
         }
@@ -127,39 +114,34 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_subj
         }
         pfd = &internal->pfds[i];
         pfd->events = 0;
-        if (events & medusa_event_in) {
+        if (io->events & medusa_event_in) {
                 pfd->events |= POLLIN;
         }
-        if (events & medusa_event_out) {
+        if (io->events & medusa_event_out) {
                 pfd->events |= POLLOUT;
         }
-        if (events & medusa_event_pri) {
+        if (io->events & medusa_event_pri) {
                 pfd->events |= POLLPRI;
         }
         return 0;
 bail:   return -1;
 }
 
-static int internal_del (struct medusa_poll_backend *backend, struct medusa_subject *subject)
+static int internal_del (struct medusa_poll_backend *backend, struct medusa_io *io)
 {
         int i;
-        int fd;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
         }
-        if (subject == NULL) {
+        if (io == NULL) {
                 goto bail;
         }
-        if (medusa_subject_get_type(subject) != medusa_subject_type_io) {
-                goto bail;
-        }
-        fd = medusa_subject_io_get_fd(subject);
-        if (fd < 0) {
+        if (io->fd < 0) {
                 goto bail;
         }
         for (i = 0; i < internal->npfds; i++) {
-                if (fd == internal->pfds[i].fd) {
+                if (io->fd == internal->pfds[i].fd) {
                         break;
                 }
         }
@@ -168,8 +150,7 @@ static int internal_del (struct medusa_poll_backend *backend, struct medusa_subj
         }
         memmove(&internal->pfds[i], &internal->pfds[i + 1], sizeof(struct pollfd) * (internal->npfds - i - 1));
         internal->npfds -= 1;
-        internal->subjects[fd] = NULL;
-        medusa_subject_destroy(subject);
+        internal->ios[io->fd] = NULL;
         return 0;
 bail:   return -1;
 }
@@ -181,7 +162,7 @@ static int internal_run (struct medusa_poll_backend *backend, struct medusa_time
         int count;
         int timeout;
         unsigned int events;
-        struct medusa_subject *subject;
+        struct medusa_io *io;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
@@ -224,8 +205,8 @@ static int internal_run (struct medusa_poll_backend *backend, struct medusa_time
                 if (internal->pfds[i].revents & POLLNVAL) {
                         events |= medusa_event_nval;
                 }
-                subject = internal->subjects[internal->pfds[i].fd];
-                rc = medusa_subject_get_callback_function(subject)(subject, events);
+                io = internal->ios[internal->pfds[i].fd];
+                rc = io->subject.callback(&io->subject, events);
                 if (rc != 0) {
                         goto bail;
                 }
@@ -240,8 +221,8 @@ static void internal_destroy (struct medusa_poll_backend *backend)
         if (internal == NULL) {
                 return;
         }
-        if (internal->subjects != NULL) {
-                free(internal->subjects);
+        if (internal->ios != NULL) {
+                free(internal->ios);
         }
         if (internal->pfds != NULL) {
                 free(internal->pfds);

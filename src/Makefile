@@ -17,8 +17,10 @@ libmedusa-monitor.a_cflags-y = \
 
 libmedusa-monitor.a_files-y = \
 	clock.c \
+	io.c \
 	monitor.c \
-	subject.c
+	subject.c \
+	timer.c
 
 libmedusa-monitor.a_cflags-${POLL_EPOLL_ENABLE} += \
 	-DPOLL_EPOLL_ENABLE=1
@@ -56,10 +58,12 @@ dist.base = medusa
 
 dist.include-y = \
 	event.h \
+	io.h \
 	monitor.h \
 	queue.h \
 	subject.h \
-	time.h
+	time.h \
+	timer.h
 
 dist.lib-y = \
 	libmedusa-monitor.a \

@@ -2,25 +2,104 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <time.h>
+#include <string.h>
 #include <signal.h>
+#include <time.h>
+#include <errno.h>
 
-#include "medusa/event.h"
-#include "medusa/time.h"
-#include "medusa/subject.h"
+#include "medusa/timer.h"
 #include "medusa/monitor.h"
 
-static int callback (struct medusa_subject *subject, unsigned int events)
+static const unsigned int g_polls[] = {
+        medusa_monitor_poll_default,
+#if defined(__LINUX__)
+        medusa_monitor_poll_epoll,
+#endif
+#if defined(__APPLE__)
+        medusa_monitor_poll_kqueue,
+#endif
+        medusa_monitor_poll_poll,
+//        medusa_monitor_poll_select
+};
+
+static void timer_timeout_callback (struct medusa_timer *timer, void *context)
 {
-        if (events == 0) {
+        int *count = context;
+        fprintf(stderr, "timeout: %d\n", *count);
+        if ((*count)++ > 10) {
+                fprintf(stderr, "break\n");
+                medusa_monitor_break(medusa_timer_get_monitor(timer));
+        }
+}
+
+static int test_poll (unsigned int poll)
+{
+        int rc;
+
+        struct medusa_monitor *monitor;
+        struct medusa_monitor_init_options options;
+
+        int count;
+        struct medusa_timer *timer;
+
+        count = 0;
+        monitor = NULL;
+
+        memset(&options, 0, sizeof(struct medusa_monitor_init_options));
+        options.poll.type = poll;
+
+        monitor = medusa_monitor_create(&options);
+        if (monitor == NULL) {
                 goto bail;
         }
-        if (events & medusa_event_timeout) {
-                fprintf(stderr, "break\n");
-                return medusa_monitor_break(medusa_subject_get_monitor(subject));
+
+        timer = medusa_timer_create();
+        if (timer == NULL) {
+                goto bail;
         }
+        rc = medusa_timer_set_initial(timer, 0.250);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_timer_set_interval(timer, 0.0001);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_timer_set_single_shot(timer, 0);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_timer_set_type(timer, medusa_timer_type_precise);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_timer_set_timeout_callback(timer, timer_timeout_callback, &count);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_timer_set_active(timer, 1);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_monitor_add(monitor, (struct medusa_subject *) timer);
+        if (rc != 0) {
+                goto bail;
+        }
+
+        rc = medusa_monitor_run(monitor, 0);
+        if (rc != 0) {
+                fprintf(stderr, "can not run monitor\n");
+                return -1;
+        }
+
+        fprintf(stderr, "finish\n");
+
+        medusa_monitor_destroy(monitor);
         return 0;
-bail:   return -1;
+bail:   if (monitor != NULL) {
+                medusa_monitor_destroy(monitor);
+        }
+        return 01;
 }
 
 static void alarm_handler (int sig)
@@ -32,9 +111,7 @@ static void alarm_handler (int sig)
 int main (int argc, char *argv[])
 {
         int rc;
-
-        struct medusa_monitor *monitor;
-        struct medusa_subject *subject;
+        unsigned int i;
 
         (void) argc;
         (void) argv;
@@ -42,40 +119,14 @@ int main (int argc, char *argv[])
         srand(time(NULL));
         signal(SIGALRM, alarm_handler);
 
-        alarm(5);
+        for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
+                alarm(5);
+                fprintf(stderr, "testing poll: %d\n", g_polls[i]);
 
-        monitor = medusa_monitor_create(NULL);
-        if (monitor == NULL) {
-                fprintf(stderr, "can not create monitor\n");
-                return -1;
+                rc = test_poll(g_polls[i]);
+                if (rc != 0) {
+                        return -1;
+                }
         }
-        subject = medusa_subject_create_timer(
-                        (struct medusa_timerspec) {
-                                .timespec = {
-                                        .seconds = 0,
-                                        .nanoseconds = 250000000
-                                },
-                                .interval = {
-                                        .seconds = 0,
-                                        .nanoseconds = 0
-                                }
-                        }, callback, NULL);
-        if (subject == NULL) {
-                fprintf(stderr, "can not create subject\n");
-                return -1;
-        }
-        rc = medusa_monitor_add(monitor, subject);
-        if (rc != 0) {
-                fprintf(stderr, "can not add subject\n");
-                return -1;
-        }
-        rc = medusa_monitor_run(monitor, 0);
-        if (rc != 0) {
-                fprintf(stderr, "can not run monitor\n");
-                return -1;
-        }
-        medusa_subject_destroy(subject);
-        medusa_monitor_destroy(monitor);
-        fprintf(stderr, "finish\n");
         return 0;
 }

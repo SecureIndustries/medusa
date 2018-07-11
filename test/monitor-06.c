@@ -12,7 +12,7 @@
 
 #include "medusa/event.h"
 #include "medusa/time.h"
-#include "medusa/subject.h"
+#include "medusa/io.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
@@ -27,26 +27,30 @@ static const unsigned int g_polls[] = {
 //        medusa_monitor_poll_select
 };
 
-static int subject_callback (struct medusa_subject *subject, unsigned int events)
+static void io_activated_callback (struct medusa_io *io, unsigned int events, void *context)
 {
         int rc;
-        if (subject == NULL) {
-                fprintf(stderr, "subject is invalid\n");
+        if (io == NULL) {
+                fprintf(stderr, "io is invalid\n");
                 goto bail;
         }
         if (events == 0) {
                 fprintf(stderr, "events is invalid\n");
                 goto bail;
         }
+        if (context == 0) {
+                fprintf(stderr, "context is invalid\n");
+                goto bail;
+        }
         fprintf(stderr, "callback:\n");
-        fprintf(stderr, "  subject: %p\n", subject);
-        fprintf(stderr, "  fd     : %d\n", medusa_subject_io_get_fd(subject));
+        fprintf(stderr, "  io     : %p\n", io);
+        fprintf(stderr, "  fd     : %d\n", medusa_io_get_fd(io));
         fprintf(stderr, "  events : 0x%08x\n", events);
         if (events & medusa_event_out) {
                 char value;
-                int *write_length = (int *) medusa_subject_get_callback_context(subject);
+                int *write_length = (int *) context;
                 value = rand();
-                rc = write(medusa_subject_io_get_fd(subject), &value, sizeof(value));
+                rc = write(medusa_io_get_fd(io), &value, sizeof(value));
                 if (rc != sizeof(value)) {
                         if (errno != EAGAIN &&
                             errno != EWOULDBLOCK) {
@@ -58,8 +62,8 @@ static int subject_callback (struct medusa_subject *subject, unsigned int events
                 }
         } else if (events & medusa_event_in) {
                 char value;
-                int *read_length = (int *) medusa_subject_get_callback_context(subject);
-                rc = read(medusa_subject_io_get_fd(subject), &value, sizeof(value));
+                int *read_length = (int *) context;
+                rc = read(medusa_io_get_fd(io), &value, sizeof(value));
                 if (rc != sizeof(value)) {
                         if (errno != EAGAIN &&
                             errno != EWOULDBLOCK) {
@@ -70,8 +74,8 @@ static int subject_callback (struct medusa_subject *subject, unsigned int events
                         *read_length += 1;
                 }
         }
-        return 0;
-bail:   return -1;
+        return;
+bail:   return;
 }
 
 static int test_poll (unsigned int poll)
@@ -87,13 +91,13 @@ static int test_poll (unsigned int poll)
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
-        struct medusa_subject *subject[2];
+        struct medusa_io *io[2];
 
         monitor = NULL;
         sv[0] = -1;
         sv[1] = -1;
-        subject[0] = NULL;
-        subject[1] = NULL;
+        io[0] = NULL;
+        io[1] = NULL;
 
         length = rand() % 10000;
         write_length = length;
@@ -117,29 +121,37 @@ static int test_poll (unsigned int poll)
 
         fprintf(stderr, "pair: %d, %d\n", sv[0], sv[1]);
 
-        subject[0] = medusa_subject_create_io(sv[0], subject_callback, &write_length);
-        if (subject[0] == NULL) {
-                fprintf(stderr, "can not create subject\n");
+        io[0] = medusa_io_create();
+        if (io[0] == NULL) {
+                fprintf(stderr, "can not create io\n");
                 goto bail;
         }
-        fprintf(stderr, "  subject: %p\n", subject[0]);
-        rc = medusa_monitor_add(monitor, subject[0], medusa_event_out);
+        rc = medusa_io_set_fd(io[0], sv[0]);
+        rc = medusa_io_set_events(io[0], medusa_event_out);
+        rc = medusa_io_set_activated_callback(io[0], io_activated_callback, &write_length);
+        rc = medusa_io_set_enabled(io[0], 1);
+        rc = medusa_monitor_add(monitor, (struct medusa_subject *) io[0]);
         if (rc != 0) {
-                fprintf(stderr, "can not add subject\n");
+                fprintf(stderr, "can not setup io[0]\n");
                 goto bail;
         }
+        fprintf(stderr, "  io: %p\n", io[0]);
 
-        subject[1] = medusa_subject_create_io(sv[1], subject_callback, &read_length);
-        if (subject[1] == NULL) {
-                fprintf(stderr, "can not create subject\n");
+        io[1] = medusa_io_create();
+        if (io[1] == NULL) {
+                fprintf(stderr, "can not create io\n");
                 goto bail;
         }
-        fprintf(stderr, "  subject: %p\n", subject[1]);
-        rc = medusa_monitor_add(monitor, subject[1], medusa_event_in);
+        rc = medusa_io_set_fd(io[1], sv[1]);
+        rc = medusa_io_set_events(io[1], medusa_event_in);
+        rc = medusa_io_set_activated_callback(io[1], io_activated_callback, &read_length);
+        rc = medusa_io_set_enabled(io[1], 1);
+        rc = medusa_monitor_add(monitor, (struct medusa_subject *) io[1]);
         if (rc != 0) {
-                fprintf(stderr, "can not add subject\n");
+                fprintf(stderr, "can not setup io[1]\n");
                 goto bail;
         }
+        fprintf(stderr, "  io: %p\n", io[1]);
 
         while (1) {
                 fprintf(stderr, "running monitor\n");
@@ -152,10 +164,10 @@ static int test_poll (unsigned int poll)
                 fprintf(stderr, "  write_length: %d\n", write_length);
                 if (write_length == 0 &&
                     write_finished == 0) {
-                        fprintf(stderr, "    deleting writer\n");
-                        rc = medusa_monitor_del(monitor, subject[0]);
+                        fprintf(stderr, "    disable writer\n");
+                        rc = medusa_io_set_enabled(io[0], 0);
                         if (rc != 0) {
-                                fprintf(stderr, "can not del subject\n");
+                                fprintf(stderr, "can not setup io\n");
                                 goto bail;
                         }
                         write_finished = 1;
@@ -175,18 +187,14 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        medusa_subject_destroy(subject[0]);
-        medusa_subject_destroy(subject[1]);
+        fprintf(stderr, "finish\n");
+
+        close(sv[0]);
+        close(sv[1]);
         medusa_monitor_destroy(monitor);
         return 0;
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);
-        }
-        if (subject[0] != NULL) {
-                medusa_subject_destroy(subject[0]);
-        }
-        if (subject[1] != NULL) {
-                medusa_subject_destroy(subject[1]);
         }
         if (sv[0] >= 0) {
                 close(sv[0]);

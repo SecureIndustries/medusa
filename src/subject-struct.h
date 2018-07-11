@@ -1,33 +1,17 @@
 
-struct medusa_subject_io {
-        int fd;
-};
-
-struct medusa_subject_timer {
-        struct medusa_timerspec timerspec;
-        struct medusa_timespec timespec;
-        unsigned int position;
-};
-
-struct medusa_subject_signal {
-        int number;
+enum {
+        medusa_subject_flag_mod       = 0x00000001,
+        medusa_subject_flag_del       = 0x00000002,
+        medusa_subject_flag_poll      = 0x00000004,
+        medusa_subject_flag_rogue     = 0x00000008
 };
 
 TAILQ_HEAD(medusa_subjects, medusa_subject);
 struct medusa_subject {
         TAILQ_ENTRY(medusa_subject) subjects;
         unsigned int type;
-        union {
-                struct medusa_subject_io io;
-                struct medusa_subject_timer timer;
-                struct medusa_subject_signal signal;
-        } u;
-        struct {
-                int (*function) (struct medusa_subject *subject, unsigned int events);
-                void *context;
-        } callback;
-        struct {
-                int refcount;
-                struct medusa_monitor *monitor;
-        } internal;
+        int (*callback) (struct medusa_subject *subject, unsigned int events);
+        void *context;
+        struct medusa_monitor *monitor;
+        unsigned int flags;
 };

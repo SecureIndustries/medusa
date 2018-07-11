@@ -21,7 +21,7 @@
 
 #include <medusa/event.h>
 #include <medusa/time.h>
-#include <medusa/subject.h>
+#include <medusa/io.h>
 #include <medusa/monitor.h>
 
 #include "http-parser.h"
@@ -133,7 +133,7 @@ enum client_state {
 TAILQ_HEAD(clients, client);
 struct client {
         TAILQ_ENTRY(client) clients;
-        struct medusa_subject *subject;
+        struct medusa_io *io;
         enum client_state state;
         struct port *port;
         struct ports *ports;
@@ -176,7 +176,7 @@ static int g_debug_level = debug_level_error;
         } \
 }
 
-static int client_subject_callback (struct medusa_subject *subject, unsigned int events);
+static void client_io_callback (struct medusa_io *io, unsigned int events, void *context);
 
 static unsigned long clock_get (void)
 {
@@ -598,10 +598,10 @@ static int client_get_fd_error (struct client *client)
         if (client == NULL) {
                 return -EINVAL;
         }
-        if (client->subject == NULL) {
+        if (client->io == NULL) {
                 return -EINVAL;
         }
-        rc = getsockopt(medusa_subject_io_get_fd(client->subject), SOL_SOCKET, SO_ERROR, &error, &len);
+        rc = getsockopt(medusa_io_get_fd(client->io), SOL_SOCKET, SO_ERROR, &error, &len);
         if (rc != 0) {
                 return -EINVAL;
         }
@@ -616,9 +616,9 @@ static int client_disconnect (struct client *client)
         if (client == NULL) {
                 return -1;
         }
-        if (client->subject != NULL) {
-                medusa_subject_destroy(client->subject);
-                client->subject = NULL;
+        if (client->io != NULL) {
+                medusa_io_destroy(client->io);
+                client->io = NULL;
         }
         if (client->port != NULL) {
                 ports_push(client->ports, client->port);
@@ -670,10 +670,16 @@ static int client_connect (struct client *client, const char *address, int port)
                 rc = -EIO;
                 goto bail;
         }
-        client->subject = medusa_subject_create_io(fd, client_subject_callback, client);
-        if (client->subject == NULL) {
-                errorf("can not create subject");
+        client->io = medusa_io_create();
+        if (client->io == NULL) {
+                errorf("can not create io");
                 rc = -EIO;
+                goto bail;
+        }
+        rc = medusa_io_set_fd(client->io, fd);
+        rc = medusa_io_set_activated_callback(client->io, client_io_callback, client);
+        rc = medusa_io_set_enabled(client->io, 1);
+        if (rc != 0) {
                 goto bail;
         }
         {
@@ -749,7 +755,7 @@ static struct client * client_create (struct ports *ports, struct buffer *reques
                 goto bail;
         }
         memset(client, 0, sizeof(struct client));
-        client->subject = NULL;
+        client->io = NULL;
         client->request = request;
         client->ports = ports;
         client->state = client_state_disconnected;
@@ -799,10 +805,10 @@ static int http_parser_on_header_value (http_parser *http_parser, const char *at
         return 0;
 }
 
-static int client_subject_callback (struct medusa_subject *subject, unsigned int events)
+static void client_io_callback (struct medusa_io *io, unsigned int events, void *context)
 {
         int rc;
-        struct client *client = (struct client *) medusa_subject_get_callback_context(subject);
+        struct client *client = (struct client *) context;
         if ((events & medusa_event_err) ||
             (events & medusa_event_hup)) {
                 client->state = client_state_disconnecting;
@@ -814,7 +820,7 @@ static int client_subject_callback (struct medusa_subject *subject, unsigned int
                         client->state = client_state_disconnecting;
                         goto bail;
                 }
-                read_rc = read(medusa_subject_io_get_fd(subject),
+                read_rc = read(medusa_io_get_fd(io),
                                client->incoming.buffer + client->incoming.length,
                                client->incoming.size - client->incoming.length);
                 if (read_rc == 0) {
@@ -845,7 +851,7 @@ static int client_subject_callback (struct medusa_subject *subject, unsigned int
                         }
                 } else if (client->state == client_state_requesting) {
                         ssize_t write_rc;
-                        write_rc = write(medusa_subject_io_get_fd(subject),
+                        write_rc = write(medusa_io_get_fd(io),
                                         client->request->buffer + client->request->offset,
                                         client->request->length - client->request->offset);
                         if (write_rc == 0) {
@@ -872,16 +878,13 @@ static int client_subject_callback (struct medusa_subject *subject, unsigned int
                         client->state = client_state_requested;
                         goto bail;
                 }
-        } else if (events & medusa_event_destroy) {
-                shutdown(medusa_subject_io_get_fd(subject), SHUT_RDWR);
-                close(medusa_subject_io_get_fd(subject));
         } else if (events != 0) {
                 errorf("invalid client: %p, state: %d", client, client->state);
                 client->state = client_state_requested;
                 goto bail;
         }
-out:    return 0;
-bail:   return -1;
+out:    return;
+bail:   return;
 }
 
 int main (int argc, char *argv[])
@@ -1127,7 +1130,7 @@ int main (int argc, char *argv[])
                         if (client->state == client_state_connected) {
                                 debugf("client: %p, state: connected", client);
                                 client->state = client_state_requesting;
-                                rc = medusa_monitor_mod(monitor, client->subject, medusa_event_out);
+                                rc = medusa_io_set_events(client->io, medusa_event_out);
                                 if (rc != 0) {
                                         errorf("can not add client to monitor");
                                         goto bail;
@@ -1139,7 +1142,7 @@ int main (int argc, char *argv[])
                         if (client->state == client_state_requested) {
                                 debugf("client: %p, state: requested", client);
                                 client->state = client_state_parsing;
-                                rc = medusa_monitor_mod(monitor, client->subject, medusa_event_in);
+                                rc = medusa_io_set_events(client->io, medusa_event_in);
                                 if (rc != 0) {
                                         errorf("can not add client to monitor");
                                         goto bail;
@@ -1178,34 +1181,28 @@ int main (int argc, char *argv[])
                         if (client->state == client_state_disconnecting) {
                                 debugf("client: %p, state: disconnecting, requests: %lld", client, client->requests);
                                 if (client->requests <= 0) {
-                                        if (client->subject != NULL) {
-                                                rc = medusa_monitor_del(monitor, client->subject);
-                                                if (rc != 0) {
-                                                        errorf("can not add client to monitor");
-                                                        goto bail;
-                                                }
-                                                medusa_subject_destroy(client->subject);
+                                        if (client->io != NULL) {
+                                                shutdown(medusa_io_get_fd(client->io), SHUT_RDWR);
+                                                close(medusa_io_get_fd(client->io));
+                                                medusa_monitor_del(monitor, (struct medusa_subject *) client->io);
                                         }
                                         if (client->port != NULL) {
                                                 ports_push(client->ports, client->port);
                                         }
-                                        client->subject = NULL;
+                                        client->io = NULL;
                                         client->port = NULL;
                                         client->state = client_state_finished;
                                 } else {
                                         if (options.keepalive == 0) {
-                                                if (client->subject != NULL) {
-                                                        rc = medusa_monitor_del(monitor, client->subject);
-                                                        if (rc != 0) {
-                                                                errorf("can not add client to monitor");
-                                                                goto bail;
-                                                        }
-                                                        medusa_subject_destroy(client->subject);
+                                                if (client->io != NULL) {
+                                                        shutdown(medusa_io_get_fd(client->io), SHUT_RDWR);
+                                                        close(medusa_io_get_fd(client->io));
+                                                        medusa_monitor_del(monitor, (struct medusa_subject *) client->io);
                                                 }
                                                 if (client->port != NULL) {
                                                         ports_push(client->ports, client->port);
                                                 }
-                                                client->subject = NULL;
+                                                client->io = NULL;
                                                 client->port = NULL;
                                         } else {
                                                 debugf("client: %p, state: keep-alive", client);
@@ -1226,12 +1223,12 @@ int main (int argc, char *argv[])
                                         client->http_parse.data = client;
                                         http_parser_init(&client->http_parse, HTTP_RESPONSE);
                                         buffer_reset(&client->incoming);
-                                        if (client->subject != NULL &&
+                                        if (client->io != NULL &&
                                             options.keepalive != 0) {
                                                 client->requests -= 1;
                                                 client->state = client_state_requesting;
                                                 client->connect_timestamp = clock_get();
-                                                rc = medusa_monitor_mod(monitor, client->subject, medusa_event_out);
+                                                rc = medusa_io_set_events(client->io, medusa_event_out);
                                                 if (rc != 0) {
                                                         errorf("can not add client to monitor");
                                                         goto bail;
@@ -1246,7 +1243,8 @@ int main (int argc, char *argv[])
                                                 client->state = client_state_connecting;
                                                 client->requests -= 1;
                                                 client->connect_timestamp = clock_get();
-                                                rc = medusa_monitor_add(monitor, client->subject, medusa_event_out);
+                                                rc = medusa_io_set_events(client->io, medusa_event_out);
+                                                rc = medusa_monitor_add(monitor, (struct medusa_subject *) client->io);
                                                 if (rc != 0) {
                                                         errorf("can not add client to monitor");
                                                         goto bail;

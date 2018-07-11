@@ -7,7 +7,8 @@
 
 #include "medusa/event.h"
 #include "medusa/time.h"
-#include "medusa/subject.h"
+#include "medusa/io.h"
+#include "medusa/timer.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
@@ -22,16 +23,17 @@ static const unsigned int g_polls[] = {
         medusa_monitor_poll_select
 };
 
-static int subject_callback (struct medusa_subject *subject, unsigned int events)
+static void io_activated_callback (struct medusa_io *io, unsigned int events, void *context)
 {
-        if (subject == NULL) {
-                goto bail;
-        }
-        if (events == 0) {
-                goto bail;
-        }
-        return 0;
-bail:   return -1;
+        (void) io;
+        (void) events;
+        (void) context;
+}
+
+static void timer_timeout_callback (struct medusa_timer *timer, void *context)
+{
+        (void) timer;
+        (void) context;
 }
 
 static int test_poll (unsigned int poll)
@@ -41,7 +43,8 @@ static int test_poll (unsigned int poll)
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
-        struct medusa_subject *subject;
+        struct medusa_io *io;
+        struct medusa_timer *timer;
 
         monitor = NULL;
 
@@ -53,48 +56,63 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        subject = medusa_subject_create_io(STDIN_FILENO, subject_callback, NULL);
-        if (subject == NULL) {
+        io = medusa_io_create();
+        if (io == NULL) {
                 goto bail;
         }
-        rc = medusa_monitor_add(monitor, subject, medusa_event_out);
+        rc = medusa_io_set_fd(io, STDIN_FILENO);
         if (rc != 0) {
                 goto bail;
         }
-        medusa_subject_destroy(subject);
+        rc = medusa_io_set_events(io, medusa_event_in);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_io_set_activated_callback(io, io_activated_callback, NULL);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_io_set_enabled(io, 1);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_monitor_add(monitor, (struct medusa_subject *) io);
+        if (rc != 0) {
+                goto bail;
+        }
 
-        subject = medusa_subject_create_timer(
-                        (struct medusa_timerspec) {
-                                .timespec = {
-                                        .seconds = 1,
-                                        .nanoseconds = 0
-                                },
-                                .interval = {
-                                        .seconds = 0,
-                                        .nanoseconds = 0
-                                }
-                        },
-                        subject_callback,
-                        NULL
-                  );
-        if (subject == NULL) {
+        timer = medusa_timer_create();
+        if (timer == NULL) {
                 goto bail;
         }
-        rc = medusa_monitor_add(monitor, subject);
+        rc = medusa_timer_set_initial(timer, 1.0);
         if (rc != 0) {
                 goto bail;
         }
-        medusa_subject_destroy(subject);
-
-        subject = medusa_subject_create_signal(SIGINT, subject_callback, NULL);
-        if (subject == NULL) {
-                goto bail;
-        }
-        rc = medusa_monitor_add(monitor, subject);
+        rc = medusa_timer_set_interval(timer, 1.0);
         if (rc != 0) {
                 goto bail;
         }
-        medusa_subject_destroy(subject);
+        rc = medusa_timer_set_single_shot(timer, 1);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_timer_set_type(timer, medusa_timer_type_precise);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_timer_set_timeout_callback(timer, timer_timeout_callback, NULL);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_timer_set_active(timer, 1);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_monitor_add(monitor, (struct medusa_subject *) timer);
+        if (rc != 0) {
+                goto bail;
+        }
 
         medusa_monitor_destroy(monitor);
         return 0;

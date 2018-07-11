@@ -1,7 +1,7 @@
 
 struct medusa_timespec {
-        unsigned long long seconds;
-        unsigned long long nanoseconds;
+        long long seconds;
+        long long nanoseconds;
 };
 
 struct medusa_timerspec {

@@ -122,6 +122,7 @@ static inline int pqueue_del (struct pqueue_head *head, unsigned int position)
         if (position > head->count + 1) {
                 return -1;
         }
+        head->position(head->entries[position], -1);
         head->entries[position] = head->entries[head->count];
         head->position(head->entries[position], position);
         head->count--;

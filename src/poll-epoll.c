@@ -9,9 +9,11 @@
 
 #include "event.h"
 #include "time.h"
-#include "subject.h"
-#include "poll-backend.h"
+#include "queue.h"
+#include "subject-struct.h"
+#include "io-struct.h"
 
+#include "poll-backend.h"
 #include "poll-epoll.h"
 
 struct internal {
@@ -21,44 +23,35 @@ struct internal {
         struct epoll_event *events;
 };
 
-static int internal_add (struct medusa_poll_backend *backend, struct medusa_subject *subject, unsigned int events)
+static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *io)
 {
         int rc;
-        int fd;
         struct epoll_event ev;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
         }
-        if (subject == NULL) {
+        if (io == NULL) {
                 goto bail;
         }
-        if (medusa_subject_get_type(subject) != medusa_subject_type_io) {
+        if (io->fd < 0) {
                 goto bail;
         }
-        fd = medusa_subject_io_get_fd(subject);
-        if (fd < 0) {
-                goto bail;
-        }
-        if (events == 0) {
+        if (io->events == 0) {
                 goto bail;
         }
         ev.events = 0;
-        if (events & medusa_event_in) {
+        if (io->events & medusa_event_in) {
                 ev.events |= EPOLLIN;
         }
-        if (events & medusa_event_out) {
+        if (io->events & medusa_event_out) {
                 ev.events |= EPOLLOUT;
         }
-        if (events & medusa_event_pri) {
+        if (io->events & medusa_event_pri) {
                 ev.events |= EPOLLPRI;
         }
-        rc = medusa_subject_retain(subject);
-        if (rc != 0) {
-                goto bail;
-        }
-        ev.data.ptr = subject;
-        rc = epoll_ctl(internal->fd, EPOLL_CTL_ADD, fd, &ev);
+        ev.data.ptr = io;
+        rc = epoll_ctl(internal->fd, EPOLL_CTL_ADD, io->fd, &ev);
         if (rc != 0) {
                 goto bail;
         }
@@ -66,74 +59,62 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_subj
 bail:   return -1;
 }
 
-static int internal_mod (struct medusa_poll_backend *backend, struct medusa_subject *subject, unsigned int events)
+static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *io)
 {
         int rc;
-        int fd;
         struct epoll_event ev;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
         }
-        if (subject == NULL) {
+        if (io == NULL) {
                 goto bail;
         }
-        if (medusa_subject_get_type(subject) != medusa_subject_type_io) {
+        if (io->fd < 0) {
                 goto bail;
         }
-        fd = medusa_subject_io_get_fd(subject);
-        if (fd < 0) {
-                goto bail;
-        }
-        if (events == 0) {
+        if (io->events == 0) {
                 goto bail;
         }
         ev.events = 0;
-        if (events & medusa_event_in) {
+        if (io->events & medusa_event_in) {
                 ev.events |= EPOLLIN;
         }
-        if (events & medusa_event_out) {
+        if (io->events & medusa_event_out) {
                 ev.events |= EPOLLOUT;
         }
-        if (events & medusa_event_pri) {
+        if (io->events & medusa_event_pri) {
                 ev.events |= EPOLLPRI;
         }
-        ev.data.ptr = subject;
-        rc = epoll_ctl(internal->fd, EPOLL_CTL_MOD, fd, &ev);
+        ev.data.ptr = io;
+        rc = epoll_ctl(internal->fd, EPOLL_CTL_MOD, io->fd, &ev);
         if (rc != 0) {
-                fprintf(stderr, "errno: %d, %s", errno, strerror(errno));
                 goto bail;
         }
         return 0;
 bail:   return -1;
 }
 
-static int internal_del (struct medusa_poll_backend *backend, struct medusa_subject *subject)
+static int internal_del (struct medusa_poll_backend *backend, struct medusa_io *io)
 {
         int rc;
-        int fd;
         struct epoll_event ev;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
         }
-        if (subject == NULL) {
+        if (io == NULL) {
                 goto bail;
         }
-        if (medusa_subject_get_type(subject) != medusa_subject_type_io) {
-                goto bail;
-        }
-        fd = medusa_subject_io_get_fd(subject);
-        if (fd < 0) {
+        if (io->fd < 0) {
                 goto bail;
         }
         ev.events = 0;
-        ev.data.ptr = subject;
-        rc = epoll_ctl(internal->fd, EPOLL_CTL_DEL, fd, &ev);
+        ev.data.ptr = io;
+        rc = epoll_ctl(internal->fd, EPOLL_CTL_DEL, io->fd, &ev);
         if (rc != 0) {
                 goto bail;
         }
-        medusa_subject_destroy(subject);
         return 0;
 bail:   return -1;
 }
@@ -145,8 +126,8 @@ static int internal_run (struct medusa_poll_backend *backend, struct medusa_time
         int count;
         int timeout;
         unsigned int events;
-        struct epoll_event *event;
-        struct medusa_subject *subject;
+        struct epoll_event *ev;
+        struct medusa_io *io;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
@@ -164,25 +145,25 @@ static int internal_run (struct medusa_poll_backend *backend, struct medusa_time
                 goto bail;
         }
         for (i = 0; i < count; i++) {
-                event = &internal->events[i];
-                subject = (struct medusa_subject *) event->data.ptr;
+                ev = &internal->events[i];
+                io = (struct medusa_io *) ev->data.ptr;
                 events = 0;
-                if (event->events & EPOLLIN) {
+                if (ev->events & EPOLLIN) {
                         events |= medusa_event_in;
                 }
-                if (event->events & EPOLLOUT) {
+                if (ev->events & EPOLLOUT) {
                         events |= medusa_event_out;
                 }
-                if (event->events & EPOLLPRI) {
+                if (ev->events & EPOLLPRI) {
                         events |= medusa_event_pri;
                 }
-                if (event->events & EPOLLHUP) {
+                if (ev->events & EPOLLHUP) {
                         events |= medusa_event_hup;
                 }
-                if (event->events & EPOLLERR) {
+                if (ev->events & EPOLLERR) {
                         events |= medusa_event_err;
                 }
-                rc = medusa_subject_get_callback_function(subject)(subject, events);
+                rc = io->subject.callback(&io->subject, events);
                 if (rc != 0) {
                         goto bail;
                 }

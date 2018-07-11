@@ -1,8 +1,10 @@
 
 subdir-y = \
-	app \
 	src \
 	test
+
+subdir-y += \
+	app
 
 app_depends-y = \
 	src
