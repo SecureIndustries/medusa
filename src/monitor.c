@@ -80,11 +80,10 @@ static int fd_set_blocking (int fd, int on)
         return 0;
 }
 
-static void monitor_break_subject_callback (struct medusa_io *io, unsigned int events, void *context)
+static void monitor_break_subject_callback (struct medusa_io *io, unsigned int events)
 {
         int rc;
         unsigned int reason;
-        (void) context;
         if (events & medusa_event_in) {
                 rc = read(io->subject.monitor->wakeup_fds[0], &reason, sizeof(reason));
                 if (rc != sizeof(reason)) {
@@ -102,15 +101,13 @@ static void monitor_break_subject_callback (struct medusa_io *io, unsigned int e
 bail:   return;
 }
 
-static void monitor_timer_subject_callback (struct medusa_io *io, unsigned int events, void *context)
+static void monitor_timer_subject_callback (struct medusa_io *io, unsigned int events)
 {
         int rc;
 
         uint64_t value;
         struct medusa_timer *timer;
         struct medusa_timespec now;
-
-        (void) context;
 
         if (events & medusa_event_in) {
                 rc = read(io->fd, &value, sizeof(value));

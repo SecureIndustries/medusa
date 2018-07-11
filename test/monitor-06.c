@@ -26,7 +26,7 @@ static const unsigned int g_polls[] = {
 //        medusa_monitor_poll_select
 };
 
-static void io_activated_callback (struct medusa_io *io, unsigned int events, void *context)
+static void io_activated_callback (struct medusa_io *io, unsigned int events)
 {
         int rc;
         if (io == NULL) {
@@ -37,17 +37,13 @@ static void io_activated_callback (struct medusa_io *io, unsigned int events, vo
                 fprintf(stderr, "events is invalid\n");
                 goto bail;
         }
-        if (context == 0) {
-                fprintf(stderr, "context is invalid\n");
-                goto bail;
-        }
         fprintf(stderr, "callback:\n");
         fprintf(stderr, "  io     : %p\n", io);
         fprintf(stderr, "  fd     : %d\n", medusa_io_get_fd(io));
         fprintf(stderr, "  events : 0x%08x\n", events);
         if (events & medusa_event_out) {
                 char value;
-                int *write_length = (int *) context;
+                int *write_length = (int *) medusa_io_get_activated_context(io);
                 value = rand();
                 rc = write(medusa_io_get_fd(io), &value, sizeof(value));
                 if (rc != sizeof(value)) {
@@ -61,7 +57,7 @@ static void io_activated_callback (struct medusa_io *io, unsigned int events, vo
                 }
         } else if (events & medusa_event_in) {
                 char value;
-                int *read_length = (int *) context;
+                int *read_length = (int *) medusa_io_get_activated_context(io);
                 rc = read(medusa_io_get_fd(io), &value, sizeof(value));
                 if (rc != sizeof(value)) {
                         if (errno != EAGAIN &&

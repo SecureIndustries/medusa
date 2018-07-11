@@ -18,7 +18,7 @@ static int io_subject_event (struct medusa_subject *subject, unsigned int events
 {
         struct medusa_io *io = (struct medusa_io *) subject;
         if (io->activated != NULL) {
-                io->activated(io, events, io->context);
+                io->activated(io, events);
         }
         return 0;
 }
@@ -110,11 +110,16 @@ unsigned int medusa_io_get_events (const struct medusa_io *io)
         return io->events;
 }
 
-int medusa_io_set_activated_callback (struct medusa_io *io, void (*activated) (struct medusa_io *io, unsigned int events, void *context), void *context)
+int medusa_io_set_activated_callback (struct medusa_io *io, void (*activated) (struct medusa_io *io, unsigned int events), void *context)
 {
         io->activated = activated;
         io->context = context;
         return medusa_subject_mod(&io->subject);
+}
+
+void * medusa_io_get_activated_context (const struct medusa_io *io)
+{
+        return io->context;
 }
 
 int medusa_io_set_enabled (struct medusa_io *io, int enabled)
