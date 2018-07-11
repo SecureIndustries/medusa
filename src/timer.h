@@ -1,9 +1,9 @@
 
 enum {
-        medusa_timer_type_precise,
-        medusa_timer_type_coarse
-#define medusa_timer_type_precise       medusa_timer_type_precise
-#define medusa_timer_type_coarse        medusa_timer_type_coarse
+        MEDUSA_TIMER_TYPE_PRECISE,
+        MEDUSA_TIMER_TYPE_COARSE
+#define MEDUSA_TIMER_TYPE_PRECISE       MEDUSA_TIMER_TYPE_PRECISE
+#define MEDUSA_TIMER_TYPE_COARSE        MEDUSA_TIMER_TYPE_COARSE
 };
 
 struct medusa_timer;

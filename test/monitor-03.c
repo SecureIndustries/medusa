@@ -5,15 +5,15 @@
 #include "medusa/monitor.h"
 
 static const unsigned int polls[] = {
-        medusa_monitor_poll_default,
+        MEDUSA_MONITOR_POLL_DEFAULT,
 #if defined(__LINUX__)
-        medusa_monitor_poll_epoll,
+        MEDUSA_MONITOR_POLL_EPOLL,
 #endif
 #if defined(__APPLE__)
-        medusa_monitor_poll_kqueue,
+        MEDUSA_MONITOR_POLL_KQUEUE,
 #endif
-        medusa_monitor_poll_poll,
-        medusa_monitor_poll_select
+        MEDUSA_MONITOR_POLL_POLL,
+        MEDUSA_MONITOR_POLL_SELECT
 };
 
 int main (int argc, char *argv[])

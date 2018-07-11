@@ -26,11 +26,11 @@ static int timer_init (struct medusa_timer *timer, void (*destroy) (struct medus
 {
         memset(timer, 0, sizeof(struct medusa_timer));
         timer->single_shot = 0;
-        timer->type = medusa_timer_type_coarse;
+        timer->type = MEDUSA_TIMER_TYPE_COARSE;
         medusa_timespec_clear(&timer->initial);
         medusa_timespec_clear(&timer->interval);
         timer->active = 0;
-        return medusa_subject_set(&timer->subject, medusa_subject_type_timer, timer_subject_event, (void (*) (struct medusa_subject *)) destroy, NULL);
+        return medusa_subject_set(&timer->subject, MEDUSA_SUBJECT_TYPE_TIMER, timer_subject_event, (void (*) (struct medusa_subject *)) destroy, NULL);
 }
 
 static void timer_uninit (struct medusa_timer *timer)
@@ -120,11 +120,11 @@ int medusa_timer_get_single_shot (const struct medusa_timer *timer)
 
 int medusa_timer_set_type (struct medusa_timer *timer, unsigned int type)
 {
-        if (type == medusa_timer_type_precise ||
-            type == medusa_timer_type_coarse) {
+        if (type == MEDUSA_TIMER_TYPE_PRECISE ||
+            type == MEDUSA_TIMER_TYPE_COARSE) {
                 timer->type = type;
         } else {
-                timer->type = medusa_timer_type_coarse;
+                timer->type = MEDUSA_TIMER_TYPE_COARSE;
         }
         return medusa_subject_mod(&timer->subject);
 }

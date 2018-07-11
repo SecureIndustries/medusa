@@ -50,7 +50,7 @@ int main (int argc, char *argv[])
         pthread_create(&thread, NULL, thread_worker, monitor);
 
         fprintf(stderr, "run...\n");
-        rc = medusa_monitor_run(monitor, medusa_monitor_run_default);
+        rc = medusa_monitor_run(monitor);
         if (rc != 0) {
                 return -1;
         }

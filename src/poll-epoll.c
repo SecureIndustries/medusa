@@ -41,13 +41,13 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
                 goto bail;
         }
         ev.events = 0;
-        if (io->events & medusa_event_in) {
+        if (io->events & MEDUSA_EVENT_IN) {
                 ev.events |= EPOLLIN;
         }
-        if (io->events & medusa_event_out) {
+        if (io->events & MEDUSA_EVENT_OUT) {
                 ev.events |= EPOLLOUT;
         }
-        if (io->events & medusa_event_pri) {
+        if (io->events & MEDUSA_EVENT_PRI) {
                 ev.events |= EPOLLPRI;
         }
         ev.data.ptr = io;
@@ -77,13 +77,13 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
                 goto bail;
         }
         ev.events = 0;
-        if (io->events & medusa_event_in) {
+        if (io->events & MEDUSA_EVENT_IN) {
                 ev.events |= EPOLLIN;
         }
-        if (io->events & medusa_event_out) {
+        if (io->events & MEDUSA_EVENT_OUT) {
                 ev.events |= EPOLLOUT;
         }
-        if (io->events & medusa_event_pri) {
+        if (io->events & MEDUSA_EVENT_PRI) {
                 ev.events |= EPOLLPRI;
         }
         ev.data.ptr = io;
@@ -153,19 +153,19 @@ static int internal_run (struct medusa_poll_backend *backend, struct medusa_time
                 io = (struct medusa_io *) ev->data.ptr;
                 events = 0;
                 if (ev->events & EPOLLIN) {
-                        events |= medusa_event_in;
+                        events |= MEDUSA_EVENT_IN;
                 }
                 if (ev->events & EPOLLOUT) {
-                        events |= medusa_event_out;
+                        events |= MEDUSA_EVENT_OUT;
                 }
                 if (ev->events & EPOLLPRI) {
-                        events |= medusa_event_pri;
+                        events |= MEDUSA_EVENT_PRI;
                 }
                 if (ev->events & EPOLLHUP) {
-                        events |= medusa_event_hup;
+                        events |= MEDUSA_EVENT_HUP;
                 }
                 if (ev->events & EPOLLERR) {
-                        events |= medusa_event_err;
+                        events |= MEDUSA_EVENT_ERR;
                 }
                 rc = io->subject.event(&io->subject, events);
                 if (rc != 0) {

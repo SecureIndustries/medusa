@@ -116,24 +116,24 @@ struct port {
         int error;
 };
 
-enum client_state {
-        client_state_unknown,
-        client_state_connecting,
-        client_state_connected,
-        client_state_requesting,
-        client_state_requested,
-        client_state_parsing,
-        client_state_parsed,
-        client_state_disconnecting,
-        client_state_disconnected,
-        client_state_finished,
+enum {
+        CLIENT_STATE_UNKNOWN,
+        CLIENT_STATE_CONNECTING,
+        CLIENT_STATE_CONNECTED,
+        CLIENT_STATE_REQUESTING,
+        CLIENT_STATE_REQUESTED,
+        CLIENT_STATE_PARSING,
+        CLIENT_STATE_PARSED,
+        CLIENT_STATE_DISDONNECTING,
+        CLIENT_STATE_DISCONNECTED,
+        CLIENT_STATE_FINISHED,
 };
 
 TAILQ_HEAD(clients, client);
 struct client {
         TAILQ_ENTRY(client) clients;
         struct medusa_io *io;
-        enum client_state state;
+        unsigned int state;
         struct port *port;
         struct ports *ports;
         struct buffer *request;
@@ -143,16 +143,16 @@ struct client {
         http_parser http_parse;
 };
 
-enum debug_level {
-        debug_level_assert,
-        debug_level_error,
-        debug_level_info,
-        debug_level_debug
+enum {
+        DEBUG_LEVEL_ASSERT,
+        DEBUG_LEVEL_ERROR,
+        DEBUG_LEVEL_INFO,
+        DEBUG_LEVEL_DEBUG
 };
-static int g_debug_level = debug_level_error;
+static int g_debug_level = DEBUG_LEVEL_ERROR;
 
 #define debugf(fmt...) { \
-        if (g_debug_level >= debug_level_debug) { \
+        if (g_debug_level >= DEBUG_LEVEL_DEBUG) { \
                 fprintf(stderr, "debug: "); \
                 fprintf(stderr, fmt); \
                 fprintf(stderr, " (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__); \
@@ -160,7 +160,7 @@ static int g_debug_level = debug_level_error;
 }
 
 #define infof(fmt...) { \
-        if (g_debug_level >= debug_level_info) { \
+        if (g_debug_level >= DEBUG_LEVEL_INFO) { \
                 fprintf(stderr, "info: "); \
                 fprintf(stderr, fmt); \
                 fprintf(stderr, " (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__); \
@@ -168,7 +168,7 @@ static int g_debug_level = debug_level_error;
 }
 
 #define errorf(fmt...) { \
-        if (g_debug_level >= debug_level_error) { \
+        if (g_debug_level >= DEBUG_LEVEL_ERROR) { \
                 fprintf(stderr, "error: "); \
                 fprintf(stderr, fmt); \
                 fprintf(stderr, " (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__); \
@@ -762,7 +762,7 @@ static struct client * client_create (struct ports *ports, struct buffer *reques
         client->io = NULL;
         client->request = request;
         client->ports = ports;
-        client->state = client_state_disconnected;
+        client->state = CLIENT_STATE_DISCONNECTED;
         client->http_parse.data = client;
         http_parser_init(&client->http_parse, HTTP_RESPONSE);
         buffer_init(&client->incoming);
@@ -785,7 +785,7 @@ static int http_parser_on_message_complete (http_parser *http_parser)
 {
         struct client *client = (struct client *) http_parser->data;
         debugf("client: %p, message-complete", client);
-        client->state = client_state_parsed;
+        client->state = CLIENT_STATE_PARSED;
         return 0;
 }
 
@@ -813,15 +813,16 @@ static void client_io_callback (struct medusa_io *io, unsigned int events)
 {
         int rc;
         struct client *client = (struct client *) medusa_io_get_activated_context(io);
-        if ((events & medusa_event_err) ||
-            (events & medusa_event_hup)) {
-                client->state = client_state_disconnecting;
-        } else if (events & medusa_event_in) {
+        if ((events & MEDUSA_EVENT_ERR) ||
+            (events & MEDUSA_EVENT_HUP) ||
+            (events & MEDUSA_EVENT_NVAL)) {
+                client->state = CLIENT_STATE_DISDONNECTING;
+        } else if (events & MEDUSA_EVENT_IN) {
                 ssize_t read_rc;
                 rc = buffer_resize(&client->incoming, client->incoming.length + 1024);
                 if (rc != 0) {
                         errorf("can not reserve client buffer");
-                        client->state = client_state_disconnecting;
+                        client->state = CLIENT_STATE_DISDONNECTING;
                         goto bail;
                 }
                 read_rc = read(medusa_io_get_fd(io),
@@ -829,7 +830,7 @@ static void client_io_callback (struct medusa_io *io, unsigned int events)
                                client->incoming.size - client->incoming.length);
                 if (read_rc == 0) {
                         errorf("connection reset by server (state: %d)", client->state);
-                        client->state = client_state_disconnecting;
+                        client->state = CLIENT_STATE_DISDONNECTING;
                         goto out;
                 } else if (read_rc < 0) {
                         if (errno == EINTR) {
@@ -837,30 +838,30 @@ static void client_io_callback (struct medusa_io *io, unsigned int events)
                         } else if (errno == EWOULDBLOCK) {
                         } else {
                                 errorf("connection reset by server, rc: %d, error: %d, %s", rc, errno, strerror(errno));
-                                client->state = client_state_disconnecting;
+                                client->state = CLIENT_STATE_DISDONNECTING;
                                 goto out;
                         }
                 } else {
                         client->incoming.length += read_rc;
                 }
-        } else if (events & medusa_event_out) {
-                if (client->state == client_state_connecting) {
+        } else if (events & MEDUSA_EVENT_OUT) {
+                if (client->state == CLIENT_STATE_CONNECTING) {
                         rc = client_get_fd_error(client);
                         if (rc == 0) {
-                                client->state = client_state_connected;
+                                client->state = CLIENT_STATE_CONNECTED;
                         } else {
                                 errorf("client: %p failed to connect: %d", client, rc);
-                                client->state = client_state_disconnecting;
+                                client->state = CLIENT_STATE_DISDONNECTING;
                                 goto bail;
                         }
-                } else if (client->state == client_state_requesting) {
+                } else if (client->state == CLIENT_STATE_REQUESTING) {
                         ssize_t write_rc;
                         write_rc = write(medusa_io_get_fd(io),
                                         client->request->buffer + client->request->offset,
                                         client->request->length - client->request->offset);
                         if (write_rc == 0) {
                                 errorf("can not write to client: %p", client);
-                                client->state = client_state_disconnecting;
+                                client->state = CLIENT_STATE_DISDONNECTING;
                                 goto bail;
                         } else if (write_rc < 0) {
                                 if (errno == EINTR) {
@@ -868,23 +869,23 @@ static void client_io_callback (struct medusa_io *io, unsigned int events)
                                 } else if (errno == EWOULDBLOCK) {
                                 } else {
                                         errorf("can not write client: %p error: %d, %s", client, errno, strerror(errno));
-                                        client->state = client_state_disconnecting;
+                                        client->state = CLIENT_STATE_DISDONNECTING;
                                         goto bail;
                                 }
                         } else {
                                 client->request->offset += write_rc;
                                 if (client->request->offset == client->request->length) {
-                                        client->state = client_state_requested;
+                                        client->state = CLIENT_STATE_REQUESTED;
                                 }
                         }
                 } else {
                         errorf("invalid client: %p, state: %d", client, client->state);
-                        client->state = client_state_requested;
+                        client->state = CLIENT_STATE_REQUESTED;
                         goto bail;
                 }
         } else if (events != 0) {
                 errorf("invalid client: %p, state: %d", client, client->state);
-                client->state = client_state_requested;
+                client->state = CLIENT_STATE_REQUESTED;
                 goto bail;
         }
 out:    return;
@@ -1093,7 +1094,7 @@ int main (int argc, char *argv[])
                 goto bail;
         }
 
-        if (g_debug_level >= debug_level_info) {
+        if (g_debug_level >= DEBUG_LEVEL_INFO) {
                 fprintf(stdout, "---\n");
                 fprintf(stdout, "%s", (char *) request->buffer);
                 fprintf(stdout, "---\n");
@@ -1118,41 +1119,41 @@ int main (int argc, char *argv[])
 
         while (1) {
                 TAILQ_FOREACH_SAFE(client, &clients, clients, nclient) {
-                        if (client->state == client_state_connecting ||
-                            client->state == client_state_requesting ||
-                            client->state == client_state_parsing){
+                        if (client->state == CLIENT_STATE_CONNECTING ||
+                            client->state == CLIENT_STATE_REQUESTING ||
+                            client->state == CLIENT_STATE_PARSING){
                                 unsigned long current;
                                 current = clock_get();
                                 if (clock_after(current, client->connect_timestamp + options.timeout)) {
                                         errorf("client: %p, state: %d timeout", client, client->state);
-                                        client->state = client_state_disconnecting;
+                                        client->state = CLIENT_STATE_DISDONNECTING;
                                 }
                         }
-                        if (client->state == client_state_connecting) {
+                        if (client->state == CLIENT_STATE_CONNECTING) {
                                 debugf("client: %p, state: connecting", client);
                         }
-                        if (client->state == client_state_connected) {
+                        if (client->state == CLIENT_STATE_CONNECTED) {
                                 debugf("client: %p, state: connected", client);
-                                client->state = client_state_requesting;
-                                rc = medusa_io_set_events(client->io, medusa_event_out);
+                                client->state = CLIENT_STATE_REQUESTING;
+                                rc = medusa_io_set_events(client->io, MEDUSA_EVENT_OUT);
                                 if (rc != 0) {
                                         errorf("can not add client to monitor");
                                         goto bail;
                                 }
                         }
-                        if (client->state == client_state_requesting) {
+                        if (client->state == CLIENT_STATE_REQUESTING) {
                                 debugf("client: %p, state: requesting", client);
                         }
-                        if (client->state == client_state_requested) {
+                        if (client->state == CLIENT_STATE_REQUESTED) {
                                 debugf("client: %p, state: requested", client);
-                                client->state = client_state_parsing;
-                                rc = medusa_io_set_events(client->io, medusa_event_in);
+                                client->state = CLIENT_STATE_PARSING;
+                                rc = medusa_io_set_events(client->io, MEDUSA_EVENT_IN);
                                 if (rc != 0) {
                                         errorf("can not add client to monitor");
                                         goto bail;
                                 }
                         }
-                        if (client->state == client_state_parsing) {
+                        if (client->state == CLIENT_STATE_PARSING) {
                                 size_t nparsed;
                                 http_parser_settings settings;
                                 debugf("client: %p, state: parsing (size: %lld, length: %lld, offset: %lld)",
@@ -1178,11 +1179,11 @@ int main (int argc, char *argv[])
                                         }
                                 }
                         }
-                        if (client->state == client_state_parsed) {
+                        if (client->state == CLIENT_STATE_PARSED) {
                                 debugf("client: %p, state: parsed", client);
-                                client->state = client_state_disconnecting;
+                                client->state = CLIENT_STATE_DISDONNECTING;
                         }
-                        if (client->state == client_state_disconnecting) {
+                        if (client->state == CLIENT_STATE_DISDONNECTING) {
                                 debugf("client: %p, state: disconnecting, requests: %lld", client, client->requests);
                                 if (client->requests <= 0) {
                                         if (client->io != NULL) {
@@ -1193,7 +1194,7 @@ int main (int argc, char *argv[])
                                         }
                                         client->io = NULL;
                                         client->port = NULL;
-                                        client->state = client_state_finished;
+                                        client->state = CLIENT_STATE_FINISHED;
                                 } else {
                                         if (options.keepalive == 0) {
                                                 if (client->io != NULL) {
@@ -1207,14 +1208,14 @@ int main (int argc, char *argv[])
                                         } else {
                                                 debugf("client: %p, state: keep-alive", client);
                                         }
-                                        client->state = client_state_disconnected;
+                                        client->state = CLIENT_STATE_DISCONNECTED;
                                 }
                                 client->request->offset = 0;
                                 client->http_parse.data = client;
                                 http_parser_init(&client->http_parse, HTTP_RESPONSE);
                                 buffer_reset(&client->incoming);
                         }
-                        if (client->state == client_state_disconnected) {
+                        if (client->state == CLIENT_STATE_DISCONNECTED) {
                                 unsigned long current;
                                 current = clock_get();
                                 if (client->io == NULL ||
@@ -1229,9 +1230,9 @@ int main (int argc, char *argv[])
                                         if (client->io != NULL &&
                                             options.keepalive != 0) {
                                                 client->requests -= 1;
-                                                client->state = client_state_requesting;
+                                                client->state = CLIENT_STATE_REQUESTING;
                                                 client->connect_timestamp = clock_get();
-                                                rc = medusa_io_set_events(client->io, medusa_event_out);
+                                                rc = medusa_io_set_events(client->io, MEDUSA_EVENT_OUT);
                                                 if (rc != 0) {
                                                         errorf("can not add client to monitor");
                                                         goto bail;
@@ -1240,13 +1241,13 @@ int main (int argc, char *argv[])
                                                 rc = client_connect(client, url_address, url_port);
                                                 if (rc != 0) {
                                                         errorf("can not connect client: %p to %s:%d, rc: %d, %s", client, url_address, url_port, rc, strerror(-rc));
-                                                        client->state = client_state_disconnecting;
+                                                        client->state = CLIENT_STATE_DISDONNECTING;
                                                         goto bail;
                                                 }
-                                                client->state = client_state_connecting;
+                                                client->state = CLIENT_STATE_CONNECTING;
                                                 client->requests -= 1;
                                                 client->connect_timestamp = clock_get();
-                                                rc = medusa_io_set_events(client->io, medusa_event_out);
+                                                rc = medusa_io_set_events(client->io, MEDUSA_EVENT_OUT);
                                                 rc = medusa_monitor_add(monitor, medusa_io_get_subject(client->io));
                                                 if (rc != 0) {
                                                         errorf("can not add client to monitor");
@@ -1255,13 +1256,13 @@ int main (int argc, char *argv[])
                                         }
                                 }
                         }
-                        if (client->state == client_state_finished) {
+                        if (client->state == CLIENT_STATE_FINISHED) {
                                 debugf("client: %p, state: finished", client);
                         }
                 }
 
                 TAILQ_FOREACH_SAFE(client, &clients, clients, nclient) {
-                        if (client->state != client_state_finished) {
+                        if (client->state != CLIENT_STATE_FINISHED) {
                                 break;
                         }
                 }
@@ -1269,7 +1270,7 @@ int main (int argc, char *argv[])
                         debugf("no more clients");
                         break;
                 }
-                rc = medusa_monitor_run(monitor, medusa_monitor_run_once | medusa_monitor_run_timeout, 1.0);
+                rc = medusa_monitor_run_timeout(monitor, 1.0);
                 if (rc == 0) {
                         continue;
                 }

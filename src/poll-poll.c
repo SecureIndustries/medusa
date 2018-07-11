@@ -70,13 +70,13 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         }
         pfd = &internal->pfds[internal->npfds];
         pfd->events = 0;
-        if (io->events & medusa_event_in) {
+        if (io->events & MEDUSA_EVENT_IN) {
                 pfd->events |= POLLIN;
         }
-        if (io->events & medusa_event_out) {
+        if (io->events & MEDUSA_EVENT_OUT) {
                 pfd->events |= POLLOUT;
         }
-        if (io->events & medusa_event_pri) {
+        if (io->events & MEDUSA_EVENT_PRI) {
                 pfd->events |= POLLPRI;
         }
         pfd->fd = io->fd;
@@ -113,13 +113,13 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
         }
         pfd = &internal->pfds[i];
         pfd->events = 0;
-        if (io->events & medusa_event_in) {
+        if (io->events & MEDUSA_EVENT_IN) {
                 pfd->events |= POLLIN;
         }
-        if (io->events & medusa_event_out) {
+        if (io->events & MEDUSA_EVENT_OUT) {
                 pfd->events |= POLLOUT;
         }
-        if (io->events & medusa_event_pri) {
+        if (io->events & MEDUSA_EVENT_PRI) {
                 pfd->events |= POLLPRI;
         }
         return 0;
@@ -187,22 +187,22 @@ static int internal_run (struct medusa_poll_backend *backend, struct medusa_time
                 }
                 events = 0;
                 if (internal->pfds[i].revents & POLLIN) {
-                        events |= medusa_event_in;
+                        events |= MEDUSA_EVENT_IN;
                 }
                 if (internal->pfds[i].revents & POLLOUT) {
-                        events |= medusa_event_out;
+                        events |= MEDUSA_EVENT_OUT;
                 }
                 if (internal->pfds[i].revents & POLLPRI) {
-                        events |= medusa_event_pri;
+                        events |= MEDUSA_EVENT_PRI;
                 }
                 if (internal->pfds[i].revents & POLLHUP) {
-                        events |= medusa_event_hup;
+                        events |= MEDUSA_EVENT_HUP;
                 }
                 if (internal->pfds[i].revents & POLLERR) {
-                        events |= medusa_event_err;
+                        events |= MEDUSA_EVENT_ERR;
                 }
                 if (internal->pfds[i].revents & POLLNVAL) {
-                        events |= medusa_event_nval;
+                        events |= MEDUSA_EVENT_NVAL;
                 }
                 io = internal->ios[internal->pfds[i].fd];
                 rc = io->subject.event(&io->subject, events);

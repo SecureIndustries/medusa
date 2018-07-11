@@ -11,15 +11,15 @@
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
-        medusa_monitor_poll_default,
+        MEDUSA_MONITOR_POLL_DEFAULT,
 #if defined(__LINUX__)
-        medusa_monitor_poll_epoll,
+        MEDUSA_MONITOR_POLL_EPOLL,
 #endif
 #if defined(__APPLE__)
-        medusa_monitor_poll_kqueue,
+        MEDUSA_MONITOR_POLL_KQUEUE,
 #endif
-        medusa_monitor_poll_poll,
-//        medusa_monitor_poll_select
+        MEDUSA_MONITOR_POLL_POLL,
+//        MEDUSA_MONITOR_POLL_SELECT
 };
 
 static void timer_timeout_callback (struct medusa_timer *timer, void *context)
@@ -84,7 +84,7 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        rc = medusa_monitor_run(monitor, medusa_monitor_run_default);
+        rc = medusa_monitor_run(monitor);
         if (rc != 0) {
                 fprintf(stderr, "can not run monitor\n");
                 return -1;

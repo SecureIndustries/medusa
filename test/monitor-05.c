@@ -11,15 +11,15 @@
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
-        medusa_monitor_poll_default,
+        MEDUSA_MONITOR_POLL_DEFAULT,
 #if defined(__LINUX__)
-        medusa_monitor_poll_epoll,
+        MEDUSA_MONITOR_POLL_EPOLL,
 #endif
 #if defined(__APPLE__)
-        medusa_monitor_poll_kqueue,
+        MEDUSA_MONITOR_POLL_KQUEUE,
 #endif
-        medusa_monitor_poll_poll,
-        medusa_monitor_poll_select
+        MEDUSA_MONITOR_POLL_POLL,
+        MEDUSA_MONITOR_POLL_SELECT
 };
 
 static void io_activated_callback (struct medusa_io *io, unsigned int events)
@@ -62,7 +62,7 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_set_events(io, medusa_event_in);
+        rc = medusa_io_set_events(io, MEDUSA_EVENT_IN);
         if (rc != 0) {
                 goto bail;
         }
@@ -95,7 +95,7 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_timer_set_type(timer, medusa_timer_type_precise);
+        rc = medusa_timer_set_type(timer, MEDUSA_TIMER_TYPE_PRECISE);
         if (rc != 0) {
                 goto bail;
         }

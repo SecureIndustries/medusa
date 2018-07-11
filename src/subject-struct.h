@@ -1,9 +1,13 @@
 
 enum {
-        medusa_subject_flag_mod       = 0x00000001,
-        medusa_subject_flag_del       = 0x00000002,
-        medusa_subject_flag_poll      = 0x00000004,
-        medusa_subject_flag_rogue     = 0x00000008
+        MEDUSA_SUBJECT_FLAG_MOD         = 0x00000001,
+        MEDUSA_SUBJECT_FLAG_DEL         = 0x00000002,
+        MEDUSA_SUBJECT_FLAG_POLL        = 0x00000004,
+        MEDUSA_SUBJECT_FLAG_ROGUE       = 0x00000008
+#define MEDUSA_SUBJECT_FLAG_MOD         MEDUSA_SUBJECT_FLAG_MOD
+#define MEDUSA_SUBJECT_FLAG_DEL         MEDUSA_SUBJECT_FLAG_DEL
+#define MEDUSA_SUBJECT_FLAG_POLL        MEDUSA_SUBJECT_FLAG_POLL
+#define MEDUSA_SUBJECT_FLAG_ROGUE       MEDUSA_SUBJECT_FLAG_ROGUE
 };
 
 TAILQ_HEAD(medusa_subjects, medusa_subject);

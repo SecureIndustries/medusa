@@ -29,7 +29,7 @@ static int io_init (struct medusa_io *io, void (*destroy) (struct medusa_io *io)
         io->fd = -1;
         io->events = 0;
         io->enabled = 0;
-        return medusa_subject_set(&io->subject, medusa_subject_type_io, io_subject_event, (void (*) (struct medusa_subject *)) destroy, NULL);
+        return medusa_subject_set(&io->subject, MEDUSA_SUBJECT_TYPE_IO, io_subject_event, (void (*) (struct medusa_subject *)) destroy, NULL);
 }
 
 static void io_uninit (struct medusa_io *io)
@@ -138,7 +138,7 @@ int medusa_io_is_valid (const struct medusa_io *io)
         if (io->fd < 0) {
                 return 0;
         }
-        if ((io->events & (medusa_event_in | medusa_event_out | medusa_event_pri)) == 0) {
+        if ((io->events & (MEDUSA_EVENT_IN | MEDUSA_EVENT_OUT | MEDUSA_EVENT_PRI)) == 0) {
                 return 0;
         }
         if (io->activated == NULL) {
