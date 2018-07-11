@@ -14,7 +14,7 @@
 
 #include "io.h"
 
-static int io_subject_callback (struct medusa_subject *subject, unsigned int events)
+static int io_subject_event (struct medusa_subject *subject, unsigned int events)
 {
         struct medusa_io *io = (struct medusa_io *) subject;
         if (io->activated != NULL) {
@@ -23,16 +23,16 @@ static int io_subject_callback (struct medusa_subject *subject, unsigned int eve
         return 0;
 }
 
-static int medusa_io_init (struct medusa_io *io)
+static int io_init (struct medusa_io *io, void (*destroy) (struct medusa_io *io))
 {
         memset(io, 0, sizeof(struct medusa_io));
         io->fd = -1;
         io->events = 0;
         io->enabled = 0;
-        return medusa_subject_set(&io->subject, medusa_subject_type_io, io_subject_callback, NULL);
+        return medusa_subject_set(&io->subject, medusa_subject_type_io, io_subject_event, (void (*) (struct medusa_subject *)) destroy, NULL);
 }
 
-static void medusa_io_uninit (struct medusa_io *io)
+static void io_uninit (struct medusa_io *io)
 {
         medusa_subject_del(&io->subject);
         if (io->fd >= 0 &&
@@ -40,6 +40,17 @@ static void medusa_io_uninit (struct medusa_io *io)
                 close(io->fd);
         }
         memset(io, 0, sizeof(struct medusa_io));
+}
+
+static void io_destroy (struct medusa_io *io)
+{
+        io_uninit(io);
+        free(io);
+}
+
+int medusa_io_init (struct medusa_io *io)
+{
+        return io_init(io, io_uninit);
 }
 
 struct medusa_io * medusa_io_create (void)
@@ -50,7 +61,7 @@ struct medusa_io * medusa_io_create (void)
         if (io == NULL) {
                 goto bail;
         }
-        rc = medusa_io_init(io);
+        rc = io_init(io, io_destroy);
         if (rc != 0) {
                 goto bail;
         }
@@ -61,16 +72,15 @@ bail:   if (io != NULL) {
         return NULL;
 }
 
-void medusa_io_destroy (struct medusa_io *io)
-{
-        medusa_io_uninit(io);
-        free(io);
-}
-
 int medusa_io_set_fd (struct medusa_io *io, int fd)
 {
         io->fd = fd;
         return medusa_subject_mod(&io->subject);
+}
+
+void medusa_io_destroy (struct medusa_io *io)
+{
+        medusa_subject_destroy(&io->subject);
 }
 
 int medusa_io_get_fd (const struct medusa_io *io)

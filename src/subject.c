@@ -8,10 +8,11 @@
 
 #include "subject.h"
 
-int medusa_subject_set (struct medusa_subject *subject, unsigned int type, int (*callback) (struct medusa_subject *subject, unsigned int events), void *context)
+int medusa_subject_set (struct medusa_subject *subject, unsigned int type, int (*event) (struct medusa_subject *subject, unsigned int events), void (*destroy) (struct medusa_subject *subject), void *context)
 {
         subject->type = type;
-        subject->callback = callback;
+        subject->event = event;
+        subject->destroy = destroy;
         subject->context = context;
         subject->flags = 0;
         subject->monitor = 0;
@@ -36,9 +37,5 @@ int medusa_subject_del (struct medusa_subject *subject)
 
 void medusa_subject_destroy (struct medusa_subject *subject)
 {
-        if (subject->type == medusa_subject_type_io) {
-                medusa_io_destroy((struct medusa_io *) subject);
-        } else if (subject->type == medusa_subject_type_timer) {
-                medusa_timer_destroy((struct medusa_timer *) subject);
-        }
+        subject->destroy(subject);
 }

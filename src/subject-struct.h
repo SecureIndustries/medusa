@@ -10,7 +10,8 @@ TAILQ_HEAD(medusa_subjects, medusa_subject);
 struct medusa_subject {
         TAILQ_ENTRY(medusa_subject) subjects;
         unsigned int type;
-        int (*callback) (struct medusa_subject *subject, unsigned int events);
+        int (*event) (struct medusa_subject *subject, unsigned int events);
+        void (*destroy) (struct medusa_subject *subject);
         void *context;
         struct medusa_monitor *monitor;
         unsigned int flags;

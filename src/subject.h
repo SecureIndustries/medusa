@@ -9,7 +9,7 @@ enum {
 #define medusa_subject_type_timer       medusa_subject_type_timer
 };
 
-int medusa_subject_set (struct medusa_subject *subject, unsigned int type, int (*callback) (struct medusa_subject *subject, unsigned int events), void *context);
+int medusa_subject_set (struct medusa_subject *subject, unsigned int type, int (*event) (struct medusa_subject *subject, unsigned int events), void (*destroy) (struct medusa_subject *subject), void *context);
 int medusa_subject_mod (struct medusa_subject *subject);
 int medusa_subject_del (struct medusa_subject *subject);
 

@@ -167,7 +167,7 @@ static int internal_run (struct medusa_poll_backend *backend, struct medusa_time
                 if (ev->events & EPOLLERR) {
                         events |= medusa_event_err;
                 }
-                rc = io->subject.callback(&io->subject, events);
+                rc = io->subject.event(&io->subject, events);
                 if (rc != 0) {
                         goto bail;
                 }

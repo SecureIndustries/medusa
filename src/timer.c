@@ -12,7 +12,7 @@
 
 #include "timer.h"
 
-static int timer_subject_callback (struct medusa_subject *subject, unsigned int events)
+static int timer_subject_event (struct medusa_subject *subject, unsigned int events)
 {
         struct medusa_timer *timer = (struct medusa_timer *) subject;
         (void) events;
@@ -22,7 +22,7 @@ static int timer_subject_callback (struct medusa_subject *subject, unsigned int 
         return 0;
 }
 
-static int medusa_timer_init (struct medusa_timer *timer)
+static int timer_init (struct medusa_timer *timer, void (*destroy) (struct medusa_timer *timer))
 {
         memset(timer, 0, sizeof(struct medusa_timer));
         timer->single_shot = 0;
@@ -30,13 +30,24 @@ static int medusa_timer_init (struct medusa_timer *timer)
         medusa_timespec_clear(&timer->initial);
         medusa_timespec_clear(&timer->interval);
         timer->active = 0;
-        return medusa_subject_set(&timer->subject, medusa_subject_type_timer, timer_subject_callback, NULL);
+        return medusa_subject_set(&timer->subject, medusa_subject_type_timer, timer_subject_event, (void (*) (struct medusa_subject *)) destroy, NULL);
 }
 
-static void medusa_timer_uninit (struct medusa_timer *timer)
+static void timer_uninit (struct medusa_timer *timer)
 {
         medusa_subject_del(&timer->subject);
         memset(timer, 0, sizeof(struct medusa_timer));
+}
+
+static void timer_destroy (struct medusa_timer *timer)
+{
+        timer_uninit(timer);
+        free(timer);
+}
+
+int medusa_timer_init (struct medusa_timer *timer)
+{
+        return timer_init(timer, timer_uninit);
 }
 
 struct medusa_timer * medusa_timer_create (void)
@@ -47,7 +58,7 @@ struct medusa_timer * medusa_timer_create (void)
         if (timer == NULL) {
                 goto bail;
         }
-        rc = medusa_timer_init(timer);
+        rc = timer_init(timer, timer_destroy);
         if (rc != 0) {
                 goto bail;
         }
@@ -60,8 +71,7 @@ bail:   if (timer != NULL) {
 
 void medusa_timer_destroy (struct medusa_timer *timer)
 {
-        medusa_timer_uninit(timer);
-        free(timer);
+        medusa_subject_destroy(&timer->subject);
 }
 
 int medusa_timer_set_initial (struct medusa_timer *timer, double initial)

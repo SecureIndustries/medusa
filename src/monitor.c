@@ -143,7 +143,7 @@ static void monitor_timer_subject_callback (struct medusa_io *io, unsigned int e
                         if (rc != 0) {
                                 goto bail;
                         }
-                        rc = timer->subject.callback(&timer->subject, medusa_event_timeout);
+                        rc = timer->subject.event(&timer->subject, medusa_event_timeout);
                         if (rc != 0) {
                                 goto bail;
                         }
