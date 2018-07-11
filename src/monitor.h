@@ -23,9 +23,11 @@ enum {
 };
 
 enum {
+        medusa_monitor_run_default      = 0x00000000,
         medusa_monitor_run_once         = 0x00000001,
         medusa_monitor_run_nowait       = 0x00000002,
         medusa_monitor_run_timeout      = 0x00000004
+#define medusa_monitor_run_default      medusa_monitor_run_default
 #define medusa_monitor_run_once         medusa_monitor_run_once
 #define medusa_monitor_run_nowait       medusa_monitor_run_nowait
 #define medusa_monitor_run_timeout      medusa_monitor_run_timeout

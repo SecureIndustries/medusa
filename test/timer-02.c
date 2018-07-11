@@ -81,7 +81,7 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        rc = medusa_monitor_run(monitor, 0);
+        rc = medusa_monitor_run(monitor, medusa_monitor_run_default);
         if (rc != 0) {
                 fprintf(stderr, "can not run monitor\n");
                 return -1;
