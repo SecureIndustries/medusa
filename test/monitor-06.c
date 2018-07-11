@@ -11,7 +11,6 @@
 #include <sys/socket.h>
 
 #include "medusa/event.h"
-#include "medusa/time.h"
 #include "medusa/io.h"
 #include "medusa/monitor.h"
 

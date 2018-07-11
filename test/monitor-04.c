@@ -5,8 +5,6 @@
 #include <signal.h>
 #include <errno.h>
 
-#include "medusa/event.h"
-#include "medusa/time.h"
 #include "medusa/io.h"
 #include "medusa/timer.h"
 #include "medusa/monitor.h"

@@ -20,7 +20,6 @@
 #include <errno.h>
 
 #include <medusa/event.h>
-#include <medusa/time.h>
 #include <medusa/io.h>
 #include <medusa/monitor.h>
 
@@ -1266,10 +1265,7 @@ int main (int argc, char *argv[])
                         debugf("no more clients");
                         break;
                 }
-                struct medusa_timespec timespec;
-                timespec.seconds = 1;
-                timespec.nanoseconds = 0;
-                rc = medusa_monitor_run(monitor, medusa_monitor_run_once | medusa_monitor_run_timeout, &timespec);
+                rc = medusa_monitor_run(monitor, medusa_monitor_run_once | medusa_monitor_run_timeout, 1.0);
                 if (rc == 0) {
                         continue;
                 }

@@ -571,6 +571,7 @@ int medusa_monitor_run (struct medusa_monitor *monitor, unsigned int flags, ...)
         struct medusa_timer *timer;
         struct medusa_timespec *timeout;
         struct medusa_timespec timeout_nowait;
+        struct medusa_timespec timeout_timespec;
         if (monitor == NULL) {
                 goto bail;
         }
@@ -579,8 +580,11 @@ int medusa_monitor_run (struct medusa_monitor *monitor, unsigned int flags, ...)
         timeout_nowait.nanoseconds = 0;
         va_start(ap, flags);
         if (flags & medusa_monitor_run_timeout) {
+                double value;
                 flags |= medusa_monitor_run_once;
-                timeout = va_arg(ap, struct medusa_timespec *);
+                value = va_arg(ap, double);
+                timeout_timespec.seconds = value;
+                timeout_timespec.nanoseconds = (value - timeout_timespec.seconds) * 1e9;
         }
         va_end(ap);
 

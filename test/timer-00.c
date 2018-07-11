@@ -1,7 +1,6 @@
 
 #include <unistd.h>
 
-#include "medusa/time.h"
 #include "medusa/timer.h"
 
 int main (int argc, char *argv[])

@@ -57,12 +57,9 @@ dist.dir = ../dist
 dist.base = medusa
 
 dist.include-y = \
+	monitor.h \
 	event.h \
 	io.h \
-	monitor.h \
-	queue.h \
-	subject.h \
-	time.h \
 	timer.h
 
 dist.lib-y = \
