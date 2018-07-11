@@ -1,11 +1,12 @@
 
-#include "event.h"
-#include "queue.h"
-#include "subject.h"
-#include "subject-struct.h"
 #include "io.h"
 #include "timer.h"
 #include "monitor.h"
+
+#include "queue.h"
+#include "subject-struct.h"
+
+#include "subject.h"
 
 int medusa_subject_set (struct medusa_subject *subject, unsigned int type, int (*callback) (struct medusa_subject *subject, unsigned int events), void *context)
 {

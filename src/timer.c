@@ -5,7 +5,6 @@
 
 #include "clock.h"
 #include "queue.h"
-#include "event.h"
 #include "time.h"
 #include "subject.h"
 #include "subject-struct.h"
