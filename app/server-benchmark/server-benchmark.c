@@ -649,6 +649,7 @@ static int client_connect (struct client *client, const char *address, int port)
                 rc = -EIO;
                 goto bail;
         }
+again:
         client_disconnect(client);
         fd = socket(AF_INET, SOCK_STREAM, 0);
         if (fd < 0) {
@@ -676,6 +677,7 @@ static int client_connect (struct client *client, const char *address, int port)
                 goto bail;
         }
         rc = medusa_io_set_fd(client->io, fd);
+        rc = medusa_io_set_close_on_destroy(client->io, 1);
         rc = medusa_io_set_activated_callback(client->io, client_io_callback, client);
         rc = medusa_io_set_enabled(client->io, 1);
         if (rc != 0) {
@@ -721,6 +723,9 @@ static int client_connect (struct client *client, const char *address, int port)
         if (rc != 0) {
                 if (errno == EINPROGRESS) {
                         rc = 0;
+                } else if (errno == EADDRNOTAVAIL) {
+                        debugf("address not available (%d -> %d)", client->port->port, port);
+                        goto again;
                 } else {
                         rc = -errno;
                         goto bail;
@@ -1181,9 +1186,7 @@ int main (int argc, char *argv[])
                                 debugf("client: %p, state: disconnecting, requests: %lld", client, client->requests);
                                 if (client->requests <= 0) {
                                         if (client->io != NULL) {
-                                                shutdown(medusa_io_get_fd(client->io), SHUT_RDWR);
-                                                close(medusa_io_get_fd(client->io));
-                                                medusa_monitor_del(monitor, (struct medusa_subject *) client->io);
+                                                medusa_monitor_del(monitor, medusa_io_get_subject(client->io));
                                         }
                                         if (client->port != NULL) {
                                                 ports_push(client->ports, client->port);
@@ -1194,9 +1197,7 @@ int main (int argc, char *argv[])
                                 } else {
                                         if (options.keepalive == 0) {
                                                 if (client->io != NULL) {
-                                                        shutdown(medusa_io_get_fd(client->io), SHUT_RDWR);
-                                                        close(medusa_io_get_fd(client->io));
-                                                        medusa_monitor_del(monitor, (struct medusa_subject *) client->io);
+                                                        medusa_monitor_del(monitor, medusa_io_get_subject(client->io));
                                                 }
                                                 if (client->port != NULL) {
                                                         ports_push(client->ports, client->port);
@@ -1216,7 +1217,10 @@ int main (int argc, char *argv[])
                         if (client->state == client_state_disconnected) {
                                 unsigned long current;
                                 current = clock_get();
-                                debugf("client disconnected");
+                                if (client->io == NULL ||
+                                    options.keepalive == 0) {
+                                        debugf("client disconnected");
+                                }
                                 if (clock_after(current, client->connect_timestamp + options.interval)) {
                                         client->request->offset = 0;
                                         client->http_parse.data = client;
@@ -1243,7 +1247,7 @@ int main (int argc, char *argv[])
                                                 client->requests -= 1;
                                                 client->connect_timestamp = clock_get();
                                                 rc = medusa_io_set_events(client->io, medusa_event_out);
-                                                rc = medusa_monitor_add(monitor, (struct medusa_subject *) client->io);
+                                                rc = medusa_monitor_add(monitor, medusa_io_get_subject(client->io));
                                                 if (rc != 0) {
                                                         errorf("can not add client to monitor");
                                                         goto bail;

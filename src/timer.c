@@ -165,6 +165,12 @@ int medusa_timer_is_valid (const struct medusa_timer *timer)
         }
         return 1;
 }
+
+struct medusa_subject * medusa_timer_get_subject (struct medusa_timer *timer)
+{
+        return &timer->subject;
+}
+
 struct medusa_monitor * medusa_timer_get_monitor (struct medusa_timer *timer)
 {
         return timer->subject.monitor;

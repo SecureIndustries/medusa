@@ -6,4 +6,5 @@ struct medusa_io {
         void (*activated) (struct medusa_io *io, unsigned int events, void *context);
         void *context;
         int enabled;
+        int close_on_destroy;
 };

@@ -1,6 +1,9 @@
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
 
 #include "queue.h"
 #include "event.h"
@@ -32,6 +35,10 @@ static int medusa_io_init (struct medusa_io *io)
 static void medusa_io_uninit (struct medusa_io *io)
 {
         medusa_subject_del(&io->subject);
+        if (io->fd >= 0 &&
+            io->close_on_destroy) {
+                close(io->fd);
+        }
         memset(io, 0, sizeof(struct medusa_io));
 }
 
@@ -69,6 +76,17 @@ int medusa_io_set_fd (struct medusa_io *io, int fd)
 int medusa_io_get_fd (const struct medusa_io *io)
 {
         return io->fd;
+}
+
+int medusa_io_set_close_on_destroy (struct medusa_io *io, int close_on_destroy)
+{
+        io->close_on_destroy = !!close_on_destroy;
+        return medusa_subject_mod(&io->subject);
+}
+
+int medusa_io_get_close_on_destroy (const struct medusa_io *io)
+{
+        return io->close_on_destroy;
 }
 
 int medusa_io_set_events (struct medusa_io *io, unsigned int events)
@@ -115,6 +133,11 @@ int medusa_io_is_valid (const struct medusa_io *io)
                 return 0;
         }
         return 1;
+}
+
+struct medusa_subject * medusa_io_get_subject (struct medusa_io *io)
+{
+        return &io->subject;
 }
 
 struct medusa_monitor * medusa_io_get_monitor (struct medusa_io *io)

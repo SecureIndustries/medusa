@@ -1,4 +1,5 @@
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -112,7 +113,11 @@ static int internal_del (struct medusa_poll_backend *backend, struct medusa_io *
         ev.data.ptr = io;
         rc = epoll_ctl(internal->fd, EPOLL_CTL_DEL, io->fd, &ev);
         if (rc != 0) {
-                goto bail;
+                if (errno != EBADF) {
+                        fprintf(stderr, "%d, %s\n", errno, strerror(errno));
+                        abort();
+                        goto bail;
+                }
         }
         return 0;
 bail:   return -1;
