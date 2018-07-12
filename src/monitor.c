@@ -303,6 +303,7 @@ static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
                                 goto bail;
                         }
                 }
+                monitor->timer.dirty = 0;
         }
         return 0;
 bail:   return -1;
