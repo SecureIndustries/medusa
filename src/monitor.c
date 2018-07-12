@@ -115,10 +115,11 @@ static void monitor_timer_subject_callback (struct medusa_io *io, unsigned int e
                         goto bail;
                 }
 
-                rc = clock_boottime(&now);
+                rc = clock_monotonic(&now);
                 if (rc != 0) {
                         goto bail;
                 }
+
                 while (1) {
                         timer = pqueue_peek(&io->subject.monitor->timer.pqueue);
                         if (timer == NULL) {
@@ -145,7 +146,6 @@ static void monitor_timer_subject_callback (struct medusa_io *io, unsigned int e
                                 goto bail;
                         }
                 }
-
         }
         return;
 bail:   return;
@@ -178,7 +178,7 @@ static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
         struct medusa_timer *timer;
         struct medusa_subject *subject;
         struct medusa_subject *nsubject;
-        rc = clock_boottime(&now);
+        rc = clock_monotonic(&now);
         if (rc != 0) {
                 goto bail;
         }
@@ -266,6 +266,9 @@ static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
                                 }
                                 if (!medusa_timespec_isset(&timer->_timespec)) {
                                         goto bail;
+                                }
+                                if (timer->type == MEDUSA_TIMER_TYPE_COARSE) {
+                                        timer->_timespec.tv_nsec = (timer->_timespec.tv_nsec / 1000) * 1000;
                                 }
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
                                         rc = pqueue_del(&monitor->timer.pqueue, timer->_position);

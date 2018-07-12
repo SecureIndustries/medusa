@@ -12,7 +12,7 @@ int clock_monotonic_raw (struct timespec *timespec)
         return clock_gettime(CLOCK_MONOTONIC_RAW, timespec);
 }
 
-int clock_boottime (struct timespec *timespec)
+int clock_monotonic_coarse (struct timespec *timespec)
 {
-        return clock_gettime(CLOCK_BOOTTIME, timespec);
+        return clock_gettime(CLOCK_MONOTONIC_COARSE, timespec);
 }

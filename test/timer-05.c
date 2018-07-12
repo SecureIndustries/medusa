@@ -51,7 +51,6 @@ static int test_poll (unsigned int poll)
         monitor = NULL;
 
         medusa_monitor_init_options_default(&options);
-        medusa_monitor_init_options_default(&options);
         options.poll.type = poll;
 
         monitor = medusa_monitor_create(&options);

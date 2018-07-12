@@ -107,7 +107,7 @@ struct medusa_timer_backend * medusa_timer_timerfd_create (const struct medusa_t
                 goto bail;
         }
         memset(internal, 0, sizeof(struct internal));
-        internal->tfd = timerfd_create(CLOCK_BOOTTIME, 0);
+        internal->tfd = timerfd_create(CLOCK_MONOTONIC, 0);
         if (internal->tfd < 0) {
                 goto bail;
         }

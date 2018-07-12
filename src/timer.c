@@ -102,7 +102,7 @@ double medusa_timer_get_remaining_time (const struct medusa_timer *timer)
 {
         struct timespec now;
         struct timespec rem;
-        clock_boottime(&now);
+        clock_monotonic(&now);
         medusa_timespec_sub(&timer->_timespec, &now, &rem);
         return rem.tv_sec + rem.tv_nsec + 1e-9;
 }
