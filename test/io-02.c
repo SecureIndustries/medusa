@@ -1,13 +1,14 @@
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include <time.h>
 #include <errno.h>
 
-#include "medusa/event.h"
 #include "medusa/io.h"
-#include "medusa/timer.h"
+#include "medusa/event.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
@@ -19,31 +20,51 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_KQUEUE,
 #endif
         MEDUSA_MONITOR_POLL_POLL,
-        MEDUSA_MONITOR_POLL_SELECT
+//        MEDUSA_MONITOR_POLL_SELECT
 };
 
 static void io_activated_callback (struct medusa_io *io, unsigned int events)
 {
+        int rc;
+        int count;
         (void) io;
         (void) events;
-}
-
-static void timer_timeout_callback (struct medusa_timer *timer)
-{
-        (void) timer;
+        rc = read(medusa_io_get_fd(io), &count, sizeof(int));
+        if (rc != sizeof(int)) {
+                fprintf(stderr, "can not read fd\n");
+        } else {
+                int *reads = medusa_io_get_activated_context(io);
+                *reads += 1;
+        }
 }
 
 static int test_poll (unsigned int poll)
 {
         int rc;
+        int fds[2];
+
+        int count;
+        int writes;
+        int reads;
+
+        long int seed;
 
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
         struct medusa_io *io;
-        struct medusa_timer *timer;
 
         monitor = NULL;
+
+        count = 10;
+        writes = 0;
+        reads = 0;
+
+        seed = time(NULL);
+        srand(seed);
+
+        fprintf(stderr, "seed: %ld\n", seed);
+        count = rand() % 10000;
 
         medusa_monitor_init_options_default(&options);
         options.poll.type = poll;
@@ -53,11 +74,15 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
+        rc = pipe(fds);
+        if (rc != 0) {
+                goto bail;
+        }
         io = medusa_io_create();
         if (io == NULL) {
                 goto bail;
         }
-        rc = medusa_io_set_fd(io, STDIN_FILENO);
+        rc = medusa_io_set_fd(io, fds[0]);
         if (rc != 0) {
                 goto bail;
         }
@@ -65,7 +90,7 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_set_activated_callback(io, io_activated_callback, NULL);
+        rc = medusa_io_set_activated_callback(io, io_activated_callback, &reads);
         if (rc != 0) {
                 goto bail;
         }
@@ -78,37 +103,21 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        timer = medusa_timer_create();
-        if (timer == NULL) {
-                goto bail;
-        }
-        rc = medusa_timer_set_initial(timer, 1.0);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_interval(timer, 1.0);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_single_shot(timer, 1);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_type(timer, MEDUSA_TIMER_TYPE_PRECISE);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_timeout_callback(timer, timer_timeout_callback, NULL);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_active(timer, 1);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_monitor_add(monitor, (struct medusa_subject *) timer);
-        if (rc != 0) {
-                goto bail;
+        while (1) {
+                if (writes != count) {
+                        rc = write(fds[1], &count, sizeof(int));
+                        if (rc != sizeof(int)) {
+                                goto bail;
+                        }
+                        writes += 1;
+                }
+                rc = medusa_monitor_run_timeout(monitor, 1.0);
+                if (rc != 0) {
+                        goto bail;
+                }
+                if (reads == count) {
+                        break;
+                }
         }
 
         medusa_monitor_destroy(monitor);

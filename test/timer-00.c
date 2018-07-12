@@ -12,5 +12,6 @@ int main (int argc, char *argv[])
         if (timer == NULL) {
                 return -1;
         }
+        medusa_timer_destroy(timer);
         return 0;
 }

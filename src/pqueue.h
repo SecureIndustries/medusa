@@ -44,41 +44,6 @@ static inline int pqueue_init (
 bail:   return -1;
 }
 
-static inline int pqueue_add (struct pqueue_head *head, void *entry)
-{
-        unsigned int i;
-        unsigned int j;
-        if (head->count + 1 >= head->size) {
-                void **tmp;
-                tmp = (void **) realloc(head->entries, sizeof(void **) * (head->size + head->step + (head->size ? 0 : 1)));
-                if (tmp == NULL) {
-                        tmp = (void **) malloc(sizeof(void *) * (head->size + head->step + (head->size ? 0 : 1)));
-                        if (tmp == NULL) {
-                                goto bail;
-                        }
-                        if (head->count > 0) {
-                                memcpy(tmp, head->entries, sizeof(void **) * (head->count + (head->size ? 0 : 1)));
-                        }
-                        free(head->entries);
-                }
-                head->entries = tmp;
-                head->size = head->size + head->step + (head->size ? 0 : 1);
-        }
-        i = head->count + 1;
-        j = i / 2;
-        while ((i > 1) && (head->compare(head->entries[j], entry) > 0)) {
-                head->entries[i] = head->entries[j];
-                head->position(head->entries[i], i);
-                i = j;
-                j = j / 2;
-        }
-        head->entries[i] = entry;
-        head->position(head->entries[i], i);
-        head->count++;
-        return 0;
-bail:   return -1;
-}
-
 static inline void pqueue_heapify (struct pqueue_head *head, unsigned int i)
 {
         void *entry;
@@ -114,6 +79,41 @@ static inline void pqueue_heapify (struct pqueue_head *head, unsigned int i)
 
                 i = k;
         }
+}
+
+static inline int pqueue_add (struct pqueue_head *head, void *entry)
+{
+        unsigned int i;
+        unsigned int j;
+        if (head->count + 1 >= head->size) {
+                void **tmp;
+                tmp = (void **) realloc(head->entries, sizeof(void **) * (head->size + head->step + (head->size ? 0 : 1)));
+                if (tmp == NULL) {
+                        tmp = (void **) malloc(sizeof(void *) * (head->size + head->step + (head->size ? 0 : 1)));
+                        if (tmp == NULL) {
+                                goto bail;
+                        }
+                        if (head->count > 0) {
+                                memcpy(tmp, head->entries, sizeof(void **) * (head->count + (head->size ? 0 : 1)));
+                        }
+                        free(head->entries);
+                }
+                head->entries = tmp;
+                head->size = head->size + head->step + (head->size ? 0 : 1);
+        }
+        i = head->count + 1;
+        j = i / 2;
+        while ((i > 1) && (head->compare(head->entries[j], entry) > 0)) {
+                head->entries[i] = head->entries[j];
+                head->position(head->entries[i], i);
+                i = j;
+                j = j / 2;
+        }
+        head->entries[i] = entry;
+        head->position(head->entries[i], i);
+        head->count++;
+        return 0;
+bail:   return -1;
 }
 
 static inline int pqueue_del (struct pqueue_head *head, unsigned int position)

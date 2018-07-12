@@ -268,7 +268,7 @@ static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
                                         goto bail;
                                 }
                                 if (timer->type == MEDUSA_TIMER_TYPE_COARSE) {
-                                        timer->_timespec.tv_nsec = (timer->_timespec.tv_nsec / 1000) * 1000;
+                                        timer->_timespec.tv_nsec = timer->_timespec.tv_nsec / 1e6;
                                 }
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
                                         rc = pqueue_del(&monitor->timer.pqueue, timer->_position);

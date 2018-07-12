@@ -6,7 +6,7 @@
 #include <errno.h>
 
 #include "medusa/io.h"
-#include "medusa/timer.h"
+#include "medusa/event.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
@@ -21,6 +21,12 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
+static void io_activated_callback (struct medusa_io *io, unsigned int events)
+{
+        (void) io;
+        (void) events;
+}
+
 static int test_poll (unsigned int poll)
 {
         int rc;
@@ -29,7 +35,6 @@ static int test_poll (unsigned int poll)
         struct medusa_monitor_init_options options;
 
         struct medusa_io *io;
-        struct medusa_timer *timer;
 
         monitor = NULL;
 
@@ -45,16 +50,23 @@ static int test_poll (unsigned int poll)
         if (io == NULL) {
                 goto bail;
         }
-        rc = medusa_monitor_add(monitor, medusa_io_get_subject(io));
+        rc = medusa_io_set_fd(io, STDIN_FILENO);
         if (rc != 0) {
                 goto bail;
         }
-
-        timer = medusa_timer_create();
-        if (timer == NULL) {
+        rc = medusa_io_set_events(io, MEDUSA_EVENT_IN);
+        if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_monitor_add(monitor, (struct medusa_subject *) timer);
+        rc = medusa_io_set_activated_callback(io, io_activated_callback, NULL);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_io_set_enabled(io, 1);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_monitor_add(monitor, medusa_io_get_subject(io));
         if (rc != 0) {
                 goto bail;
         }

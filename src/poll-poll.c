@@ -1,8 +1,10 @@
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <poll.h>
+#include <errno.h>
 
 #include "event.h"
 #include "queue.h"
@@ -54,11 +56,11 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
                 internal->pfds = tmp;
                 internal->spfds = internal->spfds + 64;
         }
-        if (io->fd >= internal->nios) {
+        if (io->fd + 1 > internal->nios) {
                 struct medusa_io **tmp;
-                tmp = (struct medusa_io **) realloc(internal->ios, sizeof(struct medusa_io *) * MAX(io->fd, internal->nios + 64));
+                tmp = (struct medusa_io **) realloc(internal->ios, sizeof(struct medusa_io *) * MAX(io->fd + 1, internal->nios + 64));
                 if (tmp == NULL) {
-                        tmp = (struct medusa_io **) malloc(sizeof(struct medusa_io *) * MAX(io->fd, internal->nios + 64));
+                        tmp = (struct medusa_io **) malloc(sizeof(struct medusa_io *) * MAX(io->fd + 1, internal->nios + 64));
                         if (tmp == NULL) {
                                 goto bail;
                         }
@@ -66,7 +68,7 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
                         free(internal->ios);
                 }
                 internal->ios = tmp;
-                internal->nios = MAX(io->fd, internal->nios + 64);
+                internal->nios = MAX(io->fd + 1, internal->nios + 64);
         }
         pfd = &internal->pfds[internal->npfds];
         pfd->events = 0;
