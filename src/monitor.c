@@ -105,8 +105,9 @@ static void monitor_timer_subject_callback (struct medusa_io *io, unsigned int e
         int rc;
 
         uint64_t value;
+        struct timespec now;
+
         struct medusa_timer *timer;
-        struct medusa_timespec now;
 
         if (events & MEDUSA_EVENT_IN) {
                 rc = read(io->fd, &value, sizeof(value));
@@ -172,11 +173,11 @@ static void monitor_timer_subject_position (void *entry, unsigned int position)
 static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
 {
         int rc;
+        struct timespec now;
         struct medusa_io *io;
         struct medusa_timer *timer;
         struct medusa_subject *subject;
         struct medusa_subject *nsubject;
-        struct medusa_timespec now;
         rc = clock_boottime(&now);
         if (rc != 0) {
                 goto bail;
@@ -635,20 +636,20 @@ bail:   return -1;
 int medusa_monitor_run_timeout (struct medusa_monitor *monitor, double timeout)
 {
         int rc;
-        struct medusa_timespec timeout_timespec;
+        struct timespec timespec;
 
         if (monitor == NULL) {
                 goto bail;
         }
 
-        timeout_timespec.seconds = timeout;
-        timeout_timespec.nanoseconds = (timeout - timeout_timespec.seconds) * 1e9;
+        timespec.tv_sec = timeout;
+        timespec.tv_nsec = (timeout - timespec.tv_sec) * 1e9;
 
         rc = medusa_monitor_apply_changes(monitor);
         if (rc != 0) {
                 goto bail;
         }
-        rc = monitor->poll.backend->run(monitor->poll.backend, &timeout_timespec);
+        rc = monitor->poll.backend->run(monitor->poll.backend, &timespec);
         if (rc != 0) {
                 goto bail;
         }

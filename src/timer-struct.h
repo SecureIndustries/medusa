@@ -1,14 +1,14 @@
 
 struct medusa_timer {
         struct medusa_subject subject;
-        struct medusa_timespec initial;
-        struct medusa_timespec interval;
+        struct timespec initial;
+        struct timespec interval;
         int single_shot;
         unsigned int type;
         int active;
         void (*timeout) (struct medusa_timer *timer);
         void *context;
 
-        struct medusa_timespec _timespec;
+        struct timespec _timespec;
         unsigned int _position;
 };

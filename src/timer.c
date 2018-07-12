@@ -76,35 +76,35 @@ void medusa_timer_destroy (struct medusa_timer *timer)
 
 int medusa_timer_set_initial (struct medusa_timer *timer, double initial)
 {
-        timer->initial.seconds = (long long) initial;
-        timer->initial.nanoseconds = (long long) ((initial - timer->initial.seconds) * 1e9);
+        timer->initial.tv_sec = (long long) initial;
+        timer->initial.tv_nsec = (long long) ((initial - timer->initial.tv_sec) * 1e9);
         return medusa_subject_mod(&timer->subject);
 }
 
 double medusa_timer_get_initial (const struct medusa_timer *timer)
 {
-        return timer->initial.seconds + timer->initial.nanoseconds * 1e-9;
+        return timer->initial.tv_sec + timer->initial.tv_nsec * 1e-9;
 }
 
 int medusa_timer_set_interval (struct medusa_timer *timer, double interval)
 {
-        timer->interval.seconds = (long long) interval;
-        timer->interval.nanoseconds = (long long) ((interval - timer->interval.seconds) * 1e9);
+        timer->interval.tv_sec = (long long) interval;
+        timer->interval.tv_nsec = (long long) ((interval - timer->interval.tv_sec) * 1e9);
         return medusa_subject_mod(&timer->subject);
 }
 
 double medusa_timer_get_interval (const struct medusa_timer *timer)
 {
-        return timer->interval.seconds + timer->interval.nanoseconds * 1e-9;
+        return timer->interval.tv_sec + timer->interval.tv_nsec * 1e-9;
 }
 
 double medusa_timer_get_remaining_time (const struct medusa_timer *timer)
 {
-        struct medusa_timespec now;
-        struct medusa_timespec rem;
+        struct timespec now;
+        struct timespec rem;
         clock_boottime(&now);
         medusa_timespec_sub(&timer->_timespec, &now, &rem);
-        return rem.seconds + rem.nanoseconds + 1e-9;
+        return rem.tv_sec + rem.tv_nsec + 1e-9;
 }
 
 int medusa_timer_set_single_shot (struct medusa_timer *timer, int single_shot)

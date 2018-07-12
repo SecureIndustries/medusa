@@ -1,38 +1,28 @@
 
-struct medusa_timespec {
-        long long seconds;
-        long long nanoseconds;
-};
+#define medusa_timespec_isset(mts)      ((mts)->tv_sec || (mts)->tv_nsec)
+#define medusa_timespec_clear(mts)      ((mts)->tv_sec = (mts)->tv_nsec = 0)
 
-struct medusa_timerspec {
-        struct medusa_timespec timespec;
-        struct medusa_timespec interval;
-};
+#define medusa_timespec_compare(a, b, CMP)                              \
+        (((a)->tv_sec == (b)->tv_sec) ?                                 \
+                ((a)->tv_nsec CMP (b)->tv_nsec) :                       \
+                ((a)->tv_sec CMP (b)->tv_sec))
 
-#define medusa_timespec_isset(mts)      ((mts)->seconds || (mts)->nanoseconds)
-#define medusa_timespec_clear(mts)      ((mts)->seconds = (mts)->nanoseconds = 0)
-
-#define medusa_timespec_compare(a, b, CMP)                                    \
-        (((a)->seconds == (b)->seconds) ?                                     \
-                ((a)->nanoseconds CMP (b)->nanoseconds) :                     \
-                ((a)->seconds CMP (b)->seconds))
-
-#define medusa_timespec_add(a, b, result)                                     \
-        do {                                                                  \
-                (result)->seconds = (a)->seconds + (b)->seconds;              \
-                (result)->nanoseconds = (a)->nanoseconds + (b)->nanoseconds;  \
-                if ((result)->nanoseconds >= 1000000000) {                    \
-                        ++(result)->seconds;                                  \
-                        (result)->nanoseconds -= 1000000000;                  \
-                }                                                             \
+#define medusa_timespec_add(a, b, result)                               \
+        do {                                                            \
+                (result)->tv_sec = (a)->tv_sec + (b)->tv_sec;           \
+                (result)->tv_nsec = (a)->tv_nsec + (b)->tv_nsec;        \
+                if ((result)->tv_nsec >= 1000000000) {                  \
+                        ++(result)->tv_sec;                             \
+                        (result)->tv_nsec -= 1000000000;                \
+                }                                                       \
         } while (0)
 
-#define medusa_timespec_sub(a, b, result)                                     \
-        do {                                                                  \
-                (result)->seconds = (a)->seconds - (b)->seconds;              \
-                (result)->nanoseconds = (a)->nanoseconds - (b)->nanoseconds;  \
-                if ((result)->nanoseconds < 0) {                              \
-                        --(result)->seconds;                                  \
-                        (result)->nanoseconds += 1000000000;                  \
-                }                                                             \
+#define medusa_timespec_sub(a, b, result)                               \
+        do {                                                            \
+                (result)->tv_sec = (a)->tv_sec - (b)->tv_sec;           \
+                (result)->tv_nsec = (a)->tv_nsec - (b)->tv_nsec;        \
+                if ((result)->tv_nsec < 0) {                            \
+                        --(result)->tv_sec;                             \
+                        (result)->tv_nsec += 1000000000;                \
+                }                                                       \
         } while (0)

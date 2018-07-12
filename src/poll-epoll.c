@@ -123,7 +123,7 @@ static int internal_del (struct medusa_poll_backend *backend, struct medusa_io *
 bail:   return -1;
 }
 
-static int internal_run (struct medusa_poll_backend *backend, struct medusa_timespec *timespec)
+static int internal_run (struct medusa_poll_backend *backend, struct timespec *timespec)
 {
         int i;
         int rc;
@@ -139,7 +139,7 @@ static int internal_run (struct medusa_poll_backend *backend, struct medusa_time
         if (timespec == NULL) {
                 timeout = -1;
         } else {
-                timeout = timespec->seconds * 1000 + timespec->nanoseconds / 1000000;
+                timeout = timespec->tv_sec * 1000 + timespec->tv_nsec / 1000000;
         }
         count = epoll_wait(internal->fd, internal->events, internal->maxevents, timeout);
         if (count == 0) {

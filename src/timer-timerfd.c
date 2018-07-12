@@ -45,7 +45,7 @@ static int internal_fd (struct medusa_timer_backend *backend)
 bail:   return -1;
 }
 
-static int internal_set (struct medusa_timer_backend *backend, struct medusa_timespec *timespec)
+static int internal_set (struct medusa_timer_backend *backend, struct timespec *timespec)
 {
         int rc;
         struct itimerspec itimerspec;
@@ -59,8 +59,8 @@ static int internal_set (struct medusa_timer_backend *backend, struct medusa_tim
                 itimerspec.it_interval.tv_sec  = 0;
                 itimerspec.it_interval.tv_nsec = 0;
         } else {
-                itimerspec.it_value.tv_sec     = timespec->seconds;
-                itimerspec.it_value.tv_nsec    = timespec->nanoseconds;
+                itimerspec.it_value.tv_sec     = timespec->tv_sec;
+                itimerspec.it_value.tv_nsec    = timespec->tv_nsec;
                 itimerspec.it_interval.tv_sec  = 0;
                 itimerspec.it_interval.tv_nsec = 0;
         }
@@ -72,7 +72,7 @@ static int internal_set (struct medusa_timer_backend *backend, struct medusa_tim
 bail:   return -1;
 }
 
-static int internal_get (struct medusa_timer_backend *backend, struct medusa_timespec *timespec)
+static int internal_get (struct medusa_timer_backend *backend, struct timespec *timespec)
 {
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {

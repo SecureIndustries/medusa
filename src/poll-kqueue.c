@@ -65,7 +65,7 @@ static int internal_del (struct medusa_poll_backend *backend, struct medusa_io *
 bail:   return -1;
 }
 
-static int internal_run (struct medusa_poll_backend *backend, struct medusa_timespec *timespec)
+static int internal_run (struct medusa_poll_backend *backend, struct timespec *timespec)
 {
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {

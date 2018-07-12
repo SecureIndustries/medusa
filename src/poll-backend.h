@@ -1,4 +1,5 @@
 
+struct timespec;
 struct medusa_monitor;
 struct medusa_io;
 struct medusa_timespec;
@@ -8,7 +9,7 @@ struct medusa_poll_backend {
         int (*add) (struct medusa_poll_backend *backend, struct medusa_io *io);
         int (*mod) (struct medusa_poll_backend *backend, struct medusa_io *io);
         int (*del) (struct medusa_poll_backend *backend, struct medusa_io *io);
-        int (*run) (struct medusa_poll_backend *backend, struct medusa_timespec *timespec);
+        int (*run) (struct medusa_poll_backend *backend, struct timespec *timespec);
         void (*destroy) (struct medusa_poll_backend *backend);
         struct medusa_monitor *monitor;
 };
