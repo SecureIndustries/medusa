@@ -70,6 +70,7 @@ int main (int argc, char *argv[])
                 if (entries[i].add == 0) {
                         pqueue_add(&pqueue, &entries[i]);
                         entries[i].add = 1;
+                        entries[i].del = 0;
                         fprintf(stderr, "  %d = %d\n", i, entries[i].pri);
                 }
         }
@@ -91,6 +92,10 @@ int main (int argc, char *argv[])
                         return -1;
                 }
                 fprintf(stderr, "  %d @ %d\n", entry->pri, entry->pos);
+                if (entry->del != 0) {
+                        fprintf(stderr, "  del is invalid: %d\n", entry->del);
+                        return -1;
+                }
                 if (entry->pri <= p) {
                         fprintf(stderr, "  %d <= %d\n", entry->pri, p);
                         return -1;

@@ -119,15 +119,60 @@ static inline void pqueue_heapify (struct pqueue_head *head, unsigned int i)
 static inline int pqueue_del (struct pqueue_head *head, unsigned int position)
 {
         unsigned int i;
+        unsigned int j;
+        unsigned int k;
+        if (position < 1) {
+                return -1;
+        }
         if (position > head->count + 1) {
                 return -1;
         }
+#if 0
         head->position(head->entries[position], -1);
-        head->entries[position] = head->entries[head->count];
-        head->position(head->entries[position], position);
+        if (position < head->count) {
+                head->entries[position] = head->entries[head->count];
+                head->position(head->entries[position], position);
+        }
         head->count--;
         for (i = head->count / 2; i > 0; i--) {
                 pqueue_heapify(head, i);
+        }
+        return 0;
+#endif
+        head->position(head->entries[position], -1);
+        if (position > 1 &&
+            head->compare(head->entries[position / 2], head->entries[head->count]) > 0) {
+                i = position;
+                j = i / 2;
+                do {
+                        head->entries[i] = head->entries[j];
+                        head->position(head->entries[i], i);
+                        i = j;
+                        j = j / 2;
+                } while ((i > 1) && (head->compare(head->entries[j], head->entries[head->count]) > 0));
+                head->entries[i] = head->entries[head->count];
+                head->position(head->entries[i], i);
+                head->count--;
+        } else {
+                if (position < head->count) {
+                        head->entries[position] = head->entries[head->count];
+                        head->position(head->entries[position], position);
+                }
+                head->count--;
+                i = position;
+                while (i != head->count + 1) {
+                        k = head->count + 1;
+                        j = i * 2;
+                        if ((j <= head->count) && (head->compare(head->entries[j], head->entries[k]) < 0)) {
+                                k = j;
+                        }
+                        if ((j + 1 <= head->count) && (head->compare(head->entries[j + 1], head->entries[k]) < 0)) {
+                                k = j + 1;
+                        }
+                        head->entries[i] = head->entries[k];
+                        head->position(head->entries[i], i);
+                        i = k;
+                }
         }
         return 0;
 }
