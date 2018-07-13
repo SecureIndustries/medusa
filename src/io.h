@@ -15,8 +15,7 @@ int medusa_io_get_close_on_destroy (const struct medusa_io *io);
 int medusa_io_set_events (struct medusa_io *io, unsigned int events);
 unsigned int medusa_io_get_events (const struct medusa_io *io);
 
-int medusa_io_set_activated_callback (struct medusa_io *io, void (*activated) (struct medusa_io *io, unsigned int events), void *context);
-void * medusa_io_get_activated_context (const struct medusa_io *io);
+int medusa_io_set_callback (struct medusa_io *io, int (*callback) (struct medusa_io *io, unsigned int events, void *context), void *context);
 
 int medusa_io_set_enabled (struct medusa_io *io, int enabled);
 int medusa_io_get_enabled (const struct medusa_io *io);

@@ -6,7 +6,7 @@ struct medusa_timer {
         int single_shot;
         unsigned int type;
         int active;
-        void (*timeout) (struct medusa_timer *timer);
+        int (*callback) (struct medusa_timer *timer, unsigned int events, void *context);
         void *context;
 
         struct timespec _timespec;

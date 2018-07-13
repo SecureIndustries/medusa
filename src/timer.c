@@ -15,9 +15,8 @@
 static int timer_subject_event (struct medusa_subject *subject, unsigned int events)
 {
         struct medusa_timer *timer = (struct medusa_timer *) subject;
-        (void) events;
-        if (timer->timeout != NULL) {
-                timer->timeout(timer);
+        if (timer->callback != NULL) {
+                return timer->callback(timer, events, timer->context);
         }
         return 0;
 }
@@ -134,9 +133,9 @@ unsigned int medusa_timer_get_type (const struct medusa_timer *timer)
         return timer->type;
 }
 
-int medusa_timer_set_timeout_callback (struct medusa_timer *timer, void (*timeout) (struct medusa_timer *timer), void *context)
+int medusa_timer_set_callback (struct medusa_timer *timer, int (*callback) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
 {
-        timer->timeout = timeout;
+        timer->callback = callback;
         timer->context = context;
         return medusa_subject_mod(&timer->subject);
 }
@@ -172,7 +171,7 @@ int medusa_timer_is_valid (const struct medusa_timer *timer)
         if (!medusa_timespec_isset(&timer->interval)) {
                 return 0;
         }
-        if (timer->timeout == NULL) {
+        if (timer->callback == NULL) {
                 return 0;
         }
         if (timer->active == 0) {

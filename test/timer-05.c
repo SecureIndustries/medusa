@@ -8,6 +8,7 @@
 #include <errno.h>
 
 #include "medusa/timer.h"
+#include "medusa/event.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
@@ -22,19 +23,22 @@ static const unsigned int g_polls[] = {
 //        MEDUSA_MONITOR_POLL_SELECT
 };
 
-static void timer_timeout_callback (struct medusa_timer *timer)
+static int timer_callback (struct medusa_timer *timer, unsigned int events, void *context)
 {
-        int *count = medusa_timer_get_timeout_context(timer);
-        fprintf(stderr, "timeout: %d\n", *count);
-        if ((*count)++ > 10) {
-                fprintf(stderr, "break\n");
-                medusa_monitor_break(medusa_timer_get_monitor(timer));
-        } else {
-                fprintf(stderr, "set interval\n");
-                medusa_timer_set_interval(timer, 0.01);
-                fprintf(stderr, "set active\n");
-                medusa_timer_start(timer);
+        if (events & MEDUSA_EVENT_TIMEOUT) {
+                int *count = context;
+                fprintf(stderr, "timeout: %d\n", *count);
+                if ((*count)++ > 10) {
+                        fprintf(stderr, "break\n");
+                        medusa_monitor_break(medusa_timer_get_monitor(timer));
+                } else {
+                        fprintf(stderr, "set interval\n");
+                        medusa_timer_set_interval(timer, 0.01);
+                        fprintf(stderr, "set active\n");
+                        medusa_timer_start(timer);
+                }
         }
+        return 0;
 }
 
 static int test_poll (unsigned int poll)
@@ -66,7 +70,7 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_timer_set_timeout_callback(timer, timer_timeout_callback, &count);
+        rc = medusa_timer_set_callback(timer, timer_callback, &count);
         if (rc != 0) {
                 goto bail;
         }

@@ -26,7 +26,7 @@ static const unsigned int g_polls[] = {
 //        MEDUSA_MONITOR_POLL_SELECT
 };
 
-static void io_activated_callback (struct medusa_io *io, unsigned int events)
+static int io_callback (struct medusa_io *io, unsigned int events, void *context)
 {
         int rc;
         if (io == NULL) {
@@ -43,7 +43,7 @@ static void io_activated_callback (struct medusa_io *io, unsigned int events)
         fprintf(stderr, "  events : 0x%08x\n", events);
         if (events & MEDUSA_EVENT_OUT) {
                 char value;
-                int *write_length = (int *) medusa_io_get_activated_context(io);
+                int *write_length = (int *) context;
                 value = rand();
                 rc = write(medusa_io_get_fd(io), &value, sizeof(value));
                 if (rc != sizeof(value)) {
@@ -57,7 +57,7 @@ static void io_activated_callback (struct medusa_io *io, unsigned int events)
                 }
         } else if (events & MEDUSA_EVENT_IN) {
                 char value;
-                int *read_length = (int *) medusa_io_get_activated_context(io);
+                int *read_length = (int *) context;
                 rc = read(medusa_io_get_fd(io), &value, sizeof(value));
                 if (rc != sizeof(value)) {
                         if (errno != EAGAIN &&
@@ -69,8 +69,8 @@ static void io_activated_callback (struct medusa_io *io, unsigned int events)
                         *read_length += 1;
                 }
         }
-        return;
-bail:   return;
+        return 0;
+bail:   return -1;
 }
 
 static int test_poll (unsigned int poll)
@@ -123,7 +123,7 @@ static int test_poll (unsigned int poll)
         }
         rc = medusa_io_set_fd(io[0], sv[0]);
         rc = medusa_io_set_events(io[0], MEDUSA_EVENT_OUT);
-        rc = medusa_io_set_activated_callback(io[0], io_activated_callback, &write_length);
+        rc = medusa_io_set_callback(io[0], io_callback, &write_length);
         rc = medusa_io_set_enabled(io[0], 1);
         rc = medusa_monitor_add(monitor, (struct medusa_subject *) io[0]);
         if (rc != 0) {
@@ -139,7 +139,7 @@ static int test_poll (unsigned int poll)
         }
         rc = medusa_io_set_fd(io[1], sv[1]);
         rc = medusa_io_set_events(io[1], MEDUSA_EVENT_IN);
-        rc = medusa_io_set_activated_callback(io[1], io_activated_callback, &read_length);
+        rc = medusa_io_set_callback(io[1], io_callback, &read_length);
         rc = medusa_io_set_enabled(io[1], 1);
         rc = medusa_monitor_add(monitor, (struct medusa_subject *) io[1]);
         if (rc != 0) {

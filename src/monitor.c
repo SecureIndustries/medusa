@@ -79,10 +79,11 @@ static int fd_set_blocking (int fd, int on)
         return 0;
 }
 
-static void monitor_break_subject_callback (struct medusa_io *io, unsigned int events)
+static int monitor_break_io_callback (struct medusa_io *io, unsigned int events, void *context)
 {
         int rc;
         unsigned int reason;
+        (void) context;
         if (events & MEDUSA_EVENT_IN) {
                 rc = read(io->subject.monitor->wakeup_fds[0], &reason, sizeof(reason));
                 if (rc != sizeof(reason)) {
@@ -96,11 +97,11 @@ static void monitor_break_subject_callback (struct medusa_io *io, unsigned int e
                         goto bail;
                 }
         }
-        return;
-bail:   return;
+        return 0;
+bail:   return -1;
 }
 
-static void monitor_timer_subject_callback (struct medusa_io *io, unsigned int events)
+static int monitor_timer_io_callback (struct medusa_io *io, unsigned int events, void *context)
 {
         int rc;
 
@@ -108,6 +109,8 @@ static void monitor_timer_subject_callback (struct medusa_io *io, unsigned int e
         struct timespec now;
 
         struct medusa_timer *timer;
+
+        (void) context;
 
         if (events & MEDUSA_EVENT_IN) {
                 rc = read(io->fd, &value, sizeof(value));
@@ -137,7 +140,7 @@ static void monitor_timer_subject_callback (struct medusa_io *io, unsigned int e
                         if (timer->single_shot != 0) {
                                 timer->active = 0;
                         }
-                        rc = medusa_monitor_mod(timer->subject.monitor, &timer->subject);
+                        rc = medusa_monitor_mod(&timer->subject);
                         if (rc != 0) {
                                 goto bail;
                         }
@@ -147,8 +150,8 @@ static void monitor_timer_subject_callback (struct medusa_io *io, unsigned int e
                         }
                 }
         }
-        return;
-bail:   return;
+        return 0;
+bail:   return -1;
 }
 
 static int monitor_timer_subject_compare (void *a, void *b)
@@ -424,7 +427,7 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_set_activated_callback(io, monitor_break_subject_callback, NULL);
+        rc = medusa_io_set_callback(io, monitor_break_io_callback, NULL);
         if (rc != 0) {
                 goto bail;
         }
@@ -448,7 +451,7 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_set_activated_callback(io, monitor_timer_subject_callback, NULL);
+        rc = medusa_io_set_callback(io, monitor_timer_io_callback, NULL);
         if (rc != 0) {
                 goto bail;
         }
@@ -475,10 +478,10 @@ void medusa_monitor_destroy (struct medusa_monitor *monitor)
                 return;
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->rogues, subjects, nsubject) {
-                medusa_monitor_del(monitor, subject);
+                medusa_monitor_del(subject);
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->subjects, subjects, nsubject) {
-                medusa_monitor_del(monitor, subject);
+                medusa_monitor_del(subject);
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->changes, subjects, nsubject) {
                 subject->flags |= MEDUSA_SUBJECT_FLAG_DEL;
@@ -523,39 +526,8 @@ int medusa_monitor_add (struct medusa_monitor *monitor, struct medusa_subject *s
 bail:   return -1;
 }
 
-int medusa_monitor_mod (struct medusa_monitor *monitor, struct medusa_subject *subject)
+int medusa_monitor_mod (struct medusa_subject *subject)
 {
-        if (monitor == NULL) {
-                goto bail;
-        }
-        if (subject == NULL) {
-                goto bail;
-        }
-        if (subject->monitor == NULL) {
-                goto bail;
-        }
-        if (subject->flags & MEDUSA_SUBJECT_FLAG_MOD) {
-                TAILQ_REMOVE(&monitor->changes, subject, subjects);
-                TAILQ_INSERT_TAIL(&monitor->changes, subject, subjects);
-                subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
-        } else if (subject->flags & MEDUSA_SUBJECT_FLAG_ROGUE) {
-                TAILQ_REMOVE(&monitor->rogues, subject, subjects);
-                TAILQ_INSERT_TAIL(&monitor->changes, subject, subjects);
-                subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
-        } else {
-                TAILQ_REMOVE(&monitor->subjects, subject, subjects);
-                TAILQ_INSERT_TAIL(&monitor->changes, subject, subjects);
-        }
-        subject->flags |= MEDUSA_SUBJECT_FLAG_MOD;
-        return 0;
-bail:   return -1;
-}
-
-int medusa_monitor_del (struct medusa_monitor *monitor, struct medusa_subject *subject)
-{
-        if (monitor == NULL) {
-                goto bail;
-        }
         if (subject == NULL) {
                 goto bail;
         }
@@ -563,19 +535,37 @@ int medusa_monitor_del (struct medusa_monitor *monitor, struct medusa_subject *s
                 goto bail;
         }
         if (subject->flags & MEDUSA_SUBJECT_FLAG_DEL) {
-                return 0;
-        }
-        if (subject->flags & MEDUSA_SUBJECT_FLAG_MOD) {
-                TAILQ_REMOVE(&monitor->changes, subject, subjects);
-                TAILQ_INSERT_TAIL(&monitor->changes, subject, subjects);
-                subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
+        } else if (subject->flags & MEDUSA_SUBJECT_FLAG_MOD) {
         } else if (subject->flags & MEDUSA_SUBJECT_FLAG_ROGUE) {
-                TAILQ_REMOVE(&monitor->rogues, subject, subjects);
-                TAILQ_INSERT_TAIL(&monitor->changes, subject, subjects);
+                TAILQ_REMOVE(&subject->monitor->rogues, subject, subjects);
+                TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
         } else {
-                TAILQ_REMOVE(&monitor->subjects, subject, subjects);
-                TAILQ_INSERT_TAIL(&monitor->changes, subject, subjects);
+                TAILQ_REMOVE(&subject->monitor->subjects, subject, subjects);
+                TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
+        }
+        subject->flags |= MEDUSA_SUBJECT_FLAG_MOD;
+        return 0;
+bail:   return -1;
+}
+
+int medusa_monitor_del (struct medusa_subject *subject)
+{
+        if (subject == NULL) {
+                goto bail;
+        }
+        if (subject->monitor == NULL) {
+                goto bail;
+        }
+        if (subject->flags & MEDUSA_SUBJECT_FLAG_DEL) {
+        } else if (subject->flags & MEDUSA_SUBJECT_FLAG_MOD) {
+        } else if (subject->flags & MEDUSA_SUBJECT_FLAG_ROGUE) {
+                TAILQ_REMOVE(&subject->monitor->rogues, subject, subjects);
+                TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
+                subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
+        } else {
+                TAILQ_REMOVE(&subject->monitor->subjects, subject, subjects);
+                TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
         }
         subject->flags |= MEDUSA_SUBJECT_FLAG_DEL;
         return 0;

@@ -23,19 +23,22 @@ static const unsigned int g_polls[] = {
 //        MEDUSA_MONITOR_POLL_SELECT
 };
 
-static void io_activated_callback (struct medusa_io *io, unsigned int events)
+static int io_callback (struct medusa_io *io, unsigned int events, void *context)
 {
         int rc;
         int count;
-        (void) io;
-        (void) events;
-        rc = read(medusa_io_get_fd(io), &count, sizeof(int));
-        if (rc != sizeof(int)) {
-                fprintf(stderr, "can not read fd\n");
-        } else {
-                int *reads = medusa_io_get_activated_context(io);
+        (void) context;
+        if (events & MEDUSA_EVENT_IN) {
+                int *reads = context;
+                rc = read(medusa_io_get_fd(io), &count, sizeof(int));
+                if (rc != sizeof(int)) {
+                        fprintf(stderr, "can not read fd\n");
+                        goto bail;
+                }
                 *reads += 1;
         }
+        return 0;
+bail:   return -1;
 }
 
 static int test_poll (unsigned int poll)
@@ -90,7 +93,7 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_set_activated_callback(io, io_activated_callback, &reads);
+        rc = medusa_io_set_callback(io, io_callback, &reads);
         if (rc != 0) {
                 goto bail;
         }

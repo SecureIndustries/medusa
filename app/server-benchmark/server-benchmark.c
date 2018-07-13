@@ -137,7 +137,7 @@ struct client {
         struct port *port;
         struct ports *ports;
         struct buffer *request;
-        long long requests;
+        long long request_offset;
         unsigned long connect_timestamp;
         struct buffer incoming;
         http_parser http_parse;
@@ -175,7 +175,7 @@ static int g_debug_level = DEBUG_LEVEL_ERROR;
         } \
 }
 
-static void client_io_callback (struct medusa_io *io, unsigned int events);
+static int client_io_callback (struct medusa_io *io, unsigned int events, void *context);
 
 static unsigned long clock_get (void)
 {
@@ -616,7 +616,7 @@ static int client_disconnect (struct client *client)
                 return -1;
         }
         if (client->io != NULL) {
-                medusa_io_destroy(client->io);
+                medusa_monitor_del(medusa_io_get_subject(client->io));
                 client->io = NULL;
         }
         if (client->port != NULL) {
@@ -678,12 +678,12 @@ again:
         }
         rc = medusa_io_set_fd(client->io, fd);
         rc = medusa_io_set_close_on_destroy(client->io, 1);
-        rc = medusa_io_set_activated_callback(client->io, client_io_callback, client);
+        rc = medusa_io_set_callback(client->io, client_io_callback, client);
         rc = medusa_io_set_enabled(client->io, 1);
         if (rc != 0) {
                 goto bail;
         }
-        {
+        if (1) {
                 int opt = 1;
                 struct port *lport;
                 struct sockaddr_in laddr;
@@ -761,6 +761,7 @@ static struct client * client_create (struct ports *ports, struct buffer *reques
         memset(client, 0, sizeof(struct client));
         client->io = NULL;
         client->request = request;
+        client->request_offset = 0;
         client->ports = ports;
         client->state = CLIENT_STATE_DISCONNECTED;
         client->http_parse.data = client;
@@ -809,10 +810,10 @@ static int http_parser_on_header_value (http_parser *http_parser, const char *at
         return 0;
 }
 
-static void client_io_callback (struct medusa_io *io, unsigned int events)
+static int client_io_callback (struct medusa_io *io, unsigned int events, void *context)
 {
         int rc;
-        struct client *client = (struct client *) medusa_io_get_activated_context(io);
+        struct client *client = (struct client *) context;
         if ((events & MEDUSA_EVENT_ERR) ||
             (events & MEDUSA_EVENT_HUP) ||
             (events & MEDUSA_EVENT_NVAL)) {
@@ -857,10 +858,10 @@ static void client_io_callback (struct medusa_io *io, unsigned int events)
                 } else if (client->state == CLIENT_STATE_REQUESTING) {
                         ssize_t write_rc;
                         write_rc = write(medusa_io_get_fd(io),
-                                        client->request->buffer + client->request->offset,
-                                        client->request->length - client->request->offset);
+                                        client->request->buffer + client->request_offset,
+                                        client->request->length - client->request_offset);
                         if (write_rc == 0) {
-                                errorf("can not write to client: %p", client);
+                                errorf("can not write to client: %p, request: %lld, error: %d, %s", client, client->request->length - client->request_offset, errno, strerror(errno));
                                 client->state = CLIENT_STATE_DISDONNECTING;
                                 goto bail;
                         } else if (write_rc < 0) {
@@ -873,8 +874,8 @@ static void client_io_callback (struct medusa_io *io, unsigned int events)
                                         goto bail;
                                 }
                         } else {
-                                client->request->offset += write_rc;
-                                if (client->request->offset == client->request->length) {
+                                client->request_offset += write_rc;
+                                if (client->request_offset == client->request->length) {
                                         client->state = CLIENT_STATE_REQUESTED;
                                 }
                         }
@@ -883,13 +884,15 @@ static void client_io_callback (struct medusa_io *io, unsigned int events)
                         client->state = CLIENT_STATE_REQUESTED;
                         goto bail;
                 }
+        } else if (events & MEDUSA_EVENT_DESTROY) {
+
         } else if (events != 0) {
                 errorf("invalid client: %p, state: %d", client, client->state);
                 client->state = CLIENT_STATE_REQUESTED;
                 goto bail;
         }
-out:    return;
-bail:   return;
+out:    return 0;
+bail:   return -1;
 }
 
 int main (int argc, char *argv[])
@@ -1088,7 +1091,7 @@ int main (int argc, char *argv[])
                         url_path,
                         (options.keepalive) ? "Connection: Keep-Alive\r\n" : "",
                         url_address,
-                        "medusa-server-benchmark");
+                        "MedusaServerBenchmark/1.0");
         if (rc != 0) {
                 errorf("can not build request");
                 goto bail;
@@ -1106,7 +1109,6 @@ int main (int argc, char *argv[])
                         errorf("can not create client");
                         goto bail;
                 }
-                client->requests = options.requests;
                 TAILQ_INSERT_TAIL(&clients, client, clients);
                 nclients += 1;
         }
@@ -1184,10 +1186,10 @@ int main (int argc, char *argv[])
                                 client->state = CLIENT_STATE_DISDONNECTING;
                         }
                         if (client->state == CLIENT_STATE_DISDONNECTING) {
-                                debugf("client: %p, state: disconnecting, requests: %lld", client, client->requests);
-                                if (client->requests <= 0) {
+                                debugf("client: %p, state: disconnecting, requests: %lld", client, options.requests);
+                                if (options.requests <= 0) {
                                         if (client->io != NULL) {
-                                                medusa_monitor_del(monitor, medusa_io_get_subject(client->io));
+                                                medusa_monitor_del(medusa_io_get_subject(client->io));
                                         }
                                         if (client->port != NULL) {
                                                 ports_push(client->ports, client->port);
@@ -1198,7 +1200,7 @@ int main (int argc, char *argv[])
                                 } else {
                                         if (options.keepalive == 0) {
                                                 if (client->io != NULL) {
-                                                        medusa_monitor_del(monitor, medusa_io_get_subject(client->io));
+                                                        medusa_monitor_del(medusa_io_get_subject(client->io));
                                                 }
                                                 if (client->port != NULL) {
                                                         ports_push(client->ports, client->port);
@@ -1210,7 +1212,7 @@ int main (int argc, char *argv[])
                                         }
                                         client->state = CLIENT_STATE_DISCONNECTED;
                                 }
-                                client->request->offset = 0;
+                                client->request_offset = 0;
                                 client->http_parse.data = client;
                                 http_parser_init(&client->http_parse, HTTP_RESPONSE);
                                 buffer_reset(&client->incoming);
@@ -1223,13 +1225,13 @@ int main (int argc, char *argv[])
                                         debugf("client disconnected");
                                 }
                                 if (clock_after(current, client->connect_timestamp + options.interval)) {
-                                        client->request->offset = 0;
+                                        client->request_offset = 0;
                                         client->http_parse.data = client;
                                         http_parser_init(&client->http_parse, HTTP_RESPONSE);
                                         buffer_reset(&client->incoming);
                                         if (client->io != NULL &&
                                             options.keepalive != 0) {
-                                                client->requests -= 1;
+                                                options.requests -= 1;
                                                 client->state = CLIENT_STATE_REQUESTING;
                                                 client->connect_timestamp = clock_get();
                                                 rc = medusa_io_set_events(client->io, MEDUSA_EVENT_OUT);
@@ -1245,7 +1247,7 @@ int main (int argc, char *argv[])
                                                         goto bail;
                                                 }
                                                 client->state = CLIENT_STATE_CONNECTING;
-                                                client->requests -= 1;
+                                                options.requests -= 1;
                                                 client->connect_timestamp = clock_get();
                                                 rc = medusa_io_set_events(client->io, MEDUSA_EVENT_OUT);
                                                 rc = medusa_monitor_add(monitor, medusa_io_get_subject(client->io));
