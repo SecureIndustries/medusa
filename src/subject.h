@@ -9,8 +9,8 @@ enum {
 #define MEDUSA_SUBJECT_TYPE_TIMER       MEDUSA_SUBJECT_TYPE_TIMER
 };
 
-void medusa_subject_destroy (struct medusa_subject *subject);
+int medusa_subject_add (struct medusa_monitor *monitor, struct medusa_subject *subject);
+int medusa_subject_mod (struct medusa_subject *subject);
+int medusa_subject_del (struct medusa_subject *subject);
 
-int medusa_monitor_add (struct medusa_monitor *monitor, struct medusa_subject *subject);
-int medusa_monitor_mod (struct medusa_subject *subject);
-int medusa_monitor_del (struct medusa_subject *subject);
+void medusa_subject_destroy (struct medusa_subject *subject);

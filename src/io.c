@@ -35,7 +35,7 @@ static int io_init (struct medusa_monitor *monitor, struct medusa_io *io, void (
         io->subject.destroy = (void (*) (struct medusa_subject *)) destroy;
         io->subject.flags = MEDUSA_SUBJECT_FLAG_NONE;
         io->subject.monitor = NULL;
-        return medusa_monitor_add(monitor, &io->subject);
+        return medusa_subject_add(monitor, &io->subject);
 }
 
 static void io_uninit (struct medusa_io *io)
@@ -60,7 +60,7 @@ int medusa_io_init (struct medusa_monitor *monitor, struct medusa_io *io)
 
 void medusa_io_uninit (struct medusa_io *io)
 {
-        medusa_monitor_del(&io->subject);
+        medusa_subject_del(&io->subject);
 }
 
 struct medusa_io * medusa_io_create (struct medusa_monitor *monitor)
@@ -89,12 +89,12 @@ bail:   if (io != NULL) {
 int medusa_io_set_fd (struct medusa_io *io, int fd)
 {
         io->fd = fd;
-        return medusa_monitor_mod(&io->subject);
+        return medusa_subject_mod(&io->subject);
 }
 
 void medusa_io_destroy (struct medusa_io *io)
 {
-        medusa_monitor_del(&io->subject);
+        medusa_subject_del(&io->subject);
 }
 
 int medusa_io_get_fd (const struct medusa_io *io)
@@ -105,7 +105,7 @@ int medusa_io_get_fd (const struct medusa_io *io)
 int medusa_io_set_close_on_destroy (struct medusa_io *io, int close_on_destroy)
 {
         io->close_on_destroy = !!close_on_destroy;
-        return medusa_monitor_mod(&io->subject);
+        return medusa_subject_mod(&io->subject);
 }
 
 int medusa_io_get_close_on_destroy (const struct medusa_io *io)
@@ -116,7 +116,7 @@ int medusa_io_get_close_on_destroy (const struct medusa_io *io)
 int medusa_io_set_events (struct medusa_io *io, unsigned int events)
 {
         io->events = events;
-        return medusa_monitor_mod(&io->subject);
+        return medusa_subject_mod(&io->subject);
 }
 
 unsigned int medusa_io_get_events (const struct medusa_io *io)
@@ -128,13 +128,13 @@ int medusa_io_set_callback (struct medusa_io *io, int (*callback) (struct medusa
 {
         io->callback = callback;
         io->context = context;
-        return medusa_monitor_mod(&io->subject);
+        return medusa_subject_mod(&io->subject);
 }
 
 int medusa_io_set_enabled (struct medusa_io *io, int enabled)
 {
         io->enabled = !!enabled;
-        return medusa_monitor_mod(&io->subject);
+        return medusa_subject_mod(&io->subject);
 }
 
 int medusa_io_get_enabled (const struct medusa_io *io)
