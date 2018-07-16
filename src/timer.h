@@ -9,7 +9,7 @@ enum {
 struct medusa_timer;
 struct medusa_monitor;
 
-struct medusa_timer * medusa_timer_create (void);
+struct medusa_timer * medusa_timer_create (struct medusa_monitor *monitor);
 void medusa_timer_destroy (struct medusa_timer *timer);
 
 int medusa_timer_set_initial (struct medusa_timer *timer, double initial);

@@ -7,6 +7,7 @@
 #include "queue.h"
 #include "time.h"
 #include "subject.h"
+#include "monitor.h"
 #include "subject-struct.h"
 #include "timer-struct.h"
 
@@ -21,7 +22,7 @@ static int timer_subject_event (struct medusa_subject *subject, unsigned int eve
         return 0;
 }
 
-static int timer_init (struct medusa_timer *timer, void (*destroy) (struct medusa_timer *timer))
+static int timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, void (*destroy) (struct medusa_timer *timer))
 {
         memset(timer, 0, sizeof(struct medusa_timer));
         timer->single_shot = 0;
@@ -29,12 +30,16 @@ static int timer_init (struct medusa_timer *timer, void (*destroy) (struct medus
         medusa_timespec_clear(&timer->initial);
         medusa_timespec_clear(&timer->interval);
         timer->active = 0;
-        return medusa_subject_set(&timer->subject, MEDUSA_SUBJECT_TYPE_TIMER, timer_subject_event, (void (*) (struct medusa_subject *)) destroy, NULL);
+        timer->subject.type = MEDUSA_SUBJECT_TYPE_TIMER;
+        timer->subject.event = timer_subject_event;
+        timer->subject.destroy = (void (*) (struct medusa_subject *)) destroy;
+        timer->subject.flags = MEDUSA_SUBJECT_FLAG_NONE;
+        timer->subject.monitor = NULL;
+        return medusa_monitor_add(monitor, &timer->subject);
 }
 
 static void timer_uninit (struct medusa_timer *timer)
 {
-        medusa_subject_del(&timer->subject);
         memset(timer, 0, sizeof(struct medusa_timer));
 }
 
@@ -44,12 +49,17 @@ static void timer_destroy (struct medusa_timer *timer)
         free(timer);
 }
 
-int medusa_timer_init (struct medusa_timer *timer)
+void medusa_timer_uninit (struct medusa_timer *timer)
 {
-        return timer_init(timer, timer_uninit);
+        medusa_monitor_del(&timer->subject);
 }
 
-struct medusa_timer * medusa_timer_create (void)
+int medusa_timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer)
+{
+        return timer_init(monitor, timer, timer_uninit);
+}
+
+struct medusa_timer * medusa_timer_create (struct medusa_monitor *monitor)
 {
         int rc;
         struct medusa_timer *timer;
@@ -57,7 +67,7 @@ struct medusa_timer * medusa_timer_create (void)
         if (timer == NULL) {
                 goto bail;
         }
-        rc = timer_init(timer, timer_destroy);
+        rc = timer_init(monitor, timer, timer_destroy);
         if (rc != 0) {
                 goto bail;
         }
@@ -70,14 +80,14 @@ bail:   if (timer != NULL) {
 
 void medusa_timer_destroy (struct medusa_timer *timer)
 {
-        medusa_subject_destroy(&timer->subject);
+        medusa_monitor_del(&timer->subject);
 }
 
 int medusa_timer_set_initial (struct medusa_timer *timer, double initial)
 {
         timer->initial.tv_sec = (long long) initial;
         timer->initial.tv_nsec = (long long) ((initial - timer->initial.tv_sec) * 1e9);
-        return medusa_subject_mod(&timer->subject);
+        return medusa_monitor_mod(&timer->subject);
 }
 
 double medusa_timer_get_initial (const struct medusa_timer *timer)
@@ -89,7 +99,7 @@ int medusa_timer_set_interval (struct medusa_timer *timer, double interval)
 {
         timer->interval.tv_sec = (long long) interval;
         timer->interval.tv_nsec = (long long) ((interval - timer->interval.tv_sec) * 1e9);
-        return medusa_subject_mod(&timer->subject);
+        return medusa_monitor_mod(&timer->subject);
 }
 
 double medusa_timer_get_interval (const struct medusa_timer *timer)
@@ -109,7 +119,7 @@ double medusa_timer_get_remaining_time (const struct medusa_timer *timer)
 int medusa_timer_set_single_shot (struct medusa_timer *timer, int single_shot)
 {
         timer->single_shot = !!single_shot;
-        return medusa_subject_mod(&timer->subject);
+        return medusa_monitor_mod(&timer->subject);
 }
 
 int medusa_timer_get_single_shot (const struct medusa_timer *timer)
@@ -125,7 +135,7 @@ int medusa_timer_set_type (struct medusa_timer *timer, unsigned int type)
         } else {
                 timer->type = MEDUSA_TIMER_TYPE_COARSE;
         }
-        return medusa_subject_mod(&timer->subject);
+        return medusa_monitor_mod(&timer->subject);
 }
 
 unsigned int medusa_timer_get_type (const struct medusa_timer *timer)
@@ -137,7 +147,7 @@ int medusa_timer_set_callback (struct medusa_timer *timer, int (*callback) (stru
 {
         timer->callback = callback;
         timer->context = context;
-        return medusa_subject_mod(&timer->subject);
+        return medusa_monitor_mod(&timer->subject);
 }
 
 void * medusa_timer_get_timeout_context (const struct medusa_timer *timer)
@@ -148,7 +158,7 @@ void * medusa_timer_get_timeout_context (const struct medusa_timer *timer)
 int medusa_timer_set_active (struct medusa_timer *timer, int active)
 {
         timer->active = !!active;
-        return medusa_subject_mod(&timer->subject);
+        return medusa_monitor_mod(&timer->subject);
 }
 
 int medusa_timer_get_active (const struct medusa_timer *timer)

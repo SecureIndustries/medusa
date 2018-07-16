@@ -116,7 +116,7 @@ static int test_poll (unsigned int poll)
 
         fprintf(stderr, "pair: %d, %d\n", sv[0], sv[1]);
 
-        io[0] = medusa_io_create();
+        io[0] = medusa_io_create(monitor);
         if (io[0] == NULL) {
                 fprintf(stderr, "can not create io\n");
                 goto bail;
@@ -125,14 +125,13 @@ static int test_poll (unsigned int poll)
         rc = medusa_io_set_events(io[0], MEDUSA_EVENT_OUT);
         rc = medusa_io_set_callback(io[0], io_callback, &write_length);
         rc = medusa_io_set_enabled(io[0], 1);
-        rc = medusa_monitor_add(monitor, (struct medusa_subject *) io[0]);
         if (rc != 0) {
                 fprintf(stderr, "can not setup io[0]\n");
                 goto bail;
         }
         fprintf(stderr, "  io: %p\n", io[0]);
 
-        io[1] = medusa_io_create();
+        io[1] = medusa_io_create(monitor);
         if (io[1] == NULL) {
                 fprintf(stderr, "can not create io\n");
                 goto bail;
@@ -141,7 +140,6 @@ static int test_poll (unsigned int poll)
         rc = medusa_io_set_events(io[1], MEDUSA_EVENT_IN);
         rc = medusa_io_set_callback(io[1], io_callback, &read_length);
         rc = medusa_io_set_enabled(io[1], 1);
-        rc = medusa_monitor_add(monitor, (struct medusa_subject *) io[1]);
         if (rc != 0) {
                 fprintf(stderr, "can not setup io[1]\n");
                 goto bail;

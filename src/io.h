@@ -3,7 +3,7 @@ struct medusa_io;
 struct medusa_subject;
 struct medusa_monitor;
 
-struct medusa_io * medusa_io_create (void);
+struct medusa_io * medusa_io_create (struct medusa_monitor *monitor);
 void medusa_io_destroy (struct medusa_io *io);
 
 int medusa_io_set_fd (struct medusa_io *io, int fd);

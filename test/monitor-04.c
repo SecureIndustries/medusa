@@ -23,8 +23,6 @@ static const unsigned int g_polls[] = {
 
 static int test_poll (unsigned int poll)
 {
-        int rc;
-
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
@@ -41,21 +39,13 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        io = medusa_io_create();
+        io = medusa_io_create(monitor);
         if (io == NULL) {
                 goto bail;
         }
-        rc = medusa_monitor_add(monitor, medusa_io_get_subject(io));
-        if (rc != 0) {
-                goto bail;
-        }
 
-        timer = medusa_timer_create();
+        timer = medusa_timer_create(monitor);
         if (timer == NULL) {
-                goto bail;
-        }
-        rc = medusa_monitor_add(monitor, (struct medusa_subject *) timer);
-        if (rc != 0) {
                 goto bail;
         }
 

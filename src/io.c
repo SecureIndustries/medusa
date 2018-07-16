@@ -8,6 +8,7 @@
 #include "queue.h"
 #include "event.h"
 #include "subject.h"
+#include "monitor.h"
 
 #include "subject-struct.h"
 #include "io-struct.h"
@@ -23,18 +24,22 @@ static int io_subject_event (struct medusa_subject *subject, unsigned int events
         return 0;
 }
 
-static int io_init (struct medusa_io *io, void (*destroy) (struct medusa_io *io))
+static int io_init (struct medusa_monitor *monitor, struct medusa_io *io, void (*destroy) (struct medusa_io *io))
 {
         memset(io, 0, sizeof(struct medusa_io));
         io->fd = -1;
         io->events = 0;
         io->enabled = 0;
-        return medusa_subject_set(&io->subject, MEDUSA_SUBJECT_TYPE_IO, io_subject_event, (void (*) (struct medusa_subject *)) destroy, NULL);
+        io->subject.type = MEDUSA_SUBJECT_TYPE_IO;
+        io->subject.event = io_subject_event;
+        io->subject.destroy = (void (*) (struct medusa_subject *)) destroy;
+        io->subject.flags = MEDUSA_SUBJECT_FLAG_NONE;
+        io->subject.monitor = NULL;
+        return medusa_monitor_add(monitor, &io->subject);
 }
 
 static void io_uninit (struct medusa_io *io)
 {
-        medusa_subject_del(&io->subject);
         if (io->fd >= 0 &&
             io->close_on_destroy) {
                 close(io->fd);
@@ -48,20 +53,29 @@ static void io_destroy (struct medusa_io *io)
         free(io);
 }
 
-int medusa_io_init (struct medusa_io *io)
+int medusa_io_init (struct medusa_monitor *monitor, struct medusa_io *io)
 {
-        return io_init(io, io_uninit);
+        return io_init(monitor, io, io_uninit);
 }
 
-struct medusa_io * medusa_io_create (void)
+void medusa_io_uninit (struct medusa_io *io)
+{
+        medusa_monitor_del(&io->subject);
+}
+
+struct medusa_io * medusa_io_create (struct medusa_monitor *monitor)
 {
         int rc;
         struct medusa_io *io;
+        io = NULL;
+        if (monitor == NULL) {
+                goto bail;
+        }
         io = malloc(sizeof(struct medusa_io));
         if (io == NULL) {
                 goto bail;
         }
-        rc = io_init(io, io_destroy);
+        rc = io_init(monitor, io, io_destroy);
         if (rc != 0) {
                 goto bail;
         }
@@ -75,12 +89,12 @@ bail:   if (io != NULL) {
 int medusa_io_set_fd (struct medusa_io *io, int fd)
 {
         io->fd = fd;
-        return medusa_subject_mod(&io->subject);
+        return medusa_monitor_mod(&io->subject);
 }
 
 void medusa_io_destroy (struct medusa_io *io)
 {
-        medusa_subject_destroy(&io->subject);
+        medusa_monitor_del(&io->subject);
 }
 
 int medusa_io_get_fd (const struct medusa_io *io)
@@ -91,7 +105,7 @@ int medusa_io_get_fd (const struct medusa_io *io)
 int medusa_io_set_close_on_destroy (struct medusa_io *io, int close_on_destroy)
 {
         io->close_on_destroy = !!close_on_destroy;
-        return medusa_subject_mod(&io->subject);
+        return medusa_monitor_mod(&io->subject);
 }
 
 int medusa_io_get_close_on_destroy (const struct medusa_io *io)
@@ -102,7 +116,7 @@ int medusa_io_get_close_on_destroy (const struct medusa_io *io)
 int medusa_io_set_events (struct medusa_io *io, unsigned int events)
 {
         io->events = events;
-        return medusa_subject_mod(&io->subject);
+        return medusa_monitor_mod(&io->subject);
 }
 
 unsigned int medusa_io_get_events (const struct medusa_io *io)
@@ -114,13 +128,13 @@ int medusa_io_set_callback (struct medusa_io *io, int (*callback) (struct medusa
 {
         io->callback = callback;
         io->context = context;
-        return medusa_subject_mod(&io->subject);
+        return medusa_monitor_mod(&io->subject);
 }
 
 int medusa_io_set_enabled (struct medusa_io *io, int enabled)
 {
         io->enabled = !!enabled;
-        return medusa_subject_mod(&io->subject);
+        return medusa_monitor_mod(&io->subject);
 }
 
 int medusa_io_get_enabled (const struct medusa_io *io)

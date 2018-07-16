@@ -62,7 +62,7 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        timer = medusa_timer_create();
+        timer = medusa_timer_create(monitor);
         if (timer == NULL) {
                 goto bail;
         }
@@ -79,10 +79,6 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
         rc = medusa_timer_set_single_shot(timer, 1);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_monitor_add(monitor, (struct medusa_subject *) timer);
         if (rc != 0) {
                 goto bail;
         }

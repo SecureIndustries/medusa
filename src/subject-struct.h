@@ -18,7 +18,6 @@ struct medusa_subject {
         unsigned int type;
         int (*event) (struct medusa_subject *subject, unsigned int events);
         void (*destroy) (struct medusa_subject *subject);
-        void *context;
         struct medusa_monitor *monitor;
         unsigned int flags;
 };

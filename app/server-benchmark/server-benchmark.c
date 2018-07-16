@@ -616,7 +616,7 @@ static int client_disconnect (struct client *client)
                 return -1;
         }
         if (client->io != NULL) {
-                medusa_monitor_del(medusa_io_get_subject(client->io));
+                medusa_io_destroy(client->io);
                 client->io = NULL;
         }
         if (client->port != NULL) {
@@ -626,7 +626,7 @@ static int client_disconnect (struct client *client)
         return 0;
 }
 
-static int client_connect (struct client *client, const char *address, int port)
+static int client_connect (struct medusa_monitor *monitor, struct client *client, const char *address, int port)
 {
         int rc;
         int fd;
@@ -670,7 +670,7 @@ again:
                 rc = -EIO;
                 goto bail;
         }
-        client->io = medusa_io_create();
+        client->io = medusa_io_create(monitor);
         if (client->io == NULL) {
                 errorf("can not create io");
                 rc = -EIO;
@@ -679,7 +679,6 @@ again:
         rc = medusa_io_set_fd(client->io, fd);
         rc = medusa_io_set_close_on_destroy(client->io, 1);
         rc = medusa_io_set_callback(client->io, client_io_callback, client);
-        rc = medusa_io_set_enabled(client->io, 1);
         if (rc != 0) {
                 goto bail;
         }
@@ -1189,7 +1188,7 @@ int main (int argc, char *argv[])
                                 debugf("client: %p, state: disconnecting, requests: %lld", client, options.requests);
                                 if (options.requests <= 0) {
                                         if (client->io != NULL) {
-                                                medusa_monitor_del(medusa_io_get_subject(client->io));
+                                                medusa_io_destroy(client->io);
                                         }
                                         if (client->port != NULL) {
                                                 ports_push(client->ports, client->port);
@@ -1200,7 +1199,7 @@ int main (int argc, char *argv[])
                                 } else {
                                         if (options.keepalive == 0) {
                                                 if (client->io != NULL) {
-                                                        medusa_monitor_del(medusa_io_get_subject(client->io));
+                                                        medusa_io_destroy(client->io);
                                                 }
                                                 if (client->port != NULL) {
                                                         ports_push(client->ports, client->port);
@@ -1240,20 +1239,32 @@ int main (int argc, char *argv[])
                                                         goto bail;
                                                 }
                                         } else {
-                                                rc = client_connect(client, url_address, url_port);
-                                                if (rc != 0) {
-                                                        errorf("can not connect client: %p to %s:%d, rc: %d, %s", client, url_address, url_port, rc, strerror(-rc));
-                                                        client->state = CLIENT_STATE_DISDONNECTING;
-                                                        goto bail;
-                                                }
-                                                client->state = CLIENT_STATE_CONNECTING;
-                                                options.requests -= 1;
-                                                client->connect_timestamp = clock_get();
-                                                rc = medusa_io_set_events(client->io, MEDUSA_EVENT_OUT);
-                                                rc = medusa_monitor_add(monitor, medusa_io_get_subject(client->io));
-                                                if (rc != 0) {
-                                                        errorf("can not add client to monitor");
-                                                        goto bail;
+                                                if (options.requests > 0) {
+                                                        rc = client_connect(monitor, client, url_address, url_port);
+                                                        if (rc != 0) {
+                                                                errorf("can not connect client: %p to %s:%d, rc: %d, %s", client, url_address, url_port, rc, strerror(-rc));
+                                                                client->state = CLIENT_STATE_DISDONNECTING;
+                                                                goto bail;
+                                                        }
+                                                        client->state = CLIENT_STATE_CONNECTING;
+                                                        options.requests -= 1;
+                                                        client->connect_timestamp = clock_get();
+                                                        rc = medusa_io_set_events(client->io, MEDUSA_EVENT_OUT);
+                                                        rc = medusa_io_set_enabled(client->io, 1);
+                                                        if (rc != 0) {
+                                                                errorf("can not add client to monitor");
+                                                                goto bail;
+                                                        }
+                                                } else {
+                                                        if (client->io != NULL) {
+                                                                medusa_io_destroy(client->io);
+                                                        }
+                                                        if (client->port != NULL) {
+                                                                ports_push(client->ports, client->port);
+                                                        }
+                                                        client->io = NULL;
+                                                        client->port = NULL;
+                                                        client->state = CLIENT_STATE_FINISHED;
                                                 }
                                         }
                                 }

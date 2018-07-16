@@ -416,7 +416,7 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
         if (rc != 0) {
                 goto bail;
         }
-        io = medusa_io_create();
+        io = medusa_io_create(monitor);
         if (io == NULL) {
                 goto bail;
         }
@@ -436,11 +436,7 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_monitor_add(monitor, &io->subject);
-        if (rc != 0) {
-                goto bail;
-        }
-        io = medusa_io_create();
+        io = medusa_io_create(monitor);
         if (io == NULL) {
                 goto bail;
         }
@@ -460,10 +456,6 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_monitor_add(monitor, &io->subject);
-        if (rc != 0) {
-                goto bail;
-        }
         return monitor;
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);
@@ -473,6 +465,8 @@ bail:   if (monitor != NULL) {
 
 void medusa_monitor_destroy (struct medusa_monitor *monitor)
 {
+        struct medusa_io *io;
+        struct medusa_timer *timer;
         struct medusa_subject *subject;
         struct medusa_subject *nsubject;
         if (monitor == NULL) {
@@ -485,11 +479,17 @@ void medusa_monitor_destroy (struct medusa_monitor *monitor)
                 medusa_monitor_del(subject);
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->changes, subjects, nsubject) {
-                subject->flags |= MEDUSA_SUBJECT_FLAG_DEL;
                 TAILQ_REMOVE(&monitor->changes, subject, subjects);
-                if ((subject->type == MEDUSA_SUBJECT_TYPE_IO) &&
-                    (subject->flags & MEDUSA_SUBJECT_FLAG_POLL)) {
-                        monitor->poll.backend->del(monitor->poll.backend, (struct medusa_io *) subject);
+                if (subject->type == MEDUSA_SUBJECT_TYPE_IO) {
+                        io = (struct medusa_io *) subject;
+                        if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
+                                monitor->poll.backend->del(monitor->poll.backend, io);
+                        }
+                } else if (subject->type == MEDUSA_SUBJECT_TYPE_TIMER) {
+                        timer = (struct medusa_timer *) subject;
+                        if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
+                                pqueue_del(&monitor->timer.pqueue, timer->_position);
+                        }
                 }
                 medusa_subject_destroy(subject);
         }
@@ -569,6 +569,31 @@ int medusa_monitor_del (struct medusa_subject *subject)
                 TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
         }
         subject->flags |= MEDUSA_SUBJECT_FLAG_DEL;
+        if (1) {
+                int rc;
+                struct medusa_io *io;
+                struct medusa_timer *timer;
+                if (subject->type == MEDUSA_SUBJECT_TYPE_IO) {
+                        io = (struct medusa_io *) subject;
+                        if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
+                                rc = subject->monitor->poll.backend->del(subject->monitor->poll.backend, io);
+                                if (rc != 0) {
+                                        goto bail;
+                                }
+                        }
+                } else if (subject->type == MEDUSA_SUBJECT_TYPE_TIMER) {
+                        timer = (struct medusa_timer *) subject;
+                        if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
+                                rc = pqueue_del(&subject->monitor->timer.pqueue, timer->_position);
+                                if (rc != 0) {
+                                        goto bail;
+                                }
+                                subject->monitor->timer.dirty = 1;
+                        }
+                }
+                TAILQ_REMOVE(&subject->monitor->changes, subject, subjects);
+                medusa_subject_destroy(subject);
+        }
         return 0;
 bail:   return -1;
 }
