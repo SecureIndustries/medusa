@@ -12,3 +12,6 @@ struct medusa_timer {
         struct timespec _timespec;
         unsigned int _position;
 };
+
+int medusa_timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer);
+void medusa_timer_uninit (struct medusa_timer *timer);

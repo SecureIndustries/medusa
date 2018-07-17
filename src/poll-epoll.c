@@ -11,6 +11,7 @@
 #include "time.h"
 #include "queue.h"
 #include "subject-struct.h"
+#include "timer-struct.h"
 #include "io-struct.h"
 
 #include "poll-backend.h"

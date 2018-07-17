@@ -16,8 +16,8 @@
 #include "monitor.h"
 
 #include "subject-struct.h"
-#include "io-struct.h"
 #include "timer-struct.h"
+#include "io-struct.h"
 
 #include "poll-epoll.h"
 #include "poll-kqueue.h"
@@ -295,16 +295,9 @@ static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
         }
         if (monitor->timer.dirty != 0) {
                 timer = pqueue_peek(&monitor->timer.pqueue);
-                if (timer == NULL) {
-                        rc = monitor->timer.backend->set(monitor->timer.backend, NULL);
-                        if (rc != 0) {
-                                goto bail;
-                        }
-                } else {
-                        rc = monitor->timer.backend->set(monitor->timer.backend, &timer->_timespec);
-                        if (rc != 0) {
-                                goto bail;
-                        }
+                rc = monitor->timer.backend->set(monitor->timer.backend, (timer) ? &timer->_timespec : NULL);
+                if (rc != 0) {
+                        goto bail;
                 }
                 monitor->timer.dirty = 0;
         }
@@ -478,7 +471,8 @@ void medusa_monitor_destroy (struct medusa_monitor *monitor)
         TAILQ_FOREACH_SAFE(subject, &monitor->subjects, subjects, nsubject) {
                 medusa_subject_del(subject);
         }
-        TAILQ_FOREACH_SAFE(subject, &monitor->changes, subjects, nsubject) {
+        while (!TAILQ_EMPTY(&monitor->changes)) {
+                subject = TAILQ_FIRST(&monitor->changes);
                 TAILQ_REMOVE(&monitor->changes, subject, subjects);
                 if (subject->type == MEDUSA_SUBJECT_TYPE_IO) {
                         io = (struct medusa_io *) subject;
@@ -569,7 +563,7 @@ int medusa_subject_del (struct medusa_subject *subject)
                 TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
         }
         subject->flags |= MEDUSA_SUBJECT_FLAG_DEL;
-        if (1) {
+        {
                 int rc;
                 struct medusa_io *io;
                 struct medusa_timer *timer;

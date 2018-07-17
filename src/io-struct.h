@@ -7,4 +7,5 @@ struct medusa_io {
         void *context;
         int enabled;
         int close_on_destroy;
+        struct medusa_timer timeout;
 };
