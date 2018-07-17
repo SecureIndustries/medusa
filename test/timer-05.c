@@ -20,7 +20,7 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_KQUEUE,
 #endif
         MEDUSA_MONITOR_POLL_POLL,
-//        MEDUSA_MONITOR_POLL_SELECT
+        MEDUSA_MONITOR_POLL_SELECT
 };
 
 static int timer_callback (struct medusa_timer *timer, unsigned int events, void *context)

@@ -5,6 +5,7 @@ enum {
         MEDUSA_EVENT_PRI        = 0x00000004,
         MEDUSA_EVENT_ERR        = 0x00000008,
         MEDUSA_EVENT_HUP        = 0x00000010,
+        MEDUSA_EVENT_EXCP       = (MEDUSA_EVENT_ERR | MEDUSA_EVENT_HUP),
         MEDUSA_EVENT_NVAL       = 0x00000020,
 
         MEDUSA_EVENT_TIMEOUT    = 0x01000000,
