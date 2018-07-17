@@ -29,7 +29,7 @@ static int timer_init (struct medusa_monitor *monitor, struct medusa_timer *time
         timer->type = MEDUSA_TIMER_TYPE_COARSE;
         medusa_timespec_clear(&timer->initial);
         medusa_timespec_clear(&timer->interval);
-        timer->active = 0;
+        timer->enabled = 0;
         timer->subject.type = MEDUSA_SUBJECT_TYPE_TIMER;
         timer->subject.event = timer_subject_event;
         timer->subject.destroy = (void (*) (struct medusa_subject *)) destroy;
@@ -155,25 +155,25 @@ void * medusa_timer_get_timeout_context (const struct medusa_timer *timer)
         return timer->context;
 }
 
-int medusa_timer_set_active (struct medusa_timer *timer, int active)
+int medusa_timer_set_enabled (struct medusa_timer *timer, int enabled)
 {
-        timer->active = !!active;
+        timer->enabled = !!enabled;
         return medusa_subject_mod(&timer->subject);
 }
 
-int medusa_timer_get_active (const struct medusa_timer *timer)
+int medusa_timer_get_enabled (const struct medusa_timer *timer)
 {
-        return timer->active;
+        return timer->enabled;
 }
 
 int medusa_timer_start (struct medusa_timer *timer)
 {
-        return medusa_timer_set_active(timer, 1);
+        return medusa_timer_set_enabled(timer, 1);
 }
 
 int medusa_timer_stop (struct medusa_timer *timer)
 {
-        return medusa_timer_set_active(timer, 0);
+        return medusa_timer_set_enabled(timer, 0);
 }
 
 int medusa_timer_is_valid (const struct medusa_timer *timer)
@@ -184,15 +184,10 @@ int medusa_timer_is_valid (const struct medusa_timer *timer)
         if (timer->callback == NULL) {
                 return 0;
         }
-        if (timer->active == 0) {
+        if (timer->enabled == 0) {
                 return 0;
         }
         return 1;
-}
-
-struct medusa_subject * medusa_timer_get_subject (struct medusa_timer *timer)
-{
-        return &timer->subject;
 }
 
 struct medusa_monitor * medusa_timer_get_monitor (struct medusa_timer *timer)

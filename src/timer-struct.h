@@ -5,7 +5,7 @@ struct medusa_timer {
         struct timespec interval;
         int single_shot;
         unsigned int type;
-        int active;
+        int enabled;
         int (*callback) (struct medusa_timer *timer, unsigned int events, void *context);
         void *context;
 

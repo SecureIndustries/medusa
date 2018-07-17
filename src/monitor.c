@@ -138,7 +138,7 @@ static int monitor_timer_io_callback (struct medusa_io *io, unsigned int events,
                         timer->subject.flags &= ~MEDUSA_SUBJECT_FLAG_POLL;
                         timer->subject.monitor->timer.dirty = 1;
                         if (timer->single_shot != 0) {
-                                timer->active = 0;
+                                timer->enabled = 0;
                         }
                         rc = medusa_subject_mod(&timer->subject);
                         if (rc != 0) {

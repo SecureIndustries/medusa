@@ -159,11 +159,6 @@ int medusa_io_is_valid (const struct medusa_io *io)
         return 1;
 }
 
-struct medusa_subject * medusa_io_get_subject (struct medusa_io *io)
-{
-        return &io->subject;
-}
-
 struct medusa_monitor * medusa_io_get_monitor (struct medusa_io *io)
 {
         return io->subject.monitor;
