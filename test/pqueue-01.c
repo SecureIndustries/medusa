@@ -24,10 +24,16 @@ static int entry_compare (void *a, void *b)
         return 0;
 }
 
-static void entry_position (void *a, unsigned int p)
+static void entry_set_position (void *a, unsigned int p)
 {
         struct entry *ea = (struct entry *) a;
         ea->pos = p;
+}
+
+static unsigned int entry_get_position (void *a)
+{
+        struct entry *ea = (struct entry *) a;
+        return ea->pos;
 }
 
 int main (int argc, char *argv[])
@@ -62,10 +68,10 @@ int main (int argc, char *argv[])
                 entries[i].pos = -1;
         }
 
-        pqueue_init(&pqueue, 0, rand() % 64, entry_compare, entry_position);
+        pqueue_init(&pqueue, 0, rand() % 64, entry_compare, entry_set_position, entry_get_position);
 
         fprintf(stderr, "add\n");
-        while (pqueue.count != (unsigned int) count) {
+        while (pqueue_count(&pqueue) != (unsigned int) count) {
                 i = rand() % count;
                 if (entries[i].add == 0) {
                         pqueue_add(&pqueue, &entries[i]);
@@ -76,17 +82,17 @@ int main (int argc, char *argv[])
         }
 
         fprintf(stderr, "del\n");
-        while (pqueue.count > (unsigned int) count / 2) {
+        while (pqueue_count(&pqueue) > (unsigned int) count / 2) {
                 i = rand() % count;
                 if (entries[i].del == 0) {
-                        pqueue_del(&pqueue, entries[i].pos);
+                        pqueue_del(&pqueue, &entries[i]);
                         entries[i].del = 1;
                         fprintf(stderr, "  %d @ %d\n", entries[i].pri, entries[i].pos);
                 }
         }
 
         fprintf(stderr, "pop\n");
-        for (p = -1; pqueue.count > 0; ) {
+        for (p = -1; pqueue_count(&pqueue) > 0; ) {
                 entry = pqueue_pop(&pqueue);
                 if (entry == NULL) {
                         return -1;

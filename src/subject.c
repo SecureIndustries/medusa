@@ -13,8 +13,13 @@
 
 void medusa_subject_destroy (struct medusa_subject *subject)
 {
+        if (--subject->refcount > 0) {
+                return;
+        }
         if (subject->event != NULL) {
                 subject->event(subject, MEDUSA_EVENT_DESTROY);
         }
-        subject->destroy(subject);
+        if (subject->destroy != NULL) {
+                subject->destroy(subject);
+        }
 }

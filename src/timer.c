@@ -34,6 +34,7 @@ static int timer_init (struct medusa_monitor *monitor, struct medusa_timer *time
         timer->subject.event = timer_subject_event;
         timer->subject.destroy = (void (*) (struct medusa_subject *)) destroy;
         timer->subject.flags = MEDUSA_SUBJECT_FLAG_NONE;
+        timer->subject.refcount = 1;
         timer->subject.monitor = NULL;
         return medusa_subject_add(monitor, &timer->subject);
 }

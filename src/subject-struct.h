@@ -7,4 +7,5 @@ struct medusa_subject {
         void (*destroy) (struct medusa_subject *subject);
         struct medusa_monitor *monitor;
         unsigned int flags;
+        unsigned int refcount;
 };

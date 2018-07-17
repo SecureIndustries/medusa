@@ -4,13 +4,22 @@
 #include <string.h>
 #include <stdint.h>
 
+#if !defined(MAX)
+#define MAX(a, b)               (((a) > (b)) ? (a) : (b))
+#endif
+
+#define pqueue_left(i)          (2 * (i))
+#define pqueue_right(i)         ((2 * (i)) + 1)
+#define pqueue_parent(i)        ((i) / 2)
+
 struct pqueue_head {
         void **entries;
         unsigned int count;
         unsigned int size;
         unsigned int step;
-        int (*compare) (void *a, void *b);
-        void (*position) (void *entry, unsigned int position);
+        int (*cmp) (void *a, void *b);
+        void (*setpos) (void *entry, unsigned int position);
+        unsigned int (*getpos) (void *entry);
 };
 
 static inline void pqueue_uninit (struct pqueue_head *head)
@@ -26,14 +35,17 @@ static inline void pqueue_uninit (struct pqueue_head *head)
 static inline int pqueue_init (
                 struct pqueue_head *head,
                 unsigned int size, unsigned int step,
-                int (*compare) (void *a, void *b),
-                void (*position) (void *entry, unsigned int position))
+                int (*cmp) (void *a, void *b),
+                void (*setpos) (void *entry, unsigned int position),
+                unsigned int (*getpos) (void *entry))
 {
         memset(head, 0, sizeof(struct pqueue_head));
         head->size = size;
         head->step = step ? step : 1;
-        head->compare = compare;
-        head->position = position;
+        head->cmp = cmp;
+        head->setpos = setpos;
+        head->getpos = getpos;
+        head->count = 1;
         if (head->size > 0) {
                 head->entries = (void **) malloc(sizeof(void *) * head->size);
                 if (head->entries == NULL) {
@@ -42,6 +54,11 @@ static inline int pqueue_init (
         }
         return 0;
 bail:   return -1;
+}
+
+static inline unsigned int pqueue_count (struct pqueue_head *head)
+{
+        return head->count -1;
 }
 
 static inline void pqueue_heapify (struct pqueue_head *head, unsigned int i)
@@ -57,12 +74,12 @@ static inline void pqueue_heapify (struct pqueue_head *head, unsigned int i)
                 r = i * 2 + 1;
                 k = i;
 
-                if (head->count >= l &&
-                    head->compare(head->entries[l], head->entries[k]) < 0) {
+                if (head->count > l &&
+                    head->cmp(head->entries[l], head->entries[k]) < 0) {
                         k = l;
                 }
-                if (head->count >= r &&
-                    head->compare(head->entries[r], head->entries[k]) < 0) {
+                if (head->count > r &&
+                    head->cmp(head->entries[r], head->entries[k]) < 0) {
                         k = r;
                 }
                 if (k == i) {
@@ -72,151 +89,137 @@ static inline void pqueue_heapify (struct pqueue_head *head, unsigned int i)
                 entry = head->entries[k];
 
                 head->entries[k] = head->entries[i];
-                head->position(head->entries[k], k);
+                head->setpos(head->entries[k], k);
 
                 head->entries[i] = entry;
-                head->position(head->entries[i], i);
+                head->setpos(head->entries[i], i);
 
                 i = k;
         }
+}
+
+static inline void pqueue_shift_up (struct pqueue_head *head, unsigned int i)
+{
+        void *e;
+        unsigned int p;
+        e = head->entries[i];
+        for (p = pqueue_parent(i);
+             ((i > 1) && (head->cmp(head->entries[p], e) > 0));
+             i = p, p = pqueue_parent(i)) {
+                head->entries[i] = head->entries[p];
+                head->setpos(head->entries[i], i);
+        }
+        head->entries[i] = e;
+        head->setpos(e, i);
+}
+
+static inline void pqueue_shift_down (struct pqueue_head *head, unsigned int i)
+{
+        void *e;
+        unsigned int c;
+        e = head->entries[i];
+        while (1) {
+                c = pqueue_left(i);
+                if (c >= head->count) {
+                        break;
+                }
+                if ((c + 1 < head->count) &&
+                    (head->cmp(head->entries[c], head->entries[c + 1]) > 0)) {
+                        c += 1;
+                }
+                if (!(head->cmp(e, head->entries[c]) > 0)) {
+                        break;
+                }
+                head->entries[i] = head->entries[c];
+                head->setpos(head->entries[i], i);
+                i = c;
+        }
+        head->entries[i] = e;
+        head->setpos(e, i);
 }
 
 static inline int pqueue_add (struct pqueue_head *head, void *entry)
 {
         unsigned int i;
-        unsigned int j;
         if (head->count + 1 >= head->size) {
                 void **tmp;
-                tmp = (void **) realloc(head->entries, sizeof(void **) * (head->size + head->step + (head->size ? 0 : 1)));
+                unsigned int size;
+                size = MAX(head->count + 1, head->size + head->step);
+                tmp = (void **) realloc(head->entries, sizeof(void **) * size);
                 if (tmp == NULL) {
-                        tmp = (void **) malloc(sizeof(void *) * (head->size + head->step + (head->size ? 0 : 1)));
+                        tmp = (void **) malloc(sizeof(void *) * size);
                         if (tmp == NULL) {
                                 goto bail;
                         }
                         if (head->count > 0) {
-                                memcpy(tmp, head->entries, sizeof(void **) * (head->count + (head->size ? 0 : 1)));
+                                memcpy(tmp, head->entries, sizeof(void **) * size);
                         }
                         free(head->entries);
                 }
                 head->entries = tmp;
-                head->size = head->size + head->step + (head->size ? 0 : 1);
+                head->size = size;
         }
-        i = head->count + 1;
-        j = i / 2;
-        while ((i > 1) && (head->compare(head->entries[j], entry) > 0)) {
-                head->entries[i] = head->entries[j];
-                head->position(head->entries[i], i);
-                i = j;
-                j = j / 2;
-        }
+        i = head->count++;
         head->entries[i] = entry;
-        head->position(head->entries[i], i);
-        head->count++;
+        head->setpos(entry, i);
+        pqueue_shift_up(head, i);
         return 0;
 bail:   return -1;
 }
 
-static inline int pqueue_del (struct pqueue_head *head, unsigned int position)
+static inline int pqueue_mod (struct pqueue_head *head, void *entry)
 {
         unsigned int i;
-        unsigned int j;
-        unsigned int k;
-        if (position < 1) {
-                return -1;
-        }
-        if (position > head->count + 1) {
-                return -1;
-        }
-#if 0
-        head->position(head->entries[position], -1);
-        if (position < head->count) {
-                head->entries[position] = head->entries[head->count];
-                head->position(head->entries[position], position);
-        }
-        head->count--;
-        for (i = head->count / 2; i > 0; i--) {
-                pqueue_heapify(head, i);
-        }
-        return 0;
-#endif
-        head->position(head->entries[position], -1);
-        if (position > 1 &&
-            head->compare(head->entries[position / 2], head->entries[head->count]) > 0) {
-                i = position;
-                j = i / 2;
-                do {
-                        head->entries[i] = head->entries[j];
-                        head->position(head->entries[i], i);
-                        i = j;
-                        j = j / 2;
-                } while ((i > 1) && (head->compare(head->entries[j], head->entries[head->count]) > 0));
-                head->entries[i] = head->entries[head->count];
-                head->position(head->entries[i], i);
-                head->count--;
+        unsigned int p;
+        i = head->getpos(entry);
+        p = pqueue_parent(i);
+        if (p > 1 && head->cmp(head->entries[p], head->entries[i]) > 0) {
+                pqueue_shift_up(head, i);
         } else {
-                if (position < head->count) {
-                        head->entries[position] = head->entries[head->count];
-                        head->position(head->entries[position], position);
+#if 0
+                for (i = head->count / 2; i > 0; i--) {
+                        pqueue_heapify(head, i);
                 }
-                head->count--;
-                i = position;
-                while (i != head->count + 1) {
-                        k = head->count + 1;
-                        j = i * 2;
-                        if ((j <= head->count) && (head->compare(head->entries[j], head->entries[k]) < 0)) {
-                                k = j;
-                        }
-                        if ((j + 1 <= head->count) && (head->compare(head->entries[j + 1], head->entries[k]) < 0)) {
-                                k = j + 1;
-                        }
-                        head->entries[i] = head->entries[k];
-                        head->position(head->entries[i], i);
-                        i = k;
-                }
+#else
+                pqueue_shift_down(head, i);
+#endif
         }
         return 0;
 }
 
-static inline void * pqueue_peek (struct pqueue_head *head)
+static inline int pqueue_del (struct pqueue_head *head, void *entry)
 {
-        void *entry;
-        if (!head->count) {
-                return NULL;
+        unsigned int i;
+        i = head->getpos(entry);
+        head->entries[i] = head->entries[--head->count];
+        if (head->cmp(entry, head->entries[i]) > 0) {
+                pqueue_shift_up(head, i);
+        } else {
+                pqueue_shift_down(head, i);
         }
-        entry = head->entries[1];
-        return entry;
+        head->setpos(entry, -1);
+        return 0;
 }
 
 static inline void * pqueue_pop (struct pqueue_head *head)
 {
-        void *entry;
-        unsigned int i;
-        unsigned int j;
-        unsigned int k;
-        if (!head->count) {
+        void *e;
+        if (head->count == 1) {
                 return NULL;
         }
-        entry = head->entries[1];
-        head->entries[1] = head->entries[head->count];
-        head->position(head->entries[1], 1);
-        head->count--;
-#if 0
-        pqueue_heapify(head, 1);
-#else
-        i = 1;
-        while (i != head->count + 1) {
-                k = head->count + 1;
-                j = i * 2;
-                if ((j <= head->count) && (head->compare(head->entries[j], head->entries[k]) < 0)) {
-                        k = j;
-                }
-                if ((j + 1 <= head->count) && (head->compare(head->entries[j + 1], head->entries[k]) < 0)) {
-                        k = j + 1;
-                }
-                head->entries[i] = head->entries[k];
-                head->position(head->entries[i], i);
-                i = k;
+        e = head->entries[1];
+        head->entries[1] = head->entries[--head->count];
+        pqueue_shift_down(head, 1);
+        head->setpos(e, -1);
+        return e;
+}
+
+static inline void * pqueue_peek (struct pqueue_head *head)
+{
+        void *e;
+        if (head->count == 1) {
+                return NULL;
         }
-#endif
-        return entry;
+        e = head->entries[1];
+        return e;
 }

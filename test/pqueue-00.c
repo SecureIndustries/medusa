@@ -23,10 +23,16 @@ static int entry_compare (void *a, void *b)
         return 0;
 }
 
-static void entry_position (void *a, unsigned int p)
+static void entry_set_position (void *a, unsigned int p)
 {
         struct entry *ea = (struct entry *) a;
         ea->pos = p;
+}
+
+static unsigned int entry_get_position (void *a)
+{
+        struct entry *ea = (struct entry *) a;
+        return ea->pos;
 }
 
 int main (int argc, char *argv[])
@@ -50,6 +56,7 @@ int main (int argc, char *argv[])
         fprintf(stderr, "seed: %ld\n", seed);
 
         count = rand() % 10000;
+        count = 1;
         entries = malloc(sizeof(struct entry) * count);
         if (entries == NULL) {
                 return -1;
@@ -59,15 +66,15 @@ int main (int argc, char *argv[])
                 entries[i].pri = i;
         }
 
-        pqueue_init(&pqueue, 0, rand() % 64, entry_compare, entry_position);
+        pqueue_init(&pqueue, 0, rand() % 64, entry_compare, entry_set_position, entry_get_position);
 
         fprintf(stderr, "add\n");
-        while (pqueue.count != (unsigned int) count) {
+        while (pqueue_count(&pqueue) != (unsigned int) count) {
                 i = rand() % count;
                 if (entries[i].add == 0) {
                         pqueue_add(&pqueue, &entries[i]);
                         entries[i].add = 1;
-                        fprintf(stderr, "  %d = %d\n", i, entries[i].pri);
+                        fprintf(stderr, "  %d = %d @ %d\n", i, entries[i].pri, entries[i].pos);
                 }
         }
 
@@ -78,7 +85,7 @@ int main (int argc, char *argv[])
                         fprintf(stderr, "entry is invalid\n");
                         return -1;
                 }
-                fprintf(stderr, "  %d = %d\n", i, entry->pri);
+                fprintf(stderr, "  %d = %d @ %d\n", i, entries[i].pri, entries[i].pos);
                 if (entry->pri <= p) {
                         fprintf(stderr, "  %d <= %d\n", entry->pri, p);
                         return -1;

@@ -11,10 +11,8 @@
 #include "monitor.h"
 
 #include "subject-struct.h"
-#include "timer-struct.h"
 #include "io-struct.h"
 
-#include "timer.h"
 #include "io.h"
 
 static int io_subject_event (struct medusa_subject *subject, unsigned int events)
@@ -26,20 +24,8 @@ static int io_subject_event (struct medusa_subject *subject, unsigned int events
         return 0;
 }
 
-static int io_timeout_callback (struct medusa_timer *timer, unsigned int events, void *context)
-{
-        struct medusa_io *io = (struct medusa_io *) context;
-        (void) timer;
-        (void) events;
-        if (events & MEDUSA_EVENT_TIMEOUT) {
-                return io_subject_event(&io->subject, events);
-        }
-        return 0;
-}
-
 static int io_init (struct medusa_monitor *monitor, struct medusa_io *io, void (*destroy) (struct medusa_io *io))
 {
-        int rc;
         memset(io, 0, sizeof(struct medusa_io));
         io->fd = -1;
         io->events = 0;
@@ -48,23 +34,9 @@ static int io_init (struct medusa_monitor *monitor, struct medusa_io *io, void (
         io->subject.event = io_subject_event;
         io->subject.destroy = (void (*) (struct medusa_subject *)) destroy;
         io->subject.flags = MEDUSA_SUBJECT_FLAG_NONE;
+        io->subject.refcount = 1;
         io->subject.monitor = NULL;
-        rc = medusa_subject_add(monitor, &io->subject);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_timer_init(monitor, &io->timeout);
-        if (rc != 0) {
-                medusa_subject_del(&io->subject);
-                goto bail;
-        }
-        rc = medusa_timer_set_callback(&io->timeout, io_timeout_callback, io);
-        if (rc != 0) {
-                medusa_subject_del(&io->subject);
-                goto bail;
-        }
-        return 0;
-bail:   return -1;
+        return medusa_subject_add(monitor, &io->subject);
 }
 
 static void io_uninit (struct medusa_io *io)
@@ -73,7 +45,6 @@ static void io_uninit (struct medusa_io *io)
             io->close_on_destroy) {
                 close(io->fd);
         }
-        medusa_timer_uninit(&io->timeout);
         memset(io, 0, sizeof(struct medusa_io));
 }
 
@@ -156,22 +127,14 @@ unsigned int medusa_io_get_events (const struct medusa_io *io)
 
 int medusa_io_set_timeout (struct medusa_io *io, double timeout)
 {
-        int rc;
-        rc = medusa_timer_set_initial(&io->timeout, timeout);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_interval(&io->timeout, timeout);
-        if (rc != 0) {
-                goto bail;
-        }
-        return 0;
-bail:   return -1;
+        io->timeout.tv_sec = (long long) timeout;
+        io->timeout.tv_nsec = (long long) ((timeout - io->timeout.tv_sec) * 1e9);
+        return medusa_subject_mod(&io->subject);
 }
 
 double medusa_io_get_timeout (const struct medusa_io *io)
 {
-        return medusa_timer_get_interval(&io->timeout);
+        return io->timeout.tv_sec + io->timeout.tv_nsec * 1e-9;
 }
 
 int medusa_io_set_callback (struct medusa_io *io, int (*callback) (struct medusa_io *io, unsigned int events, void *context), void *context)
@@ -183,18 +146,8 @@ int medusa_io_set_callback (struct medusa_io *io, int (*callback) (struct medusa
 
 int medusa_io_set_enabled (struct medusa_io *io, int enabled)
 {
-        int rc;
         io->enabled = !!enabled;
-        rc = medusa_subject_mod(&io->subject);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_enabled(&io->timeout, enabled);
-        if (rc != 0) {
-                goto bail;
-        }
-        return 0;
-bail:   return -1;
+        return medusa_subject_mod(&io->subject);
 }
 
 int medusa_io_get_enabled (const struct medusa_io *io)

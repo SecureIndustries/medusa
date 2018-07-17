@@ -6,6 +6,7 @@
 
 struct entry {
         int add;
+        int del;
         int pri;
         int pos;
 };
@@ -62,7 +63,9 @@ int main (int argc, char *argv[])
         }
         for (i = 0; i < count; i++) {
                 entries[i].add = 0;
-                entries[i].pri = count;
+                entries[i].del = 0;
+                entries[i].pri = i;
+                entries[i].pos = -1;
         }
 
         pqueue_init(&pqueue, 0, rand() % 64, entry_compare, entry_set_position, entry_get_position);
@@ -73,27 +76,35 @@ int main (int argc, char *argv[])
                 if (entries[i].add == 0) {
                         pqueue_add(&pqueue, &entries[i]);
                         entries[i].add = 1;
+                        entries[i].del = 0;
                         fprintf(stderr, "  %d = %d\n", i, entries[i].pri);
                 }
         }
 
+        fprintf(stderr, "mod\n");
+        for (i = 0; i < count; i++) {
+                entries[i].pri = rand() % count;
+                pqueue_mod(&pqueue, &entries[i]);
+        }
+
         fprintf(stderr, "pop\n");
-        for (p = count, i = 0; i < count; i++) {
+        for (p = -1; pqueue_count(&pqueue) > 0; ) {
                 entry = pqueue_pop(&pqueue);
                 if (entry == NULL) {
-                        fprintf(stderr, "entry is invalid\n");
                         return -1;
                 }
-                fprintf(stderr, "  %d = %d\n", i, entry->pri);
-                if (entry->pri != p) {
-                        fprintf(stderr, "  %d != %d\n", entry->pri, p);
+                fprintf(stderr, "  %d @ %d\n", entry->pri, entry->pos);
+                if (entry->del != 0) {
+                        fprintf(stderr, "  del is invalid: %d\n", entry->del);
+                        return -1;
+                }
+                if (entry->pri < p) {
+                        fprintf(stderr, "  %d < %d\n", entry->pri, p);
                         return -1;
                 }
                 p = entry->pri;
         }
-        if (i != count) {
-                return -1;
-        }
+
         entry = pqueue_pop(&pqueue);
         if (entry != NULL) {
                 return -1;
@@ -101,4 +112,6 @@ int main (int argc, char *argv[])
 
         pqueue_uninit(&pqueue);
         free(entries);
+
+        fprintf(stderr, "finish\n");
 }
