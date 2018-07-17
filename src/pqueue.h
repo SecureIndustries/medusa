@@ -103,11 +103,12 @@ static inline void pqueue_shift_up (struct pqueue_head *head, unsigned int i)
         void *e;
         unsigned int p;
         e = head->entries[i];
-        for (p = pqueue_parent(i);
-             ((i > 1) && (head->cmp(head->entries[p], e) > 0));
-             i = p, p = pqueue_parent(i)) {
+        p = pqueue_parent(i);
+        while ((i > 1) && (head->cmp(head->entries[p], e) > 0)) {
                 head->entries[i] = head->entries[p];
                 head->setpos(head->entries[i], i);
+                i = p;
+                p = pqueue_parent(i);
         }
         head->entries[i] = e;
         head->setpos(e, i);
