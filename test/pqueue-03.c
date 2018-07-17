@@ -52,11 +52,13 @@ int main (int argc, char *argv[])
         (void) argv;
 
         seed = time(NULL);
+        seed = 1531856103;
         srand(seed);
 
         fprintf(stderr, "seed: %ld\n", seed);
 
         count = rand() % 10000;
+        count = 10;
         entries = malloc(sizeof(struct entry) * count);
         if (entries == NULL) {
                 return -1;
