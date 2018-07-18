@@ -109,18 +109,6 @@ unsigned int medusa_io_get_events (const struct medusa_io *io)
         return io->events;
 }
 
-int medusa_io_set_timeout (struct medusa_io *io, double timeout)
-{
-        io->timeout.tv_sec = (long long) timeout;
-        io->timeout.tv_nsec = (long long) ((timeout - io->timeout.tv_sec) * 1e9);
-        return medusa_subject_mod(&io->subject);
-}
-
-double medusa_io_get_timeout (const struct medusa_io *io)
-{
-        return io->timeout.tv_sec + io->timeout.tv_nsec * 1e-9;
-}
-
 int medusa_io_set_callback (struct medusa_io *io, int (*callback) (struct medusa_io *io, unsigned int events, void *context), void *context)
 {
         io->callback = callback;

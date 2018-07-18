@@ -7,7 +7,7 @@
 #include <time.h>
 #include <errno.h>
 
-#include "medusa/io.h"
+#include "medusa/timer.h"
 #include "medusa/event.h"
 #include "medusa/monitor.h"
 
@@ -23,13 +23,26 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int io_callback (struct medusa_io *io, unsigned int events, void *context)
+static int timer_callback (struct medusa_timer *timer, unsigned int events, void *context)
 {
-        (void) context;
-        if (events & MEDUSA_EVENT_IN) {
-        }
         if (events & MEDUSA_EVENT_TIMEOUT) {
-                return medusa_monitor_break(medusa_io_get_monitor(io));
+                int *count = context;
+                fprintf(stderr, "timer: %p callback timeout: %d\n", timer, *count);
+                *count = *count + 1;
+        }
+        return 0;
+}
+
+static int timer_check_callback (struct medusa_timer *timer, unsigned int events, void *context)
+{
+        if (events & MEDUSA_EVENT_TIMEOUT) {
+                int *count = context;
+                fprintf(stderr, "timer: %p check timeout: %d\n", timer, *count);
+                if (*count == 1) {
+                        medusa_monitor_break(medusa_timer_get_monitor(timer));
+                } else {
+                        abort();
+                }
         }
         return 0;
 }
@@ -37,21 +50,15 @@ static int io_callback (struct medusa_io *io, unsigned int events, void *context
 static int test_poll (unsigned int poll)
 {
         int rc;
-        int fds[2];
-
-        long int seed;
 
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
-        struct medusa_io *io;
+        int count;
+        struct medusa_timer *timer;
 
+        count = 0;
         monitor = NULL;
-
-        seed = time(NULL);
-        srand(seed);
-
-        fprintf(stderr, "seed: %ld\n", seed);
 
         medusa_monitor_init_options_default(&options);
         options.poll.type = poll;
@@ -61,39 +68,55 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        rc = pipe(fds);
+        timer = medusa_timer_create(monitor);
+        if (timer == NULL) {
+                goto bail;
+        }
+        rc = medusa_timer_set_interval(timer, 0.01);
         if (rc != 0) {
                 goto bail;
         }
-        io = medusa_io_create(monitor);
-        if (io == NULL) {
-                goto bail;
-        }
-        rc = medusa_io_set_fd(io, fds[0]);
+        rc = medusa_timer_set_callback(timer, timer_callback, &count);
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_set_events(io, MEDUSA_EVENT_IN);
+        rc = medusa_timer_start(timer);
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_set_callback(io, io_callback, NULL);
+        rc = medusa_timer_set_single_shot(timer, 1);
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_set_enabled(io, 1);
+
+        timer = medusa_timer_create(monitor);
+        if (timer == NULL) {
+                goto bail;
+        }
+        rc = medusa_timer_set_interval(timer, 0.7);
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_set_timeout(io, 1.0);
+        rc = medusa_timer_set_callback(timer, timer_check_callback, &count);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_timer_start(timer);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_timer_set_single_shot(timer, 1);
         if (rc != 0) {
                 goto bail;
         }
 
         rc = medusa_monitor_run(monitor);
         if (rc != 0) {
-                goto bail;
+                fprintf(stderr, "can not run monitor\n");
+                return -1;
         }
+
+        fprintf(stderr, "finish\n");
 
         medusa_monitor_destroy(monitor);
         return 0;
@@ -113,6 +136,7 @@ int main (int argc, char *argv[])
 {
         int rc;
         unsigned int i;
+
         (void) argc;
         (void) argv;
 

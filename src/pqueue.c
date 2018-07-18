@@ -202,6 +202,9 @@ int pqueue_del (struct pqueue_head *head, void *entry)
 {
         unsigned int i;
         i = head->getpos(entry);
+        if (i == (unsigned int) -1) {
+                goto bail;
+        }
         head->entries[i] = head->entries[--head->count];
         if (head->cmp(entry, head->entries[i]) > 0) {
                 pqueue_shift_up(head, i);
@@ -210,6 +213,7 @@ int pqueue_del (struct pqueue_head *head, void *entry)
         }
         head->setpos(entry, -1);
         return 0;
+bail:   return -1;
 }
 
 void * pqueue_pop (struct pqueue_head *head)

@@ -296,6 +296,7 @@ static int medusa_monitor_fire_timer (struct medusa_monitor *monitor)
                         if (timer->single_shot != 0) {
                                 timer->enabled = 0;
                         }
+                        monitor->timer.dirty = 1;
                         rc = medusa_subject_mod(&timer->subject);
                         if (rc != 0) {
                                 goto bail;
@@ -398,7 +399,7 @@ int medusa_subject_del (struct medusa_subject *subject)
                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
         } else {
                 TAILQ_REMOVE(&subject->monitor->actives, subject, subjects);
-                TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
+                TAILQ_INSERT_TAIL(&subject->monitor->deletes, subject, subjects);
         }
         subject->flags |= MEDUSA_SUBJECT_FLAG_DEL;
 out:    return 0;

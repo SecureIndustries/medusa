@@ -28,8 +28,9 @@ static int timer_callback (struct medusa_timer *timer, unsigned int events, void
         if (events & MEDUSA_EVENT_TIMEOUT) {
                 int *count = context;
                 fprintf(stderr, "timeout: %d\n", *count);
-                if ((*count)++ > 10) {
+                if (*count + 1 == 10) {
                         fprintf(stderr, "break\n");
+                        medusa_timer_set_enabled(timer, 0);
                         medusa_monitor_break(medusa_timer_get_monitor(timer));
                 } else {
                         fprintf(stderr, "set interval\n");
@@ -37,6 +38,7 @@ static int timer_callback (struct medusa_timer *timer, unsigned int events, void
                         fprintf(stderr, "set active\n");
                         medusa_timer_start(timer);
                 }
+                *count = *count + 1;
         }
         return 0;
 }
