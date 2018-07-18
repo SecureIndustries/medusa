@@ -270,7 +270,7 @@ static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
 bail:   return -1;
 }
 
-static int medusa_monitor_fire_timer (struct medusa_monitor *monitor)
+static int medusa_monitor_check_timer (struct medusa_monitor *monitor)
 {
         int rc;
         struct timespec now;
@@ -637,7 +637,7 @@ int medusa_monitor_run (struct medusa_monitor *monitor)
                 if (rc != 0) {
                         goto bail;
                 }
-                rc = medusa_monitor_fire_timer(monitor);
+                rc = medusa_monitor_check_timer(monitor);
                 if (rc != 0) {
                         goto bail;
                 }
@@ -667,7 +667,7 @@ int medusa_monitor_run_once (struct medusa_monitor *monitor)
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_monitor_fire_timer(monitor);
+        rc = medusa_monitor_check_timer(monitor);
         if (rc != 0) {
                 goto bail;
         }
@@ -700,7 +700,7 @@ int medusa_monitor_run_timeout (struct medusa_monitor *monitor, double timeout)
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_monitor_fire_timer(monitor);
+        rc = medusa_monitor_check_timer(monitor);
         if (rc != 0) {
                 goto bail;
         }
