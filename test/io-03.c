@@ -119,8 +119,6 @@ int main (int argc, char *argv[])
         srand(time(NULL));
         signal(SIGALRM, alarm_handler);
 
-        return 0;
-
         for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
                 alarm(5);
                 fprintf(stderr, "testing poll: %d\n", g_polls[i]);

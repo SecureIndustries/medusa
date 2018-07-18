@@ -677,7 +677,6 @@ again:
                 goto bail;
         }
         rc = medusa_io_set_fd(client->io, fd);
-        rc = medusa_io_set_close_on_destroy(client->io, 1);
         rc = medusa_io_set_callback(client->io, client_io_callback, client);
         if (rc != 0) {
                 goto bail;
@@ -884,7 +883,11 @@ static int client_io_callback (struct medusa_io *io, unsigned int events, void *
                         goto bail;
                 }
         } else if (events & MEDUSA_EVENT_DESTROY) {
-
+                int fd;
+                fd = medusa_io_get_fd(io);
+                if (fd >= 0) {
+                        close(fd);
+                }
         } else if (events != 0) {
                 errorf("invalid client: %p, state: %d", client, client->state);
                 client->state = CLIENT_STATE_REQUESTED;

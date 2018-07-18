@@ -19,6 +19,7 @@ libmedusa-monitor.a_files-y = \
 	clock.c \
 	io.c \
 	monitor.c \
+	pqueue.c \
 	subject.c \
 	timer.c
 

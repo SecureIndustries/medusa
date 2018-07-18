@@ -30,10 +30,9 @@ static int io_init (struct medusa_monitor *monitor, struct medusa_io *io, void (
         io->fd = -1;
         io->events = 0;
         io->enabled = 0;
-        io->subject.type = MEDUSA_SUBJECT_TYPE_IO;
         io->subject.event = io_subject_event;
         io->subject.destroy = (void (*) (struct medusa_subject *)) destroy;
-        io->subject.flags = MEDUSA_SUBJECT_FLAG_NONE;
+        io->subject.flags = MEDUSA_SUBJECT_FLAG_IO;
         io->subject.refcount = 1;
         io->subject.monitor = NULL;
         return medusa_subject_add(monitor, &io->subject);
@@ -41,10 +40,6 @@ static int io_init (struct medusa_monitor *monitor, struct medusa_io *io, void (
 
 static void io_uninit (struct medusa_io *io)
 {
-        if (io->fd >= 0 &&
-            io->close_on_destroy) {
-                close(io->fd);
-        }
         memset(io, 0, sizeof(struct medusa_io));
 }
 
@@ -101,17 +96,6 @@ void medusa_io_destroy (struct medusa_io *io)
 int medusa_io_get_fd (const struct medusa_io *io)
 {
         return io->fd;
-}
-
-int medusa_io_set_close_on_destroy (struct medusa_io *io, int close_on_destroy)
-{
-        io->close_on_destroy = !!close_on_destroy;
-        return medusa_subject_mod(&io->subject);
-}
-
-int medusa_io_get_close_on_destroy (const struct medusa_io *io)
-{
-        return io->close_on_destroy;
 }
 
 int medusa_io_set_events (struct medusa_io *io, unsigned int events)

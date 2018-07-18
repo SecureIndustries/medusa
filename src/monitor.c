@@ -1,6 +1,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -38,15 +39,17 @@ enum {
 
 struct medusa_monitor {
         int running;
-        struct medusa_subjects subjects;
+        struct medusa_subjects actives;
         struct medusa_subjects changes;
+        struct medusa_subjects deletes;
         struct medusa_subjects rogues;
         struct {
                 struct medusa_poll_backend *backend;
         } poll;
         struct {
                 struct medusa_timer_backend *backend;
-                struct pqueue_head pqueue;
+                struct pqueue_head *pqueue;
+                int fired;
                 int dirty;
         } timer;
         int wakeup_fds[2];
@@ -103,52 +106,15 @@ bail:   return -1;
 
 static int monitor_timer_io_callback (struct medusa_io *io, unsigned int events, void *context)
 {
-        int rc;
-
-        uint64_t value;
-        struct timespec now;
-
-        struct medusa_timer *timer;
-
         (void) context;
-
         if (events & MEDUSA_EVENT_IN) {
+                int rc;
+                uint64_t value;
                 rc = read(io->fd, &value, sizeof(value));
                 if (rc != sizeof(value)) {
                         goto bail;
                 }
-
-                rc = clock_monotonic(&now);
-                if (rc != 0) {
-                        goto bail;
-                }
-
-                while (1) {
-                        timer = pqueue_peek(&io->subject.monitor->timer.pqueue);
-                        if (timer == NULL) {
-                                break;
-                        }
-                        if (medusa_timespec_compare(&timer->_timespec, &now, >)) {
-                                break;
-                        }
-                        timer = pqueue_pop(&timer->subject.monitor->timer.pqueue);
-                        if (timer == NULL) {
-                                break;
-                        }
-                        timer->subject.flags &= ~MEDUSA_SUBJECT_FLAG_POLL;
-                        timer->subject.monitor->timer.dirty = 1;
-                        if (timer->single_shot != 0) {
-                                timer->enabled = 0;
-                        }
-                        rc = medusa_subject_mod(&timer->subject);
-                        if (rc != 0) {
-                                goto bail;
-                        }
-                        rc = timer->subject.event(&timer->subject, MEDUSA_EVENT_TIMEOUT);
-                        if (rc != 0) {
-                                goto bail;
-                        }
-                }
+                io->subject.monitor->timer.fired = 1;
         }
         return 0;
 bail:   return -1;
@@ -191,32 +157,32 @@ static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
         if (rc != 0) {
                 goto bail;
         }
-        TAILQ_FOREACH_SAFE(subject, &monitor->changes, subjects, nsubject) {
-                if (subject->flags & MEDUSA_SUBJECT_FLAG_DEL) {
-                        if (subject->type == MEDUSA_SUBJECT_TYPE_IO) {
-                                io = (struct medusa_io *) subject;
-                                if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
-                                        rc = monitor->poll.backend->del(monitor->poll.backend, io);
-                                        if (rc != 0) {
-                                                goto bail;
-                                        }
-                                }
-                        } else if (subject->type == MEDUSA_SUBJECT_TYPE_TIMER) {
-                                timer = (struct medusa_timer *) subject;
-                                if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
-                                        rc = pqueue_del(&monitor->timer.pqueue, timer);
-                                        if (rc != 0) {
-                                                goto bail;
-                                        }
-                                        monitor->timer.dirty = 1;
+        while (!TAILQ_EMPTY(&monitor->deletes)) {
+                subject = TAILQ_FIRST(&monitor->deletes);
+                TAILQ_REMOVE(&monitor->deletes, subject, subjects);
+                subject->monitor = NULL;
+                if (subject->flags & MEDUSA_SUBJECT_FLAG_IO) {
+                        io = (struct medusa_io *) subject;
+                        if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
+                                rc = monitor->poll.backend->del(monitor->poll.backend, io);
+                                if (rc != 0) {
+                                        goto bail;
                                 }
                         }
-                        TAILQ_REMOVE(&monitor->changes, subject, subjects);
-                        subject->monitor = NULL;
-                        medusa_subject_destroy(subject);
-                        continue;
+                } else if (subject->flags & MEDUSA_SUBJECT_FLAG_TIMER) {
+                        timer = (struct medusa_timer *) subject;
+                        if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
+                                rc = pqueue_del(monitor->timer.pqueue, timer);
+                                if (rc != 0) {
+                                        goto bail;
+                                }
+                                monitor->timer.dirty = 1;
+                        }
                 }
-                if (subject->type == MEDUSA_SUBJECT_TYPE_IO) {
+                medusa_subject_destroy(subject);
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->changes, subjects, nsubject) {
+                if (subject->flags & MEDUSA_SUBJECT_FLAG_IO) {
                         io = (struct medusa_io *) subject;
                         if (!medusa_io_is_valid(io)) {
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
@@ -243,16 +209,16 @@ static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
                                         }
                                 }
                                 TAILQ_REMOVE(&monitor->changes, subject, subjects);
-                                TAILQ_INSERT_TAIL(&monitor->subjects, subject, subjects);
+                                TAILQ_INSERT_TAIL(&monitor->actives, subject, subjects);
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
                                 subject->flags |= MEDUSA_SUBJECT_FLAG_POLL;
                         }
-                } else if (subject->type == MEDUSA_SUBJECT_TYPE_TIMER) {
+                } else if (subject->flags & MEDUSA_SUBJECT_FLAG_TIMER) {
                         timer = (struct medusa_timer *) subject;
                         if (!medusa_timer_is_valid(timer)) {
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
-                                        rc = pqueue_del(&monitor->timer.pqueue, timer);
+                                        rc = pqueue_del(monitor->timer.pqueue, timer);
                                         if (rc != 0) {
                                                 goto bail;
                                         }
@@ -281,18 +247,18 @@ static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
                                         timer->_timespec.tv_nsec = timer->_timespec.tv_nsec / 1e6;
                                 }
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
-                                        rc = pqueue_del(&monitor->timer.pqueue, timer);
+                                        rc = pqueue_del(monitor->timer.pqueue, timer);
                                         if (rc != 0) {
                                                 goto bail;
                                         }
                                         monitor->timer.dirty = 1;
                                 }
-                                rc = pqueue_add(&monitor->timer.pqueue, subject);
+                                rc = pqueue_add(monitor->timer.pqueue, subject);
                                 if (rc != 0) {
                                         goto bail;
                                 }
                                 TAILQ_REMOVE(&monitor->changes, subject, subjects);
-                                TAILQ_INSERT_TAIL(&monitor->subjects, subject, subjects);
+                                TAILQ_INSERT_TAIL(&monitor->actives, subject, subjects);
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
                                 subject->flags |= MEDUSA_SUBJECT_FLAG_POLL;
@@ -300,8 +266,57 @@ static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
                         }
                 }
         }
+        return 0;
+bail:   return -1;
+}
+
+static int medusa_monitor_fire_timer (struct medusa_monitor *monitor)
+{
+        int rc;
+        struct timespec now;
+        struct medusa_timer *timer;
+        rc = clock_monotonic(&now);
+        if (rc != 0) {
+                goto bail;
+        }
+        if (monitor->timer.fired != 0) {
+                while (1) {
+                        timer = pqueue_peek(monitor->timer.pqueue);
+                        if (timer == NULL) {
+                                break;
+                        }
+                        if (medusa_timespec_compare(&timer->_timespec, &now, >)) {
+                                break;
+                        }
+                        timer = pqueue_pop(monitor->timer.pqueue);
+                        if (timer == NULL) {
+                                break;
+                        }
+                        timer->subject.flags &= ~MEDUSA_SUBJECT_FLAG_POLL;
+                        if (timer->single_shot != 0) {
+                                timer->enabled = 0;
+                        }
+                        rc = medusa_subject_mod(&timer->subject);
+                        if (rc != 0) {
+                                goto bail;
+                        }
+                        rc = timer->subject.event(&timer->subject, MEDUSA_EVENT_TIMEOUT);
+                        if (rc != 0) {
+                                goto bail;
+                        }
+                }
+                monitor->timer.fired = 0;
+        }
+        return 0;
+bail:   return -1;
+}
+
+static int medusa_monitor_setup_timer (struct medusa_monitor *monitor)
+{
+        int rc;
+        struct medusa_timer *timer;
         if (monitor->timer.dirty != 0) {
-                timer = pqueue_peek(&monitor->timer.pqueue);
+                timer = pqueue_peek(monitor->timer.pqueue);
                 rc = monitor->timer.backend->set(monitor->timer.backend, (timer) ? &timer->_timespec : NULL);
                 if (rc != 0) {
                         goto bail;
@@ -320,6 +335,73 @@ static int medusa_monitor_signal (struct medusa_monitor *monitor, unsigned int r
                 goto bail;
         }
         return 0;
+bail:   return -1;
+}
+
+int medusa_subject_add (struct medusa_monitor *monitor, struct medusa_subject *subject)
+{
+        if (monitor == NULL) {
+                goto bail;
+        }
+        if (subject == NULL) {
+                goto bail;
+        }
+        if (subject->monitor != NULL) {
+                goto bail;
+        }
+        TAILQ_INSERT_TAIL(&monitor->changes, subject, subjects);
+        subject->monitor = monitor;
+        subject->flags |= MEDUSA_SUBJECT_FLAG_MOD;
+        return 0;
+bail:   return -1;
+}
+
+int medusa_subject_mod (struct medusa_subject *subject)
+{
+        if (subject == NULL) {
+                goto bail;
+        }
+        if (subject->monitor == NULL) {
+                goto bail;
+        }
+        if (subject->flags & MEDUSA_SUBJECT_FLAG_DEL) {
+        } else if (subject->flags & MEDUSA_SUBJECT_FLAG_MOD) {
+        } else if (subject->flags & MEDUSA_SUBJECT_FLAG_ROGUE) {
+                TAILQ_REMOVE(&subject->monitor->rogues, subject, subjects);
+                TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
+                subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
+        } else {
+                TAILQ_REMOVE(&subject->monitor->actives, subject, subjects);
+                TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
+        }
+        subject->flags |= MEDUSA_SUBJECT_FLAG_MOD;
+        return 0;
+bail:   return -1;
+}
+
+int medusa_subject_del (struct medusa_subject *subject)
+{
+        if (subject == NULL) {
+                goto bail;
+        }
+        if (subject->monitor == NULL) {
+                medusa_subject_destroy(subject);
+                goto out;
+        }
+        if (subject->flags & MEDUSA_SUBJECT_FLAG_DEL) {
+        } else if (subject->flags & MEDUSA_SUBJECT_FLAG_MOD) {
+                TAILQ_REMOVE(&subject->monitor->changes, subject, subjects);
+                TAILQ_INSERT_TAIL(&subject->monitor->deletes, subject, subjects);
+        } else if (subject->flags & MEDUSA_SUBJECT_FLAG_ROGUE) {
+                TAILQ_REMOVE(&subject->monitor->rogues, subject, subjects);
+                TAILQ_INSERT_TAIL(&subject->monitor->deletes, subject, subjects);
+                subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
+        } else {
+                TAILQ_REMOVE(&subject->monitor->actives, subject, subjects);
+                TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
+        }
+        subject->flags |= MEDUSA_SUBJECT_FLAG_DEL;
+out:    return 0;
 bail:   return -1;
 }
 
@@ -344,10 +426,10 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
                 goto bail;
         }
         memset(monitor, 0, sizeof(struct medusa_monitor));
-        TAILQ_INIT(&monitor->subjects);
+        TAILQ_INIT(&monitor->actives);
         TAILQ_INIT(&monitor->changes);
+        TAILQ_INIT(&monitor->deletes);
         TAILQ_INIT(&monitor->rogues);
-        pqueue_init(&monitor->timer.pqueue, 0, 64, monitor_timer_subject_compare, monitor_timer_subject_set_position, monitor_timer_subject_get_position);
         monitor->running = 1;
         monitor->wakeup_fds[0] = -1;
         monitor->wakeup_fds[1] = -1;
@@ -404,6 +486,10 @@ struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_
                 goto bail;
         }
         monitor->timer.backend->monitor = monitor;
+        monitor->timer.pqueue = pqueue_create(0, 64, monitor_timer_subject_compare, monitor_timer_subject_set_position, monitor_timer_subject_get_position);
+        if (monitor->timer.pqueue == NULL) {
+                goto bail;
+        }
         rc = pipe(monitor->wakeup_fds);
         if (rc != 0) {
                 goto bail;
@@ -475,23 +561,27 @@ void medusa_monitor_destroy (struct medusa_monitor *monitor)
                 subject = TAILQ_FIRST(&monitor->rogues);
                 medusa_subject_del(subject);
         }
-        while (!TAILQ_EMPTY(&monitor->subjects)) {
-                subject = TAILQ_FIRST(&monitor->subjects);
-                medusa_subject_del(subject);
-        }
         while (!TAILQ_EMPTY(&monitor->changes)) {
                 subject = TAILQ_FIRST(&monitor->changes);
-                TAILQ_REMOVE(&monitor->changes, subject, subjects);
+                medusa_subject_del(subject);
+        }
+        while (!TAILQ_EMPTY(&monitor->actives)) {
+                subject = TAILQ_FIRST(&monitor->actives);
+                medusa_subject_del(subject);
+        }
+        while (!TAILQ_EMPTY(&monitor->deletes)) {
+                subject = TAILQ_FIRST(&monitor->deletes);
+                TAILQ_REMOVE(&monitor->deletes, subject, subjects);
                 subject->monitor = NULL;
-                if (subject->type == MEDUSA_SUBJECT_TYPE_IO) {
+                if (subject->flags & MEDUSA_SUBJECT_FLAG_IO) {
                         io = (struct medusa_io *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
                                 monitor->poll.backend->del(monitor->poll.backend, io);
                         }
-                } else if (subject->type == MEDUSA_SUBJECT_TYPE_TIMER) {
+                } else if (subject->flags & MEDUSA_SUBJECT_FLAG_TIMER) {
                         timer = (struct medusa_timer *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
-                                pqueue_del(&monitor->timer.pqueue, timer);
+                                pqueue_del(monitor->timer.pqueue, timer);
                         }
                 }
                 medusa_subject_destroy(subject);
@@ -508,74 +598,12 @@ void medusa_monitor_destroy (struct medusa_monitor *monitor)
         if (monitor->wakeup_fds[1] >= 0) {
                 close(monitor->wakeup_fds[1]);
         }
-        pqueue_uninit(&monitor->timer.pqueue);
+        if (monitor->timer.pqueue != NULL) {
+                pqueue_destroy(monitor->timer.pqueue);
+        }
         free(monitor);
 }
 
-int medusa_subject_add (struct medusa_monitor *monitor, struct medusa_subject *subject)
-{
-        if (monitor == NULL) {
-                goto bail;
-        }
-        if (subject == NULL) {
-                goto bail;
-        }
-        if (subject->monitor != NULL) {
-                goto bail;
-        }
-        TAILQ_INSERT_TAIL(&monitor->changes, subject, subjects);
-        subject->monitor = monitor;
-        subject->flags = MEDUSA_SUBJECT_FLAG_MOD;
-        return 0;
-bail:   return -1;
-}
-
-int medusa_subject_mod (struct medusa_subject *subject)
-{
-        if (subject == NULL) {
-                goto bail;
-        }
-        if (subject->monitor == NULL) {
-                goto bail;
-        }
-        if (subject->flags & MEDUSA_SUBJECT_FLAG_DEL) {
-        } else if (subject->flags & MEDUSA_SUBJECT_FLAG_MOD) {
-        } else if (subject->flags & MEDUSA_SUBJECT_FLAG_ROGUE) {
-                TAILQ_REMOVE(&subject->monitor->rogues, subject, subjects);
-                TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
-                subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
-        } else {
-                TAILQ_REMOVE(&subject->monitor->subjects, subject, subjects);
-                TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
-        }
-        subject->flags |= MEDUSA_SUBJECT_FLAG_MOD;
-        return 0;
-bail:   return -1;
-}
-
-int medusa_subject_del (struct medusa_subject *subject)
-{
-        if (subject == NULL) {
-                goto bail;
-        }
-        if (subject->monitor == NULL) {
-                medusa_subject_destroy(subject);
-                goto out;
-        }
-        if (subject->flags & MEDUSA_SUBJECT_FLAG_DEL) {
-        } else if (subject->flags & MEDUSA_SUBJECT_FLAG_MOD) {
-        } else if (subject->flags & MEDUSA_SUBJECT_FLAG_ROGUE) {
-                TAILQ_REMOVE(&subject->monitor->rogues, subject, subjects);
-                TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
-                subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
-        } else {
-                TAILQ_REMOVE(&subject->monitor->subjects, subject, subjects);
-                TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
-        }
-        subject->flags |= MEDUSA_SUBJECT_FLAG_DEL;
-out:    return 0;
-bail:   return -1;
-}
 
 int medusa_monitor_break (struct medusa_monitor *monitor)
 {
@@ -600,7 +628,15 @@ int medusa_monitor_run (struct medusa_monitor *monitor)
                 if (rc != 0) {
                         goto bail;
                 }
+                rc = medusa_monitor_setup_timer(monitor);
+                if (rc != 0) {
+                        goto bail;
+                }
                 rc = monitor->poll.backend->run(monitor->poll.backend, NULL);
+                if (rc != 0) {
+                        goto bail;
+                }
+                rc = medusa_monitor_fire_timer(monitor);
                 if (rc != 0) {
                         goto bail;
                 }
@@ -622,7 +658,15 @@ int medusa_monitor_run_once (struct medusa_monitor *monitor)
         if (rc != 0) {
                 goto bail;
         }
+        rc = medusa_monitor_setup_timer(monitor);
+        if (rc != 0) {
+                goto bail;
+        }
         rc = monitor->poll.backend->run(monitor->poll.backend, NULL);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_monitor_fire_timer(monitor);
         if (rc != 0) {
                 goto bail;
         }
@@ -647,7 +691,15 @@ int medusa_monitor_run_timeout (struct medusa_monitor *monitor, double timeout)
         if (rc != 0) {
                 goto bail;
         }
+        rc = medusa_monitor_setup_timer(monitor);
+        if (rc != 0) {
+                goto bail;
+        }
         rc = monitor->poll.backend->run(monitor->poll.backend, &timespec);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_monitor_fire_timer(monitor);
         if (rc != 0) {
                 goto bail;
         }

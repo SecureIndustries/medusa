@@ -6,6 +6,5 @@ struct medusa_io {
         int (*callback) (struct medusa_io *io, unsigned int events, void *context);
         void *context;
         int enabled;
-        int close_on_destroy;
         struct timespec timeout;
 };

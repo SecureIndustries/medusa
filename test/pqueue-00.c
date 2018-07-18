@@ -1,4 +1,5 @@
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
@@ -43,7 +44,7 @@ int main (int argc, char *argv[])
 
         int p;
         struct entry *entry;
-        struct pqueue_head pqueue;
+        struct pqueue_head *pqueue;
 
         long int seed;
 
@@ -66,13 +67,16 @@ int main (int argc, char *argv[])
                 entries[i].pri = i;
         }
 
-        pqueue_init(&pqueue, 0, rand() % 64, entry_compare, entry_set_position, entry_get_position);
+        pqueue = pqueue_create(0, rand() % 64, entry_compare, entry_set_position, entry_get_position);
+        if (pqueue == NULL) {
+                return -1;
+        }
 
         fprintf(stderr, "add\n");
-        while (pqueue_count(&pqueue) != (unsigned int) count) {
+        while (pqueue_count(pqueue) != (unsigned int) count) {
                 i = rand() % count;
                 if (entries[i].add == 0) {
-                        pqueue_add(&pqueue, &entries[i]);
+                        pqueue_add(pqueue, &entries[i]);
                         entries[i].add = 1;
                         fprintf(stderr, "  %d = %d @ %d\n", i, entries[i].pri, entries[i].pos);
                 }
@@ -80,7 +84,7 @@ int main (int argc, char *argv[])
 
         fprintf(stderr, "pop\n");
         for (p = -1, i = 0; i < count; i++) {
-                entry = pqueue_pop(&pqueue);
+                entry = pqueue_pop(pqueue);
                 if (entry == NULL) {
                         fprintf(stderr, "entry is invalid\n");
                         return -1;
@@ -92,11 +96,11 @@ int main (int argc, char *argv[])
                 }
                 p = entry->pri;
         }
-        entry = pqueue_pop(&pqueue);
+        entry = pqueue_pop(pqueue);
         if (entry != NULL) {
                 return -1;
         }
 
-        pqueue_uninit(&pqueue);
+        pqueue_destroy(pqueue);
         free(entries);
 }

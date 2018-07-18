@@ -9,9 +9,6 @@ void medusa_io_destroy (struct medusa_io *io);
 int medusa_io_set_fd (struct medusa_io *io, int fd);
 int medusa_io_get_fd (const struct medusa_io *io);
 
-int medusa_io_set_close_on_destroy (struct medusa_io *io, int close_on_destroy);
-int medusa_io_get_close_on_destroy (const struct medusa_io *io);
-
 int medusa_io_set_events (struct medusa_io *io, unsigned int events);
 unsigned int medusa_io_get_events (const struct medusa_io *io);
 

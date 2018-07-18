@@ -30,10 +30,9 @@ static int timer_init (struct medusa_monitor *monitor, struct medusa_timer *time
         medusa_timespec_clear(&timer->initial);
         medusa_timespec_clear(&timer->interval);
         timer->enabled = 0;
-        timer->subject.type = MEDUSA_SUBJECT_TYPE_TIMER;
         timer->subject.event = timer_subject_event;
         timer->subject.destroy = (void (*) (struct medusa_subject *)) destroy;
-        timer->subject.flags = MEDUSA_SUBJECT_FLAG_NONE;
+        timer->subject.flags = MEDUSA_SUBJECT_FLAG_TIMER;
         timer->subject.refcount = 1;
         timer->subject.monitor = NULL;
         return medusa_subject_add(monitor, &timer->subject);
