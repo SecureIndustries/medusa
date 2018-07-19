@@ -71,43 +71,6 @@ unsigned int pqueue_count (struct pqueue_head *head)
         return head->count -1;
 }
 
-void pqueue_heapify (struct pqueue_head *head, unsigned int i)
-{
-        void *entry;
-
-        unsigned int l;
-        unsigned int r;
-        unsigned int k;
-
-        while (1) {
-                l = i * 2;
-                r = i * 2 + 1;
-                k = i;
-
-                if (head->count > l &&
-                    head->cmp(head->entries[l], head->entries[k]) < 0) {
-                        k = l;
-                }
-                if (head->count > r &&
-                    head->cmp(head->entries[r], head->entries[k]) < 0) {
-                        k = r;
-                }
-                if (k == i) {
-                        break;
-                }
-
-                entry = head->entries[k];
-
-                head->entries[k] = head->entries[i];
-                head->setpos(head->entries[k], k);
-
-                head->entries[i] = entry;
-                head->setpos(head->entries[i], i);
-
-                i = k;
-        }
-}
-
 static inline void pqueue_shift_up (struct pqueue_head *head, unsigned int i)
 {
         void *e;
@@ -121,7 +84,7 @@ static inline void pqueue_shift_up (struct pqueue_head *head, unsigned int i)
                 p = pqueue_parent(i);
         }
         head->entries[i] = e;
-        head->setpos(e, i);
+        head->setpos(head->entries[i], i);
 }
 
 static inline void pqueue_shift_down (struct pqueue_head *head, unsigned int i)
@@ -178,22 +141,14 @@ int pqueue_add (struct pqueue_head *head, void *entry)
 bail:   return -1;
 }
 
-int pqueue_mod (struct pqueue_head *head, void *entry)
+int pqueue_mod (struct pqueue_head *head, void *entry, int cmp)
 {
         unsigned int i;
-        unsigned int p;
         i = head->getpos(entry);
-        p = pqueue_parent(i);
-        if (p > 1 && head->cmp(head->entries[p], head->entries[i]) > 0) {
+        if (cmp > 0) {
                 pqueue_shift_up(head, i);
         } else {
-#if 0
-                for (i = head->count / 2; i > 0; i--) {
-                        pqueue_heapify(head, i);
-                }
-#else
                 pqueue_shift_down(head, i);
-#endif
         }
         return 0;
 }

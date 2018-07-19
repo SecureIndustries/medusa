@@ -9,10 +9,9 @@ struct pqueue_head * pqueue_create (
 void pqueue_destroy (struct pqueue_head *head);
 
 unsigned int pqueue_count (struct pqueue_head *head);
-void pqueue_heapify (struct pqueue_head *head, unsigned int i);
 
 int pqueue_add (struct pqueue_head *head, void *entry);
-int pqueue_mod (struct pqueue_head *head, void *entry);
+int pqueue_mod (struct pqueue_head *head, void *entry, int cmp);
 int pqueue_del (struct pqueue_head *head, void *entry);
 
 void * pqueue_pop (struct pqueue_head *head);

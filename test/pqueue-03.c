@@ -53,13 +53,11 @@ int main (int argc, char *argv[])
         (void) argv;
 
         seed = time(NULL);
-        seed = 1531856103;
         srand(seed);
 
         fprintf(stderr, "seed: %ld\n", seed);
 
         count = rand() % 10000;
-        count = 10;
         entries = malloc(sizeof(struct entry) * count);
         if (entries == NULL) {
                 return -1;
@@ -89,8 +87,11 @@ int main (int argc, char *argv[])
 
         fprintf(stderr, "mod\n");
         for (i = 0; i < count; i++) {
-                entries[i].pri = rand() % count;
-                pqueue_mod(pqueue, &entries[i]);
+                int pri = rand() % count;
+                int opri = entries[i].pri;
+                entries[i].pri = pri;
+                fprintf(stderr, "  mod @ %d: %d -> %d, cmp: %d\n", i, opri, pri, pri > opri);
+                pqueue_mod(pqueue, &entries[i], opri > pri);
         }
 
         fprintf(stderr, "pop\n");
