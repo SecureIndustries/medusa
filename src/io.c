@@ -39,7 +39,6 @@ static int io_init (struct medusa_monitor *monitor, struct medusa_io *io, void (
         io->subject.event = io_subject_event;
         io->subject.destroy = (void (*) (struct medusa_subject *)) destroy;
         io->subject.flags = MEDUSA_SUBJECT_FLAG_IO;
-        io->subject.refcount = 1;
         io->subject.monitor = NULL;
         return medusa_subject_add(monitor, &io->subject);
 }

@@ -25,15 +25,12 @@ static int timer_subject_event (struct medusa_subject *subject, unsigned int eve
 static int timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, void (*destroy) (struct medusa_timer *timer))
 {
         memset(timer, 0, sizeof(struct medusa_timer));
-        timer->single_shot = 0;
-        timer->type = MEDUSA_TIMER_TYPE_COARSE;
+        timer->flags |= MEDUSA_TIMER_FLAG_COARSE;
         medusa_timespec_clear(&timer->initial);
         medusa_timespec_clear(&timer->interval);
-        timer->enabled = 0;
         timer->subject.event = timer_subject_event;
         timer->subject.destroy = (void (*) (struct medusa_subject *)) destroy;
         timer->subject.flags = MEDUSA_SUBJECT_FLAG_TIMER;
-        timer->subject.refcount = 1;
         timer->subject.monitor = NULL;
         return medusa_subject_add(monitor, &timer->subject);
 }
@@ -118,29 +115,41 @@ __attribute__ ((visibility ("default"))) double medusa_timer_get_remaining_time 
 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_single_shot (struct medusa_timer *timer, int single_shot)
 {
-        timer->single_shot = !!single_shot;
+        if (single_shot) {
+                timer->flags |= MEDUSA_TIMER_FLAG_SINGLE_SHOT;
+        } else {
+                timer->flags &= ~MEDUSA_TIMER_FLAG_SINGLE_SHOT;
+        }
         return medusa_subject_mod(&timer->subject);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_timer_get_single_shot (const struct medusa_timer *timer)
 {
-        return timer->single_shot;
+        return !!(timer->flags & MEDUSA_TIMER_FLAG_SINGLE_SHOT);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_type (struct medusa_timer *timer, unsigned int type)
 {
-        if (type == MEDUSA_TIMER_TYPE_PRECISE ||
-            type == MEDUSA_TIMER_TYPE_COARSE) {
-                timer->type = type;
+        timer->flags &= ~MEDUSA_TIMER_FLAG_PRECISE;
+        timer->flags &= ~MEDUSA_TIMER_FLAG_COARSE;
+        if (type == MEDUSA_TIMER_TYPE_PRECISE) {
+                timer->flags |= MEDUSA_TIMER_FLAG_PRECISE;
+        } else if (type == MEDUSA_TIMER_TYPE_COARSE) {
+                timer->flags |= MEDUSA_TIMER_FLAG_COARSE;
         } else {
-                timer->type = MEDUSA_TIMER_TYPE_COARSE;
+                timer->flags |= MEDUSA_TIMER_FLAG_COARSE;
         }
         return medusa_subject_mod(&timer->subject);
 }
 
 __attribute__ ((visibility ("default"))) unsigned int medusa_timer_get_type (const struct medusa_timer *timer)
 {
-        return timer->type;
+        if (timer->flags & MEDUSA_TIMER_FLAG_PRECISE) {
+                return MEDUSA_TIMER_TYPE_PRECISE;
+        } else if (timer->flags & MEDUSA_TIMER_FLAG_COARSE) {
+                return MEDUSA_TIMER_TYPE_COARSE;
+        }
+        return MEDUSA_TIMER_TYPE_COARSE;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_callback (struct medusa_timer *timer, int (*callback) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
@@ -157,13 +166,17 @@ __attribute__ ((visibility ("default"))) void * medusa_timer_get_timeout_context
 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_enabled (struct medusa_timer *timer, int enabled)
 {
-        timer->enabled = !!enabled;
+        if (enabled) {
+                timer->flags |= MEDUSA_TIMER_FLAG_ENABLED;
+        } else {
+                timer->flags &= ~MEDUSA_TIMER_FLAG_ENABLED;
+        }
         return medusa_subject_mod(&timer->subject);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_timer_get_enabled (const struct medusa_timer *timer)
 {
-        return timer->enabled;
+        return !!(timer->flags & MEDUSA_TIMER_FLAG_ENABLED);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_timer_start (struct medusa_timer *timer)
@@ -178,13 +191,14 @@ __attribute__ ((visibility ("default"))) int medusa_timer_stop (struct medusa_ti
 
 __attribute__ ((visibility ("default"))) int medusa_timer_is_valid (const struct medusa_timer *timer)
 {
-        if (!medusa_timespec_isset(&timer->interval)) {
+        if (!medusa_timespec_isset(&timer->initial) &&
+            !medusa_timespec_isset(&timer->interval)) {
                 return 0;
         }
         if (timer->callback == NULL) {
                 return 0;
         }
-        if (timer->enabled == 0) {
+        if ((timer->flags & MEDUSA_TIMER_FLAG_ENABLED) == 0) {
                 return 0;
         }
         return 1;

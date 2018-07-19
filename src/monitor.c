@@ -226,7 +226,8 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
                         }
                 } else if (subject->flags & MEDUSA_SUBJECT_FLAG_TIMER) {
                         timer = (struct medusa_timer *) subject;
-                        if (!medusa_timer_is_valid(timer)) {
+                        if (!medusa_timer_is_valid(timer) ||
+                            (medusa_timespec_isset(&timer->_timespec) && !medusa_timespec_isset(&timer->interval))) {
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                         rc = pqueue_del(monitor->timer.pqueue, timer);
                                         if (rc != 0) {
@@ -240,7 +241,10 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                                 subject->flags |= MEDUSA_SUBJECT_FLAG_ROGUE;
                         } else {
+                                struct timespec _timespec;
+                                medusa_timespec_clear(&_timespec);
                                 if (medusa_timespec_isset(&timer->_timespec)) {
+                                        _timespec = timer->_timespec;
                                         medusa_timespec_add(&timer->_timespec, &timer->interval, &timer->_timespec);
                                 } else {
                                         medusa_timespec_clear(&timer->_timespec);
@@ -253,19 +257,19 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
                                 if (!medusa_timespec_isset(&timer->_timespec)) {
                                         goto bail;
                                 }
-                                if (timer->type == MEDUSA_TIMER_TYPE_COARSE) {
+                                if (medusa_timer_get_type(timer) == MEDUSA_TIMER_TYPE_COARSE) {
                                         timer->_timespec.tv_nsec = timer->_timespec.tv_nsec / 1e6;
                                 }
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
-                                        rc = pqueue_del(monitor->timer.pqueue, timer);
+                                        rc = pqueue_mod(monitor->timer.pqueue, timer, medusa_timespec_compare(&_timespec, &timer->_timespec, >));
                                         if (rc != 0) {
                                                 goto bail;
                                         }
-                                        monitor->timer.dirty = 1;
-                                }
-                                rc = pqueue_add(monitor->timer.pqueue, subject);
-                                if (rc != 0) {
-                                        goto bail;
+                                } else {
+                                        rc = pqueue_add(monitor->timer.pqueue, subject);
+                                        if (rc != 0) {
+                                                goto bail;
+                                        }
                                 }
                                 TAILQ_REMOVE(&monitor->changes, subject, subjects);
                                 TAILQ_INSERT_TAIL(&monitor->actives, subject, subjects);
@@ -303,8 +307,12 @@ static int medusa_monitor_check_timer (struct medusa_monitor *monitor)
                                 break;
                         }
                         timer->subject.flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
-                        if (timer->single_shot != 0) {
-                                timer->enabled = 0;
+                        if (medusa_timer_get_single_shot(timer) ||
+                            !medusa_timespec_isset(&timer->interval)) {
+                                rc = medusa_timer_set_enabled(timer, 0);
+                                if (rc != 0) {
+                                        goto bail;
+                                }
                         }
                         monitor->timer.dirty = 1;
                         rc = medusa_subject_mod(&timer->subject);

@@ -13,6 +13,7 @@ unsigned int pqueue_count (struct pqueue_head *head);
 int pqueue_add (struct pqueue_head *head, void *entry);
 int pqueue_mod (struct pqueue_head *head, void *entry, int cmp);
 int pqueue_del (struct pqueue_head *head, void *entry);
+int pqueue_verify (struct pqueue_head *head);
 
 void * pqueue_pop (struct pqueue_head *head);
 void * pqueue_peek (struct pqueue_head *head);
