@@ -81,7 +81,7 @@ int main (int argc, char *argv[])
                         fprintf(stderr, "  %d = %d @ %d\n", i, entries[i].pri, entries[i].pos);
                 }
         }
-        if (!pqueue_is_valid(pqueue)) {
+        if (!pqueue_verify(pqueue)) {
                 return -1;
         }
 

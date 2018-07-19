@@ -85,7 +85,7 @@ int main (int argc, char *argv[])
                         fprintf(stderr, "  %d = %d\n", i, entries[i].pri);
                 }
         }
-        if (!pqueue_is_valid(pqueue)) {
+        if (!pqueue_verify(pqueue)) {
                 fprintf(stderr, "pqueue is invalid\n");
                 return -1;
         }
@@ -99,7 +99,7 @@ int main (int argc, char *argv[])
                         fprintf(stderr, "  %d @ %d\n", entries[i].pri, entries[i].pos);
                 }
         }
-        if (!pqueue_is_valid(pqueue)) {
+        if (!pqueue_verify(pqueue)) {
                 fprintf(stderr, "pqueue is invalid\n");
                 return -1;
         }

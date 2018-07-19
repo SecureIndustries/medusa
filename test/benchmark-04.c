@@ -32,6 +32,7 @@ static const unsigned int g_polls[] = {
 
 static int *g_pipes;
 static unsigned int g_samples;
+static unsigned int g_ntimers;
 static unsigned int g_npipes;
 static unsigned int g_nactives;
 static unsigned int g_nwrites;
@@ -63,9 +64,11 @@ static int io_callback (struct medusa_io *io, unsigned int events, void *context
         wid = id + 1;
 
         if (events & MEDUSA_EVENT_IN) {
-                rc = medusa_timer_set_interval(g_timers[id], 10 + drand48());
-                if (rc != 0) {
-                        return -1;
+                if (g_ntimers) {
+                        rc = medusa_timer_set_interval(g_timers[id], 10 + drand48());
+                        if (rc != 0) {
+                                return -1;
+                        }
                 }
                 n = read(medusa_io_get_fd(io), (char *) &ch, sizeof(ch));
                 if (n >= 0) {
@@ -121,10 +124,12 @@ static int test_poll (unsigned int poll)
                         goto bail;
                 }
 
-                g_timers[i] = medusa_timer_create(monitor);
-                rc |= medusa_timer_set_callback(g_timers[i], timer_callback, (void *) ((uintptr_t) i));
-                if (rc != 0) {
-                        goto bail;
+                if (g_ntimers) {
+                        g_timers[i] = medusa_timer_create(monitor);
+                        rc |= medusa_timer_set_callback(g_timers[i], timer_callback, (void *) ((uintptr_t) i));
+                        if (rc != 0) {
+                                goto bail;
+                        }
                 }
         }
 
@@ -141,13 +146,15 @@ static int test_poll (unsigned int poll)
                                 goto bail;
                         }
 
-                        if (medusa_io_get_enabled(g_ios[i])) {
-                                rc |= medusa_timer_set_enabled(g_timers[i], 0);
-                        }
-                        rc |= medusa_timer_set_interval(g_timers[i], 10.0 + drand48());
-                        rc |= medusa_timer_set_enabled(g_timers[i], 1);
-                        if (rc != 0) {
-                                goto bail;
+                        if (g_ntimers) {
+                                if (medusa_timer_get_enabled(g_timers[i])) {
+                                        rc |= medusa_timer_set_enabled(g_timers[i], 0);
+                                }
+                                rc |= medusa_timer_set_interval(g_timers[i], 10.0 + drand48());
+                                rc |= medusa_timer_set_enabled(g_timers[i], 1);
+                                if (rc != 0) {
+                                        goto bail;
+                                }
                         }
                 }
                 rc = medusa_monitor_run_timeout(monitor, 0.0);
@@ -210,8 +217,9 @@ int main (int argc, char *argv[])
         g_npipes   = 100;
         g_nactives = 1;
         g_nwrites  = g_npipes;
+        g_ntimers  = 0;
 
-        while ((c = getopt(argc, argv, "n:a:w:s:")) != -1) {
+        while ((c = getopt(argc, argv, "n:a:w:s:t:")) != -1) {
                 switch (c) {
                         case 'n':
                                 g_npipes = atoi(optarg);
@@ -224,6 +232,9 @@ int main (int argc, char *argv[])
                                 break;
                         case 's':
                                 g_samples = atoi(optarg);
+                                break;
+                        case 't':
+                                g_ntimers = !!atoi(optarg);
                                 break;
                         default:
                                 fprintf(stderr, "unknown param: %c", c);

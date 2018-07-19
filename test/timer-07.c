@@ -72,7 +72,7 @@ static int test_poll (unsigned int poll)
         if (timer == NULL) {
                 goto bail;
         }
-        rc = medusa_timer_set_interval(timer, 0.01);
+        rc = medusa_timer_set_initial(timer, 0.01);
         if (rc != 0) {
                 goto bail;
         }
@@ -81,10 +81,6 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
         rc = medusa_timer_start(timer);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_single_shot(timer, 1);
         if (rc != 0) {
                 goto bail;
         }
@@ -105,7 +101,7 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_timer_set_single_shot(timer, 1);
+        rc = medusa_timer_set_single_shot(timer, 0.5);
         if (rc != 0) {
                 goto bail;
         }

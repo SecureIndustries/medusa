@@ -85,7 +85,7 @@ int main (int argc, char *argv[])
                         fprintf(stderr, "  %d = %d\n", i, entries[i].pri);
                 }
         }
-        if (!pqueue_is_valid(pqueue)) {
+        if (!pqueue_verify(pqueue)) {
                 fprintf(stderr, "pqueue is invalid\n");
                 return -1;
         }
@@ -95,10 +95,10 @@ int main (int argc, char *argv[])
                 int pri = rand() % count;
                 int opri = entries[i].pri;
                 entries[i].pri = pri;
-                fprintf(stderr, "  mod @ %d: %d -> %d, cmp: %d\n", i, opri, pri, pri > opri);
+                fprintf(stderr, "  mod @ %d: %d -> %d, cmp: %d\n", i, opri, pri, opri > pri);
                 pqueue_mod(pqueue, &entries[i], opri > pri);
         }
-        if (!pqueue_is_valid(pqueue)) {
+        if (!pqueue_verify(pqueue)) {
                 fprintf(stderr, "pqueue is invalid\n");
                 return -1;
         }
