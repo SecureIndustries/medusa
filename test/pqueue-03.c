@@ -85,6 +85,10 @@ int main (int argc, char *argv[])
                         fprintf(stderr, "  %d = %d\n", i, entries[i].pri);
                 }
         }
+        if (!pqueue_is_valid(pqueue)) {
+                fprintf(stderr, "pqueue is invalid\n");
+                return -1;
+        }
 
         fprintf(stderr, "mod\n");
         for (i = 0; i < count; i++) {
@@ -93,6 +97,10 @@ int main (int argc, char *argv[])
                 entries[i].pri = pri;
                 fprintf(stderr, "  mod @ %d: %d -> %d, cmp: %d\n", i, opri, pri, pri > opri);
                 pqueue_mod(pqueue, &entries[i], opri > pri);
+        }
+        if (!pqueue_is_valid(pqueue)) {
+                fprintf(stderr, "pqueue is invalid\n");
+                return -1;
         }
 
         fprintf(stderr, "pop\n");
@@ -112,7 +120,6 @@ int main (int argc, char *argv[])
                 }
                 p = entry->pri;
         }
-
         entry = pqueue_pop(pqueue);
         if (entry != NULL) {
                 return -1;

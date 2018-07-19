@@ -85,6 +85,10 @@ int main (int argc, char *argv[])
                         fprintf(stderr, "  %d = %d\n", i, entries[i].pri);
                 }
         }
+        if (!pqueue_is_valid(pqueue)) {
+                fprintf(stderr, "pqueue is invalid\n");
+                return -1;
+        }
 
         fprintf(stderr, "del\n");
         while (pqueue_count(pqueue) > (unsigned int) count / 2) {
@@ -94,6 +98,10 @@ int main (int argc, char *argv[])
                         entries[i].del = 1;
                         fprintf(stderr, "  %d @ %d\n", entries[i].pri, entries[i].pos);
                 }
+        }
+        if (!pqueue_is_valid(pqueue)) {
+                fprintf(stderr, "pqueue is invalid\n");
+                return -1;
         }
 
         fprintf(stderr, "pop\n");

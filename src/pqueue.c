@@ -193,3 +193,29 @@ void * pqueue_peek (struct pqueue_head *head)
         e = head->entries[1];
         return e;
 }
+
+static int pqueue_is_valid_actual (struct pqueue_head *head, unsigned int pos)
+{
+        if (pqueue_left(pos) < head->count) {
+                if (head->cmp(head->entries[pos], head->entries[pqueue_left(pos)]) > 0) {
+                        return 0;
+                }
+                if (!pqueue_is_valid_actual(head, pqueue_left(pos))) {
+                        return 0;
+                }
+        }
+        if (pqueue_right(pos) < head->count) {
+                if (head->cmp(head->entries[pos], head->entries[pqueue_right(pos)]) > 0) {
+                        return 0;
+                }
+                if (!pqueue_is_valid_actual(head, pqueue_right(pos))) {
+                        return 0;
+                }
+        }
+        return 1;
+}
+
+int pqueue_is_valid (struct pqueue_head *head)
+{
+    return pqueue_is_valid_actual(head, 1);
+}

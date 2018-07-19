@@ -81,6 +81,10 @@ int main (int argc, char *argv[])
                         fprintf(stderr, "  %d = %d\n", i, entries[i].pri);
                 }
         }
+        if (!pqueue_is_valid(pqueue)) {
+                fprintf(stderr, "pqueue is invalid\n");
+                return -1;
+        }
 
         fprintf(stderr, "pop\n");
         for (p = count, i = 0; i < count; i++) {
@@ -106,4 +110,6 @@ int main (int argc, char *argv[])
 
         pqueue_destroy(pqueue);
         free(entries);
+
+        fprintf(stderr, "finish\n");
 }

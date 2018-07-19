@@ -58,7 +58,6 @@ int main (int argc, char *argv[])
         fprintf(stderr, "seed: %ld\n", seed);
 
         count = rand() % 10000;
-        count = 1;
         entries = malloc(sizeof(struct entry) * count);
         if (entries == NULL) {
                 return -1;
@@ -82,6 +81,9 @@ int main (int argc, char *argv[])
                         fprintf(stderr, "  %d = %d @ %d\n", i, entries[i].pri, entries[i].pos);
                 }
         }
+        if (!pqueue_is_valid(pqueue)) {
+                return -1;
+        }
 
         fprintf(stderr, "pop\n");
         for (p = -1, i = 0; i < count; i++) {
@@ -104,4 +106,6 @@ int main (int argc, char *argv[])
 
         pqueue_destroy(pqueue);
         free(entries);
+
+        fprintf(stderr, "finish\n");
 }
