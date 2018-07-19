@@ -145,18 +145,12 @@ static unsigned int monitor_timer_subject_get_position (void *entry)
         return timer->_position;
 }
 
-static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
+static int medusa_monitor_process_deletes (struct medusa_monitor *monitor)
 {
         int rc;
-        struct timespec now;
         struct medusa_io *io;
         struct medusa_timer *timer;
         struct medusa_subject *subject;
-        struct medusa_subject *nsubject;
-        rc = clock_monotonic(&now);
-        if (rc != 0) {
-                goto bail;
-        }
         while (!TAILQ_EMPTY(&monitor->deletes)) {
                 subject = TAILQ_FIRST(&monitor->deletes);
                 TAILQ_REMOVE(&monitor->deletes, subject, subjects);
@@ -180,6 +174,22 @@ static int medusa_monitor_apply_changes (struct medusa_monitor *monitor)
                         }
                 }
                 medusa_subject_destroy(subject);
+        }
+        return 0;
+bail:   return -1;
+}
+
+static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
+{
+        int rc;
+        struct timespec now;
+        struct medusa_io *io;
+        struct medusa_timer *timer;
+        struct medusa_subject *subject;
+        struct medusa_subject *nsubject;
+        rc = medusa_clock_monotonic(&now);
+        if (rc != 0) {
+                goto bail;
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->changes, subjects, nsubject) {
                 if (subject->flags & MEDUSA_SUBJECT_FLAG_IO) {
@@ -275,7 +285,7 @@ static int medusa_monitor_check_timer (struct medusa_monitor *monitor)
         int rc;
         struct timespec now;
         struct medusa_timer *timer;
-        rc = clock_monotonic(&now);
+        rc = medusa_clock_monotonic(&now);
         if (rc != 0) {
                 goto bail;
         }
@@ -625,7 +635,11 @@ int medusa_monitor_run (struct medusa_monitor *monitor)
         }
 
         while (monitor->running) {
-                rc = medusa_monitor_apply_changes(monitor);
+                rc = medusa_monitor_process_deletes(monitor);
+                if (rc != 0) {
+                        goto bail;
+                }
+                rc = medusa_monitor_process_changes(monitor);
                 if (rc != 0) {
                         goto bail;
                 }
@@ -655,7 +669,11 @@ int medusa_monitor_run_once (struct medusa_monitor *monitor)
                 goto bail;
         }
 
-        rc = medusa_monitor_apply_changes(monitor);
+        rc = medusa_monitor_process_deletes(monitor);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_monitor_process_changes(monitor);
         if (rc != 0) {
                 goto bail;
         }
@@ -688,7 +706,11 @@ int medusa_monitor_run_timeout (struct medusa_monitor *monitor, double timeout)
         timespec.tv_sec = timeout;
         timespec.tv_nsec = (timeout - timespec.tv_sec) * 1e9;
 
-        rc = medusa_monitor_apply_changes(monitor);
+        rc = medusa_monitor_process_deletes(monitor);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_monitor_process_changes(monitor);
         if (rc != 0) {
                 goto bail;
         }

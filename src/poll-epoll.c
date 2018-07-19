@@ -17,6 +17,10 @@
 #include "poll-backend.h"
 #include "poll-epoll.h"
 
+#define EVENTS_SIZE     32
+#define EVENTS_STEP     32
+#define EVENTS_MAX      8192
+
 struct internal {
         struct medusa_poll_backend backend;
         int fd;
@@ -169,14 +173,18 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
                         goto bail;
                 }
         }
-        if (count == internal->maxevents) {
-                free(internal->events);
-                internal->maxevents += 64;
-                internal->events = (struct epoll_event *) malloc(sizeof(struct epoll_event) * internal->maxevents);
-                if (internal->events == NULL) {
-                        internal->maxevents = 0;
-                        goto bail;
+        if (count == internal->maxevents && internal->maxevents < EVENTS_MAX) {
+                void *tmp;
+                internal->maxevents += EVENTS_STEP;
+                tmp = (struct epoll_event *) realloc(internal->events, sizeof(struct epoll_event) * internal->maxevents);
+                if (tmp == NULL) {
+                        tmp = (struct epoll_event *) malloc(sizeof(struct epoll_event) * internal->maxevents);
+                        if (tmp == NULL) {
+                                goto bail;
+                        }
+                        free(internal->events);
                 }
+                internal->events = tmp;
         }
 out:    return 0;
 bail:   return -1;
@@ -210,7 +218,7 @@ struct medusa_poll_backend * medusa_monitor_epoll_create (const struct medusa_mo
         if (internal->fd < 0) {
                 goto bail;
         }
-        internal->maxevents = 64;
+        internal->maxevents = EVENTS_SIZE;
         internal->events = (struct epoll_event *) malloc(sizeof(struct epoll_event) * internal->maxevents);
         if (internal->events == NULL) {
                 goto bail;

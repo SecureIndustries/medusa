@@ -59,6 +59,7 @@ dist.base = medusa
 
 dist.include-y = \
 	monitor.h \
+	clock.h \
 	event.h \
 	io.h \
 	timer.h

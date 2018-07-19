@@ -26,6 +26,12 @@ static int io_subject_event (struct medusa_subject *subject, unsigned int events
 
 static int io_init (struct medusa_monitor *monitor, struct medusa_io *io, void (*destroy) (struct medusa_io *io))
 {
+        if (monitor == NULL) {
+                return -1;
+        }
+        if (io == NULL) {
+                return -1;
+        }
         memset(io, 0, sizeof(struct medusa_io));
         io->fd = -1;
         io->events = 0;
@@ -40,22 +46,37 @@ static int io_init (struct medusa_monitor *monitor, struct medusa_io *io, void (
 
 static void io_uninit (struct medusa_io *io)
 {
+        if (io == NULL) {
+                return;
+        }
         memset(io, 0, sizeof(struct medusa_io));
 }
 
 static void io_destroy (struct medusa_io *io)
 {
+        if (io == NULL) {
+                return;
+        }
         io_uninit(io);
         free(io);
 }
 
 int medusa_io_init (struct medusa_monitor *monitor, struct medusa_io *io)
 {
+        if (monitor == NULL) {
+                return -1;
+        }
+        if (io == NULL) {
+                return -1;
+        }
         return io_init(monitor, io, io_uninit);
 }
 
 void medusa_io_uninit (struct medusa_io *io)
 {
+        if (io == NULL) {
+                return;
+        }
         medusa_subject_del(&io->subject);
 }
 
@@ -84,33 +105,54 @@ bail:   if (io != NULL) {
 
 int medusa_io_set_fd (struct medusa_io *io, int fd)
 {
+        if (io == NULL) {
+                return -1;
+        }
+        if (fd < 0) {
+                return -1;
+        }
         io->fd = fd;
         return medusa_subject_mod(&io->subject);
 }
 
 void medusa_io_destroy (struct medusa_io *io)
 {
+        if (io == NULL) {
+                return;
+        }
         medusa_subject_del(&io->subject);
 }
 
 int medusa_io_get_fd (const struct medusa_io *io)
 {
+        if (io == NULL) {
+                return -1;
+        }
         return io->fd;
 }
 
 int medusa_io_set_events (struct medusa_io *io, unsigned int events)
 {
+        if (io == NULL) {
+                return -1;
+        }
         io->events = events;
         return medusa_subject_mod(&io->subject);
 }
 
 unsigned int medusa_io_get_events (const struct medusa_io *io)
 {
+        if (io == NULL) {
+                return 0;
+        }
         return io->events;
 }
 
 int medusa_io_set_callback (struct medusa_io *io, int (*callback) (struct medusa_io *io, unsigned int events, void *context), void *context)
 {
+        if (io == NULL) {
+                return -1;
+        }
         io->callback = callback;
         io->context = context;
         return medusa_subject_mod(&io->subject);
@@ -118,12 +160,18 @@ int medusa_io_set_callback (struct medusa_io *io, int (*callback) (struct medusa
 
 int medusa_io_set_enabled (struct medusa_io *io, int enabled)
 {
+        if (io == NULL) {
+                return -1;
+        }
         io->enabled = !!enabled;
         return medusa_subject_mod(&io->subject);
 }
 
 int medusa_io_get_enabled (const struct medusa_io *io)
 {
+        if (io == NULL) {
+                return 0;
+        }
         return io->enabled;
 }
 
@@ -146,5 +194,8 @@ int medusa_io_is_valid (const struct medusa_io *io)
 
 struct medusa_monitor * medusa_io_get_monitor (struct medusa_io *io)
 {
+        if (io == NULL) {
+                return NULL;
+        }
         return io->subject.monitor;
 }
