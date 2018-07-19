@@ -165,7 +165,7 @@ static int medusa_monitor_process_deletes (struct medusa_monitor *monitor)
                         }
                 } else if (subject->flags & MEDUSA_SUBJECT_FLAG_TIMER) {
                         timer = (struct medusa_timer *) subject;
-                        if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
+                        if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 rc = pqueue_del(monitor->timer.pqueue, timer);
                                 if (rc != 0) {
                                         goto bail;
@@ -227,7 +227,7 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
                 } else if (subject->flags & MEDUSA_SUBJECT_FLAG_TIMER) {
                         timer = (struct medusa_timer *) subject;
                         if (!medusa_timer_is_valid(timer)) {
-                                if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
+                                if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                         rc = pqueue_del(monitor->timer.pqueue, timer);
                                         if (rc != 0) {
                                                 goto bail;
@@ -237,7 +237,7 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
                                 TAILQ_REMOVE(&monitor->changes, subject, subjects);
                                 TAILQ_INSERT_TAIL(&monitor->rogues, subject, subjects);
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
-                                subject->flags &= ~MEDUSA_SUBJECT_FLAG_POLL;
+                                subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                                 subject->flags |= MEDUSA_SUBJECT_FLAG_ROGUE;
                         } else {
                                 if (medusa_timespec_isset(&timer->_timespec)) {
@@ -256,7 +256,7 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
                                 if (timer->type == MEDUSA_TIMER_TYPE_COARSE) {
                                         timer->_timespec.tv_nsec = timer->_timespec.tv_nsec / 1e6;
                                 }
-                                if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
+                                if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                         rc = pqueue_del(monitor->timer.pqueue, timer);
                                         if (rc != 0) {
                                                 goto bail;
@@ -271,7 +271,7 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
                                 TAILQ_INSERT_TAIL(&monitor->actives, subject, subjects);
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
-                                subject->flags |= MEDUSA_SUBJECT_FLAG_POLL;
+                                subject->flags |= MEDUSA_SUBJECT_FLAG_HEAP;
                                 monitor->timer.dirty = 1;
                         }
                 }
@@ -302,7 +302,7 @@ static int medusa_monitor_check_timer (struct medusa_monitor *monitor)
                         if (timer == NULL) {
                                 break;
                         }
-                        timer->subject.flags &= ~MEDUSA_SUBJECT_FLAG_POLL;
+                        timer->subject.flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         if (timer->single_shot != 0) {
                                 timer->enabled = 0;
                         }
@@ -591,7 +591,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                         }
                 } else if (subject->flags & MEDUSA_SUBJECT_FLAG_TIMER) {
                         timer = (struct medusa_timer *) subject;
-                        if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
+                        if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 pqueue_del(monitor->timer.pqueue, timer);
                         }
                 }
@@ -624,41 +624,6 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_break (struct medusa
 __attribute__ ((visibility ("default"))) int medusa_monitor_continue (struct medusa_monitor *monitor)
 {
         return medusa_monitor_signal(monitor, WAKEUP_REASON_LOOP_CONTINUE);
-}
-
-__attribute__ ((visibility ("default"))) int medusa_monitor_run (struct medusa_monitor *monitor)
-{
-        int rc;
-
-        if (monitor == NULL) {
-                goto bail;
-        }
-
-        while (monitor->running) {
-                rc = medusa_monitor_process_deletes(monitor);
-                if (rc != 0) {
-                        goto bail;
-                }
-                rc = medusa_monitor_process_changes(monitor);
-                if (rc != 0) {
-                        goto bail;
-                }
-                rc = medusa_monitor_setup_timer(monitor);
-                if (rc != 0) {
-                        goto bail;
-                }
-                rc = monitor->poll.backend->run(monitor->poll.backend, NULL);
-                if (rc != 0) {
-                        goto bail;
-                }
-                rc = medusa_monitor_check_timer(monitor);
-                if (rc != 0) {
-                        goto bail;
-                }
-        }
-
-        return 0;
-bail:   return -1;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_monitor_run_once (struct medusa_monitor *monitor)
@@ -725,6 +690,41 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
         rc = medusa_monitor_check_timer(monitor);
         if (rc != 0) {
                 goto bail;
+        }
+
+        return 0;
+bail:   return -1;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_monitor_run (struct medusa_monitor *monitor)
+{
+        int rc;
+
+        if (monitor == NULL) {
+                goto bail;
+        }
+
+        while (monitor->running) {
+                rc = medusa_monitor_process_deletes(monitor);
+                if (rc != 0) {
+                        goto bail;
+                }
+                rc = medusa_monitor_process_changes(monitor);
+                if (rc != 0) {
+                        goto bail;
+                }
+                rc = medusa_monitor_setup_timer(monitor);
+                if (rc != 0) {
+                        goto bail;
+                }
+                rc = monitor->poll.backend->run(monitor->poll.backend, NULL);
+                if (rc != 0) {
+                        goto bail;
+                }
+                rc = medusa_monitor_check_timer(monitor);
+                if (rc != 0) {
+                        goto bail;
+                }
         }
 
         return 0;

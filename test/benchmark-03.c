@@ -226,8 +226,6 @@ int main (int argc, char *argv[])
                 if (rc != 0) {
                         return -1;
                 }
-
-                break;
         }
 
         for (i = 0; i < g_npipes; i++) {
