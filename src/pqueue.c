@@ -217,5 +217,5 @@ static int pqueue_is_valid_actual (struct pqueue_head *head, unsigned int pos)
 
 int pqueue_is_valid (struct pqueue_head *head)
 {
-    return pqueue_is_valid_actual(head, 1);
+        return pqueue_is_valid_actual(head, 1);
 }
