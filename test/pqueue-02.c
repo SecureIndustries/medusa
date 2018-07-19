@@ -4,6 +4,7 @@
 #include <time.h>
 
 #include "../src/pqueue.h"
+#include "../src/pqueue.c"
 
 struct entry {
         int add;

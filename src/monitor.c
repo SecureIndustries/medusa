@@ -416,7 +416,7 @@ out:    return 0;
 bail:   return -1;
 }
 
-int medusa_monitor_init_options_default (struct medusa_monitor_init_options *options)
+__attribute__ ((visibility ("default"))) int medusa_monitor_init_options_default (struct medusa_monitor_init_options *options)
 {
         if (options == NULL) {
                 goto bail;
@@ -426,7 +426,7 @@ int medusa_monitor_init_options_default (struct medusa_monitor_init_options *opt
 bail:   return -1;
 }
 
-struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_options *options)
+__attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_options *options)
 {
         int rc;
         struct medusa_io *io;
@@ -560,7 +560,7 @@ bail:   if (monitor != NULL) {
         return NULL;
 }
 
-void medusa_monitor_destroy (struct medusa_monitor *monitor)
+__attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct medusa_monitor *monitor)
 {
         struct medusa_io *io;
         struct medusa_timer *timer;
@@ -616,17 +616,17 @@ void medusa_monitor_destroy (struct medusa_monitor *monitor)
 }
 
 
-int medusa_monitor_break (struct medusa_monitor *monitor)
+__attribute__ ((visibility ("default"))) int medusa_monitor_break (struct medusa_monitor *monitor)
 {
         return medusa_monitor_signal(monitor, WAKEUP_REASON_LOOP_BREAK);
 }
 
-int medusa_monitor_continue (struct medusa_monitor *monitor)
+__attribute__ ((visibility ("default"))) int medusa_monitor_continue (struct medusa_monitor *monitor)
 {
         return medusa_monitor_signal(monitor, WAKEUP_REASON_LOOP_CONTINUE);
 }
 
-int medusa_monitor_run (struct medusa_monitor *monitor)
+__attribute__ ((visibility ("default"))) int medusa_monitor_run (struct medusa_monitor *monitor)
 {
         int rc;
 
@@ -661,7 +661,7 @@ int medusa_monitor_run (struct medusa_monitor *monitor)
 bail:   return -1;
 }
 
-int medusa_monitor_run_once (struct medusa_monitor *monitor)
+__attribute__ ((visibility ("default"))) int medusa_monitor_run_once (struct medusa_monitor *monitor)
 {
         int rc;
 
@@ -694,7 +694,7 @@ int medusa_monitor_run_once (struct medusa_monitor *monitor)
 bail:   return -1;
 }
 
-int medusa_monitor_run_timeout (struct medusa_monitor *monitor, double timeout)
+__attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct medusa_monitor *monitor, double timeout)
 {
         int rc;
         struct timespec timespec;

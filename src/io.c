@@ -61,7 +61,7 @@ static void io_destroy (struct medusa_io *io)
         free(io);
 }
 
-int medusa_io_init (struct medusa_monitor *monitor, struct medusa_io *io)
+__attribute__ ((visibility ("default"))) int medusa_io_init (struct medusa_monitor *monitor, struct medusa_io *io)
 {
         if (monitor == NULL) {
                 return -1;
@@ -72,7 +72,7 @@ int medusa_io_init (struct medusa_monitor *monitor, struct medusa_io *io)
         return io_init(monitor, io, io_uninit);
 }
 
-void medusa_io_uninit (struct medusa_io *io)
+__attribute__ ((visibility ("default"))) void medusa_io_uninit (struct medusa_io *io)
 {
         if (io == NULL) {
                 return;
@@ -80,7 +80,7 @@ void medusa_io_uninit (struct medusa_io *io)
         medusa_subject_del(&io->subject);
 }
 
-struct medusa_io * medusa_io_create (struct medusa_monitor *monitor)
+__attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create (struct medusa_monitor *monitor)
 {
         int rc;
         struct medusa_io *io;
@@ -103,7 +103,15 @@ bail:   if (io != NULL) {
         return NULL;
 }
 
-int medusa_io_set_fd (struct medusa_io *io, int fd)
+__attribute__ ((visibility ("default"))) void medusa_io_destroy (struct medusa_io *io)
+{
+        if (io == NULL) {
+                return;
+        }
+        medusa_subject_del(&io->subject);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_set_fd (struct medusa_io *io, int fd)
 {
         if (io == NULL) {
                 return -1;
@@ -115,15 +123,7 @@ int medusa_io_set_fd (struct medusa_io *io, int fd)
         return medusa_subject_mod(&io->subject);
 }
 
-void medusa_io_destroy (struct medusa_io *io)
-{
-        if (io == NULL) {
-                return;
-        }
-        medusa_subject_del(&io->subject);
-}
-
-int medusa_io_get_fd (const struct medusa_io *io)
+__attribute__ ((visibility ("default"))) int medusa_io_get_fd (const struct medusa_io *io)
 {
         if (io == NULL) {
                 return -1;
@@ -131,7 +131,7 @@ int medusa_io_get_fd (const struct medusa_io *io)
         return io->fd;
 }
 
-int medusa_io_set_events (struct medusa_io *io, unsigned int events)
+__attribute__ ((visibility ("default"))) int medusa_io_set_events (struct medusa_io *io, unsigned int events)
 {
         if (io == NULL) {
                 return -1;
@@ -140,7 +140,7 @@ int medusa_io_set_events (struct medusa_io *io, unsigned int events)
         return medusa_subject_mod(&io->subject);
 }
 
-unsigned int medusa_io_get_events (const struct medusa_io *io)
+__attribute__ ((visibility ("default"))) unsigned int medusa_io_get_events (const struct medusa_io *io)
 {
         if (io == NULL) {
                 return 0;
@@ -148,7 +148,7 @@ unsigned int medusa_io_get_events (const struct medusa_io *io)
         return io->events;
 }
 
-int medusa_io_set_callback (struct medusa_io *io, int (*callback) (struct medusa_io *io, unsigned int events, void *context), void *context)
+__attribute__ ((visibility ("default"))) int medusa_io_set_callback (struct medusa_io *io, int (*callback) (struct medusa_io *io, unsigned int events, void *context), void *context)
 {
         if (io == NULL) {
                 return -1;
@@ -158,7 +158,7 @@ int medusa_io_set_callback (struct medusa_io *io, int (*callback) (struct medusa
         return medusa_subject_mod(&io->subject);
 }
 
-int medusa_io_set_enabled (struct medusa_io *io, int enabled)
+__attribute__ ((visibility ("default"))) int medusa_io_set_enabled (struct medusa_io *io, int enabled)
 {
         if (io == NULL) {
                 return -1;
@@ -167,7 +167,7 @@ int medusa_io_set_enabled (struct medusa_io *io, int enabled)
         return medusa_subject_mod(&io->subject);
 }
 
-int medusa_io_get_enabled (const struct medusa_io *io)
+__attribute__ ((visibility ("default"))) int medusa_io_get_enabled (const struct medusa_io *io)
 {
         if (io == NULL) {
                 return 0;
@@ -175,7 +175,7 @@ int medusa_io_get_enabled (const struct medusa_io *io)
         return io->enabled;
 }
 
-int medusa_io_is_valid (const struct medusa_io *io)
+__attribute__ ((visibility ("default"))) int medusa_io_is_valid (const struct medusa_io *io)
 {
         if (io->fd < 0) {
                 return 0;
@@ -192,7 +192,7 @@ int medusa_io_is_valid (const struct medusa_io *io)
         return 1;
 }
 
-struct medusa_monitor * medusa_io_get_monitor (struct medusa_io *io)
+__attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_io_get_monitor (struct medusa_io *io)
 {
         if (io == NULL) {
                 return NULL;
