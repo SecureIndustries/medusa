@@ -97,11 +97,14 @@ static int test_poll (unsigned int poll)
         int rc;
         unsigned int i;
         unsigned int j;
+        unsigned int k;
         unsigned int space;
 
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
+        struct timeval create_start;
+        struct timeval create_finish;
         struct timeval apply_start;
         struct timeval apply_finish;
         struct timeval run_start;
@@ -112,46 +115,22 @@ static int test_poll (unsigned int poll)
         medusa_monitor_init_options_default(&options);
         options.poll.type = poll;
 
-        monitor = medusa_monitor_create(&options);
-        if (monitor == NULL) {
-                goto bail;
-        }
-
-        for (i = 0; i < g_npipes; i++) {
-                g_ios[i] = medusa_io_create(monitor);
-                rc |= medusa_io_set_callback(g_ios[i], io_callback, (void *) ((uintptr_t) i));
-                if (rc != 0) {
+        for (j = 0; j < 1; j++) {
+                gettimeofday(&create_start, NULL);
+                monitor = medusa_monitor_create(&options);
+                if (monitor == NULL) {
                         goto bail;
                 }
-
-                if (g_ntimers) {
-                        g_timers[i] = medusa_timer_create(monitor);
-                        rc |= medusa_timer_set_callback(g_timers[i], timer_callback, (void *) ((uintptr_t) i));
-                        if (rc != 0) {
-                                goto bail;
-                        }
-                }
-        }
-
-        for (j = 0; j < g_samples; j++) {
-                gettimeofday(&apply_start, NULL);
                 for (i = 0; i < g_npipes; i++) {
-                        if (medusa_io_get_enabled(g_ios[i])) {
-                                rc = medusa_io_set_enabled(g_ios[i], 0);
-                        }
-                        rc |= medusa_io_set_fd(g_ios[i], g_pipes[i * 2]);
-                        rc |= medusa_io_set_events(g_ios[i], MEDUSA_EVENT_IN);
-                        rc |= medusa_io_set_enabled(g_ios[i], 1);
+                        g_ios[i] = medusa_io_create(monitor);
+                        rc |= medusa_io_set_callback(g_ios[i], io_callback, (void *) ((uintptr_t) i));
                         if (rc != 0) {
                                 goto bail;
                         }
 
                         if (g_ntimers) {
-                                if (medusa_timer_get_enabled(g_timers[i])) {
-                                        rc |= medusa_timer_set_enabled(g_timers[i], 0);
-                                }
-                                rc |= medusa_timer_set_interval(g_timers[i], 10.0 + drand48());
-                                rc |= medusa_timer_set_enabled(g_timers[i], 1);
+                                g_timers[i] = medusa_timer_create(monitor);
+                                rc |= medusa_timer_set_callback(g_timers[i], timer_callback, (void *) ((uintptr_t) i));
                                 if (rc != 0) {
                                         goto bail;
                                 }
@@ -161,35 +140,68 @@ static int test_poll (unsigned int poll)
                 if (rc != 0) {
                         goto bail;
                 }
-                gettimeofday(&apply_finish, NULL);
+                gettimeofday(&create_finish, NULL);
+                timersub(&create_finish, &create_start, &create_finish);
 
-                g_fired = 0;
-                space = g_npipes / g_nactives;
-                space = space * 2;
-                for (i = 0; i < g_nactives; i++, g_fired++) {
-                        (void) write(g_pipes[i * space + 1], "e", 1);
-                }
+                for (k = 0; k < g_samples; k++) {
+                        gettimeofday(&apply_start, NULL);
+                        for (i = 0; i < g_npipes; i++) {
+                                if (medusa_io_get_enabled(g_ios[i])) {
+                                        rc = medusa_io_set_enabled(g_ios[i], 0);
+                                }
+                                rc |= medusa_io_set_fd(g_ios[i], g_pipes[i * 2]);
+                                rc |= medusa_io_set_events(g_ios[i], MEDUSA_EVENT_IN);
+                                rc |= medusa_io_set_enabled(g_ios[i], 1);
+                                if (rc != 0) {
+                                        goto bail;
+                                }
 
-                g_count = 0;
-                g_writes = g_nwrites;
-
-                gettimeofday(&run_start, NULL);
-                do {
+                                if (g_ntimers) {
+                                        if (medusa_timer_get_enabled(g_timers[i])) {
+                                                rc |= medusa_timer_set_enabled(g_timers[i], 0);
+                                        }
+                                        rc |= medusa_timer_set_interval(g_timers[i], 10.0 + drand48());
+                                        rc |= medusa_timer_set_enabled(g_timers[i], 1);
+                                        if (rc != 0) {
+                                                goto bail;
+                                        }
+                                }
+                        }
                         rc = medusa_monitor_run_timeout(monitor, 0.0);
                         if (rc != 0) {
                                 goto bail;
                         }
-                } while (g_count != g_fired);
-                gettimeofday(&run_finish, NULL);
+                        gettimeofday(&apply_finish, NULL);
+                        timersub(&apply_finish, &apply_start, &apply_finish);
 
-                timersub(&apply_finish, &apply_start, &apply_finish);
-                timersub(&run_finish, &run_start, &run_finish);
-                fprintf(stderr, "%8ld, %8ld\n",
-                                apply_finish.tv_sec * 1000000 + apply_finish.tv_usec,
-                                run_finish.tv_sec * 1000000 + run_finish.tv_usec);
+                        g_fired = 0;
+                        space = g_npipes / g_nactives;
+                        space = space * 2;
+                        for (i = 0; i < g_nactives; i++, g_fired++) {
+                                (void) write(g_pipes[i * space + 1], "e", 1);
+                        }
+
+                        g_count = 0;
+                        g_writes = g_nwrites;
+
+                        gettimeofday(&run_start, NULL);
+                        do {
+                                rc = medusa_monitor_run_timeout(monitor, 0.0);
+                                if (rc != 0) {
+                                        goto bail;
+                                }
+                        } while (g_count != g_fired);
+                        gettimeofday(&run_finish, NULL);
+
+                        timersub(&run_finish, &run_start, &run_finish);
+                        fprintf(stderr, "%8ld %8ld, %8ld\n",
+                                        create_finish.tv_sec * 1000000 + create_finish.tv_usec,
+                                        apply_finish.tv_sec * 1000000 + apply_finish.tv_usec,
+                                        run_finish.tv_sec * 1000000 + run_finish.tv_usec);
+                }
+                medusa_monitor_destroy(monitor);
         }
 
-        medusa_monitor_destroy(monitor);
         return 0;
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);
