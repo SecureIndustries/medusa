@@ -257,8 +257,15 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
                                 if (!medusa_timespec_isset(&timer->_timespec)) {
                                         goto bail;
                                 }
-                                if (medusa_timer_get_type(timer) == MEDUSA_TIMER_TYPE_COARSE) {
+                                if (medusa_timer_get_resolution(timer) == MEDUSA_TIMER_RESOLUTION_MICROSECONDS) {
+                                        timer->_timespec.tv_nsec = timer->_timespec.tv_nsec / 1e3;
+                                } else if (medusa_timer_get_resolution(timer) == MEDUSA_TIMER_RESOLUTION_MILLISECONDS) {
                                         timer->_timespec.tv_nsec = timer->_timespec.tv_nsec / 1e6;
+                                } else if (medusa_timer_get_resolution(timer) == MEDUSA_TIMER_RESOLUTION_SECONDS) {
+                                        if (timer->_timespec.tv_nsec >= 500000000) {
+                                                timer->_timespec.tv_sec += 1;
+                                        }
+                                        timer->_timespec.tv_nsec = 0;
                                 }
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                         rc = pqueue_mod(monitor->timer.pqueue, timer, medusa_timespec_compare(&_timespec, &timer->_timespec, >));

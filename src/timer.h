@@ -1,9 +1,15 @@
 
 enum {
-        MEDUSA_TIMER_TYPE_PRECISE,
-        MEDUSA_TIMER_TYPE_COARSE
-#define MEDUSA_TIMER_TYPE_PRECISE       MEDUSA_TIMER_TYPE_PRECISE
-#define MEDUSA_TIMER_TYPE_COARSE        MEDUSA_TIMER_TYPE_COARSE
+        MEDUSA_TIMER_RESOLUTION_DEFAULT,
+        MEDUSA_TIMER_RESOLUTION_NANOSECOMDS,
+        MEDUSA_TIMER_RESOLUTION_MICROSECONDS,
+        MEDUSA_TIMER_RESOLUTION_MILLISECONDS,
+        MEDUSA_TIMER_RESOLUTION_SECONDS
+#define MEDUSA_TIMER_RESOLUTION_DEFAULT         MEDUSA_TIMER_RESOLUTION_DEFAULT
+#define MEDUSA_TIMER_RESOLUTION_NANOSECOMDS     MEDUSA_TIMER_RESOLUTION_NANOSECOMDS
+#define MEDUSA_TIMER_RESOLUTION_MICROSECONDS    MEDUSA_TIMER_RESOLUTION_MICROSECONDS
+#define MEDUSA_TIMER_RESOLUTION_MILLISECONDS    MEDUSA_TIMER_RESOLUTION_MILLISECONDS
+#define MEDUSA_TIMER_RESOLUTION_SECONDS         MEDUSA_TIMER_RESOLUTION_SECONDS
 };
 
 struct medusa_timer;
@@ -23,8 +29,8 @@ double medusa_timer_get_remaining_time (const struct medusa_timer *timer);
 int medusa_timer_set_single_shot (struct medusa_timer *timer, int single_shot);
 int medusa_timer_get_single_shot (const struct medusa_timer *timer);
 
-int medusa_timer_set_type (struct medusa_timer *timer, unsigned int type);
-unsigned int medusa_timer_get_type (const struct medusa_timer *timer);
+int medusa_timer_set_resolution (struct medusa_timer *timer, unsigned int resolution);
+unsigned int medusa_timer_get_resolution (const struct medusa_timer *timer);
 
 int medusa_timer_set_callback (struct medusa_timer *timer, int (*callback) (struct medusa_timer *timer, unsigned int events, void *context), void *context);
 

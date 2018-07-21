@@ -25,7 +25,7 @@ static int timer_subject_event (struct medusa_subject *subject, unsigned int eve
 static int timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, void (*destroy) (struct medusa_timer *timer))
 {
         memset(timer, 0, sizeof(struct medusa_timer));
-        timer->flags |= MEDUSA_TIMER_FLAG_COARSE;
+        timer->flags |= MEDUSA_TIMER_FLAG_MILLISECONDS;
         medusa_timespec_clear(&timer->initial);
         medusa_timespec_clear(&timer->interval);
         timer->subject.event = timer_subject_event;
@@ -128,28 +128,38 @@ __attribute__ ((visibility ("default"))) int medusa_timer_get_single_shot (const
         return !!(timer->flags & MEDUSA_TIMER_FLAG_SINGLE_SHOT);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_set_type (struct medusa_timer *timer, unsigned int type)
+__attribute__ ((visibility ("default"))) int medusa_timer_set_resolution (struct medusa_timer *timer, unsigned int resolution)
 {
-        timer->flags &= ~MEDUSA_TIMER_FLAG_PRECISE;
-        timer->flags &= ~MEDUSA_TIMER_FLAG_COARSE;
-        if (type == MEDUSA_TIMER_TYPE_PRECISE) {
-                timer->flags |= MEDUSA_TIMER_FLAG_PRECISE;
-        } else if (type == MEDUSA_TIMER_TYPE_COARSE) {
-                timer->flags |= MEDUSA_TIMER_FLAG_COARSE;
+        timer->flags &= ~MEDUSA_TIMER_FLAG_NANOSECONDS;
+        timer->flags &= ~MEDUSA_TIMER_FLAG_MICROSECONDS;
+        timer->flags &= ~MEDUSA_TIMER_FLAG_MILLISECONDS;
+        timer->flags &= ~MEDUSA_TIMER_FLAG_SECONDS;
+        if (resolution == MEDUSA_TIMER_RESOLUTION_NANOSECOMDS) {
+                timer->flags |= MEDUSA_TIMER_FLAG_NANOSECONDS;
+        } else if (resolution == MEDUSA_TIMER_RESOLUTION_MICROSECONDS) {
+                timer->flags |= MEDUSA_TIMER_FLAG_MICROSECONDS;
+        } else if (resolution == MEDUSA_TIMER_RESOLUTION_MILLISECONDS) {
+                timer->flags |= MEDUSA_TIMER_FLAG_MILLISECONDS;
+        } else if (resolution == MEDUSA_TIMER_RESOLUTION_SECONDS) {
+                timer->flags |= MEDUSA_TIMER_FLAG_SECONDS;
         } else {
-                timer->flags |= MEDUSA_TIMER_FLAG_COARSE;
+                timer->flags |= MEDUSA_TIMER_FLAG_MILLISECONDS;
         }
         return medusa_subject_mod(&timer->subject);
 }
 
-__attribute__ ((visibility ("default"))) unsigned int medusa_timer_get_type (const struct medusa_timer *timer)
+__attribute__ ((visibility ("default"))) unsigned int medusa_timer_get_resolution (const struct medusa_timer *timer)
 {
-        if (timer->flags & MEDUSA_TIMER_FLAG_PRECISE) {
-                return MEDUSA_TIMER_TYPE_PRECISE;
-        } else if (timer->flags & MEDUSA_TIMER_FLAG_COARSE) {
-                return MEDUSA_TIMER_TYPE_COARSE;
+        if (timer->flags & MEDUSA_TIMER_FLAG_NANOSECONDS) {
+                return MEDUSA_TIMER_RESOLUTION_NANOSECOMDS;
+        } else if (timer->flags & MEDUSA_TIMER_FLAG_MICROSECONDS) {
+                return MEDUSA_TIMER_RESOLUTION_MICROSECONDS;
+        } else if (timer->flags & MEDUSA_TIMER_FLAG_MILLISECONDS) {
+                return MEDUSA_TIMER_RESOLUTION_MILLISECONDS;
+        } else if (timer->flags & MEDUSA_TIMER_FLAG_SECONDS) {
+                return MEDUSA_TIMER_RESOLUTION_SECONDS;
         }
-        return MEDUSA_TIMER_TYPE_COARSE;
+        return MEDUSA_TIMER_RESOLUTION_DEFAULT;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_callback (struct medusa_timer *timer, int (*callback) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
