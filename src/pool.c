@@ -47,30 +47,6 @@ static inline int aligncount (unsigned int size, unsigned int count)
         return count;
 }
 
-static void entry_destroy (struct entry *entry)
-{
-        if (entry == NULL) {
-                return;
-        }
-        if (entry->block != NULL &&
-            entry->block->pool != NULL &&
-            entry->block->pool->destructor != NULL) {
-                entry->block->pool->destructor(entry->data, entry->block->pool->context);
-        }
-}
-
-static void entry_create (struct entry *entry)
-{
-        if (entry == NULL) {
-                return;
-        }
-        if (entry->block != NULL &&
-            entry->block->pool != NULL &&
-            entry->block->pool->constructor != NULL) {
-                entry->block->pool->constructor(entry->data, entry->block->pool->context);
-        }
-}
-
 static void block_destroy (struct block *block)
 {
         struct entry *entry;
@@ -80,11 +56,17 @@ static void block_destroy (struct block *block)
         }
         TAILQ_FOREACH_SAFE(entry, &block->free, list, nentry) {
                 TAILQ_REMOVE(&block->free, entry, list);
-                entry_destroy(entry);
+                if (block->pool != NULL &&
+                    block->pool->destructor != NULL) {
+                        block->pool->destructor(entry->data, entry->block->pool->context);
+                }
         }
         TAILQ_FOREACH_SAFE(entry, &block->used, list, nentry) {
                 TAILQ_REMOVE(&block->used, entry, list);
-                entry_destroy(entry);
+                if (block->pool != NULL &&
+                    block->pool->destructor != NULL) {
+                        block->pool->destructor(entry->data, entry->block->pool->context);
+                }
         }
         free(block);
 }
@@ -108,7 +90,9 @@ static struct block * block_create (struct pool *pool)
                 entry = (struct entry *) (block->data + pool->size * i);
                 entry->block = block;
                 TAILQ_INSERT_HEAD(&block->free, entry, list);
-                entry_create(entry);
+                if (pool->constructor != NULL) {
+                        pool->constructor(entry->data, pool->context);
+                }
         }
         return block;
 bail:   if (block != NULL) {
@@ -191,24 +175,21 @@ void * pool_malloc (struct pool *pool)
 {
         struct entry *entry;
         struct block *block;
-        struct blocks *blocks;
         if (pool == NULL) {
                 goto bail;
         }
         if (!TAILQ_EMPTY(&pool->half)) {
-                blocks = &pool->half;
+                block = TAILQ_FIRST(&pool->half);
+                TAILQ_REMOVE(&pool->half, block, list);
         } else if (!TAILQ_EMPTY(&pool->free)) {
-                blocks = &pool->free;
+                block = TAILQ_FIRST(&pool->free);
+                TAILQ_REMOVE(&pool->free, block, list);
         } else {
                 block = block_create(pool);
                 if (block == NULL) {
                         goto bail;
                 }
-                TAILQ_INSERT_HEAD(&pool->free, block, list);
-                blocks = &pool->free;
         }
-        block = TAILQ_FIRST(blocks);
-        TAILQ_REMOVE(blocks, block, list);
         entry = TAILQ_FIRST(&block->free);
         TAILQ_REMOVE(&block->free, entry, list);
         TAILQ_INSERT_HEAD(&block->used, entry, list);
@@ -224,19 +205,17 @@ bail:   return NULL;
 void pool_free (void *ptr)
 {
         struct entry *entry;
-        struct blocks *blocks;
         if (ptr == NULL) {
                 return;
         }
         entry = (struct entry *) (((unsigned char *) ptr) - sizeof(struct entry));
         if (TAILQ_EMPTY(&entry->block->free)) {
-                blocks = &entry->block->pool->full;
+                TAILQ_REMOVE(&entry->block->pool->full, entry->block, list);
         } else {
-                blocks = &entry->block->pool->half;
+                TAILQ_REMOVE(&entry->block->pool->half, entry->block, list);
         }
         TAILQ_REMOVE(&entry->block->used, entry, list);
         TAILQ_INSERT_HEAD(&entry->block->free, entry, list);
-        TAILQ_REMOVE(blocks, entry->block, list);
         if (TAILQ_EMPTY(&entry->block->used)) {
                 TAILQ_INSERT_HEAD(&entry->block->pool->free, entry->block, list);
         } else {
