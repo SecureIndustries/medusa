@@ -50,7 +50,7 @@ int main (int argc, char *argv[])
         allocs = rand() % 10000;
         fprintf(stderr, "allocs: %d\n", allocs);
 
-        pool = pool_create("pool", size, align, count, POOL_FLAG_NONE, contructor, destructor, NULL);
+        pool = pool_create("pool", size, align, count, POOL_FLAG_DEFAULT, contructor, destructor, NULL);
         if (pool == NULL) {
                 return -1;
         }
