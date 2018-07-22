@@ -31,14 +31,14 @@ struct pool {
         unsigned int size;
         unsigned int count;
         unsigned int flags;
+        unsigned int page_size;
+        unsigned int block_count;
         void (*constructor) (void *ptr, void *context);
         void (*destructor) (void *ptr, void *context);
         void *context;
 };
 
-static unsigned int page_size = 0;
-
-static inline int aligncount (unsigned int size, unsigned int count)
+static inline int aligncount (unsigned int size, unsigned int count, unsigned int page_size)
 {
         count *= size;
         count = (count + sizeof(void *) * 4 + (page_size - 1)) & ~(page_size - 1);
@@ -74,11 +74,9 @@ static void block_destroy (struct block *block)
 static struct block * block_create (struct pool *pool)
 {
         unsigned int i;
-        unsigned int count;
         struct entry *entry;
         struct block *block;
-        count = aligncount(pool->size, pool->count);
-        block = malloc(sizeof(struct block) + pool->size * count);
+        block = malloc(sizeof(struct block) + pool->size * pool->block_count);
         if (block == NULL) {
                 goto bail;
         }
@@ -86,7 +84,7 @@ static struct block * block_create (struct pool *pool)
         block->pool = pool;
         TAILQ_INIT(&block->free);
         TAILQ_INIT(&block->used);
-        for (i = 0; i < count; i++) {
+        for (i = 0; i < pool->block_count; i++) {
                 entry = (struct entry *) (block->data + pool->size * i);
                 entry->block = block;
                 TAILQ_INSERT_HEAD(&block->free, entry, list);
@@ -139,6 +137,9 @@ struct pool * pool_create (
         pool->constructor = constructor;
         pool->destructor = destructor;
         pool->context = context;
+        pool->page_size = getpagesize();
+        pool->block_count = aligncount(pool->size, pool->count, pool->page_size);
+        fprintf(stderr, "size: %d, count: %d, psize: %d, bcount: %d\n", pool->size, pool->count, pool->page_size, pool->block_count);
         return pool;
 bail:   if (pool != NULL) {
                 pool_destroy(pool);
@@ -227,9 +228,4 @@ void pool_free (void *ptr)
         } else {
                 block_destroy(block);
         }
-}
-
-__attribute__ ((constructor)) static void pool_constructor (void)
-{
-        page_size = getpagesize();
 }

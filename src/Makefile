@@ -17,11 +17,12 @@ libmedusa-monitor.a_cflags-y = \
 
 libmedusa-monitor.a_files-y = \
 	clock.c \
-	io.c \
-	monitor.c \
+	pool.c \
 	pqueue.c \
 	subject.c \
-	timer.c
+	io.c \
+	timer.c \
+	monitor.c \
 
 libmedusa-monitor.a_cflags-${POLL_EPOLL_ENABLE} += \
 	-DPOLL_EPOLL_ENABLE=1

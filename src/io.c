@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+#include "pool.h"
 #include "queue.h"
 #include "event.h"
 #include "subject.h"
@@ -14,6 +15,8 @@
 #include "io-struct.h"
 
 #include "io.h"
+
+static struct pool *g_pool;
 
 static int io_subject_event (struct medusa_subject *subject, unsigned int events)
 {
@@ -57,7 +60,11 @@ static void io_destroy (struct medusa_io *io)
                 return;
         }
         io_uninit(io);
+#if 1
+        pool_free(io);
+#else
         free(io);
+#endif
 }
 
 __attribute__ ((visibility ("default"))) int medusa_io_init (struct medusa_monitor *monitor, struct medusa_io *io)
@@ -87,7 +94,11 @@ __attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create (st
         if (monitor == NULL) {
                 goto bail;
         }
+#if 1
+        io = pool_malloc(g_pool);
+#else
         io = malloc(sizeof(struct medusa_io));
+#endif
         if (io == NULL) {
                 goto bail;
         }
@@ -197,4 +208,16 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_io_get_m
                 return NULL;
         }
         return io->subject.monitor;
+}
+
+__attribute__ ((constructor)) static void io_constructor (void)
+{
+        g_pool = pool_create("medusa-io", sizeof(struct medusa_io), 0, 0, POOL_FLAG_DEFAULT, NULL, NULL, NULL);
+}
+
+__attribute__ ((destructor)) static void io_destructor (void)
+{
+        if (g_pool != NULL) {
+                pool_destroy(g_pool);
+        }
 }

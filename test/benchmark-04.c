@@ -194,7 +194,7 @@ static int test_poll (unsigned int poll)
                         gettimeofday(&run_finish, NULL);
 
                         timersub(&run_finish, &run_start, &run_finish);
-                        fprintf(stderr, "%8ld %8ld, %8ld\n",
+                        fprintf(stderr, "%8ld %8ld %8ld\n",
                                         create_finish.tv_sec * 1000000 + create_finish.tv_usec,
                                         apply_finish.tv_sec * 1000000 + apply_finish.tv_usec,
                                         run_finish.tv_sec * 1000000 + run_finish.tv_usec);

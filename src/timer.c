@@ -1,9 +1,11 @@
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 
 #include "clock.h"
+#include "pool.h"
 #include "queue.h"
 #include "time.h"
 #include "subject.h"
@@ -12,6 +14,8 @@
 #include "timer-struct.h"
 
 #include "timer.h"
+
+static struct pool *g_pool;
 
 static int timer_subject_event (struct medusa_subject *subject, unsigned int events)
 {
@@ -43,7 +47,11 @@ static void timer_uninit (struct medusa_timer *timer)
 static void timer_destroy (struct medusa_timer *timer)
 {
         timer_uninit(timer);
+#if 1
+        pool_free(timer);
+#else
         free(timer);
+#endif
 }
 
 __attribute__ ((visibility ("default"))) void medusa_timer_uninit (struct medusa_timer *timer)
@@ -60,7 +68,11 @@ __attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_crea
 {
         int rc;
         struct medusa_timer *timer;
+#if 1
+        timer = pool_malloc(g_pool);
+#else
         timer = malloc(sizeof(struct medusa_timer));
+#endif
         if (timer == NULL) {
                 goto bail;
         }
@@ -217,4 +229,16 @@ __attribute__ ((visibility ("default"))) int medusa_timer_is_valid (const struct
 __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_timer_get_monitor (struct medusa_timer *timer)
 {
         return timer->subject.monitor;
+}
+
+__attribute__ ((constructor)) static void timer_constructor (void)
+{
+        g_pool = pool_create("medusa-timer", sizeof(struct medusa_timer), 0, 0, POOL_FLAG_DEFAULT, NULL, NULL, NULL);
+}
+
+__attribute__ ((destructor)) static void timer_destructor (void)
+{
+        if (g_pool != NULL) {
+                pool_destroy(g_pool);
+        }
 }
