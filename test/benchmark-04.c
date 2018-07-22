@@ -115,7 +115,7 @@ static int test_poll (unsigned int poll)
         medusa_monitor_init_options_default(&options);
         options.poll.type = poll;
 
-        for (j = 0; j < 1; j++) {
+        for (j = 0; j < g_samples; j++) {
                 gettimeofday(&create_start, NULL);
                 monitor = medusa_monitor_create(&options);
                 if (monitor == NULL) {
@@ -278,7 +278,6 @@ int main (int argc, char *argv[])
         }
 
         for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
-                alarm(5);
                 fprintf(stderr, "testing poll: %d\n", g_polls[i]);
 
                 rc = test_poll(g_polls[i]);

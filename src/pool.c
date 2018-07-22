@@ -139,7 +139,6 @@ struct pool * pool_create (
         pool->context = context;
         pool->page_size = getpagesize();
         pool->block_count = aligncount(pool->size, pool->count, pool->page_size);
-        fprintf(stderr, "size: %d, count: %d, psize: %d, bcount: %d\n", pool->size, pool->count, pool->page_size, pool->block_count);
         return pool;
 bail:   if (pool != NULL) {
                 pool_destroy(pool);
