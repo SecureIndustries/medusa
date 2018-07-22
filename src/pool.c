@@ -222,8 +222,6 @@ void pool_free (void *ptr)
         TAILQ_INSERT_HEAD(&block->free, entry, list);
         if (!TAILQ_EMPTY(&block->used)) {
                 TAILQ_INSERT_HEAD(&pool->half, block, list);
-        } else if (TAILQ_EMPTY(&pool->free)) {
-                TAILQ_INSERT_HEAD(&pool->free, block, list);
         } else {
                 block_destroy(block);
         }
