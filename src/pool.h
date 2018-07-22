@@ -5,10 +5,10 @@
 struct pool;
 
 enum {
-        POOL_FLAG_NONE          = 0x00000000,
+        POOL_FLAG_DEFAULT       = 0x00000000,
         POOL_FLAG_POISON        = 0x00000001,
-        POOL_FLAG_RED_ZONE      = 0x00000002
-#define POOL_FLAG_NONE          POOL_FLAG_NONE
+        POOL_FLAG_RED_ZONE      = 0x00000002,
+#define POOL_FLAG_DEFAULT       POOL_FLAG_DEFAULT
 #define POOL_FLAG_POISON        POOL_FLAG_POISON
 #define POOL_FLAG_RED_ZONE      POOL_FLAG_RED_ZONE
 };
