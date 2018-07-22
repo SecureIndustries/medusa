@@ -204,22 +204,28 @@ bail:   return NULL;
 
 void pool_free (void *ptr)
 {
+        struct pool *pool;
+        struct block *block;
         struct entry *entry;
         if (ptr == NULL) {
                 return;
         }
         entry = (struct entry *) (((unsigned char *) ptr) - sizeof(struct entry));
-        if (TAILQ_EMPTY(&entry->block->free)) {
-                TAILQ_REMOVE(&entry->block->pool->full, entry->block, list);
+        block = entry->block;
+        pool = block->pool;
+        if (TAILQ_EMPTY(&block->free)) {
+                TAILQ_REMOVE(&pool->full, block, list);
         } else {
-                TAILQ_REMOVE(&entry->block->pool->half, entry->block, list);
+                TAILQ_REMOVE(&pool->half, block, list);
         }
-        TAILQ_REMOVE(&entry->block->used, entry, list);
-        TAILQ_INSERT_HEAD(&entry->block->free, entry, list);
-        if (TAILQ_EMPTY(&entry->block->used)) {
-                TAILQ_INSERT_HEAD(&entry->block->pool->free, entry->block, list);
+        TAILQ_REMOVE(&block->used, entry, list);
+        TAILQ_INSERT_HEAD(&block->free, entry, list);
+        if (!TAILQ_EMPTY(&block->used)) {
+                TAILQ_INSERT_HEAD(&pool->half, block, list);
+        } else if (TAILQ_EMPTY(&pool->free)) {
+                TAILQ_INSERT_HEAD(&pool->free, block, list);
         } else {
-                TAILQ_INSERT_HEAD(&entry->block->pool->half, entry->block, list);
+                block_destroy(block);
         }
 }
 
