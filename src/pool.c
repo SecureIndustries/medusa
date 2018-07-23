@@ -32,16 +32,19 @@ struct pool {
         unsigned int flags;
         unsigned int page_size;
         unsigned int block_count;
+        unsigned int entry_capacity;
+        unsigned int entry_used;
+        unsigned int entry_used_average;
         void (*constructor) (void *ptr, void *context);
         void (*destructor) (void *ptr, void *context);
         void *context;
 };
 
-static inline int aligncount (unsigned int size, unsigned int count, unsigned int page_size)
+static inline int aligncount (unsigned int size, unsigned int count, unsigned int header, unsigned int page_size)
 {
         count *= size;
-        count = (count + sizeof(void *) * 4 + (page_size - 1)) & ~(page_size - 1);
-        count = count - sizeof(void *) * 4;
+        count = (count + header + sizeof(void *) * 4 + (page_size - 1)) & ~(page_size - 1);
+        count = count - header - sizeof(void *) * 4;
         count /= size;
         return count;
 }
@@ -60,6 +63,7 @@ static void block_destroy (struct block *block)
                         block->pool->destructor(entry->data, block->pool->context);
                 }
         }
+        block->pool->entry_capacity -= block->pool->block_count;
         free(block);
 }
 
@@ -82,6 +86,7 @@ static struct block * block_create (struct pool *pool)
                         pool->constructor(entry->data, pool->context);
                 }
         }
+        pool->entry_capacity += pool->block_count;
         return block;
 bail:   if (block != NULL) {
                 block_destroy(block);
@@ -124,12 +129,15 @@ struct pool * pool_create (
         pool->size = (pool->size + align - 1) & ~(align - 1);
         pool->count = count;
         pool->flags = flags;
+        if (pool->flags == POOL_FLAG_DEFAULT) {
+                pool->flags  = 0;
+                pool->flags |= POOL_FLAG_RESERVE_HEURISTIC;
+        }
         pool->constructor = constructor;
         pool->destructor = destructor;
         pool->context = context;
         pool->page_size = getpagesize();
-        pool->block_count = aligncount(pool->size, pool->count, pool->page_size - sizeof(struct block));
-        fprintf(stderr, "size: %d, count: %d, bcount: %d, sentry: %ld\n", pool->size, pool->count, pool->block_count, sizeof(struct entry));
+        pool->block_count = aligncount(pool->size, pool->count, sizeof(struct block), pool->page_size);
         return pool;
 bail:   if (pool != NULL) {
                 pool_destroy(pool);
@@ -188,6 +196,7 @@ void * pool_malloc (struct pool *pool)
         entry = SLIST_FIRST(&block->free);
         SLIST_REMOVE_HEAD(&block->free, list);
         block->nused += 1;
+        pool->entry_used += 1;
         if (SLIST_EMPTY(&block->free)) {
                 ablocks = &pool->full;
         } else {
@@ -222,8 +231,31 @@ void pool_free (void *ptr)
         }
         SLIST_INSERT_HEAD(&block->free, entry, list);
         block->nused -= 1;
+        pool->entry_used -= 1;
         if (block->nused == 0) {
-                block_destroy(block);
+                if (pool->flags & POOL_FLAG_RESERVE_NONE) {
+                        block_destroy(block);
+                } else if (pool->flags & POOL_FLAG_RESERVE_SINGLE) {
+                        if (TAILQ_EMPTY(&pool->free)) {
+                                TAILQ_INSERT_HEAD(&pool->free, block, list);
+                        } else {
+                                block_destroy(block);
+                        }
+                } else if (pool->flags & POOL_FLAG_RESERVE_HEURISTIC) {
+                        TAILQ_INSERT_HEAD(&pool->free, block, list);
+                        if (pool->entry_used_average == 0) {
+                                pool->entry_used_average = pool->entry_used;
+                        }
+                        pool->entry_used_average = pool->entry_used_average * 3 / 4 + pool->entry_used / 4;
+                        while (pool->entry_used_average * 2 < pool->entry_capacity && !TAILQ_EMPTY(&pool->free)) {
+                                block = TAILQ_LAST(&pool->free, blocks);
+                                TAILQ_REMOVE(&pool->free, block, list);
+                                block_destroy(block);
+                        }
+
+                } else {
+                        block_destroy(block);
+                }
         } else {
                 TAILQ_INSERT_HEAD(&pool->half, block, list);
         }

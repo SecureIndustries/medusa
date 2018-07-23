@@ -21,6 +21,7 @@ static void destructor (void *ptr, void *context)
 int main (int argc, char *argv[])
 {
         unsigned int i;
+        unsigned int a;
         unsigned int seed;
         unsigned int allocs;
 
@@ -59,9 +60,18 @@ int main (int argc, char *argv[])
         if (ptrs == NULL) {
                 return -1;
         }
+        memset(ptrs, 0, sizeof(void *) * allocs);
 
-        for (i = 0; i < allocs; i++) {
-                ptrs[i] = pool_malloc(pool);
+        a = 0;
+        while (a != allocs) {
+                i = rand() % allocs;
+                if (ptrs[i] == NULL) {
+                        ptrs[i] = pool_malloc(pool);
+                        a += 1;
+                } else {
+                        pool_free(ptrs[i]);
+                        ptrs[i] = NULL;
+                }
         }
         for (i = 0; i < allocs; i++) {
                 pool_free(ptrs[i]);
