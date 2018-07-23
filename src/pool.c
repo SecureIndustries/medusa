@@ -7,10 +7,9 @@
 #include "queue.h"
 #include "pool.h"
 
-TAILQ_HEAD(entries, entry);
+SLIST_HEAD(entries, entry);
 struct entry {
-        struct block *block;
-        TAILQ_ENTRY(entry) list;
+        SLIST_ENTRY(entry) list;
         unsigned char data[0];
 };
 
@@ -19,7 +18,7 @@ struct block {
         struct pool *pool;
         TAILQ_ENTRY(block) list;
         struct entries free;
-        struct entries used;
+        unsigned int nused;
         unsigned char data[0];
 };
 
@@ -50,22 +49,15 @@ static inline int aligncount (unsigned int size, unsigned int count, unsigned in
 static void block_destroy (struct block *block)
 {
         struct entry *entry;
-        struct entry *nentry;
         if (block == NULL) {
                 return;
         }
-        TAILQ_FOREACH_SAFE(entry, &block->free, list, nentry) {
-                TAILQ_REMOVE(&block->free, entry, list);
+        while (!SLIST_EMPTY(&block->free)) {
+                entry = SLIST_FIRST(&block->free);
+                SLIST_REMOVE_HEAD(&block->free, list);
                 if (block->pool != NULL &&
                     block->pool->destructor != NULL) {
-                        block->pool->destructor(entry->data, entry->block->pool->context);
-                }
-        }
-        TAILQ_FOREACH_SAFE(entry, &block->used, list, nentry) {
-                TAILQ_REMOVE(&block->used, entry, list);
-                if (block->pool != NULL &&
-                    block->pool->destructor != NULL) {
-                        block->pool->destructor(entry->data, entry->block->pool->context);
+                        block->pool->destructor(entry->data, block->pool->context);
                 }
         }
         free(block);
@@ -82,12 +74,10 @@ static struct block * block_create (struct pool *pool)
         }
         memset(block, 0, sizeof(struct block));
         block->pool = pool;
-        TAILQ_INIT(&block->free);
-        TAILQ_INIT(&block->used);
+        SLIST_INIT(&block->free);
         for (i = 0; i < pool->block_count; i++) {
                 entry = (struct entry *) (block->data + pool->size * i);
-                entry->block = block;
-                TAILQ_INSERT_HEAD(&block->free, entry, list);
+                SLIST_INSERT_HEAD(&block->free, entry, list);
                 if (pool->constructor != NULL) {
                         pool->constructor(entry->data, pool->context);
                 }
@@ -138,7 +128,8 @@ struct pool * pool_create (
         pool->destructor = destructor;
         pool->context = context;
         pool->page_size = getpagesize();
-        pool->block_count = aligncount(pool->size, pool->count, pool->page_size);
+        pool->block_count = aligncount(pool->size, pool->count, pool->page_size - sizeof(struct block));
+        fprintf(stderr, "size: %d, count: %d, bcount: %d, sentry: %ld\n", pool->size, pool->count, pool->block_count, sizeof(struct entry));
         return pool;
 bail:   if (pool != NULL) {
                 pool_destroy(pool);
@@ -175,29 +166,40 @@ void * pool_malloc (struct pool *pool)
 {
         struct entry *entry;
         struct block *block;
+        struct blocks *rblocks;
+        struct blocks *ablocks;
         if (pool == NULL) {
                 goto bail;
         }
         if (!TAILQ_EMPTY(&pool->half)) {
-                block = TAILQ_FIRST(&pool->half);
-                TAILQ_REMOVE(&pool->half, block, list);
+                rblocks = &pool->half;
         } else if (!TAILQ_EMPTY(&pool->free)) {
-                block = TAILQ_FIRST(&pool->free);
-                TAILQ_REMOVE(&pool->free, block, list);
+                rblocks = &pool->free;
         } else {
+                rblocks = NULL;
                 block = block_create(pool);
                 if (block == NULL) {
                         goto bail;
                 }
         }
-        entry = TAILQ_FIRST(&block->free);
-        TAILQ_REMOVE(&block->free, entry, list);
-        TAILQ_INSERT_HEAD(&block->used, entry, list);
-        if (TAILQ_EMPTY(&block->free)) {
-                TAILQ_INSERT_HEAD(&pool->full, block, list);
-        } else {
-                TAILQ_INSERT_HEAD(&pool->half, block, list);
+        if (rblocks != NULL) {
+                block = TAILQ_FIRST(rblocks);
         }
+        entry = SLIST_FIRST(&block->free);
+        SLIST_REMOVE_HEAD(&block->free, list);
+        block->nused += 1;
+        if (SLIST_EMPTY(&block->free)) {
+                ablocks = &pool->full;
+        } else {
+                ablocks = &pool->half;
+        }
+        if (rblocks != ablocks) {
+                if (rblocks != NULL) {
+                        TAILQ_REMOVE(rblocks, block, list);
+                }
+                TAILQ_INSERT_HEAD(ablocks, block, list);
+        }
+        entry->list.sle_next = (void *) block;
         return entry->data;
 bail:   return NULL;
 }
@@ -211,18 +213,18 @@ void pool_free (void *ptr)
                 return;
         }
         entry = (struct entry *) (((unsigned char *) ptr) - sizeof(struct entry));
-        block = entry->block;
+        block = (struct block *) entry->list.sle_next;
         pool = block->pool;
-        if (TAILQ_EMPTY(&block->free)) {
+        if (SLIST_EMPTY(&block->free)) {
                 TAILQ_REMOVE(&pool->full, block, list);
         } else {
                 TAILQ_REMOVE(&pool->half, block, list);
         }
-        TAILQ_REMOVE(&block->used, entry, list);
-        TAILQ_INSERT_HEAD(&block->free, entry, list);
-        if (!TAILQ_EMPTY(&block->used)) {
-                TAILQ_INSERT_HEAD(&pool->half, block, list);
-        } else {
+        SLIST_INSERT_HEAD(&block->free, entry, list);
+        block->nused -= 1;
+        if (block->nused == 0) {
                 block_destroy(block);
+        } else {
+                TAILQ_INSERT_HEAD(&pool->half, block, list);
         }
 }
