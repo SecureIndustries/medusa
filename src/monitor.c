@@ -527,19 +527,11 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         if (rc != 0) {
                 goto bail;
         }
-        io = medusa_io_create(monitor);
-        if (io == NULL) {
-                goto bail;
-        }
-        rc = medusa_io_set_fd(io, monitor->wakeup_fds[0]);
+        io = medusa_io_create(monitor, monitor->wakeup_fds[0], monitor_break_io_callback, NULL);
         if (rc != 0) {
                 goto bail;
         }
         rc = medusa_io_set_events(io, MEDUSA_IO_EVENT_IN);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_io_set_callback(io, monitor_break_io_callback, NULL);
         if (rc != 0) {
                 goto bail;
         }
@@ -547,19 +539,11 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         if (rc != 0) {
                 goto bail;
         }
-        io = medusa_io_create(monitor);
-        if (io == NULL) {
-                goto bail;
-        }
-        rc = medusa_io_set_fd(io, monitor->timer.backend->fd(monitor->timer.backend));
+        io = medusa_io_create(monitor, monitor->timer.backend->fd(monitor->timer.backend), monitor_timer_io_callback, NULL);
         if (rc != 0) {
                 goto bail;
         }
         rc = medusa_io_set_events(io, MEDUSA_IO_EVENT_IN);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_io_set_callback(io, monitor_timer_io_callback, NULL);
         if (rc != 0) {
                 goto bail;
         }

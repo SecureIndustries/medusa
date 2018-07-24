@@ -20,15 +20,26 @@ static struct pool *g_pool;
 static int timer_subject_event (struct medusa_subject *subject, unsigned int events)
 {
         struct medusa_timer *timer = (struct medusa_timer *) subject;
-        if (timer->callback != NULL) {
-                return timer->callback(timer, events, timer->context);
-        }
-        return 0;
+        return timer->onevent(timer, events, timer->context);
 }
 
-static int timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, void (*destroy) (struct medusa_timer *timer))
+static int timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, void (*destroy) (struct medusa_timer *timer), int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
 {
+        if (monitor == NULL) {
+                return -1;
+        }
+        if (timer == NULL) {
+                return -1;
+        }
+        if (destroy == NULL) {
+                return -1;
+        }
+        if (onevent == NULL) {
+                return -1;
+        }
         memset(timer, 0, sizeof(struct medusa_timer));
+        timer->onevent = onevent;
+        timer->context = context;
         timer->flags |= MEDUSA_TIMER_FLAG_MILLISECONDS;
         medusa_timespec_clear(&timer->initial);
         medusa_timespec_clear(&timer->interval);
@@ -59,15 +70,32 @@ __attribute__ ((visibility ("default"))) void medusa_timer_uninit (struct medusa
         medusa_subject_del(&timer->subject);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer)
+__attribute__ ((visibility ("default"))) int medusa_timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
 {
-        return timer_init(monitor, timer, timer_uninit);
+        if (monitor == NULL) {
+                goto bail;
+        }
+        if (timer == NULL) {
+                goto bail;
+        }
+        if (onevent == NULL) {
+                goto bail;
+        }
+        return timer_init(monitor, timer, timer_uninit, onevent, context);
+bail:   return -1;
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_create (struct medusa_monitor *monitor)
+__attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
 {
         int rc;
         struct medusa_timer *timer;
+        timer = NULL;
+        if (monitor == NULL) {
+                goto bail;
+        }
+        if (onevent == NULL) {
+                goto bail;
+        }
 #if 1
         timer = pool_malloc(g_pool);
 #else
@@ -76,7 +104,7 @@ __attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_crea
         if (timer == NULL) {
                 goto bail;
         }
-        rc = timer_init(monitor, timer, timer_destroy);
+        rc = timer_init(monitor, timer, timer_destroy, onevent, context);
         if (rc != 0) {
                 goto bail;
         }
@@ -174,13 +202,6 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_timer_get_resolutio
         return MEDUSA_TIMER_RESOLUTION_DEFAULT;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_set_callback (struct medusa_timer *timer, int (*callback) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
-{
-        timer->callback = callback;
-        timer->context = context;
-        return medusa_subject_mod(&timer->subject);
-}
-
 __attribute__ ((visibility ("default"))) void * medusa_timer_get_timeout_context (const struct medusa_timer *timer)
 {
         return timer->context;
@@ -215,9 +236,6 @@ __attribute__ ((visibility ("default"))) int medusa_timer_is_valid (const struct
 {
         if (!medusa_timespec_isset(&timer->initial) &&
             !medusa_timespec_isset(&timer->interval)) {
-                return 0;
-        }
-        if (timer->callback == NULL) {
                 return 0;
         }
         if ((timer->flags & MEDUSA_TIMER_FLAG_ENABLED) == 0) {

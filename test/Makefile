@@ -19,11 +19,13 @@ define test-defaults
     $1_ldflags-y = \
     	-Wl,-Bstatic \
     	-lmedusa-monitor \
+    	-lmedusa-socket \
 		-Wl,-Bdynamic \
 		-lpthread
 
 	$1_depends-y = \
-		../dist/lib/libmedusa-monitor.a
+		../dist/lib/libmedusa-monitor.a \
+		../dist/lib/libmedusa-socket.a
 endef
 
 $(eval $(foreach T,${tests},$(eval $(call test-defaults,$T))))

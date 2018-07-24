@@ -7,10 +7,12 @@ POLL_SELECT_ENABLE    ?= y
 TIMER_TIMERFD_ENABLE  ?= y
 
 target.a-y = \
-	libmedusa-monitor.a
+	libmedusa-monitor.a \
+	libmedusa-socket.a
 
 target.so-y = \
-	libmedusa-monitor.so
+	libmedusa-monitor.so \
+	libmedusa-socket.so
 
 libmedusa-monitor.a_cflags-y = \
 	-fvisibility=hidden
@@ -55,6 +57,18 @@ libmedusa-monitor.so_cflags-y = \
 libmedusa-monitor.so_files-y = \
 	${libmedusa-monitor.a_files-y}
 
+libmedusa-socket.a_cflags-y = \
+	-fvisibility=hidden
+
+libmedusa-socket.a_files-y = \
+	tcpsocket.c
+
+libmedusa-socket.so_cflags-y = \
+	${libmedusa-socket.a_cflags-y}
+
+libmedusa-socket.so_files-y = \
+	${libmedusa-socket.a_files-y}
+
 dist.dir = ../dist
 dist.base = medusa
 
@@ -67,6 +81,8 @@ dist.include-y = \
 
 dist.lib-y = \
 	libmedusa-monitor.a \
-	libmedusa-monitor.so
+	libmedusa-monitor.so \
+	libmedusa-socket.a \
+	libmedusa-socket.so
 
 include ../Makefile.lib

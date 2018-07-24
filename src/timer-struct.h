@@ -21,12 +21,12 @@ struct medusa_timer {
 
         struct timespec initial;
         struct timespec interval;
-        int (*callback) (struct medusa_timer *timer, unsigned int events, void *context);
+        int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context);
         void *context;
 
         struct timespec _timespec;
         unsigned int _position;
 };
 
-int medusa_timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer);
+int medusa_timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context);
 void medusa_timer_uninit (struct medusa_timer *timer);

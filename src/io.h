@@ -21,16 +21,13 @@ enum {
 #define MEDUSA_IO_EVENT_DESTROY MEDUSA_IO_EVENT_DESTROY
 };
 
-struct medusa_io * medusa_io_create (struct medusa_monitor *monitor);
+struct medusa_io * medusa_io_create (struct medusa_monitor *monitor, int fd, int (*callback) (struct medusa_io *io, unsigned int events, void *context), void *context);
 void medusa_io_destroy (struct medusa_io *io);
 
-int medusa_io_set_fd (struct medusa_io *io, int fd);
 int medusa_io_get_fd (const struct medusa_io *io);
 
 int medusa_io_set_events (struct medusa_io *io, unsigned int events);
 unsigned int medusa_io_get_events (const struct medusa_io *io);
-
-int medusa_io_set_callback (struct medusa_io *io, int (*callback) (struct medusa_io *io, unsigned int events, void *context), void *context);
 
 int medusa_io_set_enabled (struct medusa_io *io, int enabled);
 int medusa_io_get_enabled (const struct medusa_io *io);

@@ -50,7 +50,7 @@ static int test_poll (unsigned int poll, unsigned int count)
         }
 
         for (i = 0; i < count; i++) {
-                timer = medusa_timer_create(monitor);
+                timer = medusa_timer_create(monitor, timer_callback, NULL);
                 if (timer == NULL) {
                         goto bail;
                 }
@@ -59,10 +59,6 @@ static int test_poll (unsigned int poll, unsigned int count)
                         goto bail;
                 }
                 rc = medusa_timer_set_single_shot(timer, rand() % 2);
-                if (rc != 0) {
-                        goto bail;
-                }
-                rc = medusa_timer_set_callback(timer, timer_callback, NULL);
                 if (rc != 0) {
                         goto bail;
                 }

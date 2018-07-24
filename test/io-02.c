@@ -80,19 +80,11 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 goto bail;
         }
-        io = medusa_io_create(monitor);
-        if (io == NULL) {
-                goto bail;
-        }
-        rc = medusa_io_set_fd(io, fds[0]);
+        io = medusa_io_create(monitor, fds[0], io_callback, &reads);
         if (rc != 0) {
                 goto bail;
         }
         rc = medusa_io_set_events(io, MEDUSA_IO_EVENT_IN);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_io_set_callback(io, io_callback, &reads);
         if (rc != 0) {
                 goto bail;
         }

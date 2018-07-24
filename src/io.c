@@ -20,13 +20,10 @@ static struct pool *g_pool;
 static int io_subject_event (struct medusa_subject *subject, unsigned int events)
 {
         struct medusa_io *io = (struct medusa_io *) subject;
-        if (io->callback != NULL) {
-                return io->callback(io, events, io->context);
-        }
-        return 0;
+        return io->onevent(io, events, io->context);
 }
 
-static int io_init (struct medusa_monitor *monitor, struct medusa_io *io, void (*destroy) (struct medusa_io *io))
+static int io_init (struct medusa_monitor *monitor, struct medusa_io *io, void (*destroy) (struct medusa_io *io), int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context), void *context)
 {
         if (monitor == NULL) {
                 return -1;
@@ -34,8 +31,19 @@ static int io_init (struct medusa_monitor *monitor, struct medusa_io *io, void (
         if (io == NULL) {
                 return -1;
         }
+        if (destroy == NULL) {
+                return -1;
+        }
+        if (fd < 0) {
+                return -1;
+        }
+        if (onevent == NULL) {
+                return -1;
+        }
         memset(io, 0, sizeof(struct medusa_io));
-        io->fd = -1;
+        io->fd = fd;
+        io->onevent = onevent;
+        io->context = context;
         io->events = 0;
         io->enabled = 0;
         io->subject.event = io_subject_event;
@@ -66,7 +74,7 @@ static void io_destroy (struct medusa_io *io)
 #endif
 }
 
-__attribute__ ((visibility ("default"))) int medusa_io_init (struct medusa_monitor *monitor, struct medusa_io *io)
+__attribute__ ((visibility ("default"))) int medusa_io_init (struct medusa_monitor *monitor, struct medusa_io *io, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context), void *context)
 {
         if (monitor == NULL) {
                 return -1;
@@ -74,7 +82,13 @@ __attribute__ ((visibility ("default"))) int medusa_io_init (struct medusa_monit
         if (io == NULL) {
                 return -1;
         }
-        return io_init(monitor, io, io_uninit);
+        if (fd < 0) {
+                return -1;
+        }
+        if (onevent == NULL) {
+                return -1;
+        }
+        return io_init(monitor, io, io_uninit, fd, onevent, context);
 }
 
 __attribute__ ((visibility ("default"))) void medusa_io_uninit (struct medusa_io *io)
@@ -85,12 +99,18 @@ __attribute__ ((visibility ("default"))) void medusa_io_uninit (struct medusa_io
         medusa_subject_del(&io->subject);
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create (struct medusa_monitor *monitor)
+__attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create (struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context), void *context)
 {
         int rc;
         struct medusa_io *io;
         io = NULL;
         if (monitor == NULL) {
+                goto bail;
+        }
+        if (fd < 0) {
+                goto bail;
+        }
+        if (onevent == NULL) {
                 goto bail;
         }
 #if 1
@@ -101,7 +121,7 @@ __attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create (st
         if (io == NULL) {
                 goto bail;
         }
-        rc = io_init(monitor, io, io_destroy);
+        rc = io_init(monitor, io, io_destroy, fd, onevent, context);
         if (rc != 0) {
                 goto bail;
         }
@@ -118,18 +138,6 @@ __attribute__ ((visibility ("default"))) void medusa_io_destroy (struct medusa_i
                 return;
         }
         medusa_subject_del(&io->subject);
-}
-
-__attribute__ ((visibility ("default"))) int medusa_io_set_fd (struct medusa_io *io, int fd)
-{
-        if (io == NULL) {
-                return -1;
-        }
-        if (fd < 0) {
-                return -1;
-        }
-        io->fd = fd;
-        return medusa_subject_mod(&io->subject);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_io_get_fd (const struct medusa_io *io)
@@ -157,16 +165,6 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_io_get_events (cons
         return io->events;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_io_set_callback (struct medusa_io *io, int (*callback) (struct medusa_io *io, unsigned int events, void *context), void *context)
-{
-        if (io == NULL) {
-                return -1;
-        }
-        io->callback = callback;
-        io->context = context;
-        return medusa_subject_mod(&io->subject);
-}
-
 __attribute__ ((visibility ("default"))) int medusa_io_set_enabled (struct medusa_io *io, int enabled)
 {
         if (io == NULL) {
@@ -186,13 +184,7 @@ __attribute__ ((visibility ("default"))) int medusa_io_get_enabled (const struct
 
 __attribute__ ((visibility ("default"))) int medusa_io_is_valid (const struct medusa_io *io)
 {
-        if (io->fd < 0) {
-                return 0;
-        }
         if ((io->events & (MEDUSA_IO_EVENT_IN | MEDUSA_IO_EVENT_OUT | MEDUSA_IO_EVENT_PRI)) == 0) {
-                return 0;
-        }
-        if (io->callback == NULL) {
                 return 0;
         }
         if (io->enabled == 0) {

@@ -669,15 +669,10 @@ again:
                 rc = -EIO;
                 goto bail;
         }
-        client->io = medusa_io_create(monitor);
+        client->io = medusa_io_create(monitor, fd, client_io_callback, client);
         if (client->io == NULL) {
                 errorf("can not create io");
                 rc = -EIO;
-                goto bail;
-        }
-        rc = medusa_io_set_fd(client->io, fd);
-        rc = medusa_io_set_callback(client->io, client_io_callback, client);
-        if (rc != 0) {
                 goto bail;
         }
         if (1) {

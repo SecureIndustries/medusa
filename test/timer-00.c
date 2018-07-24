@@ -8,7 +8,7 @@ int main (int argc, char *argv[])
         struct medusa_timer *timer;
         (void) argc;
         (void) argv;
-        timer = medusa_timer_create(NULL);
+        timer = medusa_timer_create(NULL, NULL, NULL);
         if (timer != NULL) {
                 return -1;
         }

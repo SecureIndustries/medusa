@@ -47,19 +47,11 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        io = medusa_io_create(monitor);
+        io = medusa_io_create(monitor, STDIN_FILENO, io_callback, NULL);
         if (io == NULL) {
                 goto bail;
         }
-        rc = medusa_io_set_fd(io, STDIN_FILENO);
-        if (rc != 0) {
-                goto bail;
-        }
         rc = medusa_io_set_events(io, MEDUSA_IO_EVENT_IN);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_io_set_callback(io, io_callback, NULL);
         if (rc != 0) {
                 goto bail;
         }

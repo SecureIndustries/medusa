@@ -96,9 +96,8 @@ static int test_poll (unsigned int poll)
         }
 
         for (i = 0; i < g_npipes; i++) {
-                g_ios[i] = medusa_io_create(monitor);
-                rc |= medusa_io_set_callback(g_ios[i], io_callback, (void *) ((uintptr_t) i));
-                if (rc != 0) {
+                g_ios[i] = medusa_io_create(monitor, g_pipes[i * 2], io_callback, (void *) ((uintptr_t) i));
+                if (g_ios[i] == NULL) {
                         goto bail;
                 }
         }
@@ -108,7 +107,6 @@ static int test_poll (unsigned int poll)
                         if (medusa_io_get_enabled(g_ios[i])) {
                                 rc = medusa_io_set_enabled(g_ios[i], 0);
                         }
-                        rc |= medusa_io_set_fd(g_ios[i], g_pipes[i * 2]);
                         rc |= medusa_io_set_events(g_ios[i], MEDUSA_IO_EVENT_IN);
                         rc |= medusa_io_set_enabled(g_ios[i], 1);
                         if (rc != 0) {
