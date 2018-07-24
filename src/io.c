@@ -7,7 +7,6 @@
 
 #include "pool.h"
 #include "queue.h"
-#include "event.h"
 #include "subject.h"
 #include "monitor.h"
 
@@ -190,7 +189,7 @@ __attribute__ ((visibility ("default"))) int medusa_io_is_valid (const struct me
         if (io->fd < 0) {
                 return 0;
         }
-        if ((io->events & (MEDUSA_EVENT_IN | MEDUSA_EVENT_OUT | MEDUSA_EVENT_PRI)) == 0) {
+        if ((io->events & (MEDUSA_IO_EVENT_IN | MEDUSA_IO_EVENT_OUT | MEDUSA_IO_EVENT_PRI)) == 0) {
                 return 0;
         }
         if (io->callback == NULL) {

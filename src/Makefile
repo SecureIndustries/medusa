@@ -61,9 +61,9 @@ dist.base = medusa
 dist.include-y = \
 	monitor.h \
 	clock.h \
-	event.h \
 	io.h \
-	timer.h
+	timer.h \
+	tcpsocket.h
 
 dist.lib-y = \
 	libmedusa-monitor.a \

@@ -10,7 +10,6 @@
 
 #include "time.h"
 #include "clock.h"
-#include "event.h"
 #include "subject.h"
 #include "io.h"
 #include "timer.h"
@@ -87,7 +86,7 @@ static int monitor_break_io_callback (struct medusa_io *io, unsigned int events,
         int rc;
         unsigned int reason;
         (void) context;
-        if (events & MEDUSA_EVENT_IN) {
+        if (events & MEDUSA_IO_EVENT_IN) {
                 rc = read(io->subject.monitor->wakeup_fds[0], &reason, sizeof(reason));
                 if (rc != sizeof(reason)) {
                         goto bail;
@@ -107,7 +106,7 @@ bail:   return -1;
 static int monitor_timer_io_callback (struct medusa_io *io, unsigned int events, void *context)
 {
         (void) context;
-        if (events & MEDUSA_EVENT_IN) {
+        if (events & MEDUSA_IO_EVENT_IN) {
                 int rc;
                 uint64_t value;
                 rc = read(io->fd, &value, sizeof(value));
@@ -326,7 +325,7 @@ static int medusa_monitor_check_timer (struct medusa_monitor *monitor)
                         if (rc != 0) {
                                 goto bail;
                         }
-                        rc = timer->subject.event(&timer->subject, MEDUSA_EVENT_TIMEOUT);
+                        rc = timer->subject.event(&timer->subject, MEDUSA_TIMER_EVENT_TIMEOUT);
                         if (rc != 0) {
                                 goto bail;
                         }
@@ -536,7 +535,7 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_set_events(io, MEDUSA_EVENT_IN);
+        rc = medusa_io_set_events(io, MEDUSA_IO_EVENT_IN);
         if (rc != 0) {
                 goto bail;
         }
@@ -556,7 +555,7 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_set_events(io, MEDUSA_EVENT_IN);
+        rc = medusa_io_set_events(io, MEDUSA_IO_EVENT_IN);
         if (rc != 0) {
                 goto bail;
         }

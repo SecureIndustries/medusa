@@ -8,7 +8,6 @@
 #include <errno.h>
 
 #include "medusa/timer.h"
-#include "medusa/event.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
@@ -26,7 +25,7 @@ static const unsigned int g_polls[] = {
 static int timer_callback (struct medusa_timer *timer, unsigned int events, void *context)
 {
         (void) context;
-        if (events & MEDUSA_EVENT_TIMEOUT) {
+        if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 fprintf(stderr, "break\n");
                 medusa_monitor_break(medusa_timer_get_monitor(timer));
         }

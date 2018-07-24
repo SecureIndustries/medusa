@@ -10,7 +10,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#include "medusa/event.h"
 #include "medusa/io.h"
 #include "medusa/monitor.h"
 
@@ -41,7 +40,7 @@ static int io_callback (struct medusa_io *io, unsigned int events, void *context
         fprintf(stderr, "  io     : %p\n", io);
         fprintf(stderr, "  fd     : %d\n", medusa_io_get_fd(io));
         fprintf(stderr, "  events : 0x%08x\n", events);
-        if (events & MEDUSA_EVENT_OUT) {
+        if (events & MEDUSA_IO_EVENT_OUT) {
                 char value;
                 int *write_length = (int *) context;
                 value = rand();
@@ -55,7 +54,7 @@ static int io_callback (struct medusa_io *io, unsigned int events, void *context
                 } else {
                         *write_length -= 1;
                 }
-        } else if (events & MEDUSA_EVENT_IN) {
+        } else if (events & MEDUSA_IO_EVENT_IN) {
                 char value;
                 int *read_length = (int *) context;
                 rc = read(medusa_io_get_fd(io), &value, sizeof(value));
@@ -122,7 +121,7 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
         rc = medusa_io_set_fd(io[0], sv[0]);
-        rc = medusa_io_set_events(io[0], MEDUSA_EVENT_OUT);
+        rc = medusa_io_set_events(io[0], MEDUSA_IO_EVENT_OUT);
         rc = medusa_io_set_callback(io[0], io_callback, &write_length);
         rc = medusa_io_set_enabled(io[0], 1);
         if (rc != 0) {
@@ -137,7 +136,7 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
         rc = medusa_io_set_fd(io[1], sv[1]);
-        rc = medusa_io_set_events(io[1], MEDUSA_EVENT_IN);
+        rc = medusa_io_set_events(io[1], MEDUSA_IO_EVENT_IN);
         rc = medusa_io_set_callback(io[1], io_callback, &read_length);
         rc = medusa_io_set_enabled(io[1], 1);
         if (rc != 0) {

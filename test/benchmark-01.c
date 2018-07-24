@@ -7,7 +7,6 @@
 #include <signal.h>
 
 #include "medusa/timer.h"
-#include "medusa/event.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {

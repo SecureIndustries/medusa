@@ -14,7 +14,6 @@
 
 #include "medusa/io.h"
 #include "medusa/timer.h"
-#include "medusa/event.h"
 #include "medusa/clock.h"
 #include "medusa/monitor.h"
 
@@ -63,7 +62,7 @@ static int io_callback (struct medusa_io *io, unsigned int events, void *context
         id = (uintptr_t) context;
         wid = id + 1;
 
-        if (events & MEDUSA_EVENT_IN) {
+        if (events & MEDUSA_IO_EVENT_IN) {
                 if (g_ntimers) {
                         rc = medusa_timer_set_interval(g_timers[id], 10 + drand48());
                         if (rc != 0) {
@@ -150,7 +149,7 @@ static int test_poll (unsigned int poll)
                                         rc = medusa_io_set_enabled(g_ios[i], 0);
                                 }
                                 rc |= medusa_io_set_fd(g_ios[i], g_pipes[i * 2]);
-                                rc |= medusa_io_set_events(g_ios[i], MEDUSA_EVENT_IN);
+                                rc |= medusa_io_set_events(g_ios[i], MEDUSA_IO_EVENT_IN);
                                 rc |= medusa_io_set_enabled(g_ios[i], 1);
                                 if (rc != 0) {
                                         goto bail;

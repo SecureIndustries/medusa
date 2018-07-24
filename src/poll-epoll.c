@@ -7,11 +7,10 @@
 
 #include <sys/epoll.h>
 
-#include "event.h"
 #include "time.h"
 #include "queue.h"
 #include "subject-struct.h"
-#include "timer-struct.h"
+#include "io.h"
 #include "io-struct.h"
 
 #include "poll-backend.h"
@@ -46,13 +45,13 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
                 goto bail;
         }
         ev.events = 0;
-        if (io->events & MEDUSA_EVENT_IN) {
+        if (io->events & MEDUSA_IO_EVENT_IN) {
                 ev.events |= EPOLLIN;
         }
-        if (io->events & MEDUSA_EVENT_OUT) {
+        if (io->events & MEDUSA_IO_EVENT_OUT) {
                 ev.events |= EPOLLOUT;
         }
-        if (io->events & MEDUSA_EVENT_PRI) {
+        if (io->events & MEDUSA_IO_EVENT_PRI) {
                 ev.events |= EPOLLPRI;
         }
         ev.data.ptr = io;
@@ -82,13 +81,13 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
                 goto bail;
         }
         ev.events = 0;
-        if (io->events & MEDUSA_EVENT_IN) {
+        if (io->events & MEDUSA_IO_EVENT_IN) {
                 ev.events |= EPOLLIN;
         }
-        if (io->events & MEDUSA_EVENT_OUT) {
+        if (io->events & MEDUSA_IO_EVENT_OUT) {
                 ev.events |= EPOLLOUT;
         }
-        if (io->events & MEDUSA_EVENT_PRI) {
+        if (io->events & MEDUSA_IO_EVENT_PRI) {
                 ev.events |= EPOLLPRI;
         }
         ev.data.ptr = io;
@@ -154,19 +153,19 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
                 io = (struct medusa_io *) ev->data.ptr;
                 events = 0;
                 if (ev->events & EPOLLIN) {
-                        events |= MEDUSA_EVENT_IN;
+                        events |= MEDUSA_IO_EVENT_IN;
                 }
                 if (ev->events & EPOLLOUT) {
-                        events |= MEDUSA_EVENT_OUT;
+                        events |= MEDUSA_IO_EVENT_OUT;
                 }
                 if (ev->events & EPOLLPRI) {
-                        events |= MEDUSA_EVENT_PRI;
+                        events |= MEDUSA_IO_EVENT_PRI;
                 }
                 if (ev->events & EPOLLHUP) {
-                        events |= MEDUSA_EVENT_HUP;
+                        events |= MEDUSA_IO_EVENT_HUP;
                 }
                 if (ev->events & EPOLLERR) {
-                        events |= MEDUSA_EVENT_ERR;
+                        events |= MEDUSA_IO_EVENT_ERR;
                 }
                 rc = io->subject.event(&io->subject, events);
                 if (rc != 0) {

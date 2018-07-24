@@ -6,11 +6,10 @@
 #include <poll.h>
 #include <errno.h>
 
-#include "event.h"
 #include "queue.h"
 #include "time.h"
 #include "subject-struct.h"
-#include "timer-struct.h"
+#include "io.h"
 #include "io-struct.h"
 
 #include "poll-backend.h"
@@ -73,13 +72,13 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         }
         pfd = &internal->pfds[internal->npfds];
         pfd->events = 0;
-        if (io->events & MEDUSA_EVENT_IN) {
+        if (io->events & MEDUSA_IO_EVENT_IN) {
                 pfd->events |= POLLIN;
         }
-        if (io->events & MEDUSA_EVENT_OUT) {
+        if (io->events & MEDUSA_IO_EVENT_OUT) {
                 pfd->events |= POLLOUT;
         }
-        if (io->events & MEDUSA_EVENT_PRI) {
+        if (io->events & MEDUSA_IO_EVENT_PRI) {
                 pfd->events |= POLLPRI;
         }
         pfd->fd = io->fd;
@@ -116,13 +115,13 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
         }
         pfd = &internal->pfds[i];
         pfd->events = 0;
-        if (io->events & MEDUSA_EVENT_IN) {
+        if (io->events & MEDUSA_IO_EVENT_IN) {
                 pfd->events |= POLLIN;
         }
-        if (io->events & MEDUSA_EVENT_OUT) {
+        if (io->events & MEDUSA_IO_EVENT_OUT) {
                 pfd->events |= POLLOUT;
         }
-        if (io->events & MEDUSA_EVENT_PRI) {
+        if (io->events & MEDUSA_IO_EVENT_PRI) {
                 pfd->events |= POLLPRI;
         }
         return 0;
@@ -190,22 +189,22 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
                 }
                 events = 0;
                 if (internal->pfds[i].revents & POLLIN) {
-                        events |= MEDUSA_EVENT_IN;
+                        events |= MEDUSA_IO_EVENT_IN;
                 }
                 if (internal->pfds[i].revents & POLLOUT) {
-                        events |= MEDUSA_EVENT_OUT;
+                        events |= MEDUSA_IO_EVENT_OUT;
                 }
                 if (internal->pfds[i].revents & POLLPRI) {
-                        events |= MEDUSA_EVENT_PRI;
+                        events |= MEDUSA_IO_EVENT_PRI;
                 }
                 if (internal->pfds[i].revents & POLLHUP) {
-                        events |= MEDUSA_EVENT_HUP;
+                        events |= MEDUSA_IO_EVENT_HUP;
                 }
                 if (internal->pfds[i].revents & POLLERR) {
-                        events |= MEDUSA_EVENT_ERR;
+                        events |= MEDUSA_IO_EVENT_ERR;
                 }
                 if (internal->pfds[i].revents & POLLNVAL) {
-                        events |= MEDUSA_EVENT_NVAL;
+                        events |= MEDUSA_IO_EVENT_NVAL;
                 }
                 io = internal->ios[internal->pfds[i].fd];
                 rc = io->subject.event(&io->subject, events);

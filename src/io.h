@@ -3,6 +3,24 @@ struct medusa_io;
 struct medusa_subject;
 struct medusa_monitor;
 
+enum {
+        MEDUSA_IO_EVENT_IN      = 0x00000001,
+        MEDUSA_IO_EVENT_OUT     = 0x00000002,
+        MEDUSA_IO_EVENT_PRI     = 0x00000004,
+        MEDUSA_IO_EVENT_ERR     = 0x00000008,
+        MEDUSA_IO_EVENT_HUP     = 0x00000010,
+        MEDUSA_IO_EVENT_EXCP    = (MEDUSA_IO_EVENT_ERR | MEDUSA_IO_EVENT_HUP),
+        MEDUSA_IO_EVENT_NVAL    = 0x00000020,
+        MEDUSA_IO_EVENT_DESTROY = 0x00000040
+#define MEDUSA_IO_EVENT_IN      MEDUSA_IO_EVENT_IN
+#define MEDUSA_IO_EVENT_OUT     MEDUSA_IO_EVENT_OUT
+#define MEDUSA_IO_EVENT_PRI     MEDUSA_IO_EVENT_PRI
+#define MEDUSA_IO_EVENT_ERR     MEDUSA_IO_EVENT_ERR
+#define MEDUSA_IO_EVENT_HUP     MEDUSA_IO_EVENT_HUP
+#define MEDUSA_IO_EVENT_NVAL    MEDUSA_IO_EVENT_NVAL
+#define MEDUSA_IO_EVENT_DESTROY MEDUSA_IO_EVENT_DESTROY
+};
+
 struct medusa_io * medusa_io_create (struct medusa_monitor *monitor);
 void medusa_io_destroy (struct medusa_io *io);
 

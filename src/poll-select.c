@@ -6,11 +6,10 @@
 #include <sys/select.h>
 #include <errno.h>
 
-#include "event.h"
 #include "queue.h"
 #include "time.h"
 #include "subject-struct.h"
-#include "timer-struct.h"
+#include "io.h"
 #include "io-struct.h"
 
 #include "poll-backend.h"
@@ -50,13 +49,13 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         FD_CLR(io->fd, &internal->rfds);
         FD_CLR(io->fd, &internal->wfds);
         FD_CLR(io->fd, &internal->efds);
-        if (io->events & MEDUSA_EVENT_IN) {
+        if (io->events & MEDUSA_IO_EVENT_IN) {
                 FD_SET(io->fd, &internal->rfds);
         }
-        if (io->events & MEDUSA_EVENT_OUT) {
+        if (io->events & MEDUSA_IO_EVENT_OUT) {
                 FD_SET(io->fd, &internal->wfds);
         }
-        if (io->events & MEDUSA_EVENT_PRI) {
+        if (io->events & MEDUSA_IO_EVENT_PRI) {
                 FD_SET(io->fd, &internal->rfds);
         }
         FD_SET(io->fd, &internal->efds);
@@ -86,13 +85,13 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
         FD_CLR(io->fd, &internal->rfds);
         FD_CLR(io->fd, &internal->wfds);
         FD_CLR(io->fd, &internal->efds);
-        if (io->events & MEDUSA_EVENT_IN) {
+        if (io->events & MEDUSA_IO_EVENT_IN) {
                 FD_SET(io->fd, &internal->rfds);
         }
-        if (io->events & MEDUSA_EVENT_OUT) {
+        if (io->events & MEDUSA_IO_EVENT_OUT) {
                 FD_SET(io->fd, &internal->wfds);
         }
-        if (io->events & MEDUSA_EVENT_PRI) {
+        if (io->events & MEDUSA_IO_EVENT_PRI) {
                 FD_SET(io->fd, &internal->rfds);
         }
         FD_SET(io->fd, &internal->efds);
@@ -156,13 +155,13 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
         for (i = 0; i < __FD_SETSIZE; i++) {
                 events = 0;
                 if (FD_ISSET(i, &internal->_rfds)) {
-                        events |= MEDUSA_EVENT_IN;
+                        events |= MEDUSA_IO_EVENT_IN;
                 }
                 if (FD_ISSET(i, &internal->_wfds)) {
-                        events |= MEDUSA_EVENT_OUT;
+                        events |= MEDUSA_IO_EVENT_OUT;
                 }
                 if (FD_ISSET(i, &internal->_efds)) {
-                        events |= MEDUSA_EVENT_ERR;
+                        events |= MEDUSA_IO_EVENT_ERR;
                 }
                 if (events == 0) {
                         continue;

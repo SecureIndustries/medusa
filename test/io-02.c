@@ -8,7 +8,6 @@
 #include <errno.h>
 
 #include "medusa/io.h"
-#include "medusa/event.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
@@ -28,7 +27,7 @@ static int io_callback (struct medusa_io *io, unsigned int events, void *context
         int rc;
         int count;
         (void) context;
-        if (events & MEDUSA_EVENT_IN) {
+        if (events & MEDUSA_IO_EVENT_IN) {
                 int *reads = context;
                 rc = read(medusa_io_get_fd(io), &count, sizeof(int));
                 if (rc != sizeof(int)) {
@@ -89,7 +88,7 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_set_events(io, MEDUSA_EVENT_IN);
+        rc = medusa_io_set_events(io, MEDUSA_IO_EVENT_IN);
         if (rc != 0) {
                 goto bail;
         }

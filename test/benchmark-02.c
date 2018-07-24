@@ -8,7 +8,6 @@
 
 #include "medusa/io.h"
 #include "medusa/timer.h"
-#include "medusa/event.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
@@ -69,7 +68,7 @@ static int test_poll (unsigned int poll, int *pipes, unsigned int count)
                 if (rc != 0) {
                         goto bail;
                 }
-                rc = medusa_io_set_events(io, MEDUSA_EVENT_IN);
+                rc = medusa_io_set_events(io, MEDUSA_IO_EVENT_IN);
                 if (rc != 0) {
                         goto bail;
                 }

@@ -19,7 +19,6 @@
 #include <netinet/tcp.h>
 #include <errno.h>
 
-#include <medusa/event.h>
 #include <medusa/io.h>
 #include <medusa/monitor.h>
 
@@ -812,11 +811,11 @@ static int client_io_callback (struct medusa_io *io, unsigned int events, void *
 {
         int rc;
         struct client *client = (struct client *) context;
-        if ((events & MEDUSA_EVENT_ERR) ||
-            (events & MEDUSA_EVENT_HUP) ||
-            (events & MEDUSA_EVENT_NVAL)) {
+        if ((events & MEDUSA_IO_EVENT_ERR) ||
+            (events & MEDUSA_IO_EVENT_HUP) ||
+            (events & MEDUSA_IO_EVENT_NVAL)) {
                 client->state = CLIENT_STATE_DISDONNECTING;
-        } else if (events & MEDUSA_EVENT_IN) {
+        } else if (events & MEDUSA_IO_EVENT_IN) {
                 ssize_t read_rc;
                 rc = buffer_resize(&client->incoming, client->incoming.length + 1024);
                 if (rc != 0) {
@@ -843,7 +842,7 @@ static int client_io_callback (struct medusa_io *io, unsigned int events, void *
                 } else {
                         client->incoming.length += read_rc;
                 }
-        } else if (events & MEDUSA_EVENT_OUT) {
+        } else if (events & MEDUSA_IO_EVENT_OUT) {
                 if (client->state == CLIENT_STATE_CONNECTING) {
                         rc = client_get_fd_error(client);
                         if (rc == 0) {
@@ -882,7 +881,7 @@ static int client_io_callback (struct medusa_io *io, unsigned int events, void *
                         client->state = CLIENT_STATE_REQUESTED;
                         goto bail;
                 }
-        } else if (events & MEDUSA_EVENT_DESTROY) {
+        } else if (events & MEDUSA_IO_EVENT_DESTROY) {
                 int fd;
                 fd = medusa_io_get_fd(io);
                 if (fd >= 0) {
@@ -1139,7 +1138,7 @@ int main (int argc, char *argv[])
                         if (client->state == CLIENT_STATE_CONNECTED) {
                                 debugf("client: %p, state: connected", client);
                                 client->state = CLIENT_STATE_REQUESTING;
-                                rc = medusa_io_set_events(client->io, MEDUSA_EVENT_OUT);
+                                rc = medusa_io_set_events(client->io, MEDUSA_IO_EVENT_OUT);
                                 if (rc != 0) {
                                         errorf("can not add client to monitor");
                                         goto bail;
@@ -1151,7 +1150,7 @@ int main (int argc, char *argv[])
                         if (client->state == CLIENT_STATE_REQUESTED) {
                                 debugf("client: %p, state: requested", client);
                                 client->state = CLIENT_STATE_PARSING;
-                                rc = medusa_io_set_events(client->io, MEDUSA_EVENT_IN);
+                                rc = medusa_io_set_events(client->io, MEDUSA_IO_EVENT_IN);
                                 if (rc != 0) {
                                         errorf("can not add client to monitor");
                                         goto bail;
@@ -1236,7 +1235,7 @@ int main (int argc, char *argv[])
                                                 options.requests -= 1;
                                                 client->state = CLIENT_STATE_REQUESTING;
                                                 client->connect_timestamp = clock_get();
-                                                rc = medusa_io_set_events(client->io, MEDUSA_EVENT_OUT);
+                                                rc = medusa_io_set_events(client->io, MEDUSA_IO_EVENT_OUT);
                                                 if (rc != 0) {
                                                         errorf("can not add client to monitor");
                                                         goto bail;
@@ -1252,7 +1251,7 @@ int main (int argc, char *argv[])
                                                         client->state = CLIENT_STATE_CONNECTING;
                                                         options.requests -= 1;
                                                         client->connect_timestamp = clock_get();
-                                                        rc = medusa_io_set_events(client->io, MEDUSA_EVENT_OUT);
+                                                        rc = medusa_io_set_events(client->io, MEDUSA_IO_EVENT_OUT);
                                                         rc = medusa_io_set_enabled(client->io, 1);
                                                         if (rc != 0) {
                                                                 errorf("can not add client to monitor");
