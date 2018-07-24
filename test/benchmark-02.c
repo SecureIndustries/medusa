@@ -30,7 +30,7 @@ static int io_onevent (struct medusa_io *io, unsigned int events, void *context)
         return 0;
 }
 
-static int timer_callback (struct medusa_timer *timer, unsigned int events, void *context)
+static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context)
 {
         (void) timer;
         (void) events;
@@ -73,7 +73,7 @@ static int test_poll (unsigned int poll, int *pipes, unsigned int count)
                         goto bail;
                 }
 
-                timer = medusa_timer_create(monitor, timer_callback, NULL);
+                timer = medusa_timer_create(monitor, timer_onevent, NULL);
                 if (timer == NULL) {
                         goto bail;
                 }
@@ -101,7 +101,7 @@ static int test_poll (unsigned int poll, int *pipes, unsigned int count)
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);
         }
-        return 01;
+        return -1;
 }
 
 static void alarm_handler (int sig)

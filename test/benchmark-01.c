@@ -78,7 +78,7 @@ static int test_poll (unsigned int poll, unsigned int count)
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);
         }
-        return 01;
+        return -1;
 }
 
 static void alarm_handler (int sig)

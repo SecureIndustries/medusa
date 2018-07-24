@@ -115,7 +115,7 @@ static int test_poll (unsigned int poll)
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);
         }
-        return 01;
+        return -1;
 }
 
 int main (int argc, char *argv[])

@@ -5,8 +5,7 @@
 #include <signal.h>
 #include <errno.h>
 
-#include "medusa/io.h"
-#include "medusa/timer.h"
+#include "medusa/tcpsocket.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
@@ -21,17 +20,9 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int io_onevent (struct medusa_io *io, unsigned int events, void *context)
+static int tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
 {
-        (void) io;
-        (void) events;
-        (void) context;
-        return 0;
-}
-
-static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context)
-{
-        (void) timer;
+        (void) tcpsocket;
         (void) events;
         (void) context;
         return 0;
@@ -44,8 +35,7 @@ static int test_poll (unsigned int poll)
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
-        struct medusa_io *io;
-        struct medusa_timer *timer;
+        struct medusa_tcpsocket *tcpsocket;
 
         monitor = NULL;
 
@@ -57,40 +47,23 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        io = medusa_io_create(monitor, STDIN_FILENO, io_onevent, NULL);
-        if (io == NULL) {
+        tcpsocket = medusa_tcpsocket_create(monitor, tcpsocket_onevent, NULL);
+        if (tcpsocket == NULL) {
                 goto bail;
         }
-        rc = medusa_io_set_events(io, MEDUSA_IO_EVENT_IN);
+        rc = medusa_tcpsocket_set_nonblocking(tcpsocket, 1);
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_set_enabled(io, 1);
+        rc = medusa_tcpsocket_set_reuseaddr(tcpsocket, 0);
         if (rc != 0) {
                 goto bail;
         }
-
-        timer = medusa_timer_create(monitor, timer_onevent, NULL);
-        if (timer == NULL) {
-                goto bail;
-        }
-        rc = medusa_timer_set_initial(timer, 1.0);
+        rc = medusa_tcpsocket_set_reuseport(tcpsocket, 1);
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_timer_set_interval(timer, 1.0);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_single_shot(timer, 1);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_resolution(timer, MEDUSA_TIMER_RESOLUTION_NANOSECOMDS);
-        if (rc != 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_enabled(timer, 1);
+        rc = medusa_tcpsocket_bind(tcpsocket, "0.0.0.0", 12345);
         if (rc != 0) {
                 goto bail;
         }

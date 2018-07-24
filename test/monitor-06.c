@@ -190,7 +190,7 @@ bail:   if (monitor != NULL) {
         if (sv[1] >= 0) {
                 close(sv[1]);
         }
-        return 01;
+        return -1;
 }
 
 static void alarm_handler (int sig)

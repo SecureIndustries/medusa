@@ -21,14 +21,14 @@ enum {
 
 enum {
         MEDUSA_TCPSOCKET_STATE_UNKNWON          = 0,
-        MEDUSA_TCPSOCKET_STATE_INITIAL          = 1,
+        MEDUSA_TCPSOCKET_STATE_DISCONNECTED     = 1,
         MEDUSA_TCPSOCKET_STATE_RESOLVING        = 1,
         MEDUSA_TCPSOCKET_STATE_CONNECTING       = 2,
         MEDUSA_TCPSOCKET_STATE_CONNECTED        = 3,
         MEDUSA_TCPSOCKET_STATE_LISTENING        = 4,
         MEDUSA_TCPSOCKET_STATE_CLOSING          = 5
 #define MEDUSA_TCPSOCKET_STATE_UNKNWON          MEDUSA_TCPSOCKET_STATE_UNKNWON
-#define MEDUSA_TCPSOCKET_STATE_INITIAL          MEDUSA_TCPSOCKET_STATE_INITIAL
+#define MEDUSA_TCPSOCKET_STATE_DISCONNECTED     MEDUSA_TCPSOCKET_STATE_DISCONNECTED
 #define MEDUSA_TCPSOCKET_STATE_RESOLVING        MEDUSA_TCPSOCKET_STATE_RESOLVING
 #define MEDUSA_TCPSOCKET_STATE_CONNECTING       MEDUSA_TCPSOCKET_STATE_CONNECTING
 #define MEDUSA_TCPSOCKET_STATE_CONNECTED        MEDUSA_TCPSOCKET_STATE_CONNECTED
@@ -50,8 +50,8 @@ int medusa_tcpsocket_get_reuseaddr (const struct medusa_tcpsocket *tcpsocket);
 int medusa_tcpsocket_set_reuseport (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_reuseport (const struct medusa_tcpsocket *tcpsocket);
 
-int medusa_tcpsocket_bind (struct medusa_tcpsocket *tcpsocket, const char *address, unsigned int port);
-int medusa_tcpsocket_connect (struct medusa_tcpsocket *tcpsocket, const char *address, unsigned int port);
+int medusa_tcpsocket_bind (struct medusa_tcpsocket *tcpsocket, const char *address, unsigned short port);
+int medusa_tcpsocket_connect (struct medusa_tcpsocket *tcpsocket, const char *address, unsigned short port);
 
 int medusa_tcpsocket_read (struct medusa_tcpsocket *tcpsocket, void *data, int size);
 int medusa_tcpsocket_write (struct medusa_tcpsocket *tcpsocket, const void *data, int size);
