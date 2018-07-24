@@ -22,7 +22,7 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int io_callback (struct medusa_io *io, unsigned int events, void *context)
+static int io_onevent (struct medusa_io *io, unsigned int events, void *context)
 {
         int rc;
         int count;
@@ -80,7 +80,7 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 goto bail;
         }
-        io = medusa_io_create(monitor, fds[0], io_callback, &reads);
+        io = medusa_io_create(monitor, fds[0], io_onevent, &reads);
         if (rc != 0) {
                 goto bail;
         }

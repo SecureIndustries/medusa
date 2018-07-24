@@ -174,7 +174,7 @@ static int g_debug_level = DEBUG_LEVEL_ERROR;
         } \
 }
 
-static int client_io_callback (struct medusa_io *io, unsigned int events, void *context);
+static int client_io_onevent (struct medusa_io *io, unsigned int events, void *context);
 
 static unsigned long clock_get (void)
 {
@@ -669,7 +669,7 @@ again:
                 rc = -EIO;
                 goto bail;
         }
-        client->io = medusa_io_create(monitor, fd, client_io_callback, client);
+        client->io = medusa_io_create(monitor, fd, client_io_onevent, client);
         if (client->io == NULL) {
                 errorf("can not create io");
                 rc = -EIO;
@@ -802,7 +802,7 @@ static int http_parser_on_header_value (http_parser *http_parser, const char *at
         return 0;
 }
 
-static int client_io_callback (struct medusa_io *io, unsigned int events, void *context)
+static int client_io_onevent (struct medusa_io *io, unsigned int events, void *context)
 {
         int rc;
         struct client *client = (struct client *) context;

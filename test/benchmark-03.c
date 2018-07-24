@@ -39,7 +39,7 @@ static unsigned int g_failures;
 
 static struct medusa_io **g_ios;
 
-static int io_callback (struct medusa_io *io, unsigned int events, void *context)
+static int io_onevent (struct medusa_io *io, unsigned int events, void *context)
 {
         uintptr_t id;
         unsigned int wid;
@@ -96,7 +96,7 @@ static int test_poll (unsigned int poll)
         }
 
         for (i = 0; i < g_npipes; i++) {
-                g_ios[i] = medusa_io_create(monitor, g_pipes[i * 2], io_callback, (void *) ((uintptr_t) i));
+                g_ios[i] = medusa_io_create(monitor, g_pipes[i * 2], io_onevent, (void *) ((uintptr_t) i));
                 if (g_ios[i] == NULL) {
                         goto bail;
                 }

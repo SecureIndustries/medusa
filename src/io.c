@@ -96,6 +96,9 @@ __attribute__ ((visibility ("default"))) void medusa_io_uninit (struct medusa_io
         if (io == NULL) {
                 return;
         }
+        if ((io->subject.flags & MEDUSA_SUBJECT_FLAG_IO) == 0) {
+             return;
+        }
         medusa_subject_del(&io->subject);
 }
 

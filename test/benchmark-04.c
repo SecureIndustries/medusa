@@ -43,7 +43,7 @@ static unsigned int g_failures;
 static struct medusa_io **g_ios;
 static struct medusa_timer **g_timers;
 
-static int timer_callback (struct medusa_timer *timer, unsigned int events, void *context)
+static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context)
 {
         (void) timer;
         (void) events;
@@ -51,7 +51,7 @@ static int timer_callback (struct medusa_timer *timer, unsigned int events, void
         return 0;
 }
 
-static int io_callback (struct medusa_io *io, unsigned int events, void *context)
+static int io_onevent (struct medusa_io *io, unsigned int events, void *context)
 {
         int rc;
         uintptr_t id;
@@ -121,13 +121,13 @@ static int test_poll (unsigned int poll)
                         goto bail;
                 }
                 for (i = 0; i < g_npipes; i++) {
-                        g_ios[i] = medusa_io_create(monitor, g_pipes[i * 2], io_callback, (void *) ((uintptr_t) i));
+                        g_ios[i] = medusa_io_create(monitor, g_pipes[i * 2], io_onevent, (void *) ((uintptr_t) i));
                         if (g_ios[i] == NULL) {
                                 goto bail;
                         }
 
                         if (g_ntimers) {
-                                g_timers[i] = medusa_timer_create(monitor, timer_callback, (void *) ((uintptr_t) i));
+                                g_timers[i] = medusa_timer_create(monitor, timer_onevent, (void *) ((uintptr_t) i));
                                 if (g_timers[i] == NULL) {
                                         goto bail;
                                 }

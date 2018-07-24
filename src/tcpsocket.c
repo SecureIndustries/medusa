@@ -10,6 +10,8 @@
 
 struct medusa_tcpsocket {
         struct medusa_io io;
+        int fd;
+        unsigned int state;
 };
 
 struct medusa_tcpsocket * medusa_tcpsocket_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context), void *context)

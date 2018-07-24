@@ -67,6 +67,12 @@ static void timer_destroy (struct medusa_timer *timer)
 
 __attribute__ ((visibility ("default"))) void medusa_timer_uninit (struct medusa_timer *timer)
 {
+        if (timer == NULL) {
+                return;
+        }
+        if ((timer->subject.flags & MEDUSA_SUBJECT_FLAG_TIMER) == 0) {
+             return;
+        }
         medusa_subject_del(&timer->subject);
 }
 

@@ -25,7 +25,7 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int io_callback (struct medusa_io *io, unsigned int events, void *context)
+static int io_onevent (struct medusa_io *io, unsigned int events, void *context)
 {
         int rc;
         if (io == NULL) {
@@ -115,7 +115,7 @@ static int test_poll (unsigned int poll)
 
         fprintf(stderr, "pair: %d, %d\n", sv[0], sv[1]);
 
-        io[0] = medusa_io_create(monitor, sv[0], io_callback, &write_length);
+        io[0] = medusa_io_create(monitor, sv[0], io_onevent, &write_length);
         if (io[0] == NULL) {
                 fprintf(stderr, "can not create io\n");
                 goto bail;
@@ -128,7 +128,7 @@ static int test_poll (unsigned int poll)
         }
         fprintf(stderr, "  io: %p\n", io[0]);
 
-        io[1] = medusa_io_create(monitor, sv[1], io_callback, &read_length);
+        io[1] = medusa_io_create(monitor, sv[1], io_onevent, &read_length);
         if (io[1] == NULL) {
                 fprintf(stderr, "can not create io\n");
                 goto bail;

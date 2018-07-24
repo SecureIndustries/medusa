@@ -81,7 +81,7 @@ static int fd_set_blocking (int fd, int on)
         return 0;
 }
 
-static int monitor_break_io_callback (struct medusa_io *io, unsigned int events, void *context)
+static int monitor_break_io_onevent (struct medusa_io *io, unsigned int events, void *context)
 {
         int rc;
         unsigned int reason;
@@ -103,7 +103,7 @@ static int monitor_break_io_callback (struct medusa_io *io, unsigned int events,
 bail:   return -1;
 }
 
-static int monitor_timer_io_callback (struct medusa_io *io, unsigned int events, void *context)
+static int monitor_timer_io_onevent (struct medusa_io *io, unsigned int events, void *context)
 {
         (void) context;
         if (events & MEDUSA_IO_EVENT_IN) {
@@ -527,7 +527,7 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         if (rc != 0) {
                 goto bail;
         }
-        io = medusa_io_create(monitor, monitor->wakeup_fds[0], monitor_break_io_callback, NULL);
+        io = medusa_io_create(monitor, monitor->wakeup_fds[0], monitor_break_io_onevent, NULL);
         if (rc != 0) {
                 goto bail;
         }
@@ -539,7 +539,7 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         if (rc != 0) {
                 goto bail;
         }
-        io = medusa_io_create(monitor, monitor->timer.backend->fd(monitor->timer.backend), monitor_timer_io_callback, NULL);
+        io = medusa_io_create(monitor, monitor->timer.backend->fd(monitor->timer.backend), monitor_timer_io_onevent, NULL);
         if (rc != 0) {
                 goto bail;
         }
