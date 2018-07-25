@@ -290,10 +290,8 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind (struct medus
         if (tcpsocket->state != MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
                 return -1;
         }
-        rc = medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BINDING);
-        if (rc != 0) {
-                goto bail;
-        }
+        tcpsocket->state = MEDUSA_TCPSOCKET_STATE_BINDING;
+        medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BINDING);
         if (protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV4) {
 ipv4:
                 sockaddr_in.sin_family = AF_INET;
@@ -356,11 +354,25 @@ ipv6:
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BOUND);
-        if (rc < 0) {
+        tcpsocket->state = MEDUSA_TCPSOCKET_STATE_BOUND;
+        medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BOUND);
+        if (tcpsocket->flags & MEDUSA_TCPSOCKET_FLAG_BACKLOG) {
+                rc = listen(tcpsocket->io.fd, tcpsocket->backlog);
+                if (rc != 0) {
+                        goto bail;
+                }
+        }
+        tcpsocket->state = MEDUSA_TCPSOCKET_STATE_LISTENING;
+        medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_LISTENING);
+        rc = medusa_io_set_events(&tcpsocket->io, MEDUSA_IO_EVENT_IN);
+        if (rc != 0) {
                 goto bail;
         }
-        return 0;
+        rc = medusa_io_set_enabled(&tcpsocket->io, 1);
+        if (rc != 0) {
+                goto bail;
+        }
+        return medusa_monitor_mod(&tcpsocket->io.subject);
 bail:   medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BIND_ERROR);
         return -1;
 }
@@ -422,10 +434,17 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect (struct me
                 if (inet_ntop(res->ai_family, ptr, str, sizeof(str)) == NULL) {
                         continue;
                 }
+                if (tcpsocket->io.fd >= 0) {
+                        close(tcpsocket->io.fd);
+                }
+                tcpsocket->io.fd = socket(res->ai_family, SOCK_STREAM, 0);
+                if (tcpsocket->io.fd < 0) {
+                        goto bail;
+                }
                 rc = connect(tcpsocket->io.fd, res->ai_addr, res->ai_addrlen);
                 if (rc != 0) {
                         if (errno != EINPROGRESS &&
-                            errno != -EALREADY) {
+                            errno != EALREADY) {
                                 continue;
                         } else {
                                 rc = -errno;
@@ -440,7 +459,11 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect (struct me
                 goto bail;
         }
         freeaddrinfo(result);
-        return 0;
+        rc = medusa_io_set_enabled(&tcpsocket->io, 1);
+        if (rc != 0) {
+                goto bail;
+        }
+        return medusa_monitor_mod(&tcpsocket->io.subject);
 bail:   if (result != NULL) {
                 freeaddrinfo(result);
         }

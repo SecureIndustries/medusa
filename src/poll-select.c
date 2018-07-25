@@ -168,7 +168,7 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
                 }
                 io = internal->ios[i];
                 rc = medusa_io_onevent(io, events);
-                if (rc != 0) {
+                if (rc < 0) {
                         goto bail;
                 }
         }
