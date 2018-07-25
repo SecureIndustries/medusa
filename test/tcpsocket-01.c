@@ -63,8 +63,9 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_tcpsocket_bind(tcpsocket, "0.0.0.0", 12345);
+        rc = medusa_tcpsocket_bind(tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, "127.0.0.1", 12345);
         if (rc != 0) {
+                fprintf(stderr, "  medusa_tcpsocket_bind failed\n");
                 goto bail;
         }
 
@@ -83,8 +84,10 @@ int main (int argc, char *argv[])
         (void) argc;
         (void) argv;
         for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
+                fprintf(stderr, "testing poll: %d\n", g_polls[i]);
                 rc = test_poll(g_polls[i]);
                 if (rc != 0) {
+                        fprintf(stderr, "  failed\n");
                         return -1;
                 }
         }

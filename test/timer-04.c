@@ -110,6 +110,7 @@ int main (int argc, char *argv[])
 
                 rc = test_poll(g_polls[i]);
                 if (rc != 0) {
+                        fprintf(stderr, "  failed\n");
                         return -1;
                 }
         }

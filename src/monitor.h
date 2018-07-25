@@ -1,5 +1,4 @@
 
-struct medusa_subject;
 struct medusa_monitor;
 
 enum {

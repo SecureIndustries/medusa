@@ -8,30 +8,24 @@
 #include "pool.h"
 #include "queue.h"
 #include "time.h"
-#include "subject.h"
 #include "monitor.h"
+#include "monitor-private.h"
 #include "subject-struct.h"
 #include "timer-struct.h"
 
 #include "timer.h"
 
+#define MEDUSA_TIMER_USE_POOL   1
+#if defined(MEDUSA_TIMER_USE_POOL) && (MEDUSA_TIMER_USE_POOL == 1)
 static struct pool *g_pool;
+#endif
 
-static int timer_subject_event (struct medusa_subject *subject, unsigned int events)
-{
-        struct medusa_timer *timer = (struct medusa_timer *) subject;
-        return timer->onevent(timer, events, timer->context);
-}
-
-static int timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, void (*destroy) (struct medusa_timer *timer), int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
+__attribute__ ((visibility ("default"))) int medusa_timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
 {
         if (monitor == NULL) {
                 return -1;
         }
         if (timer == NULL) {
-                return -1;
-        }
-        if (destroy == NULL) {
                 return -1;
         }
         if (onevent == NULL) {
@@ -43,26 +37,9 @@ static int timer_init (struct medusa_monitor *monitor, struct medusa_timer *time
         timer->flags |= MEDUSA_TIMER_FLAG_MILLISECONDS;
         medusa_timespec_clear(&timer->initial);
         medusa_timespec_clear(&timer->interval);
-        timer->subject.event = timer_subject_event;
-        timer->subject.destroy = (void (*) (struct medusa_subject *)) destroy;
         timer->subject.flags = MEDUSA_SUBJECT_FLAG_TIMER;
         timer->subject.monitor = NULL;
-        return medusa_subject_add(monitor, &timer->subject);
-}
-
-static void timer_uninit (struct medusa_timer *timer)
-{
-        memset(timer, 0, sizeof(struct medusa_timer));
-}
-
-static void timer_destroy (struct medusa_timer *timer)
-{
-        timer_uninit(timer);
-#if 1
-        pool_free(timer);
-#else
-        free(timer);
-#endif
+        return medusa_monitor_add(monitor, &timer->subject);
 }
 
 __attribute__ ((visibility ("default"))) void medusa_timer_uninit (struct medusa_timer *timer)
@@ -73,22 +50,11 @@ __attribute__ ((visibility ("default"))) void medusa_timer_uninit (struct medusa
         if ((timer->subject.flags & MEDUSA_SUBJECT_FLAG_TIMER) == 0) {
              return;
         }
-        medusa_subject_del(&timer->subject);
-}
-
-__attribute__ ((visibility ("default"))) int medusa_timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
-{
-        if (monitor == NULL) {
-                goto bail;
+        if (timer->subject.monitor != NULL) {
+                medusa_monitor_del(&timer->subject);
+        } else {
+                medusa_timer_onevent(timer, MEDUSA_TIMER_EVENT_DESTROY);
         }
-        if (timer == NULL) {
-                goto bail;
-        }
-        if (onevent == NULL) {
-                goto bail;
-        }
-        return timer_init(monitor, timer, timer_uninit, onevent, context);
-bail:   return -1;
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
@@ -102,7 +68,7 @@ __attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_crea
         if (onevent == NULL) {
                 goto bail;
         }
-#if 1
+#if defined(MEDUSA_TIMER_USE_POOL) && (MEDUSA_TIMER_USE_POOL == 1)
         timer = pool_malloc(g_pool);
 #else
         timer = malloc(sizeof(struct medusa_timer));
@@ -110,10 +76,11 @@ __attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_crea
         if (timer == NULL) {
                 goto bail;
         }
-        rc = timer_init(monitor, timer, timer_destroy, onevent, context);
+        rc = medusa_timer_init(monitor, timer, onevent, context);
         if (rc != 0) {
                 goto bail;
         }
+        timer->subject.flags |= MEDUSA_SUBJECT_FLAG_ALLOC;
         return timer;
 bail:   if (timer != NULL) {
                 medusa_timer_destroy(timer);
@@ -123,14 +90,14 @@ bail:   if (timer != NULL) {
 
 __attribute__ ((visibility ("default"))) void medusa_timer_destroy (struct medusa_timer *timer)
 {
-        medusa_subject_del(&timer->subject);
+        medusa_timer_uninit(timer);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_initial (struct medusa_timer *timer, double initial)
 {
         timer->initial.tv_sec = (long long) initial;
         timer->initial.tv_nsec = (long long) ((initial - timer->initial.tv_sec) * 1e9);
-        return medusa_subject_mod(&timer->subject);
+        return medusa_monitor_mod(&timer->subject);
 }
 
 __attribute__ ((visibility ("default"))) double medusa_timer_get_initial (const struct medusa_timer *timer)
@@ -142,7 +109,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_set_interval (struct m
 {
         timer->interval.tv_sec = (long long) interval;
         timer->interval.tv_nsec = (long long) ((interval - timer->interval.tv_sec) * 1e9);
-        return medusa_subject_mod(&timer->subject);
+        return medusa_monitor_mod(&timer->subject);
 }
 
 __attribute__ ((visibility ("default"))) double medusa_timer_get_interval (const struct medusa_timer *timer)
@@ -166,7 +133,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_set_single_shot (struc
         } else {
                 timer->flags &= ~MEDUSA_TIMER_FLAG_SINGLE_SHOT;
         }
-        return medusa_subject_mod(&timer->subject);
+        return medusa_monitor_mod(&timer->subject);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_timer_get_single_shot (const struct medusa_timer *timer)
@@ -191,7 +158,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_set_resolution (struct
         } else {
                 timer->flags |= MEDUSA_TIMER_FLAG_MILLISECONDS;
         }
-        return medusa_subject_mod(&timer->subject);
+        return medusa_monitor_mod(&timer->subject);
 }
 
 __attribute__ ((visibility ("default"))) unsigned int medusa_timer_get_resolution (const struct medusa_timer *timer)
@@ -220,7 +187,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_set_enabled (struct me
         } else {
                 timer->flags &= ~MEDUSA_TIMER_FLAG_ENABLED;
         }
-        return medusa_subject_mod(&timer->subject);
+        return medusa_monitor_mod(&timer->subject);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_timer_get_enabled (const struct medusa_timer *timer)
@@ -236,6 +203,28 @@ __attribute__ ((visibility ("default"))) int medusa_timer_start (struct medusa_t
 __attribute__ ((visibility ("default"))) int medusa_timer_stop (struct medusa_timer *timer)
 {
         return medusa_timer_set_enabled(timer, 0);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_onevent (struct medusa_timer *timer, unsigned int events)
+{
+        int rc;
+        rc = 0;
+        if (timer->onevent != NULL) {
+                rc = timer->onevent(timer, events, timer->context);
+        }
+        if ((rc != 1) &&
+            (events & MEDUSA_TIMER_EVENT_DESTROY)) {
+                if (timer->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
+#if defined(MEDUSA_TIMER_USE_POOL) && (MEDUSA_TIMER_USE_POOL == 1)
+                        pool_free(timer);
+#else
+                        free(timer);
+#endif
+                } else {
+                        memset(timer, 0, sizeof(struct medusa_timer));
+                }
+        }
+        return rc;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_timer_is_valid (const struct medusa_timer *timer)
@@ -257,12 +246,16 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_timer_ge
 
 __attribute__ ((constructor)) static void timer_constructor (void)
 {
+#if defined(MEDUSA_TIMER_USE_POOL) && (MEDUSA_TIMER_USE_POOL == 1)
         g_pool = pool_create("medusa-timer", sizeof(struct medusa_timer), 0, 0, POOL_FLAG_DEFAULT, NULL, NULL, NULL);
+#endif
 }
 
 __attribute__ ((destructor)) static void timer_destructor (void)
 {
+#if defined(MEDUSA_TIMER_USE_POOL) && (MEDUSA_TIMER_USE_POOL == 1)
         if (g_pool != NULL) {
                 pool_destroy(g_pool);
         }
+#endif
 }

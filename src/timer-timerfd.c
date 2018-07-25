@@ -9,7 +9,6 @@
 #include <sys/timerfd.h>
 
 #include "time.h"
-#include "subject.h"
 #include "timer-backend.h"
 
 #include "timer-timerfd.h"
