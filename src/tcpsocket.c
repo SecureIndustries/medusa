@@ -47,6 +47,9 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
         struct medusa_tcpsocket *tcpsocket = (struct medusa_tcpsocket *) io;
         (void) context;
         es = 0;
+        if (events & MEDUSA_IO_EVENT_IN) {
+                es |= MEDUSA_TCPSOCKET_EVENT_READ;
+        }
         if (events & MEDUSA_IO_EVENT_DESTROY) {
                 es |= MEDUSA_TCPSOCKET_EVENT_DESTROY;
         }
@@ -344,9 +347,7 @@ ipv6:
                 }
                 goto bail;
         }
-        if (tcpsocket->io.fd < 0) {
-                tcpsocket->io.fd = socket(sockaddr->sa_family, SOCK_STREAM, 0);
-        }
+        tcpsocket->io.fd = socket(sockaddr->sa_family, SOCK_STREAM, 0);
         if (tcpsocket->io.fd < 0) {
                 goto bail;
         }
@@ -362,8 +363,6 @@ ipv6:
                         goto bail;
                 }
         }
-        tcpsocket->state = MEDUSA_TCPSOCKET_STATE_LISTENING;
-        medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_LISTENING);
         rc = medusa_io_set_events(&tcpsocket->io, MEDUSA_IO_EVENT_IN);
         if (rc != 0) {
                 goto bail;
@@ -372,8 +371,14 @@ ipv6:
         if (rc != 0) {
                 goto bail;
         }
+        tcpsocket->state = MEDUSA_TCPSOCKET_STATE_LISTENING;
+        medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_LISTENING);
         return medusa_monitor_mod(&tcpsocket->io.subject);
-bail:   medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BIND_ERROR);
+bail:   if (tcpsocket->io.fd >= 0) {
+                close(tcpsocket->io.fd);
+                tcpsocket->io.fd = -1;
+        }
+        tcpsocket->state = MEDUSA_TCPSOCKET_STATE_DISCONNECTED;
         return -1;
 }
 
@@ -396,6 +401,8 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect (struct me
         if (tcpsocket->state != MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
                 goto bail;
         }
+        tcpsocket->state = MEDUSA_TCPSOCKET_STATE_RESOLVING;
+        medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_RESOLVING);
         memset(&hints, 0, sizeof(struct addrinfo));
         if (protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV4) {
                 hints.ai_family = AF_INET;
@@ -411,6 +418,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect (struct me
         if (rc != 0) {
                 goto bail;
         }
+        medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_RESOLVED);
+        tcpsocket->state = MEDUSA_TCPSOCKET_STATE_CONNECTING;
+        medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTING);
         rc = -1;
         for (res = result; res; res = res->ai_next) {
                 void *ptr;
@@ -459,6 +469,10 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect (struct me
                 goto bail;
         }
         freeaddrinfo(result);
+        if (rc == 0) {
+                tcpsocket->state = MEDUSA_TCPSOCKET_STATE_CONNECTED;
+                medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTED);
+        }
         rc = medusa_io_set_enabled(&tcpsocket->io, 1);
         if (rc != 0) {
                 goto bail;
@@ -468,6 +482,67 @@ bail:   if (result != NULL) {
                 freeaddrinfo(result);
         }
         return -1;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_accept_init (struct medusa_tcpsocket *tcpsocket, struct medusa_tcpsocket *accepted, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context), void *context)
+{
+        int fd;
+        int rc;
+        if (tcpsocket == NULL) {
+                return -1;
+        }
+        if (accepted == NULL) {
+                return -1;
+        }
+        if (onevent == NULL) {
+                return -1;
+        }
+        fd = accept(tcpsocket->io.fd, NULL, NULL);
+        if (fd < 0) {
+                return -1;
+        }
+        rc = medusa_tcpsocket_init(medusa_tcpsocket_get_monitor(tcpsocket), accepted, onevent, context);
+        if (rc < 0) {
+                close(fd);
+                return -1;
+        }
+        accepted->io.fd = fd;
+        return medusa_monitor_mod(&tcpsocket->io.subject);
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context), void *context)
+{
+        int fd;
+        int rc;
+        struct medusa_tcpsocket *accepted;
+        if (tcpsocket == NULL) {
+                return NULL;
+        }
+        if (onevent == NULL) {
+                return NULL;
+        }
+        fd = accept(tcpsocket->io.fd, NULL, NULL);
+        if (fd < 0) {
+                return NULL;
+        }
+        accepted = medusa_tcpsocket_create(medusa_tcpsocket_get_monitor(tcpsocket), onevent, context);
+        if (accepted == NULL) {
+                close(fd);
+                return NULL;
+        }
+        accepted->io.fd = fd;
+        rc = medusa_io_set_enabled(&accepted->io, 1);
+        if (rc != 0) {
+                medusa_tcpsocket_destroy(accepted);
+                return NULL;
+        }
+        rc = medusa_monitor_mod(&accepted->io.subject);
+        if (rc != 0) {
+                medusa_tcpsocket_destroy(accepted);
+                return NULL;
+        }
+        medusa_tcpsocket_onevent(accepted, MEDUSA_TCPSOCKET_EVENT_CONNECTED);
+        return accepted;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_read (struct medusa_tcpsocket *tcpsocket, void *data, int size)
@@ -508,6 +583,14 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent (struct me
                 }
         }
         return (rc < 0) ? rc : 0;
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_tcpsocket_get_monitor (struct medusa_tcpsocket *tcpsocket)
+{
+        if (tcpsocket == NULL) {
+                return NULL;
+        }
+        return tcpsocket->io.subject.monitor;
 }
 
 __attribute__ ((constructor)) static void tcpsocket_constructor (void)

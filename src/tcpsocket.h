@@ -14,7 +14,6 @@ enum {
 enum {
         MEDUSA_TCPSOCKET_EVENT_BINDING          = 0x00000001,
         MEDUSA_TCPSOCKET_EVENT_BOUND            = 0x00000002,
-        MEDUSA_TCPSOCKET_EVENT_BIND_ERROR       = 0x00000004,
         MEDUSA_TCPSOCKET_EVENT_LISTENING        = 0x00000008,
         MEDUSA_TCPSOCKET_EVENT_RESOLVING        = 0x00000010,
         MEDUSA_TCPSOCKET_EVENT_RESOLVED         = 0x00000020,
@@ -25,7 +24,6 @@ enum {
         MEDUSA_TCPSOCKET_EVENT_DESTROY          = 0x00000400
 #define MEDUSA_TCPSOCKET_EVENT_BINDING          MEDUSA_TCPSOCKET_EVENT_BINDING
 #define MEDUSA_TCPSOCKET_EVENT_BOUND            MEDUSA_TCPSOCKET_EVENT_BOUND
-#define MEDUSA_TCPSOCKET_EVENT_BIND_ERROR       MEDUSA_TCPSOCKET_EVENT_BIND_ERROR
 #define MEDUSA_TCPSOCKET_EVENT_LISTENING        MEDUSA_TCPSOCKET_EVENT_LISTENING
 #define MEDUSA_TCPSOCKET_EVENT_RESOLVING        MEDUSA_TCPSOCKET_EVENT_RESOLVING
 #define MEDUSA_TCPSOCKET_EVENT_RESOLVED         MEDUSA_TCPSOCKET_EVENT_RESOLVED
@@ -78,8 +76,10 @@ int medusa_tcpsocket_get_backlog (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_bind (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
 int medusa_tcpsocket_connect (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
+struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context), void *context);
 
 int medusa_tcpsocket_read (struct medusa_tcpsocket *tcpsocket, void *data, int size);
 int medusa_tcpsocket_write (struct medusa_tcpsocket *tcpsocket, const void *data, int size);
 
 int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events);
+struct medusa_monitor * medusa_tcpsocket_get_monitor (struct medusa_tcpsocket *tcpsocket);

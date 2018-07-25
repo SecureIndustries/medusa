@@ -22,24 +22,57 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int tcpsocket_bind_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
-{
-        (void) tcpsocket;
-        (void) events;
-        (void) context;
-        fprintf(stderr, "bind    events: 0x%08x\n", events);
-        if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
-                return medusa_monitor_break(medusa_tcpsocket_get_monitor(tcpsocket));
-        }
-        return 0;
-}
-
-static int tcpsocket_connect_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
+static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
 {
         (void) tcpsocket;
         (void) events;
         (void) context;
         fprintf(stderr, "connect events: 0x%08x\n", events);
+        if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
+                unsigned int *connected = context;
+                *connected = *connected | 1;
+                if (*connected == (1 | 2)) {
+                        return medusa_monitor_break(medusa_tcpsocket_get_monitor(tcpsocket));
+                }
+        }
+        return 0;
+}
+
+static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
+{
+        (void) tcpsocket;
+        (void) events;
+        (void) context;
+        fprintf(stderr, "server  events: 0x%08x\n", events);
+        if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
+                unsigned int *connected = context;
+                *connected = *connected | 2;
+                if (*connected == (1 | 2)) {
+                        return medusa_monitor_break(medusa_tcpsocket_get_monitor(tcpsocket));
+                }
+        }
+        return 0;
+}
+
+
+static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
+{
+        int rc;
+        struct medusa_tcpsocket *accepted;
+        (void) tcpsocket;
+        (void) events;
+        (void) context;
+        fprintf(stderr, "bind    events: 0x%08x\n", events);
+        if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
+                accepted = medusa_tcpsocket_accept(tcpsocket, tcpsocket_server_onevent, context);
+                if (accepted == NULL) {
+                        return -1;
+                }
+                rc = medusa_tcpsocket_set_nonblocking(accepted, 1);
+                if (rc != 0) {
+                        return -1;
+                }
+        }
         return 0;
 }
 
@@ -50,9 +83,12 @@ static int test_poll (unsigned int poll)
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
+        unsigned short port;
+        unsigned int connected;
         struct medusa_tcpsocket *tcpsocket;
 
         monitor = NULL;
+        connected = 0;
 
         medusa_monitor_init_options_default(&options);
         options.poll.type = poll;
@@ -62,7 +98,7 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        tcpsocket = medusa_tcpsocket_create(monitor, tcpsocket_bind_onevent, NULL);
+        tcpsocket = medusa_tcpsocket_create(monitor, tcpsocket_listener_onevent, &connected);
         if (tcpsocket == NULL) {
                 goto bail;
         }
@@ -82,13 +118,20 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_tcpsocket_bind(tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, "127.0.0.1", 12345);
-        if (rc != 0) {
+        for (port = 12345; port < 65535; port++) {
+                rc = medusa_tcpsocket_bind(tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, "127.0.0.1", port);
+                if (rc == 0) {
+                        break;
+                }
+        }
+        if (port >= 65535) {
                 fprintf(stderr, "  medusa_tcpsocket_bind failed\n");
                 goto bail;
         }
 
-        tcpsocket = medusa_tcpsocket_create(monitor, tcpsocket_connect_onevent, NULL);
+        fprintf(stderr, "port: %d\n", port);
+
+        tcpsocket = medusa_tcpsocket_create(monitor, tcpsocket_client_onevent, &connected);
         if (tcpsocket == NULL) {
                 goto bail;
         }
@@ -96,7 +139,7 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_tcpsocket_connect(tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, "127.0.0.1", 12345);
+        rc = medusa_tcpsocket_connect(tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, "127.0.0.1", port);
         if (rc != 0) {
                 fprintf(stderr, "  medusa_tcpsocket_connect failed\n");
                 goto bail;
@@ -116,7 +159,13 @@ bail:   if (monitor != NULL) {
         return -1;
 }
 
-static void alarm_handler (int sig)
+static void sigalarm_handler (int sig)
+{
+        (void) sig;
+        abort();
+}
+
+static void sigint_handler (int sig)
 {
         (void) sig;
         abort();
@@ -131,7 +180,8 @@ int main (int argc, char *argv[])
         (void) argv;
 
         srand(time(NULL));
-        signal(SIGALRM, alarm_handler);
+        signal(SIGALRM, sigalarm_handler);
+        signal(SIGINT, sigint_handler);
 
         for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
                 alarm(5);
