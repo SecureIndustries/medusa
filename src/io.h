@@ -26,6 +26,8 @@ void medusa_io_destroy (struct medusa_io *io);
 int medusa_io_get_fd (const struct medusa_io *io);
 
 int medusa_io_set_events (struct medusa_io *io, unsigned int events);
+int medusa_io_add_events (struct medusa_io *io, unsigned int events);
+int medusa_io_del_events (struct medusa_io *io, unsigned int events);
 unsigned int medusa_io_get_events (const struct medusa_io *io);
 
 int medusa_io_set_enabled (struct medusa_io *io, int enabled);

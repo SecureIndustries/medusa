@@ -3,8 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "../src/pool.h"
-#include "../src/pool.c"
+#include "medusa/pool.h"
 
 static void contructor (void *ptr, void *context)
 {
@@ -28,7 +27,7 @@ int main (int argc, char *argv[])
         unsigned int align;
         unsigned int count;
 
-        struct pool *pool;
+        struct medusa_pool *pool;
         void **ptrs;
 
         (void) argc;
@@ -50,7 +49,7 @@ int main (int argc, char *argv[])
         allocs = rand() % 100000;
         fprintf(stderr, "allocs: %d\n", allocs);
 
-        pool = pool_create("pool", size, align, count, POOL_FLAG_DEFAULT, contructor, destructor, NULL);
+        pool = medusa_pool_create("pool", size, align, count, MEDUSA_POOL_FLAG_DEFAULT, contructor, destructor, NULL);
         if (pool == NULL) {
                 return -1;
         }
@@ -61,13 +60,13 @@ int main (int argc, char *argv[])
         }
 
         for (i = 0; i < allocs; i++) {
-                ptrs[i] = pool_malloc(pool);
+                ptrs[i] = medusa_pool_malloc(pool);
         }
         for (i = 0; i < allocs; i++) {
-                pool_free(ptrs[i]);
+                medusa_pool_free(ptrs[i]);
         }
 
-        pool_destroy(pool);
+        medusa_pool_destroy(pool);
 
         free(ptrs);
         return 0;

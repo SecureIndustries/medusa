@@ -5,6 +5,8 @@ struct medusa_tcpsocket {
         unsigned int state;
         int backlog;
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context);
+        struct medusa_buffer rbuffer;
+        struct medusa_buffer wbuffer;
 };
 
 int medusa_tcpsocket_init (struct medusa_monitor *monitor, struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context), void *context);

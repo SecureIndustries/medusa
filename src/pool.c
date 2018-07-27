@@ -15,14 +15,14 @@ struct entry {
 
 TAILQ_HEAD(blocks, block);
 struct block {
-        struct pool *pool;
+        struct medusa_pool *pool;
         TAILQ_ENTRY(block) list;
         struct entries free;
         unsigned int nused;
         unsigned char data[0];
 };
 
-struct pool {
+struct medusa_pool {
         char *name;
         struct blocks free;
         struct blocks half;
@@ -67,7 +67,7 @@ static void block_destroy (struct block *block)
         free(block);
 }
 
-static struct block * block_create (struct pool *pool)
+static struct block * block_create (struct medusa_pool *pool)
 {
         unsigned int i;
         struct entry *entry;
@@ -94,7 +94,7 @@ bail:   if (block != NULL) {
         return NULL;
 }
 
-struct pool * pool_create (
+__attribute__ ((visibility ("default"))) struct medusa_pool * medusa_pool_create (
                 const char *name,
                 unsigned int size,
                 unsigned int align,
@@ -104,18 +104,18 @@ struct pool * pool_create (
                 void (*destructor) (void *ptr, void *context),
                 void *context)
 {
-        struct pool *pool;
+        struct medusa_pool *pool;
         if (align == 0) {
                 align = 16;
         }
         if (count == 0) {
                 count = 1;
         }
-        pool = malloc(sizeof(struct pool));
+        pool = malloc(sizeof(struct medusa_pool));
         if (pool == NULL) {
                 goto bail;
         }
-        memset(pool, 0, sizeof(struct pool));
+        memset(pool, 0, sizeof(struct medusa_pool));
         TAILQ_INIT(&pool->free);
         TAILQ_INIT(&pool->half);
         TAILQ_INIT(&pool->full);
@@ -129,9 +129,9 @@ struct pool * pool_create (
         pool->size = (pool->size + align - 1) & ~(align - 1);
         pool->count = count;
         pool->flags = flags;
-        if (pool->flags == POOL_FLAG_DEFAULT) {
+        if (pool->flags == MEDUSA_POOL_FLAG_DEFAULT) {
                 pool->flags  = 0;
-                pool->flags |= POOL_FLAG_RESERVE_HEURISTIC;
+                pool->flags |= MEDUSA_POOL_FLAG_RESERVE_HEURISTIC;
         }
         pool->constructor = constructor;
         pool->destructor = destructor;
@@ -140,12 +140,12 @@ struct pool * pool_create (
         pool->block_count = aligncount(pool->size, pool->count, sizeof(struct block), pool->page_size);
         return pool;
 bail:   if (pool != NULL) {
-                pool_destroy(pool);
+                medusa_pool_destroy(pool);
         }
         return NULL;
 }
 
-void pool_destroy (struct pool *pool)
+__attribute__ ((visibility ("default"))) void medusa_pool_destroy (struct medusa_pool *pool)
 {
         struct block *block;
         struct block *nblock;
@@ -170,7 +170,7 @@ void pool_destroy (struct pool *pool)
         free(pool);
 }
 
-void * pool_malloc (struct pool *pool)
+__attribute__ ((visibility ("default"))) void * medusa_pool_malloc (struct medusa_pool *pool)
 {
         struct entry *entry;
         struct block *block;
@@ -213,9 +213,9 @@ void * pool_malloc (struct pool *pool)
 bail:   return NULL;
 }
 
-void pool_free (void *ptr)
+__attribute__ ((visibility ("default"))) void medusa_pool_free (void *ptr)
 {
-        struct pool *pool;
+        struct medusa_pool *pool;
         struct block *block;
         struct entry *entry;
         if (ptr == NULL) {
@@ -233,15 +233,15 @@ void pool_free (void *ptr)
         block->nused -= 1;
         pool->entry_used -= 1;
         if (block->nused == 0) {
-                if (pool->flags & POOL_FLAG_RESERVE_NONE) {
+                if (pool->flags & MEDUSA_POOL_FLAG_RESERVE_NONE) {
                         block_destroy(block);
-                } else if (pool->flags & POOL_FLAG_RESERVE_SINGLE) {
+                } else if (pool->flags & MEDUSA_POOL_FLAG_RESERVE_SINGLE) {
                         if (TAILQ_EMPTY(&pool->free)) {
                                 TAILQ_INSERT_HEAD(&pool->free, block, list);
                         } else {
                                 block_destroy(block);
                         }
-                } else if (pool->flags & POOL_FLAG_RESERVE_HEURISTIC) {
+                } else if (pool->flags & MEDUSA_POOL_FLAG_RESERVE_HEURISTIC) {
                         TAILQ_INSERT_HEAD(&pool->free, block, list);
                         if (pool->entry_used_average == 0) {
                                 pool->entry_used_average = pool->entry_used;

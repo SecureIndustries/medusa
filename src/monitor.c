@@ -371,7 +371,7 @@ static int medusa_monitor_signal (struct medusa_monitor *monitor, unsigned int r
 bail:   return -1;
 }
 
-int medusa_monitor_add (struct medusa_monitor *monitor, struct medusa_subject *subject)
+__attribute__ ((visibility ("default"))) int medusa_monitor_add (struct medusa_monitor *monitor, struct medusa_subject *subject)
 {
         if (monitor == NULL) {
                 goto bail;
@@ -389,7 +389,7 @@ int medusa_monitor_add (struct medusa_monitor *monitor, struct medusa_subject *s
 bail:   return -1;
 }
 
-int medusa_monitor_mod (struct medusa_subject *subject)
+__attribute__ ((visibility ("default"))) int medusa_monitor_mod (struct medusa_subject *subject)
 {
         if (subject == NULL) {
                 goto bail;
@@ -412,7 +412,7 @@ int medusa_monitor_mod (struct medusa_subject *subject)
 bail:   return -1;
 }
 
-int medusa_monitor_del (struct medusa_subject *subject)
+__attribute__ ((visibility ("default"))) int medusa_monitor_del (struct medusa_subject *subject)
 {
         if (subject == NULL) {
                 goto bail;

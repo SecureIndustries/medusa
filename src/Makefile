@@ -20,6 +20,7 @@ libmedusa-monitor.a_cflags-y = \
 libmedusa-monitor.a_files-y = \
 	clock.c \
 	pool.c \
+	buffer.c \
 	pqueue.c \
 	io.c \
 	timer.c \
@@ -74,6 +75,8 @@ dist.base = medusa
 dist.include-y = \
 	monitor.h \
 	clock.h \
+	pool.h \
+	buffer.h \
 	io.h \
 	timer.h \
 	tcpsocket.h
