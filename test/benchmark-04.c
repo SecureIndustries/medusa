@@ -134,7 +134,7 @@ static int test_poll (unsigned int poll)
                         }
                 }
                 rc = medusa_monitor_run_timeout(monitor, 0.0);
-                if (rc != 0) {
+                if (rc < 0) {
                         goto bail;
                 }
                 gettimeofday(&create_finish, NULL);
@@ -146,7 +146,7 @@ static int test_poll (unsigned int poll)
                                 if (medusa_io_get_enabled(g_ios[i])) {
                                         rc = medusa_io_set_enabled(g_ios[i], 0);
                                 }
-                                rc |= medusa_io_set_events(g_ios[i], MEDUSA_IO_EVENT_IN);
+                                rc  = medusa_io_set_events(g_ios[i], MEDUSA_IO_EVENT_IN);
                                 rc |= medusa_io_set_enabled(g_ios[i], 1);
                                 if (rc != 0) {
                                         goto bail;
@@ -164,7 +164,7 @@ static int test_poll (unsigned int poll)
                                 }
                         }
                         rc = medusa_monitor_run_timeout(monitor, 0.0);
-                        if (rc != 0) {
+                        if (rc < 0) {
                                 goto bail;
                         }
                         gettimeofday(&apply_finish, NULL);
@@ -183,7 +183,7 @@ static int test_poll (unsigned int poll)
                         gettimeofday(&run_start, NULL);
                         do {
                                 rc = medusa_monitor_run_timeout(monitor, 0.0);
-                                if (rc != 0) {
+                                if (rc < 0) {
                                         goto bail;
                                 }
                         } while (g_count != g_fired);

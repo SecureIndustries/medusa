@@ -69,7 +69,7 @@ static int test_poll (unsigned int poll, unsigned int count)
         }
 
         rc = medusa_monitor_run_timeout(monitor, 0.0);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
 

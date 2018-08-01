@@ -82,14 +82,17 @@ static int test_poll (unsigned int poll)
         }
         io = medusa_io_create(monitor, fds[0], io_onevent, &reads);
         if (io == NULL) {
+                fprintf(stderr, "medusa_io_create failed\n");
                 goto bail;
         }
         rc = medusa_io_set_events(io, MEDUSA_IO_EVENT_IN);
         if (rc != 0) {
+                fprintf(stderr, "medusa_io_set_events failed\n");
                 goto bail;
         }
         rc = medusa_io_set_enabled(io, 1);
         if (rc != 0) {
+                fprintf(stderr, "medusa_io_set_enabled failed\n");
                 goto bail;
         }
 
@@ -102,7 +105,8 @@ static int test_poll (unsigned int poll)
                         writes += 1;
                 }
                 rc = medusa_monitor_run_timeout(monitor, 1.0);
-                if (rc != 0) {
+                if (rc < 0) {
+                        fprintf(stderr, "medusa_monitor_run_timeout failed\n");
                         goto bail;
                 }
                 if (reads == count) {
