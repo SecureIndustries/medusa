@@ -58,5 +58,7 @@ int medusa_monitor_run (struct medusa_monitor *monitor);
 int medusa_monitor_run_once (struct medusa_monitor *monitor);
 int medusa_monitor_run_timeout (struct medusa_monitor *monitor, double timeout);
 
+int medusa_monitor_get_running (struct medusa_monitor *monitor);
+
 int medusa_monitor_break (struct medusa_monitor *monitor);
 int medusa_monitor_continue (struct medusa_monitor *monitor);

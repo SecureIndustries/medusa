@@ -185,7 +185,7 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
                 }
                 internal->events = tmp;
         }
-out:    return 0;
+out:    return count;
 bail:   return -1;
 }
 

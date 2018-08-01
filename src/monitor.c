@@ -620,6 +620,13 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
         free(monitor);
 }
 
+__attribute__ ((visibility ("default"))) int medusa_monitor_get_running (struct medusa_monitor *monitor)
+{
+        if (monitor == NULL) {
+                return -1;
+        }
+        return monitor->running;
+}
 
 __attribute__ ((visibility ("default"))) int medusa_monitor_break (struct medusa_monitor *monitor)
 {
@@ -652,7 +659,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_once (struct med
                 goto bail;
         }
         rc = monitor->poll.backend->run(monitor->poll.backend, NULL);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         rc = medusa_monitor_check_timer(monitor);
@@ -667,6 +674,7 @@ bail:   return -1;
 __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct medusa_monitor *monitor, double timeout)
 {
         int rc;
+        int count;
         struct timespec timespec;
 
         if (monitor == NULL) {
@@ -688,8 +696,8 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
         if (rc != 0) {
                 goto bail;
         }
-        rc = monitor->poll.backend->run(monitor->poll.backend, &timespec);
-        if (rc != 0) {
+        count = monitor->poll.backend->run(monitor->poll.backend, &timespec);
+        if (count < 0) {
                 goto bail;
         }
         rc = medusa_monitor_check_timer(monitor);
@@ -697,7 +705,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
                 goto bail;
         }
 
-        return 0;
+        return count;
 bail:   return -1;
 }
 
@@ -723,7 +731,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run (struct medusa_m
                         goto bail;
                 }
                 rc = monitor->poll.backend->run(monitor->poll.backend, NULL);
-                if (rc != 0) {
+                if (rc < 0) {
                         goto bail;
                 }
                 rc = medusa_monitor_check_timer(monitor);
