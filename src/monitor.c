@@ -414,6 +414,7 @@ bail:   return -1;
 
 __attribute__ ((visibility ("default"))) int medusa_monitor_del (struct medusa_subject *subject)
 {
+        int rc;
         if (subject == NULL) {
                 goto bail;
         }
@@ -433,6 +434,10 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_del (struct medusa_s
                 TAILQ_INSERT_TAIL(&subject->monitor->deletes, subject, subjects);
         }
         subject->flags |= MEDUSA_SUBJECT_FLAG_DEL;
+        rc = medusa_monitor_process_deletes(subject->monitor);
+        if (rc != 0) {
+                goto bail;
+        }
         return 0;
 bail:   return -1;
 }
