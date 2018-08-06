@@ -70,6 +70,9 @@ void medusa_tcpsocket_destroy (struct medusa_tcpsocket *tcpsocket);
 
 unsigned int medusa_tcpspcket_get_state (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_set_enabled (struct medusa_tcpsocket *tcpsocket, int enabled);
+int medusa_tcpsocket_get_enabled (const struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_set_nonblocking (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_nonblocking (const struct medusa_tcpsocket *tcpsocket);
 

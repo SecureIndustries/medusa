@@ -27,7 +27,6 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         int rc;
         char c;
         (void) tcpsocket;
-        (void) events;
         (void) context;
         fprintf(stderr, "connect events: 0x%08x\n", events);
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
@@ -59,7 +58,6 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         int rc;
         char c;
         (void) tcpsocket;
-        (void) events;
         (void) context;
         fprintf(stderr, "server  events: 0x%08x\n", events);
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
