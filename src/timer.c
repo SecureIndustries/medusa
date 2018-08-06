@@ -100,6 +100,20 @@ __attribute__ ((visibility ("default"))) int medusa_timer_set_initial (struct me
         return medusa_monitor_mod(&timer->subject);
 }
 
+__attribute__ ((visibility ("default"))) int medusa_timer_set_initial_timeval (struct medusa_timer *timer, const struct timeval *timeval)
+{
+        timer->initial.tv_sec = timeval->tv_sec;
+        timer->initial.tv_nsec = timeval->tv_usec * 1e3;
+        return medusa_monitor_mod(&timer->subject);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_set_initial_timespec (struct medusa_timer *timer, const struct timespec *timespec)
+{
+        timer->initial.tv_sec = timespec->tv_sec;
+        timer->initial.tv_nsec = timespec->tv_nsec;
+        return medusa_monitor_mod(&timer->subject);
+}
+
 __attribute__ ((visibility ("default"))) double medusa_timer_get_initial (const struct medusa_timer *timer)
 {
         return timer->initial.tv_sec + timer->initial.tv_nsec * 1e-9;
@@ -109,6 +123,20 @@ __attribute__ ((visibility ("default"))) int medusa_timer_set_interval (struct m
 {
         timer->interval.tv_sec = (long long) interval;
         timer->interval.tv_nsec = (long long) ((interval - timer->interval.tv_sec) * 1e9);
+        return medusa_monitor_mod(&timer->subject);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_set_interval_timeval (struct medusa_timer *timer, const struct timeval *timeval)
+{
+        timer->interval.tv_sec = timeval->tv_sec;
+        timer->interval.tv_nsec = timeval->tv_usec * 1e3;
+        return medusa_monitor_mod(&timer->subject);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_set_interval_timespec (struct medusa_timer *timer, const struct timespec *timespec)
+{
+        timer->interval.tv_sec = timespec->tv_sec;
+        timer->interval.tv_nsec = timespec->tv_nsec;
         return medusa_monitor_mod(&timer->subject);
 }
 
