@@ -35,7 +35,7 @@ static int timer_onevent (struct medusa_timer *timer, unsigned int events, void 
                         fprintf(stderr, "set interval\n");
                         medusa_timer_set_interval(timer, 0.01);
                         fprintf(stderr, "set active\n");
-                        medusa_timer_start(timer);
+                        medusa_timer_set_enabled(timer, 1);
                 }
                 *count = *count + 1;
         }
@@ -71,7 +71,7 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_timer_start(timer);
+        rc = medusa_timer_set_enabled(timer, 1);
         if (rc != 0) {
                 goto bail;
         }
