@@ -216,6 +216,17 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
         struct medusa_tcpsocket *accepted;
         levents = (unsigned int *) context;
         fprintf(stderr, "listener events: 0x%08x\n", events);
+        if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
+                if (*levents & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
+                        fprintf(stderr, "  invalid events\n");
+                        return -1;
+                }
+                *levents = 0;
+                if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+                        fprintf(stderr, "  invalid state\n");
+                        return -1;
+                }
+        }
         if (events & MEDUSA_TCPSOCKET_EVENT_BINDING) {
                 if (*levents & MEDUSA_TCPSOCKET_EVENT_BINDING) {
                         fprintf(stderr, "  invalid events\n");

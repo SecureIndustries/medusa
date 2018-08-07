@@ -35,6 +35,7 @@ static int test_poll (unsigned int poll)
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
+        int port;
         struct medusa_tcpsocket *tcpsocket;
 
         monitor = NULL;
@@ -63,11 +64,17 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_tcpsocket_bind(tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, "127.0.0.1", 12345);
-        if (rc != 0) {
-                fprintf(stderr, "  medusa_tcpsocket_bind failed\n");
+        for (port = 12345; port < 65535; port++) {
+                rc = medusa_tcpsocket_bind(tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, "127.0.0.1", port);
+                if (rc == 0) {
+                        break;
+                }
+        }
+        if (port >= 65535) {
+                fprintf(stderr, "medusa_tcpsocket_bind failed\n");
                 goto bail;
         }
+        fprintf(stderr, "port: %d\n", port);
         rc = medusa_tcpsocket_set_enabled(tcpsocket, 1);
         if (rc != 0) {
                 goto bail;
