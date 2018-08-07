@@ -344,6 +344,14 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_backlog (const
         return 0;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_fd (const struct medusa_tcpsocket *tcpsocket)
+{
+        if (tcpsocket == NULL) {
+                return -1;
+        }
+        return tcpsocket->io.fd;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port)
 {
         int rc;

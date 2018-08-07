@@ -85,6 +85,8 @@ int medusa_tcpsocket_get_reuseport (const struct medusa_tcpsocket *tcpsocket);
 int medusa_tcpsocket_set_backlog (struct medusa_tcpsocket *tcpsocket, int backlog);
 int medusa_tcpsocket_get_backlog (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_get_fd (const struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_bind (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
 int medusa_tcpsocket_connect (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
 struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context), void *context);
