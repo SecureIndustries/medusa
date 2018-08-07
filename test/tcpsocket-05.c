@@ -191,12 +191,18 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
                         return -1;
                 }
         }
-        if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
-                *levents |= MEDUSA_TCPSOCKET_EVENT_LISTENING;
+        if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
+                if (*levents & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
+                        fprintf(stderr, "  invalid events\n");
+                        return -1;
+                }
+                *levents |= MEDUSA_TCPSOCKET_EVENT_CONNECTION;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_LISTENING) {
                         fprintf(stderr, "  invalid state\n");
                         return -1;
                 }
+        }
+        if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
                 accepted = medusa_tcpsocket_accept(tcpsocket, tcpsocket_server_onevent, context);
                 if (accepted == NULL) {
                         return -1;
@@ -297,6 +303,7 @@ static int test_poll (unsigned int poll)
         if (levents != (MEDUSA_TCPSOCKET_EVENT_BINDING |
                         MEDUSA_TCPSOCKET_EVENT_BOUND |
                         MEDUSA_TCPSOCKET_EVENT_LISTENING |
+                        MEDUSA_TCPSOCKET_EVENT_CONNECTION |
                         MEDUSA_TCPSOCKET_EVENT_READ |
                         MEDUSA_TCPSOCKET_EVENT_CONNECTED)) {
                 fprintf(stderr, "listener events: 0x%08x is invalid\n", levents);
@@ -310,6 +317,7 @@ static int test_poll (unsigned int poll)
                 fprintf(stderr, "client   events: 0x%08x invalid\n", cevents & ~(MEDUSA_TCPSOCKET_EVENT_RESOLVING | MEDUSA_TCPSOCKET_EVENT_RESOLVED | MEDUSA_TCPSOCKET_EVENT_CONNECTING | MEDUSA_TCPSOCKET_EVENT_CONNECTED));
                 goto bail;
         }
+
         medusa_monitor_destroy(monitor);
         return 0;
 bail:   if (monitor != NULL) {

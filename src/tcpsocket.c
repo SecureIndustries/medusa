@@ -81,6 +81,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
         }
         if (events & MEDUSA_IO_EVENT_IN) {
                 if (tcpsocket->state == MEDUSA_TCPSOCKET_STATE_LISTENING) {
+                        es |= MEDUSA_TCPSOCKET_EVENT_CONNECTION;
                 } else if (tcpsocket->state == MEDUSA_TCPSOCKET_STATE_CONNECTED) {
                         rc = medusa_buffer_grow(&tcpsocket->rbuffer, 4096);
                         if (rc != 0) {
@@ -98,12 +99,10 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                         if (rc != 0) {
                                 return -1;
                         }
+                        es |= MEDUSA_TCPSOCKET_EVENT_READ;
                 } else {
                         return -1;
                 }
-        }
-        if (events & MEDUSA_IO_EVENT_IN) {
-                es |= MEDUSA_TCPSOCKET_EVENT_READ;
         }
         if (events & MEDUSA_IO_EVENT_DESTROY) {
                 es |= MEDUSA_TCPSOCKET_EVENT_DESTROY;

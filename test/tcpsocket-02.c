@@ -28,7 +28,7 @@ static int tcpsocket_bind_onevent (struct medusa_tcpsocket *tcpsocket, unsigned 
         (void) events;
         (void) context;
         fprintf(stderr, "bind    events: 0x%08x\n", events);
-        if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
+        if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
                 return medusa_monitor_break(medusa_tcpsocket_get_monitor(tcpsocket));
         }
         return 0;

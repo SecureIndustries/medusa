@@ -109,7 +109,7 @@ static int test_poll (unsigned int poll)
                 return -1;
         }
 
-        if (timer_count > timer_set_count * 2) {
+        if (timer_count > timer_set_count * 3) {
                 fprintf(stderr, "error\n");
                 goto bail;
         }

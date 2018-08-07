@@ -63,7 +63,7 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
         (void) events;
         (void) context;
         fprintf(stderr, "bind    events: 0x%08x\n", events);
-        if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
+        if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
                 accepted = medusa_tcpsocket_accept(tcpsocket, tcpsocket_server_onevent, context);
                 if (accepted == NULL) {
                         return -1;
