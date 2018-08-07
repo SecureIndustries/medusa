@@ -68,6 +68,10 @@ static int test_poll (unsigned int poll)
                 fprintf(stderr, "  medusa_tcpsocket_bind failed\n");
                 goto bail;
         }
+        rc = medusa_tcpsocket_set_enabled(tcpsocket, 1);
+        if (rc != 0) {
+                goto bail;
+        }
 
         medusa_monitor_destroy(monitor);
         return 0;

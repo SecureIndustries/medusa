@@ -87,6 +87,10 @@ static int test_poll (unsigned int poll)
                 fprintf(stderr, "  medusa_tcpsocket_bind failed\n");
                 goto bail;
         }
+        rc = medusa_tcpsocket_set_enabled(tcpsocket, 1);
+        if (rc != 0) {
+                goto bail;
+        }
 
         tcpsocket = medusa_tcpsocket_create(monitor, tcpsocket_connect_onevent, NULL);
         if (tcpsocket == NULL) {
@@ -99,6 +103,10 @@ static int test_poll (unsigned int poll)
         rc = medusa_tcpsocket_connect(tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, "127.0.0.1", 12345);
         if (rc != 0) {
                 fprintf(stderr, "  medusa_tcpsocket_connect failed\n");
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_enabled(tcpsocket, 1);
+        if (rc != 0) {
                 goto bail;
         }
 

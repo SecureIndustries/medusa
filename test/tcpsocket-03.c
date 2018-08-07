@@ -72,6 +72,10 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
                 if (rc != 0) {
                         return -1;
                 }
+                rc = medusa_tcpsocket_set_enabled(accepted, 1);
+                if (rc != 0) {
+                        return -1;
+                }
         }
         return 0;
 }
@@ -100,6 +104,10 @@ static int test_poll (unsigned int poll)
 
         tcpsocket = medusa_tcpsocket_create(monitor, tcpsocket_listener_onevent, &connected);
         if (tcpsocket == NULL) {
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_enabled(tcpsocket, 1);
+        if (rc != 0) {
                 goto bail;
         }
         rc = medusa_tcpsocket_set_nonblocking(tcpsocket, 1);
@@ -133,6 +141,10 @@ static int test_poll (unsigned int poll)
 
         tcpsocket = medusa_tcpsocket_create(monitor, tcpsocket_client_onevent, &connected);
         if (tcpsocket == NULL) {
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_enabled(tcpsocket, 1);
+        if (rc != 0) {
                 goto bail;
         }
         rc = medusa_tcpsocket_set_nonblocking(tcpsocket, 1);
