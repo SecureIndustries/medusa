@@ -74,6 +74,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                 }
                 length = medusa_buffer_length(&tcpsocket->wbuffer);
                 if (length <= 0) {
+                        es |= MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED;
                         rc = medusa_io_del_events(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
                         if (rc != 0) {
                                 return -1;

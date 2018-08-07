@@ -95,6 +95,17 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                         return -1;
                 }
         }
+        if (events & MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED) {
+                if (*cevents & MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED) {
+                        fprintf(stderr, "  invalid events\n");
+                        return -1;
+                }
+                *cevents |= MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED;
+                if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTED) {
+                        fprintf(stderr, "  invalid state\n");
+                        return -1;
+                }
+        }
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 fprintf(stderr, "write\n");
                 rc = medusa_tcpsocket_write(tcpsocket, "e", 1);
@@ -152,6 +163,17 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                         return -1;
                 }
                 *levents |= MEDUSA_TCPSOCKET_EVENT_WRITTEN;
+                if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTED) {
+                        fprintf(stderr, "  invalid state\n");
+                        return -1;
+                }
+        }
+        if (events & MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED) {
+                if (*levents & MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED) {
+                        fprintf(stderr, "  invalid events\n");
+                        return -1;
+                }
+                *levents |= MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTED) {
                         fprintf(stderr, "  invalid state\n");
                         return -1;
@@ -328,6 +350,7 @@ static int test_poll (unsigned int poll)
                         MEDUSA_TCPSOCKET_EVENT_CONNECTION |
                         MEDUSA_TCPSOCKET_EVENT_READ |
                         MEDUSA_TCPSOCKET_EVENT_WRITTEN |
+                        MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED |
                         MEDUSA_TCPSOCKET_EVENT_CONNECTED)) {
                 fprintf(stderr, "listener events: 0x%08x is invalid\n", levents);
                 goto bail;
@@ -337,7 +360,8 @@ static int test_poll (unsigned int poll)
                         MEDUSA_TCPSOCKET_EVENT_CONNECTING |
                         MEDUSA_TCPSOCKET_EVENT_CONNECTED |
                         MEDUSA_TCPSOCKET_EVENT_READ |
-                        MEDUSA_TCPSOCKET_EVENT_WRITTEN)) {
+                        MEDUSA_TCPSOCKET_EVENT_WRITTEN |
+                        MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED)) {
                 fprintf(stderr, "client   events: 0x%08x invalid\n", cevents & ~(MEDUSA_TCPSOCKET_EVENT_RESOLVING | MEDUSA_TCPSOCKET_EVENT_RESOLVED | MEDUSA_TCPSOCKET_EVENT_CONNECTING | MEDUSA_TCPSOCKET_EVENT_CONNECTED));
                 goto bail;
         }
