@@ -38,7 +38,7 @@ tests: all
 		printf "  $${T} ... "; \
 		./$${T} 2>/dev/null 1>/dev/null; \
 		if [ $$? != 0 ]; then \
-			echo "fail"; \
+			echo "fail (rc: $$?)"; \
 		else \
 			echo "success"; \
 		fi \
