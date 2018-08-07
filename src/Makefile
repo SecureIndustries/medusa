@@ -80,6 +80,10 @@ libmedusa-socket.so_files-y = \
 libmedusa-socket.so_ldflags-y = \
 	-lmedusa-monitor
 
+libmedusa-socket.so_depends-y = \
+	libmedusa-monitor.a \
+	libmedusa-monitor.so
+
 libmedusa-http.a_cflags-y = \
 	-fvisibility=hidden
 
@@ -98,6 +102,13 @@ libmedusa-http.so_includes-y = \
 
 libmedusa-http.so_files-y = \
 	${libmedusa-http.a_files-y}
+
+libmedusa-http.so_ldflags-y = \
+	-lmedusa-socket
+
+libmedusa-http.so_depends-y = \
+	libmedusa-socket.a \
+	libmedusa-socket.so
 
 dist.dir = ../dist
 dist.base = medusa

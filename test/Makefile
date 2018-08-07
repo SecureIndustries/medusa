@@ -24,7 +24,7 @@ define test-defaults
 		-Wl,-Bdynamic \
 		-lpthread
 
-	1_depends-y = \
+	$1_depends-y = \
 		../dist/lib/libmedusa-socket.a \
 		../dist/lib/libmedusa-monitor.a
 endef
