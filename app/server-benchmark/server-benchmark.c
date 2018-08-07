@@ -19,6 +19,7 @@
 #include <netinet/tcp.h>
 #include <errno.h>
 
+#include <medusa/error.h>
 #include <medusa/io.h>
 #include <medusa/monitor.h>
 
@@ -670,7 +671,7 @@ again:
                 goto bail;
         }
         client->io = medusa_io_create(monitor, fd, client_io_onevent, client);
-        if (client->io == NULL) {
+        if (MEDUSA_IS_ERR_OR_NULL(client->io)) {
                 errorf("can not create io");
                 rc = -EIO;
                 goto bail;
@@ -1134,7 +1135,7 @@ int main (int argc, char *argv[])
                                 debugf("client: %p, state: connected", client);
                                 client->state = CLIENT_STATE_REQUESTING;
                                 rc = medusa_io_set_events(client->io, MEDUSA_IO_EVENT_OUT);
-                                if (rc != 0) {
+                                if (rc < 0) {
                                         errorf("can not add client to monitor");
                                         goto bail;
                                 }
@@ -1146,7 +1147,7 @@ int main (int argc, char *argv[])
                                 debugf("client: %p, state: requested", client);
                                 client->state = CLIENT_STATE_PARSING;
                                 rc = medusa_io_set_events(client->io, MEDUSA_IO_EVENT_IN);
-                                if (rc != 0) {
+                                if (rc < 0) {
                                         errorf("can not add client to monitor");
                                         goto bail;
                                 }
@@ -1231,7 +1232,7 @@ int main (int argc, char *argv[])
                                                 client->state = CLIENT_STATE_REQUESTING;
                                                 client->connect_timestamp = clock_get();
                                                 rc = medusa_io_set_events(client->io, MEDUSA_IO_EVENT_OUT);
-                                                if (rc != 0) {
+                                                if (rc < 0) {
                                                         errorf("can not add client to monitor");
                                                         goto bail;
                                                 }
@@ -1246,9 +1247,9 @@ int main (int argc, char *argv[])
                                                         client->state = CLIENT_STATE_CONNECTING;
                                                         options.requests -= 1;
                                                         client->connect_timestamp = clock_get();
-                                                        rc = medusa_io_set_events(client->io, MEDUSA_IO_EVENT_OUT);
-                                                        rc = medusa_io_set_enabled(client->io, 1);
-                                                        if (rc != 0) {
+                                                        rc  = medusa_io_set_events(client->io, MEDUSA_IO_EVENT_OUT);
+                                                        rc |= medusa_io_set_enabled(client->io, 1);
+                                                        if (rc < 0) {
                                                                 errorf("can not add client to monitor");
                                                                 goto bail;
                                                         }

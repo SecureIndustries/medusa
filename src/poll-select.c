@@ -10,6 +10,7 @@
 #include "time.h"
 #include "subject-struct.h"
 #include "io.h"
+#include "io-private.h"
 #include "io-struct.h"
 
 #include "poll-backend.h"

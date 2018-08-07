@@ -87,7 +87,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                         if (length <= 0) {
                                 es |= MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED;
                                 rc = medusa_io_del_events(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
-                                if (rc != 0) {
+                                if (rc < 0) {
                                         goto bail;
                                 }
                         }
@@ -112,7 +112,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                 if (errno == ECONNRESET) {
                                         tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
                                         rc = medusa_io_set_enabled(&tcpsocket->io, 0);
-                                        if (rc != 0) {
+                                        if (rc < 0) {
                                                 goto bail;
                                         }
                                         es |= MEDUSA_TCPSOCKET_EVENT_DISCONNECTED;
@@ -122,7 +122,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                         } else if (rc == 0) {
                                 tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
                                 rc = medusa_io_set_enabled(&tcpsocket->io, 0);
-                                if (rc != 0) {
+                                if (rc < 0) {
                                         goto bail;
                                 }
                                 es |= MEDUSA_TCPSOCKET_EVENT_DISCONNECTED;
@@ -484,7 +484,7 @@ ipv6:
                 }
         }
         rc = medusa_io_set_events(&tcpsocket->io, MEDUSA_IO_EVENT_IN);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_LISTENING);
@@ -733,7 +733,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_write (struct medu
                 return -1;
         }
         rc = medusa_io_add_events(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
-        if (rc != 0) {
+        if (rc < 0) {
                 return -1;
         }
         return size;

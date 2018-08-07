@@ -3,6 +3,7 @@ struct medusa_io;
 struct medusa_monitor;
 
 enum {
+        MEDUSA_IO_EVENT_NONE    = 0x00000000,
         MEDUSA_IO_EVENT_IN      = 0x00000001,
         MEDUSA_IO_EVENT_OUT     = 0x00000002,
         MEDUSA_IO_EVENT_PRI     = 0x00000004,
@@ -11,6 +12,7 @@ enum {
         MEDUSA_IO_EVENT_EXCP    = (MEDUSA_IO_EVENT_ERR | MEDUSA_IO_EVENT_HUP),
         MEDUSA_IO_EVENT_NVAL    = 0x00000020,
         MEDUSA_IO_EVENT_DESTROY = 0x00000040
+#define MEDUSA_IO_EVENT_NONE    MEDUSA_IO_EVENT_NONE
 #define MEDUSA_IO_EVENT_IN      MEDUSA_IO_EVENT_IN
 #define MEDUSA_IO_EVENT_OUT     MEDUSA_IO_EVENT_OUT
 #define MEDUSA_IO_EVENT_PRI     MEDUSA_IO_EVENT_PRI
@@ -33,6 +35,4 @@ unsigned int medusa_io_get_events (const struct medusa_io *io);
 int medusa_io_set_enabled (struct medusa_io *io, int enabled);
 int medusa_io_get_enabled (const struct medusa_io *io);
 
-int medusa_io_onevent (struct medusa_io *io, unsigned int events);
-int medusa_io_is_valid (const struct medusa_io *io);
 struct medusa_monitor * medusa_io_get_monitor (struct medusa_io *io);

@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include "medusa/error.h"
 #include "medusa/io.h"
 #include "medusa/monitor.h"
 
@@ -116,26 +117,26 @@ static int test_poll (unsigned int poll)
         fprintf(stderr, "pair: %d, %d\n", sv[0], sv[1]);
 
         io[0] = medusa_io_create(monitor, sv[0], io_onevent, &write_length);
-        if (io[0] == NULL) {
+        if (MEDUSA_IS_ERR_OR_NULL(io[0])) {
                 fprintf(stderr, "can not create io\n");
                 goto bail;
         }
-        rc = medusa_io_set_events(io[0], MEDUSA_IO_EVENT_OUT);
-        rc = medusa_io_set_enabled(io[0], 1);
-        if (rc != 0) {
+        rc  = medusa_io_set_events(io[0], MEDUSA_IO_EVENT_OUT);
+        rc |= medusa_io_set_enabled(io[0], 1);
+        if (rc < 0) {
                 fprintf(stderr, "can not setup io[0]\n");
                 goto bail;
         }
         fprintf(stderr, "  io: %p\n", io[0]);
 
         io[1] = medusa_io_create(monitor, sv[1], io_onevent, &read_length);
-        if (io[1] == NULL) {
+        if (MEDUSA_IS_ERR_OR_NULL(io[1])) {
                 fprintf(stderr, "can not create io\n");
                 goto bail;
         }
-        rc = medusa_io_set_events(io[1], MEDUSA_IO_EVENT_IN);
-        rc = medusa_io_set_enabled(io[1], 1);
-        if (rc != 0) {
+        rc  = medusa_io_set_events(io[1], MEDUSA_IO_EVENT_IN);
+        rc |= medusa_io_set_enabled(io[1], 1);
+        if (rc < 0) {
                 fprintf(stderr, "can not setup io[1]\n");
                 goto bail;
         }
@@ -154,7 +155,7 @@ static int test_poll (unsigned int poll)
                     write_finished == 0) {
                         fprintf(stderr, "    disable writer\n");
                         rc = medusa_io_set_enabled(io[0], 0);
-                        if (rc != 0) {
+                        if (rc < 0) {
                                 fprintf(stderr, "can not setup io\n");
                                 goto bail;
                         }

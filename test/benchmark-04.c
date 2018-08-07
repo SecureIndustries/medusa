@@ -123,7 +123,7 @@ static int test_poll (unsigned int poll)
                 }
                 for (i = 0; i < g_npipes; i++) {
                         g_ios[i] = medusa_io_create(monitor, g_pipes[i * 2], io_onevent, (void *) ((uintptr_t) i));
-                        if (g_ios[i] == NULL) {
+                        if (MEDUSA_IS_ERR_OR_NULL(g_ios[i])) {
                                 goto bail;
                         }
 
@@ -144,12 +144,13 @@ static int test_poll (unsigned int poll)
                 for (k = 0; k < g_samples; k++) {
                         gettimeofday(&apply_start, NULL);
                         for (i = 0; i < g_npipes; i++) {
+                                rc = 0;
                                 if (medusa_io_get_enabled(g_ios[i])) {
-                                        rc = medusa_io_set_enabled(g_ios[i], 0);
+                                        rc |= medusa_io_set_enabled(g_ios[i], 0);
                                 }
-                                rc  = medusa_io_set_events(g_ios[i], MEDUSA_IO_EVENT_IN);
+                                rc |= medusa_io_set_events(g_ios[i], MEDUSA_IO_EVENT_IN);
                                 rc |= medusa_io_set_enabled(g_ios[i], 1);
-                                if (rc != 0) {
+                                if (rc < 0) {
                                         goto bail;
                                 }
 

@@ -5,7 +5,8 @@
 #include "queue.h"
 #include "time.h"
 #include "subject-struct.h"
-#include "timer-struct.h"
+#include "io.h"
+#include "io-private.h"
 #include "io-struct.h"
 
 #include "poll-backend.h"

@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <errno.h>
 
+#include "medusa/error.h"
 #include "medusa/io.h"
 #include "medusa/monitor.h"
 
@@ -48,15 +49,15 @@ static int test_poll (unsigned int poll)
         }
 
         io = medusa_io_create(monitor, STDIN_FILENO, io_onevent, NULL);
-        if (io == NULL) {
+        if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 goto bail;
         }
         rc = medusa_io_set_events(io, MEDUSA_IO_EVENT_IN);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         rc = medusa_io_set_enabled(io, 1);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
 

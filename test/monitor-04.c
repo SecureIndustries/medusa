@@ -57,7 +57,7 @@ static int test_poll (unsigned int poll)
         }
 
         io = medusa_io_create(monitor, STDIN_FILENO, io_onevent, NULL);
-        if (io == NULL) {
+        if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 goto bail;
         }
 

@@ -62,15 +62,15 @@ static int test_poll (unsigned int poll, int *pipes, unsigned int count)
 
         for (i = 0; i < (count + 1) / 2; i++) {
                 io = medusa_io_create(monitor, pipes[i * 2], io_onevent, NULL);
-                if (io == NULL) {
+                if (MEDUSA_IS_ERR_OR_NULL(io)) {
                         goto bail;
                 }
                 rc = medusa_io_set_events(io, MEDUSA_IO_EVENT_IN);
-                if (rc != 0) {
+                if (rc < 0) {
                         goto bail;
                 }
                 rc = medusa_io_set_enabled(io, 1);
-                if (rc != 0) {
+                if (rc < 0) {
                         goto bail;
                 }
 
