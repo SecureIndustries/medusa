@@ -128,7 +128,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
                 rc = medusa_tcpsocket_read(tcpsocket, &c, 1);
                 if (rc != 1) {
-                        fprintf(stderr, "medusa_tcpsocket_read failed\n");
+                        fprintf(stderr, "medusa_tcpsocket_read failed, rc: %d\n", rc);
                         return -1;
                 }
                 if (c != 'e') {
@@ -386,7 +386,8 @@ static int test_poll (unsigned int poll)
                         MEDUSA_TCPSOCKET_EVENT_BOUND |
                         MEDUSA_TCPSOCKET_EVENT_LISTENING |
                         MEDUSA_TCPSOCKET_EVENT_CONNECTION |
-                        MEDUSA_TCPSOCKET_EVENT_CONNECTED)) {
+                        MEDUSA_TCPSOCKET_EVENT_CONNECTED |
+                        MEDUSA_TCPSOCKET_EVENT_READ)) {
                 fprintf(stderr, "listener events: 0x%08x is invalid\n", levents);
                 goto bail;
         }

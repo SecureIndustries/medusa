@@ -105,6 +105,13 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                 } else {
                                         goto bail;
                                 }
+                        } else if (rc == 0) {
+                                tcpsocket->state = MEDUSA_TCPSOCKET_STATE_DISCONNECTED;
+                                rc = medusa_io_set_enabled(&tcpsocket->io, 0);
+                                if (rc != 0) {
+                                        goto bail;
+                                }
+                                es |= MEDUSA_TCPSOCKET_EVENT_DISCONNECTED;
                         } else {
                                 rc = medusa_buffer_set_length(&tcpsocket->rbuffer, medusa_buffer_length(&tcpsocket->rbuffer) + rc);
                                 if (rc != 0) {
