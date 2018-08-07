@@ -230,13 +230,21 @@ __attribute__ ((visibility ("default"))) void medusa_buffer_destroy (struct medu
         if (buffer->buffer != NULL) {
                 free(buffer->buffer);
         }
-	free(buffer);
+#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
+        medusa_pool_free(buffer);
+#else
+        free(buffer);
+#endif
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_create (void)
 {
 	struct medusa_buffer *buffer;
-	buffer = malloc(sizeof(struct medusa_buffer));
+#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
+	buffer = medusa_pool_malloc(g_pool);
+#else
+        buffer = malloc(sizeof(struct medusa_buffer));
+#endif
 	if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return MEDUSA_ERR_PTR(-ENOMEM);
 	}
