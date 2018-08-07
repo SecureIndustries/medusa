@@ -1,10 +1,16 @@
 
+ifeq ($(__LINUX__), y)
 POLL_EPOLL_ENABLE     ?= y
+endif
+ifeq ($(__DARWIN__), y)
 POLL_KQUEUE_ENABLE    ?= y
+endif
 POLL_POLL_ENABLE      ?= y
 POLL_SELECT_ENABLE    ?= y
 
+ifeq ($(__LINUX__), y)
 TIMER_TIMERFD_ENABLE  ?= y
+endif
 
 target.a-y = \
 	libmedusa-monitor.a \
@@ -70,6 +76,9 @@ libmedusa-socket.so_cflags-y = \
 
 libmedusa-socket.so_files-y = \
 	${libmedusa-socket.a_files-y}
+
+libmedusa-socket.so_ldflags-y = \
+	-lmedusa-monitor
 
 libmedusa-http.a_cflags-y = \
 	-fvisibility=hidden

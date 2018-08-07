@@ -11,8 +11,3 @@ __attribute__ ((visibility ("default"))) int medusa_clock_monotonic_raw (struct 
 {
         return clock_gettime(CLOCK_MONOTONIC_RAW, timespec);
 }
-
-__attribute__ ((visibility ("default"))) int medusa_clock_monotonic_coarse (struct timespec *timespec)
-{
-        return clock_gettime(CLOCK_MONOTONIC_COARSE, timespec);
-}

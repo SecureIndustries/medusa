@@ -504,14 +504,18 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         }
         if (options->poll.type == MEDUSA_MONITOR_POLL_DEFAULT) {
                 do {
+#if defined(__LINUX__) && (__LINUX__ == 1)
                         monitor->poll.backend = medusa_monitor_epoll_create(NULL);
                         if (monitor->poll.backend != NULL) {
                                 break;
                         }
+#endif
+#if defined(__DARWIN__) && (__DARWIN__ == 1)
                         monitor->poll.backend = medusa_monitor_kqueue_create(NULL);
                         if (monitor->poll.backend != NULL) {
                                 break;
                         }
+#endif
                         monitor->poll.backend = medusa_monitor_poll_create(NULL);
                         if (monitor->poll.backend != NULL) {
                                 break;
@@ -521,10 +525,14 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
                                 break;
                         }
                 } while (0);
+#if defined(__LINUX__) && (__LINUX__ == 1)
         } else if (options->poll.type == MEDUSA_MONITOR_POLL_EPOLL) {
                 monitor->poll.backend = medusa_monitor_epoll_create(NULL);
+#endif
+#if defined(__DARWIN__) && (__DARWIN__ == 1)
         } else if (options->poll.type == MEDUSA_MONITOR_POLL_KQUEUE) {
                 monitor->poll.backend = medusa_monitor_kqueue_create(NULL);
+#endif
         } else if (options->poll.type == MEDUSA_MONITOR_POLL_POLL) {
                 monitor->poll.backend = medusa_monitor_poll_create(NULL);
         } else if (options->poll.type == MEDUSA_MONITOR_POLL_SELECT) {
@@ -538,13 +546,17 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         monitor->poll.backend->monitor = monitor;
         if (options->timer.type == MEDUSA_MONITOR_TIMER_DEFAULT) {
                 do {
+#if defined(__LINUX__) && (__LINUX__ == 1)
                         monitor->timer.backend = medusa_timer_timerfd_create(NULL);
                         if (monitor->timer.backend != NULL) {
                                 break;
                         }
+#endif
                 } while (0);
+#if defined(__LINUX__) && (__LINUX__ == 1)
         } else if (options->timer.type == MEDUSA_MONITOR_TIMER_TIMERFD) {
                 monitor->timer.backend = medusa_timer_timerfd_create(NULL);
+#endif
         } else {
                 goto bail;
         }

@@ -7,24 +7,24 @@ target-y = \
 all:
 
 define test-defaults
-    $1_files-y = \
-        $1.c
+	$1_files-y = \
+		$1.c
 
-    $1_includes-y = \
-        ../dist/include
+	$1_includes-y = \
+		../dist/include
 
-    $1_libraries-y = \
-        ../dist/lib
+	$1_libraries-y = \
+		../dist/lib
 
-    $1_ldflags-y = \
-    	-Wl,-Bstatic \
-    	-lmedusa-http \
-    	-lmedusa-socket \
-    	-lmedusa-monitor \
+	$1_ldflags-y = \
+		-Wl,-Bstatic \
+		-lmedusa-http \
+		-lmedusa-socket \
+		-lmedusa-monitor \
 		-Wl,-Bdynamic \
 		-lpthread
 
-	$1_depends-y = \
+	1_depends-y = \
 		../dist/lib/libmedusa-socket.a \
 		../dist/lib/libmedusa-monitor.a
 endef

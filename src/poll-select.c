@@ -26,7 +26,11 @@ struct internal {
         fd_set _rfds;
         fd_set _wfds;
         fd_set _efds;
+#if defined(__DARWIN__) && (__DARWIN__ == 1)
+        struct medusa_io *ios[__DARWIN_FD_SETSIZE];
+#else
         struct medusa_io *ios[__FD_SETSIZE];
+#endif
 };
 
 static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *io)
@@ -44,7 +48,11 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->events == 0) {
                 goto bail;
         }
+#if defined(__DARWIN__) && (__DARWIN__ == 1)
+        if (io->fd >= __DARWIN_FD_SETSIZE) {
+#else
         if (io->fd >= __FD_SETSIZE) {
+#endif
                 goto bail;
         }
         FD_CLR(io->fd, &internal->rfds);
@@ -146,14 +154,22 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
         memcpy(&internal->_rfds, &internal->rfds, sizeof(internal->rfds));
         memcpy(&internal->_wfds, &internal->wfds, sizeof(internal->wfds));
         memcpy(&internal->_efds, &internal->efds, sizeof(internal->efds));
+#if defined(__DARWIN__) && (__DARWIN__ == 1)
+        count = select(__DARWIN_FD_SETSIZE, &internal->_rfds, &internal->_wfds, &internal->_efds, timeval);
+#else
         count = select(__FD_SETSIZE, &internal->_rfds, &internal->_wfds, &internal->_efds, timeval);
+#endif
         if (count == 0) {
                 goto out;
         }
         if (count < 0) {
                 goto bail;
         }
+#if defined(__DARWIN__) && (__DARWIN__ == 1)
+        for (i = 0; i < __DARWIN_FD_SETSIZE; i++) {
+#else
         for (i = 0; i < __FD_SETSIZE; i++) {
+#endif
                 events = 0;
                 if (FD_ISSET(i, &internal->_rfds)) {
                         events |= MEDUSA_IO_EVENT_IN;

@@ -31,4 +31,3 @@ struct timespec;
 
 int medusa_clock_monotonic (struct timespec *timespec);
 int medusa_clock_monotonic_raw (struct timespec *timespec);
-int medusa_clock_monotonic_coarse (struct timespec *timespec);
