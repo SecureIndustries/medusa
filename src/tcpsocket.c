@@ -54,6 +54,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
         es = 0;
         if (events & MEDUSA_IO_EVENT_OUT) {
                 if (tcpsocket->state == MEDUSA_TCPSOCKET_STATE_CONNECTING) {
+                        es |= MEDUSA_TCPSOCKET_EVENT_CONNECTED;
                 } else if (tcpsocket->state == MEDUSA_TCPSOCKET_STATE_CONNECTED) {
                         length = medusa_buffer_length(&tcpsocket->wbuffer);
                         if (length <= 0) {
@@ -67,17 +68,17 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                         if (rc != 0) {
                                 return -1;
                         }
-                        length = medusa_buffer_length(&tcpsocket->wbuffer);
-                        if (length <= 0) {
-                                rc = medusa_io_del_events(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
-                                if (rc != 0) {
-                                        return -1;
-                                }
-                        }
+                        es |= MEDUSA_TCPSOCKET_EVENT_WRITTEN;
                 } else {
                         return -1;
                 }
-                return 0;
+                length = medusa_buffer_length(&tcpsocket->wbuffer);
+                if (length <= 0) {
+                        rc = medusa_io_del_events(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
+                        if (rc != 0) {
+                                return -1;
+                        }
+                }
         }
         if (events & MEDUSA_IO_EVENT_IN) {
                 if (tcpsocket->state == MEDUSA_TCPSOCKET_STATE_LISTENING) {
