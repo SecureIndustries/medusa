@@ -191,7 +191,7 @@ __attribute__ ((visibility ("default"))) void medusa_tcpsocket_destroy (struct m
         medusa_tcpsocket_uninit(tcpsocket);
 }
 
-__attribute__ ((visibility ("default"))) unsigned int medusa_tcpspcket_get_state (const struct medusa_tcpsocket *tcpsocket)
+__attribute__ ((visibility ("default"))) unsigned int medusa_tcpsocket_get_state (const struct medusa_tcpsocket *tcpsocket)
 {
         if (tcpsocket == NULL) {
                 return MEDUSA_TCPSOCKET_STATE_UNKNWON;
@@ -465,6 +465,7 @@ bail:   if (tcpsocket->io.fd >= 0) {
                 tcpsocket->io.fd = -1;
         }
         tcpsocket->state = MEDUSA_TCPSOCKET_STATE_DISCONNECTED;
+        medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DISCONNECTED);
         return -1;
 }
 
@@ -476,16 +477,16 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect (struct me
         struct addrinfo *res;
         result = NULL;
         if (tcpsocket == NULL) {
-                goto bail;
+                return -1;
         }
         if (address == NULL) {
-                goto bail;
+                return -1;
         }
         if (port == 0) {
-                goto bail;
+                return -1;
         }
         if (tcpsocket->state != MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
-                goto bail;
+                return -1;
         }
         if (tcpsocket->io.fd >= 0) {
                 return -1;
@@ -510,6 +511,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect (struct me
         if (rc != 0) {
                 goto bail;
         }
+        tcpsocket->state = MEDUSA_TCPSOCKET_STATE_RESOLVED;
         rc = medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_RESOLVED);
         if (rc < 0) {
                 goto bail;
@@ -590,6 +592,7 @@ bail:   if (result != NULL) {
                 tcpsocket->io.fd = -1;
         }
         tcpsocket->state = MEDUSA_TCPSOCKET_STATE_DISCONNECTED;
+        medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DISCONNECTED);
         return -1;
 }
 
