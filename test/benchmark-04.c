@@ -66,7 +66,7 @@ static int io_onevent (struct medusa_io *io, unsigned int events, void *context)
         if (events & MEDUSA_IO_EVENT_IN) {
                 if (g_ntimers) {
                         rc = medusa_timer_set_interval(g_timers[id], 10 + drand48());
-                        if (rc != 0) {
+                        if (rc < 0) {
                                 return -1;
                         }
                 }

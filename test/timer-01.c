@@ -53,23 +53,23 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
         rc = medusa_timer_set_initial(timer, 1.0);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         rc = medusa_timer_set_interval(timer, 1.0);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         rc = medusa_timer_set_single_shot(timer, 1);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         rc = medusa_timer_set_resolution(timer, MEDUSA_TIMER_RESOLUTION_NANOSECOMDS);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         rc = medusa_timer_set_enabled(timer, 1);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
 

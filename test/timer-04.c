@@ -25,13 +25,20 @@ static const unsigned int g_polls[] = {
 
 static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context)
 {
+        int rc;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 int *count = context;
                 fprintf(stderr, "timeout: %d\n", *count);
                 if (*count + 1 == 10) {
                         fprintf(stderr, "break\n");
-                        medusa_timer_set_enabled(timer, 0);
-                        medusa_monitor_break(medusa_timer_get_monitor(timer));
+                        rc = medusa_timer_set_enabled(timer, 0);
+                        if (rc < 0) {
+                                return -1;
+                        }
+                        rc = medusa_monitor_break(medusa_timer_get_monitor(timer));
+                        if (rc < 0) {
+                                return -1;
+                        }
                 }
                 *count = *count + 1;
         }
@@ -64,11 +71,11 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
         rc = medusa_timer_set_interval(timer, 0.00001);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         rc = medusa_timer_set_enabled(timer, 1);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
 

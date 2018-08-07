@@ -35,7 +35,7 @@ static int timer_set_onevent (struct medusa_timer *timer, unsigned int events, v
                 timer_set_count += 1;
                 fprintf(stderr, "timer-set: %p callback tm: %p, count: %d\n", timer, tm, timer_set_count);
                 rc = medusa_timer_set_enabled(tm, !medusa_timer_get_enabled(tm));
-                if (rc != 0) {
+                if (rc < 0) {
                         goto bail;
                 }
                 if (timer_set_count == 4) {
@@ -83,11 +83,11 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
         rc = medusa_timer_set_interval(timer, 0.1);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         rc = medusa_timer_set_enabled(timer, 0);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
 
@@ -96,11 +96,11 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
         rc = medusa_timer_set_interval(timer, 0.5);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         rc = medusa_timer_set_enabled(timer, 1);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
 

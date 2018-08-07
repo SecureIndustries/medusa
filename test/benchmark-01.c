@@ -56,15 +56,15 @@ static int test_poll (unsigned int poll, unsigned int count)
                         goto bail;
                 }
                 rc = medusa_timer_set_interval(timer, rand());
-                if (rc != 0) {
+                if (rc < 0) {
                         goto bail;
                 }
                 rc = medusa_timer_set_single_shot(timer, rand() % 2);
-                if (rc != 0) {
+                if (rc < 0) {
                         goto bail;
                 }
                 rc = medusa_timer_set_enabled(timer, 1);
-                if (rc != 0) {
+                if (rc < 0) {
                         goto bail;
                 }
         }

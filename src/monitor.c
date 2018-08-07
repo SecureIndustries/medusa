@@ -326,7 +326,7 @@ static int medusa_monitor_check_timer (struct medusa_monitor *monitor)
                         if (medusa_timer_get_single_shot(timer) ||
                             !medusa_timespec_isset(&timer->interval)) {
                                 rc = medusa_timer_set_enabled(timer, 0);
-                                if (rc != 0) {
+                                if (rc < 0) {
                                         goto bail;
                                 }
                         }
