@@ -1,8 +1,8 @@
 
 struct medusa_buffer {
         void *buffer;
-        int64_t length;
-        int64_t size;
+        int length;
+        int size;
 };
 
 int medusa_buffer_init (struct medusa_buffer *buffer);
