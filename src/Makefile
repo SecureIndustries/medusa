@@ -96,6 +96,7 @@ dist.base = medusa
 dist.include-y = \
 	monitor.h \
 	clock.h \
+	error.h \
 	pool.h \
 	buffer.h \
 	io.h \

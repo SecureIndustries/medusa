@@ -8,7 +8,7 @@
 #include "buffer.h"
 #include "buffer-struct.h"
 
-int medusa_buffer_resize (struct medusa_buffer *buffer, int64_t size)
+__attribute__ ((visibility ("default"))) int medusa_buffer_resize (struct medusa_buffer *buffer, int64_t size)
 {
 	void *data;
 	if (buffer == NULL) {
@@ -35,12 +35,12 @@ int medusa_buffer_resize (struct medusa_buffer *buffer, int64_t size)
 	return 0;
 }
 
-int medusa_buffer_grow (struct medusa_buffer *buffer, int64_t size)
+__attribute__ ((visibility ("default"))) int medusa_buffer_grow (struct medusa_buffer *buffer, int64_t size)
 {
 	return medusa_buffer_resize(buffer, medusa_buffer_length(buffer) + size);
 }
 
-void medusa_buffer_reset (struct medusa_buffer *buffer)
+__attribute__ ((visibility ("default"))) void medusa_buffer_reset (struct medusa_buffer *buffer)
 {
 	if (buffer == NULL) {
 		return;
@@ -48,7 +48,7 @@ void medusa_buffer_reset (struct medusa_buffer *buffer)
 	buffer->length = 0;
 }
 
-void * medusa_buffer_base (const struct medusa_buffer *buffer)
+__attribute__ ((visibility ("default"))) void * medusa_buffer_base (const struct medusa_buffer *buffer)
 {
 	if (buffer == NULL) {
 		return NULL;
@@ -56,7 +56,7 @@ void * medusa_buffer_base (const struct medusa_buffer *buffer)
 	return buffer->buffer;
 }
 
-int64_t medusa_buffer_length (const struct medusa_buffer *buffer)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_length (const struct medusa_buffer *buffer)
 {
 	if (buffer == NULL) {
 		return -1;
@@ -64,7 +64,7 @@ int64_t medusa_buffer_length (const struct medusa_buffer *buffer)
 	return buffer->length;
 }
 
-int medusa_buffer_set_length (struct medusa_buffer *buffer, int64_t length)
+__attribute__ ((visibility ("default"))) int medusa_buffer_set_length (struct medusa_buffer *buffer, int64_t length)
 {
 	if (buffer == NULL) {
 		return -1;
@@ -76,7 +76,7 @@ int medusa_buffer_set_length (struct medusa_buffer *buffer, int64_t length)
 	return 0;
 }
 
-int medusa_buffer_push (struct medusa_buffer *buffer, const void *data, int64_t length)
+__attribute__ ((visibility ("default"))) int medusa_buffer_push (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
 	int rc;
 	if (buffer == NULL) {
@@ -100,7 +100,7 @@ int medusa_buffer_push (struct medusa_buffer *buffer, const void *data, int64_t 
 	return 0;
 }
 
-int medusa_buffer_printf (struct medusa_buffer *buffer, const char *format, ...)
+__attribute__ ((visibility ("default"))) int medusa_buffer_printf (struct medusa_buffer *buffer, const char *format, ...)
 {
 	int rc;
 	int size;
@@ -133,7 +133,7 @@ bail:	va_end(va);
 	return -1;
 }
 
-int medusa_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va)
+__attribute__ ((visibility ("default"))) int medusa_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va)
 {
 	int rc;
 	int size;
@@ -160,7 +160,7 @@ int medusa_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_
 bail:	return -1;
 }
 
-int medusa_buffer_eat (struct medusa_buffer *buffer, int64_t length)
+__attribute__ ((visibility ("default"))) int medusa_buffer_eat (struct medusa_buffer *buffer, int64_t length)
 {
 	if (buffer == NULL) {
 		return -1;
@@ -180,7 +180,7 @@ int medusa_buffer_eat (struct medusa_buffer *buffer, int64_t length)
 	return 0;
 }
 
-int64_t medusa_buffer_size (const struct medusa_buffer *buffer)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_size (const struct medusa_buffer *buffer)
 {
 	if (buffer == NULL) {
 		return -1;
@@ -188,7 +188,7 @@ int64_t medusa_buffer_size (const struct medusa_buffer *buffer)
 	return buffer->size;
 }
 
-int medusa_buffer_init (struct medusa_buffer *buffer)
+__attribute__ ((visibility ("default"))) int medusa_buffer_init (struct medusa_buffer *buffer)
 {
         if (buffer == NULL) {
                 return -1;
@@ -197,7 +197,7 @@ int medusa_buffer_init (struct medusa_buffer *buffer)
         return 0;
 }
 
-void medusa_buffer_uninit (struct medusa_buffer *buffer)
+__attribute__ ((visibility ("default"))) void medusa_buffer_uninit (struct medusa_buffer *buffer)
 {
         if (buffer == NULL) {
                 return;
@@ -207,7 +207,7 @@ void medusa_buffer_uninit (struct medusa_buffer *buffer)
         }
 }
 
-void medusa_buffer_destroy (struct medusa_buffer *buffer)
+__attribute__ ((visibility ("default"))) void medusa_buffer_destroy (struct medusa_buffer *buffer)
 {
         if (buffer == NULL) {
                 return;
@@ -218,7 +218,7 @@ void medusa_buffer_destroy (struct medusa_buffer *buffer)
 	free(buffer);
 }
 
-struct medusa_buffer * medusa_buffer_create (void)
+__attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_create (void)
 {
 	struct medusa_buffer *buffer;
 	buffer = malloc(sizeof(struct medusa_buffer));

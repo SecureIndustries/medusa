@@ -18,6 +18,7 @@ define test-defaults
 
     $1_ldflags-y = \
     	-Wl,-Bstatic \
+    	-lmedusa-http \
     	-lmedusa-socket \
     	-lmedusa-monitor \
 		-Wl,-Bdynamic \
@@ -37,8 +38,9 @@ tests: all
 	${Q}for T in ${tests}; do \
 		printf "  $${T} ... "; \
 		./$${T} 2>/dev/null 1>/dev/null; \
-		if [ $$? != 0 ]; then \
-			echo "fail (rc: $$?)"; \
+		retval=$$?; \
+		if [ $$retval != 0 ]; then \
+			echo "fail (rc: $$retval)"; \
 		else \
 			echo "success"; \
 		fi \

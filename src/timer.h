@@ -48,6 +48,4 @@ unsigned int medusa_timer_get_resolution (const struct medusa_timer *timer);
 int medusa_timer_set_enabled (struct medusa_timer *timer, int enabled);
 int medusa_timer_get_enabled (const struct medusa_timer *timer);
 
-int medusa_timer_onevent (struct medusa_timer *timer, unsigned int events);
-int medusa_timer_is_valid (const struct medusa_timer *timer);
 struct medusa_monitor * medusa_timer_get_monitor (struct medusa_timer *timer);

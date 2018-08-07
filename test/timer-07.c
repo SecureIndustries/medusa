@@ -7,6 +7,7 @@
 #include <time.h>
 #include <errno.h>
 
+#include "medusa/error.h"
 #include "medusa/timer.h"
 #include "medusa/monitor.h"
 
@@ -68,7 +69,7 @@ static int test_poll (unsigned int poll)
         }
 
         timer = medusa_timer_create(monitor, timer_onevent, &count);
-        if (timer == NULL) {
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 goto bail;
         }
         rc = medusa_timer_set_initial(timer, 0.01);
@@ -81,7 +82,7 @@ static int test_poll (unsigned int poll)
         }
 
         timer = medusa_timer_create(monitor, timer_check_callback, &count);
-        if (timer == NULL) {
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 goto bail;
         }
         rc = medusa_timer_set_interval(timer, 0.8);

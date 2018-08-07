@@ -12,9 +12,10 @@
 #include <time.h>
 #include <signal.h>
 
+#include "medusa/error.h"
+#include "medusa/clock.h"
 #include "medusa/io.h"
 #include "medusa/timer.h"
-#include "medusa/clock.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
@@ -128,7 +129,7 @@ static int test_poll (unsigned int poll)
 
                         if (g_ntimers) {
                                 g_timers[i] = medusa_timer_create(monitor, timer_onevent, (void *) ((uintptr_t) i));
-                                if (g_timers[i] == NULL) {
+                                if (MEDUSA_IS_ERR_OR_NULL(g_timers[i])) {
                                         goto bail;
                                 }
                         }

@@ -13,6 +13,7 @@
 #include "clock.h"
 #include "io.h"
 #include "timer.h"
+#include "timer-private.h"
 #include "monitor.h"
 #include "monitor-private.h"
 
