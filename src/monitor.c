@@ -242,6 +242,7 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
                                         }
                                         monitor->timer.dirty = 1;
                                 }
+                                medusa_timespec_clear(&timer->_timespec);
                                 TAILQ_REMOVE(&monitor->changes, subject, subjects);
                                 TAILQ_INSERT_TAIL(&monitor->rogues, subject, subjects);
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
