@@ -23,39 +23,42 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context)
+static int timer_count;
+static int timer_set_count;
+
+static struct medusa_timer *timer_tik;
+static struct medusa_timer *timer_set;
+
+static int timer_set_onevent (struct medusa_timer *timer, unsigned int events, void *context)
 {
         int rc;
+        (void) context;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
-                int *count = context;
-                fprintf(stderr, "timeout: %d\n", *count);
-                if (*count + 1 == 10) {
-                        fprintf(stderr, "break\n");
-                        rc = medusa_timer_set_enabled(timer, 0);
-                        if (rc < 0) {
-                                fprintf(stderr, "medusa_timer_set_enabled failed\n");
-                                return -1;
-                        }
+                timer_set_count += 1;
+                fprintf(stderr, "timer-set: %p callback tm: %p, count: %d, remaining: %.2f\n", timer, timer_tik, timer_set_count, medusa_timer_get_remaining_time(timer_tik));
+                rc = medusa_timer_set_enabled(timer_tik, !medusa_timer_get_enabled(timer_tik));
+                if (rc < 0) {
+                        fprintf(stderr, "medusa_timer_set_enabled failed\n");
+                        goto bail;
+                }
+                if (timer_set_count == 4) {
                         rc = medusa_monitor_break(medusa_timer_get_monitor(timer));
                         if (rc < 0) {
                                 fprintf(stderr, "medusa_monitor_break failed\n");
-                                return -1;
-                        }
-                } else {
-                        fprintf(stderr, "set interval\n");
-                        rc = medusa_timer_set_interval(timer, 0.01);
-                        if (rc < 0) {
-                                fprintf(stderr, "medusa_timer_set_interval failed\n");
-                                return -1;
-                        }
-                        fprintf(stderr, "set active\n");
-                        rc = medusa_timer_set_enabled(timer, 1);
-                        if (rc < 0) {
-                                fprintf(stderr, "medusa_timer_set_enabled failed\n");
-                                return -1;
+                                goto bail;
                         }
                 }
-                *count = *count + 1;
+        }
+        return 0;
+bail:   return -1;
+}
+
+static int timer_tik_onevent (struct medusa_timer *timer, unsigned int events, void *context)
+{
+        (void) context;
+        if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
+                timer_count += 1;
+                fprintf(stderr, "timer-tik: %p callback count: %d, remaining: %.2f\n", timer, timer_count, medusa_timer_get_remaining_time(timer_set));
         }
         return 0;
 }
@@ -67,11 +70,10 @@ static int test_poll (unsigned int poll)
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
-        int count;
-        struct medusa_timer *timer;
-
-        count = 0;
         monitor = NULL;
+
+        timer_count = 0;
+        timer_set_count = 0;
 
         medusa_monitor_init_options_default(&options);
         options.poll.type = poll;
@@ -82,24 +84,35 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        timer = medusa_timer_create(monitor, timer_onevent, &count);
-        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+        timer_tik = medusa_timer_create(monitor, timer_tik_onevent, NULL);
+        if (MEDUSA_IS_ERR_OR_NULL(timer_tik)) {
                 fprintf(stderr, "medusa_timer_create failed\n");
                 goto bail;
         }
-        rc = medusa_timer_set_interval(timer, 0.01);
+        rc = medusa_timer_set_interval(timer_tik, 0.1);
         if (rc < 0) {
                 fprintf(stderr, "medusa_timer_set_interval failed\n");
                 goto bail;
         }
-        rc = medusa_timer_set_enabled(timer, 1);
+        rc = medusa_timer_set_enabled(timer_tik, 0);
         if (rc < 0) {
                 fprintf(stderr, "medusa_timer_set_enabled failed\n");
                 goto bail;
         }
-        rc = medusa_timer_set_single_shot(timer, 1);
+
+        timer_set = medusa_timer_create(monitor, timer_set_onevent, NULL);
+        if (MEDUSA_IS_ERR_OR_NULL(timer_set)) {
+                fprintf(stderr, "medusa_timer_create failed\n");
+                goto bail;
+        }
+        rc = medusa_timer_set_interval(timer_set, 0.5);
         if (rc < 0) {
-                fprintf(stderr, "medusa_timer_set_single_shot failed\n");
+                fprintf(stderr, "medusa_timer_set_interval failed\n");
+                goto bail;
+        }
+        rc = medusa_timer_set_enabled(timer_set, 1);
+        if (rc < 0) {
+                fprintf(stderr, "medusa_timer_set_enabled failed\n");
                 goto bail;
         }
 
@@ -107,6 +120,11 @@ static int test_poll (unsigned int poll)
         if (rc != 0) {
                 fprintf(stderr, "can not run monitor\n");
                 return -1;
+        }
+
+        if (timer_count > timer_set_count * 3) {
+                fprintf(stderr, "error\n");
+                goto bail;
         }
 
         fprintf(stderr, "finish\n");

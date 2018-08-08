@@ -40,7 +40,7 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->fd < 0) {
                 goto bail;
         }
-        if (io->events == 0) {
+        if (medusa_io_get_events(io) == 0) {
                 goto bail;
         }
         if (internal->npfds + 1 >= internal->spfds) {
@@ -73,13 +73,13 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         }
         pfd = &internal->pfds[internal->npfds];
         pfd->events = 0;
-        if (io->events & MEDUSA_IO_EVENT_IN) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_IN) {
                 pfd->events |= POLLIN;
         }
-        if (io->events & MEDUSA_IO_EVENT_OUT) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_OUT) {
                 pfd->events |= POLLOUT;
         }
-        if (io->events & MEDUSA_IO_EVENT_PRI) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_PRI) {
                 pfd->events |= POLLPRI;
         }
         pfd->fd = io->fd;
@@ -103,7 +103,7 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->fd < 0) {
                 goto bail;
         }
-        if (io->events == 0) {
+        if (medusa_io_get_events(io) == 0) {
                 goto bail;
         }
         for (i = 0; i < internal->npfds; i++) {
@@ -116,13 +116,13 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
         }
         pfd = &internal->pfds[i];
         pfd->events = 0;
-        if (io->events & MEDUSA_IO_EVENT_IN) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_IN) {
                 pfd->events |= POLLIN;
         }
-        if (io->events & MEDUSA_IO_EVENT_OUT) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_OUT) {
                 pfd->events |= POLLOUT;
         }
-        if (io->events & MEDUSA_IO_EVENT_PRI) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_PRI) {
                 pfd->events |= POLLPRI;
         }
         return 0;

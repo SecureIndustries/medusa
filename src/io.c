@@ -17,10 +17,48 @@
 
 #include "io.h"
 
+#define MEDUSA_IO_EVENT_MASK              0xff
+#define MEDUSA_IO_EVENT_SHIFT             0x00
+
+#define MEDUSA_IO_ENABLE_MASK             0xff
+#define MEDUSA_IO_ENABLE_SHIFT            0x18
+
 #define MEDUSA_IO_USE_POOL      1
 #if defined(MEDUSA_IO_USE_POOL) && (MEDUSA_IO_USE_POOL == 1)
 static struct medusa_pool *g_pool;
 #endif
+
+static inline void io_set_events (struct medusa_io *io, unsigned int events)
+{
+        io->flags = (io->flags & ~(MEDUSA_IO_EVENT_MASK << MEDUSA_IO_EVENT_SHIFT)) |
+                    ((events & MEDUSA_IO_EVENT_MASK) << MEDUSA_IO_EVENT_SHIFT);
+}
+
+static inline void io_add_events (struct medusa_io *io, unsigned int events)
+{
+        io->flags |= ((events & MEDUSA_IO_EVENT_MASK) << MEDUSA_IO_EVENT_SHIFT);
+}
+
+static inline void io_del_events (struct medusa_io *io, unsigned int events)
+{
+        io->flags &= ~((events & MEDUSA_IO_EVENT_MASK) << MEDUSA_IO_EVENT_SHIFT);
+}
+
+static inline unsigned int io_get_events (const struct medusa_io *io)
+{
+        return (io->flags >> MEDUSA_IO_EVENT_SHIFT) & MEDUSA_IO_EVENT_MASK;
+}
+
+static inline unsigned int io_get_enabled (const struct medusa_io *io)
+{
+        return (io->flags >> MEDUSA_IO_ENABLE_SHIFT);
+}
+
+static inline void io_set_enabled (struct medusa_io *io, unsigned int enabled)
+{
+        io->flags = (io->flags & ~(MEDUSA_IO_ENABLE_MASK << MEDUSA_IO_ENABLE_SHIFT)) |
+                    ((enabled & MEDUSA_IO_ENABLE_MASK) << MEDUSA_IO_ENABLE_SHIFT);
+}
 
 __attribute__ ((visibility ("default"))) int medusa_io_init (struct medusa_monitor *monitor, struct medusa_io *io, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context), void *context)
 {
@@ -40,9 +78,9 @@ __attribute__ ((visibility ("default"))) int medusa_io_init (struct medusa_monit
         io->fd = fd;
         io->onevent = onevent;
         io->context = context;
-        io->events = 0;
-        io->enabled = 0;
-        io->subject.flags = MEDUSA_SUBJECT_FLAG_IO;
+        io_set_events(io, 0);
+        io_set_enabled(io, 0);
+        io->subject.flags = MEDUSA_SUBJECT_TYPE_IO;
         io->subject.monitor = NULL;
         return medusa_monitor_add(monitor, &io->subject);
 }
@@ -52,7 +90,7 @@ __attribute__ ((visibility ("default"))) void medusa_io_uninit (struct medusa_io
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 return;
         }
-        if ((io->subject.flags & MEDUSA_SUBJECT_FLAG_IO) == 0) {
+        if ((io->subject.flags & MEDUSA_SUBJECT_TYPE_IO) == 0) {
                 return;
         }
         if (io->subject.monitor != NULL) {
@@ -111,8 +149,11 @@ __attribute__ ((visibility ("default"))) int medusa_io_set_events (struct medusa
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 return -EINVAL;
         }
-        io->events = (events & (MEDUSA_IO_EVENT_IN | MEDUSA_IO_EVENT_OUT | MEDUSA_IO_EVENT_PRI));
-        return medusa_monitor_mod(&io->subject);
+        io_set_events(io, events & (MEDUSA_IO_EVENT_IN | MEDUSA_IO_EVENT_OUT | MEDUSA_IO_EVENT_PRI));
+        if (io->subject.monitor) {
+                return medusa_monitor_mod(&io->subject);
+        }
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_io_add_events (struct medusa_io *io, unsigned int events)
@@ -120,8 +161,11 @@ __attribute__ ((visibility ("default"))) int medusa_io_add_events (struct medusa
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 return -EINVAL;
         }
-        io->events |= (events & (MEDUSA_IO_EVENT_IN | MEDUSA_IO_EVENT_OUT | MEDUSA_IO_EVENT_PRI));
-        return medusa_monitor_mod(&io->subject);
+        io_add_events(io, events & (MEDUSA_IO_EVENT_IN | MEDUSA_IO_EVENT_OUT | MEDUSA_IO_EVENT_PRI));
+        if (io->subject.monitor) {
+                return medusa_monitor_mod(&io->subject);
+        }
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_io_del_events (struct medusa_io *io, unsigned int events)
@@ -129,8 +173,11 @@ __attribute__ ((visibility ("default"))) int medusa_io_del_events (struct medusa
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 return -EINVAL;
         }
-        io->events &= ~(events & (MEDUSA_IO_EVENT_IN | MEDUSA_IO_EVENT_OUT | MEDUSA_IO_EVENT_PRI));
-        return medusa_monitor_mod(&io->subject);
+        io_del_events(io, events & (MEDUSA_IO_EVENT_IN | MEDUSA_IO_EVENT_OUT | MEDUSA_IO_EVENT_PRI));
+        if (io->subject.monitor) {
+                return medusa_monitor_mod(&io->subject);
+        }
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) unsigned int medusa_io_get_events (const struct medusa_io *io)
@@ -138,7 +185,7 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_io_get_events (cons
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 return 0;
         }
-        return io->events;
+        return io_get_events(io);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_io_set_enabled (struct medusa_io *io, int enabled)
@@ -146,8 +193,11 @@ __attribute__ ((visibility ("default"))) int medusa_io_set_enabled (struct medus
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 return -EINVAL;
         }
-        io->enabled = !!enabled;
-        return medusa_monitor_mod(&io->subject);
+        io_set_enabled(io, !!enabled);
+        if (io->subject.monitor) {
+                return medusa_monitor_mod(&io->subject);
+        }
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_io_get_enabled (const struct medusa_io *io)
@@ -155,7 +205,7 @@ __attribute__ ((visibility ("default"))) int medusa_io_get_enabled (const struct
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 return -EINVAL;
         }
-        return io->enabled;
+        return io_get_enabled(io);
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_io_get_monitor (struct medusa_io *io)
@@ -169,20 +219,23 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_io_get_m
 int medusa_io_onevent (struct medusa_io *io, unsigned int events)
 {
         int rc;
+        unsigned int type;
         rc = 0;
+        type = io->subject.flags & MEDUSA_SUBJECT_TYPE_MASK;
         if (io->onevent != NULL) {
                 rc = io->onevent(io, events, io->context);
         }
-        if ((rc != 1) &&
-            (events & MEDUSA_IO_EVENT_DESTROY)) {
-                if (io->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
+        if (events & MEDUSA_IO_EVENT_DESTROY) {
+                if (type == MEDUSA_SUBJECT_TYPE_IO) {
+                        if (io->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
 #if defined(MEDUSA_IO_USE_POOL) && (MEDUSA_IO_USE_POOL == 1)
-                        medusa_pool_free(io);
+                                medusa_pool_free(io);
 #else
-                        free(io);
+                                free(io);
 #endif
-                } else {
-                        memset(io, 0, sizeof(struct medusa_io));
+                        } else {
+                                memset(io, 0, sizeof(struct medusa_io));
+                        }
                 }
         }
         return rc;
@@ -196,10 +249,10 @@ int medusa_io_is_valid (const struct medusa_io *io)
         if (io->onevent == NULL) {
                 return 0;
         }
-        if ((io->events & (MEDUSA_IO_EVENT_IN | MEDUSA_IO_EVENT_OUT | MEDUSA_IO_EVENT_PRI)) == 0) {
+        if ((io_get_events(io) & (MEDUSA_IO_EVENT_IN | MEDUSA_IO_EVENT_OUT | MEDUSA_IO_EVENT_PRI)) == 0) {
                 return 0;
         }
-        if (io->enabled == 0) {
+        if (io_get_enabled(io) == 0) {
                 return 0;
         }
         return 1;

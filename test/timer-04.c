@@ -33,10 +33,12 @@ static int timer_onevent (struct medusa_timer *timer, unsigned int events, void 
                         fprintf(stderr, "break\n");
                         rc = medusa_timer_set_enabled(timer, 0);
                         if (rc < 0) {
+                                fprintf(stderr, "medusa_timer_set_enabled failed\n");
                                 return -1;
                         }
                         rc = medusa_monitor_break(medusa_timer_get_monitor(timer));
                         if (rc < 0) {
+                                fprintf(stderr, "medusa_monitor_break failed\n");
                                 return -1;
                         }
                 }
@@ -63,19 +65,23 @@ static int test_poll (unsigned int poll)
 
         monitor = medusa_monitor_create(&options);
         if (monitor == NULL) {
+                fprintf(stderr, "medusa_monitor_create failed\n");
                 goto bail;
         }
 
         timer = medusa_timer_create(monitor, timer_onevent, &count);
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                fprintf(stderr, "medusa_timer_create failed\n");
                 goto bail;
         }
         rc = medusa_timer_set_interval(timer, 0.00001);
         if (rc < 0) {
+                fprintf(stderr, "medusa_timer_set_interval failed\n");
                 goto bail;
         }
         rc = medusa_timer_set_enabled(timer, 1);
         if (rc < 0) {
+                fprintf(stderr, "medusa_timer_set_enabled failed\n");
                 goto bail;
         }
 

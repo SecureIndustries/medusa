@@ -2,8 +2,7 @@
 struct medusa_io {
         struct medusa_subject subject;
         int fd;
-        unsigned int events;
-        int enabled;
+        unsigned int flags;
         int (*onevent) (struct medusa_io *io, unsigned int events, void *context);
         void *context;
 };

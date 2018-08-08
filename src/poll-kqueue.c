@@ -28,7 +28,7 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->fd < 0) {
                 goto bail;
         }
-        if (io->events == 0) {
+        if (medusa_io_get_events(io) == 0) {
                 goto bail;
         }
         return 0;
@@ -47,7 +47,7 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->fd < 0) {
                 goto bail;
         }
-        if (io->events == 0) {
+        if (medusa_io_get_events(io) == 0) {
                 goto bail;
         }
         return 0;

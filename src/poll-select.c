@@ -45,7 +45,7 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->fd < 0) {
                 goto bail;
         }
-        if (io->events == 0) {
+        if (medusa_io_get_events(io) == 0) {
                 goto bail;
         }
 #if defined(__DARWIN__) && (__DARWIN__ == 1)
@@ -58,13 +58,13 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         FD_CLR(io->fd, &internal->rfds);
         FD_CLR(io->fd, &internal->wfds);
         FD_CLR(io->fd, &internal->efds);
-        if (io->events & MEDUSA_IO_EVENT_IN) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_IN) {
                 FD_SET(io->fd, &internal->rfds);
         }
-        if (io->events & MEDUSA_IO_EVENT_OUT) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_OUT) {
                 FD_SET(io->fd, &internal->wfds);
         }
-        if (io->events & MEDUSA_IO_EVENT_PRI) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_PRI) {
                 FD_SET(io->fd, &internal->rfds);
         }
         FD_SET(io->fd, &internal->efds);
@@ -85,7 +85,7 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->fd < 0) {
                 goto bail;
         }
-        if (io->events == 0) {
+        if (medusa_io_get_events(io) == 0) {
                 goto bail;
         }
         if (internal->ios[io->fd] != io) {
@@ -94,13 +94,13 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
         FD_CLR(io->fd, &internal->rfds);
         FD_CLR(io->fd, &internal->wfds);
         FD_CLR(io->fd, &internal->efds);
-        if (io->events & MEDUSA_IO_EVENT_IN) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_IN) {
                 FD_SET(io->fd, &internal->rfds);
         }
-        if (io->events & MEDUSA_IO_EVENT_OUT) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_OUT) {
                 FD_SET(io->fd, &internal->wfds);
         }
-        if (io->events & MEDUSA_IO_EVENT_PRI) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_PRI) {
                 FD_SET(io->fd, &internal->rfds);
         }
         FD_SET(io->fd, &internal->efds);

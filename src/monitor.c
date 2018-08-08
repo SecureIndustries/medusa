@@ -161,7 +161,7 @@ static int medusa_monitor_process_deletes (struct medusa_monitor *monitor)
                 subject = TAILQ_FIRST(&monitor->deletes);
                 TAILQ_REMOVE(&monitor->deletes, subject, subjects);
                 subject->monitor = NULL;
-                if (subject->flags & MEDUSA_SUBJECT_FLAG_IO) {
+                if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
                         io = (struct medusa_io *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
                                 rc = monitor->poll.backend->del(monitor->poll.backend, io);
@@ -171,7 +171,7 @@ static int medusa_monitor_process_deletes (struct medusa_monitor *monitor)
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_POLL;
                         }
                         medusa_io_onevent(io, MEDUSA_IO_EVENT_DESTROY);
-                } else if (subject->flags & MEDUSA_SUBJECT_FLAG_TIMER) {
+                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
                         timer = (struct medusa_timer *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 rc = pqueue_del(monitor->timer.pqueue, timer);
@@ -201,7 +201,7 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
                 goto bail;
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->changes, subjects, nsubject) {
-                if (subject->flags & MEDUSA_SUBJECT_FLAG_IO) {
+                if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
                         io = (struct medusa_io *) subject;
                         if (!medusa_io_is_valid(io)) {
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
@@ -233,7 +233,7 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
                                 subject->flags |= MEDUSA_SUBJECT_FLAG_POLL;
                         }
-                } else if (subject->flags & MEDUSA_SUBJECT_FLAG_TIMER) {
+                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
                         timer = (struct medusa_timer *) subject;
                         if (!medusa_timer_is_valid(timer) ||
                             (medusa_timespec_isset(&timer->_timespec) && !medusa_timespec_isset(&timer->interval))) {
@@ -440,7 +440,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_del (struct medusa_s
         }
         subject->flags |= MEDUSA_SUBJECT_FLAG_DEL;
         if (1) {
-                if (subject->flags & MEDUSA_SUBJECT_FLAG_IO) {
+                if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
                         struct medusa_io *io;
                         io = (struct medusa_io *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
@@ -450,7 +450,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_del (struct medusa_s
                                 }
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_POLL;
                         }
-                } else if (subject->flags & MEDUSA_SUBJECT_FLAG_TIMER) {
+                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
                         struct medusa_timer *timer;
                         timer = (struct medusa_timer *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
@@ -635,14 +635,14 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                 subject = TAILQ_FIRST(&monitor->deletes);
                 TAILQ_REMOVE(&monitor->deletes, subject, subjects);
                 subject->monitor = NULL;
-                if (subject->flags & MEDUSA_SUBJECT_FLAG_IO) {
+                if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
                         io = (struct medusa_io *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
                                 monitor->poll.backend->del(monitor->poll.backend, io);
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_POLL;
                         }
                         medusa_io_onevent(io, MEDUSA_IO_EVENT_DESTROY);
-                } else if (subject->flags & MEDUSA_SUBJECT_FLAG_TIMER) {
+                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
                         timer = (struct medusa_timer *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 pqueue_del(monitor->timer.pqueue, timer);

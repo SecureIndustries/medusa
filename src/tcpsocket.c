@@ -168,7 +168,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
         if (rc < 0) {
                 goto bail;
         }
-        return 1;
+        return 0;
 bail:   return -1;
 }
 
@@ -187,9 +187,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init (struct medus
         tcpsocket->io.fd = -1;
         tcpsocket->io.onevent = medusa_tcpsocket_io_onevent;
         tcpsocket->io.context = context;
-        tcpsocket->io.events = MEDUSA_IO_EVENT_IN;
-        tcpsocket->io.enabled = 0;
-        tcpsocket->io.subject.flags = MEDUSA_SUBJECT_FLAG_IO;
+        medusa_io_set_events(&tcpsocket->io, MEDUSA_IO_EVENT_IN);
+        medusa_io_set_enabled(&tcpsocket->io, 0);
+        tcpsocket->io.subject.flags = MEDUSA_SUBJECT_TYPE_IO | MEDUSA_SUBJECT_TYPE_TCPSOCKET;
         tcpsocket->io.subject.monitor = NULL;
         tcpsocket_set_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_DEFAULT);
         tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
@@ -204,7 +204,7 @@ __attribute__ ((visibility ("default"))) void medusa_tcpsocket_uninit (struct me
         if (tcpsocket == NULL) {
                 return;
         }
-        if ((tcpsocket->io.subject.flags & MEDUSA_SUBJECT_FLAG_IO) == 0) {
+        if ((tcpsocket->io.subject.flags & MEDUSA_SUBJECT_TYPE_TCPSOCKET) == 0) {
              return;
         }
         if (tcpsocket->io.subject.monitor != NULL) {

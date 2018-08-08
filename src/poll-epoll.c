@@ -42,17 +42,17 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->fd < 0) {
                 goto bail;
         }
-        if (io->events == 0) {
+        if (medusa_io_get_events(io) == 0) {
                 goto bail;
         }
         ev.events = 0;
-        if (io->events & MEDUSA_IO_EVENT_IN) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_IN) {
                 ev.events |= EPOLLIN;
         }
-        if (io->events & MEDUSA_IO_EVENT_OUT) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_OUT) {
                 ev.events |= EPOLLOUT;
         }
-        if (io->events & MEDUSA_IO_EVENT_PRI) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_PRI) {
                 ev.events |= EPOLLPRI;
         }
         ev.data.ptr = io;
@@ -78,17 +78,17 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->fd < 0) {
                 goto bail;
         }
-        if (io->events == 0) {
+        if (medusa_io_get_events(io) == 0) {
                 goto bail;
         }
         ev.events = 0;
-        if (io->events & MEDUSA_IO_EVENT_IN) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_IN) {
                 ev.events |= EPOLLIN;
         }
-        if (io->events & MEDUSA_IO_EVENT_OUT) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_OUT) {
                 ev.events |= EPOLLOUT;
         }
-        if (io->events & MEDUSA_IO_EVENT_PRI) {
+        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_PRI) {
                 ev.events |= EPOLLPRI;
         }
         ev.data.ptr = io;
