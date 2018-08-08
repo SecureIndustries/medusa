@@ -97,7 +97,7 @@ static int test_poll (unsigned int poll)
                 fprintf(stderr, "medusa_timer_set_enabled failed\n");
                 goto bail;
         }
-        rc = medusa_timer_set_single_shot(timer, 1);
+        rc = medusa_timer_set_singleshot(timer, 1);
         if (rc < 0) {
                 fprintf(stderr, "medusa_timer_set_single_shot failed\n");
                 goto bail;

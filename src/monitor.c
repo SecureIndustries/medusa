@@ -193,7 +193,10 @@ static int medusa_monitor_process_deletes (struct medusa_monitor *monitor)
                                 }
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_POLL;
                         }
-                        medusa_io_onevent(io, MEDUSA_IO_EVENT_DESTROY);
+                        rc = medusa_io_onevent(io, MEDUSA_IO_EVENT_DESTROY);
+                        if (rc < 0) {
+                                goto bail;
+                        }
                 } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
                         timer = (struct medusa_timer *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
@@ -204,7 +207,10 @@ static int medusa_monitor_process_deletes (struct medusa_monitor *monitor)
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                                 monitor->timer.dirty = 1;
                         }
-                        medusa_timer_onevent(timer, MEDUSA_TIMER_EVENT_DESTROY);
+                        rc = medusa_timer_onevent(timer, MEDUSA_TIMER_EVENT_DESTROY);
+                        if (rc < 0) {
+                                goto bail;
+                        }
                 }
         }
         return 0;
@@ -362,7 +368,7 @@ static int medusa_monitor_check_timer (struct medusa_monitor *monitor)
                                 break;
                         }
                         timer->subject.flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
-                        if (medusa_timer_get_single_shot(timer) ||
+                        if (medusa_timer_get_singleshot(timer) ||
                             !medusa_timespec_isset(&timer->interval)) {
                                 rc = medusa_timer_set_enabled(timer, 0);
                                 if (rc < 0) {
@@ -375,7 +381,7 @@ static int medusa_monitor_check_timer (struct medusa_monitor *monitor)
                                 goto bail;
                         }
                         if (timer->onevent != NULL) {
-                                rc = timer->onevent(timer, MEDUSA_TIMER_EVENT_TIMEOUT, timer->context);
+                                rc = medusa_timer_onevent(timer, MEDUSA_TIMER_EVENT_TIMEOUT);
                                 if (rc != 0) {
                                         goto bail;
                                 }

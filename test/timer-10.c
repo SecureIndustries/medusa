@@ -23,12 +23,19 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
+static struct medusa_monitor *g_monitor;
+
 static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context)
 {
-        (void) context;
+        int *count;
+        (void) timer;
+        count = (int *) context;
+        fprintf(stderr, "events: 0x%08x\n", events);
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
-                fprintf(stderr, "break\n");
-                medusa_monitor_break(medusa_timer_get_monitor(timer));
+                *count += 1;
+        }
+        if (events & MEDUSA_TIMER_EVENT_DESTROY) {
+                return medusa_monitor_break(g_monitor);
         }
         return 0;
 }
@@ -36,59 +43,44 @@ static int timer_onevent (struct medusa_timer *timer, unsigned int events, void 
 static int test_poll (unsigned int poll)
 {
         int rc;
+        int count;
 
-        struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
-        struct medusa_timer *timer;
-
-        monitor = NULL;
+        count = 0;
+        g_monitor = NULL;
 
         medusa_monitor_init_options_default(&options);
         options.poll.type = poll;
 
-        monitor = medusa_monitor_create(&options);
-        if (monitor == NULL) {
+        g_monitor = medusa_monitor_create(&options);
+        if (g_monitor == NULL) {
+                fprintf(stderr, "medusa_monitor_create failed\n");
                 goto bail;
         }
 
-        timer = medusa_timer_create(monitor, timer_onevent, NULL);
-        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
-                goto bail;
-        }
-        rc = medusa_timer_set_initial(timer, 0.0);
+        rc = medusa_timer_create_singleshot(g_monitor, 0.1, timer_onevent, &count);
         if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_interval(timer, 0.1);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_singleshot(timer, 1);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_resolution(timer, MEDUSA_TIMER_RESOLUTION_NANOSECOMDS);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_enabled(timer, 1);
-        if (rc < 0) {
+                fprintf(stderr, "medusa_timer_create_singleshot failed\n");
                 goto bail;
         }
 
-        rc = medusa_monitor_run(monitor);
+        rc = medusa_monitor_run(g_monitor);
         if (rc != 0) {
                 fprintf(stderr, "can not run monitor\n");
                 return -1;
         }
 
+        if (count != 1) {
+                fprintf(stderr, "error\n");
+                return -1;
+        }
         fprintf(stderr, "finish\n");
 
-        medusa_monitor_destroy(monitor);
+        medusa_monitor_destroy(g_monitor);
         return 0;
-bail:   if (monitor != NULL) {
-                medusa_monitor_destroy(monitor);
+bail:   if (g_monitor != NULL) {
+                medusa_monitor_destroy(g_monitor);
         }
         return -1;
 }

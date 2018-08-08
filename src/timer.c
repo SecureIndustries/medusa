@@ -26,12 +26,14 @@ static struct medusa_pool *g_pool;
 enum {
         MEDUSA_TIMER_FLAG_ENABLED       = 0x00000001,
         MEDUSA_TIMER_FLAG_SINGLE_SHOT   = 0x00000002,
-        MEDUSA_TIMER_FLAG_NANOSECONDS   = 0x00000004,
-        MEDUSA_TIMER_FLAG_MICROSECONDS  = 0x00000008,
-        MEDUSA_TIMER_FLAG_MILLISECONDS  = 0x00000010,
-        MEDUSA_TIMER_FLAG_SECONDS       = 0x00000020
+        MEDUSA_TIMER_FLAG_AUTO_DESTROY  = 0x00000004,
+        MEDUSA_TIMER_FLAG_NANOSECONDS   = 0x00000008,
+        MEDUSA_TIMER_FLAG_MICROSECONDS  = 0x00000010,
+        MEDUSA_TIMER_FLAG_MILLISECONDS  = 0x00000020,
+        MEDUSA_TIMER_FLAG_SECONDS       = 0x00000040
 #define MEDUSA_TIMER_FLAG_ENABLED       MEDUSA_TIMER_FLAG_ENABLED
 #define MEDUSA_TIMER_FLAG_SINGLE_SHOT   MEDUSA_TIMER_FLAG_SINGLE_SHOT
+#define MEDUSA_TIMER_FLAG_AUTO_DESTROY  MEDUSA_TIMER_FLAG_AUTO_DESTROY
 #define MEDUSA_TIMER_FLAG_NANOSECONDS   MEDUSA_TIMER_FLAG_NANOSECONDS
 #define MEDUSA_TIMER_FLAG_MICROSECONDS  MEDUSA_TIMER_FLAG_MICROSECONDS
 #define MEDUSA_TIMER_FLAG_MILLISECONDS  MEDUSA_TIMER_FLAG_MILLISECONDS
@@ -75,6 +77,76 @@ __attribute__ ((visibility ("default"))) void medusa_timer_uninit (struct medusa
         }
 }
 
+__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot (struct medusa_monitor *monitor, double interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
+{
+        struct timespec timespec;
+        if (monitor == NULL) {
+                return -EINVAL;
+        }
+        if (interval < 0) {
+                return -EINVAL;
+        }
+        if (onevent == NULL) {
+                return -EINVAL;
+        }
+        timespec.tv_sec = (long long) interval;
+        timespec.tv_nsec = (long long) ((interval - timespec.tv_sec) * 1e9);
+        return medusa_timer_create_singleshot_timespec(monitor, &timespec, onevent, context);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_timeval (struct medusa_monitor *monitor, const struct timeval *timeval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
+{
+        struct timespec timespec;
+        if (monitor == NULL) {
+                return -EINVAL;
+        }
+        if (timeval == NULL) {
+                return -EINVAL;
+        }
+        if (onevent == NULL) {
+                return -EINVAL;
+        }
+        timespec.tv_sec = timeval->tv_sec;
+        timespec.tv_nsec = timeval->tv_usec * 1e3;
+        return medusa_timer_create_singleshot_timespec(monitor, &timespec, onevent, context);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_timespec (struct medusa_monitor *monitor, const struct timespec *timespec, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
+{
+        int rc;
+        struct medusa_timer *timer;
+        if (monitor == NULL) {
+                return -EINVAL;
+        }
+        if (timespec == NULL) {
+                return -EINVAL;
+        }
+        if (onevent == NULL) {
+                return -EINVAL;
+        }
+        timer = medusa_timer_create(monitor, onevent, context);
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return -EIO;
+        }
+        rc = medusa_timer_set_singleshot(timer, 1);
+        if (rc < 0) {
+                medusa_timer_destroy(timer);
+                return rc;
+        }
+        rc = medusa_timer_set_interval_timespec(timer, timespec);
+        if (rc < 0) {
+                medusa_timer_destroy(timer);
+                return rc;
+        }
+        rc = medusa_timer_set_enabled(timer, 1);
+        if (rc < 0) {
+                medusa_timer_destroy(timer);
+                return rc;
+        }
+        timer->flags |= MEDUSA_TIMER_FLAG_AUTO_DESTROY;
+        return 0;
+}
+
 __attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
 {
         int rc;
@@ -113,6 +185,9 @@ __attribute__ ((visibility ("default"))) void medusa_timer_destroy (struct medus
 __attribute__ ((visibility ("default"))) int medusa_timer_set_initial (struct medusa_timer *timer, double initial)
 {
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return -EINVAL;
+        }
+        if (initial < 0) {
                 return -EINVAL;
         }
         timer->initial.tv_sec = (long long) initial;
@@ -166,6 +241,9 @@ __attribute__ ((visibility ("default"))) double medusa_timer_get_initial (const 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_interval (struct medusa_timer *timer, double interval)
 {
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return -EINVAL;
+        }
+        if (interval < 0) {
                 return -EINVAL;
         }
         timer->interval.tv_sec = (long long) interval;
@@ -278,12 +356,12 @@ __attribute__ ((visibility ("default"))) int medusa_timer_get_remaining_timespec
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_set_single_shot (struct medusa_timer *timer, int single_shot)
+__attribute__ ((visibility ("default"))) int medusa_timer_set_singleshot (struct medusa_timer *timer, int singleshot)
 {
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 return -EINVAL;
         }
-        if (single_shot) {
+        if (singleshot) {
                 timer->flags |= MEDUSA_TIMER_FLAG_SINGLE_SHOT;
         } else {
                 timer->flags &= ~MEDUSA_TIMER_FLAG_SINGLE_SHOT;
@@ -294,7 +372,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_set_single_shot (struc
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_get_single_shot (const struct medusa_timer *timer)
+__attribute__ ((visibility ("default"))) int medusa_timer_get_singleshot (const struct medusa_timer *timer)
 {
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 return -EINVAL;
@@ -385,6 +463,11 @@ int medusa_timer_onevent (struct medusa_timer *timer, unsigned int events)
         type = timer->subject.flags & MEDUSA_SUBJECT_TYPE_MASK;
         if (timer->onevent != NULL) {
                 rc = timer->onevent(timer, events, timer->context);
+        }
+        if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
+                if (timer->flags & MEDUSA_TIMER_FLAG_AUTO_DESTROY) {
+                        medusa_timer_destroy(timer);
+                }
         }
         if (events & MEDUSA_TIMER_EVENT_DESTROY) {
                 if (type == MEDUSA_SUBJECT_TYPE_TIMER) {

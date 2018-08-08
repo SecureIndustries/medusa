@@ -27,6 +27,10 @@ struct timespec;
 struct medusa_timer;
 struct medusa_monitor;
 
+int medusa_timer_create_singleshot (struct medusa_monitor *monitor, double interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context);
+int medusa_timer_create_singleshot_timeval (struct medusa_monitor *monitor, const struct timeval *timeval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context);
+int medusa_timer_create_singleshot_timespec (struct medusa_monitor *monitor, const struct timespec *timespec, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context);
+
 struct medusa_timer * medusa_timer_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context);
 void medusa_timer_destroy (struct medusa_timer *timer);
 
@@ -44,8 +48,8 @@ double medusa_timer_get_remaining_time (const struct medusa_timer *timer);
 int medusa_timer_get_remaining_timeval (const struct medusa_timer *timer, struct timeval *timeval);
 int medusa_timer_get_remaining_timespec (const struct medusa_timer *timer, struct timespec *timespec);
 
-int medusa_timer_set_single_shot (struct medusa_timer *timer, int single_shot);
-int medusa_timer_get_single_shot (const struct medusa_timer *timer);
+int medusa_timer_set_singleshot (struct medusa_timer *timer, int singleshot);
+int medusa_timer_get_singleshot (const struct medusa_timer *timer);
 
 int medusa_timer_set_resolution (struct medusa_timer *timer, unsigned int resolution);
 unsigned int medusa_timer_get_resolution (const struct medusa_timer *timer);

@@ -82,7 +82,7 @@ static int test_poll (unsigned int poll, int *pipes, unsigned int count)
                 if (rc < 0) {
                         goto bail;
                 }
-                rc = medusa_timer_set_single_shot(timer, rand() % 2);
+                rc = medusa_timer_set_singleshot(timer, rand() % 2);
                 if (rc < 0) {
                         goto bail;
                 }

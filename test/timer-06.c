@@ -80,7 +80,7 @@ static int test_poll (unsigned int poll)
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_timer_set_single_shot(timer, 1);
+        rc = medusa_timer_set_singleshot(timer, 1);
         if (rc < 0) {
                 goto bail;
         }
@@ -97,7 +97,7 @@ static int test_poll (unsigned int poll)
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_timer_set_single_shot(timer, 1);
+        rc = medusa_timer_set_singleshot(timer, 1);
         if (rc < 0) {
                 goto bail;
         }
