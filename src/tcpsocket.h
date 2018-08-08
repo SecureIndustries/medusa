@@ -1,4 +1,7 @@
 
+#if !defined(MEDUSA_TCPSOCKET_H)
+#define MEDUSA_TCPSOCKET_H
+
 struct medusa_monitor;
 struct medusa_tcpsocket;
 
@@ -100,3 +103,5 @@ int medusa_tcpsocket_write (struct medusa_tcpsocket *tcpsocket, const void *data
 
 int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 struct medusa_monitor * medusa_tcpsocket_get_monitor (struct medusa_tcpsocket *tcpsocket);
+
+#endif

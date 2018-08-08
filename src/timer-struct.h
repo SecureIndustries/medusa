@@ -1,4 +1,7 @@
 
+#if !defined(MEDUSA_TIMER_STRUCT_H)
+#define MEDUSA_TIMER_STRUCT_H
+
 struct medusa_timer {
         struct medusa_subject subject;
 
@@ -15,3 +18,5 @@ struct medusa_timer {
 
 int medusa_timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context);
 void medusa_timer_uninit (struct medusa_timer *timer);
+
+#endif

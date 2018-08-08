@@ -1,4 +1,7 @@
 
+#if !defined(MEDUSA_TIMER_BACKEND_H)
+#define MEDUSA_TIMER_BACKEND_H
+
 struct timespec;
 struct medusa_monitor;
 
@@ -10,3 +13,5 @@ struct medusa_timer_backend {
         void (*destroy) (struct medusa_timer_backend *backend);
         struct medusa_monitor *monitor;
 };
+
+#endif

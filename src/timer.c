@@ -234,6 +234,50 @@ __attribute__ ((visibility ("default"))) double medusa_timer_get_remaining_time 
         return rem.tv_sec + rem.tv_nsec * 1e-9;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_timer_get_remaining_timeval (const struct medusa_timer *timer, struct timeval *timeval)
+{
+        struct timespec now;
+        struct timespec rem;
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return -EINVAL;
+        }
+        if (!medusa_timer_get_enabled(timer)) {
+                return -EAGAIN;
+        }
+        medusa_clock_monotonic(&now);
+        if (!medusa_timespec_compare(&timer->_timespec, &now, >)) {
+                return 0;
+        }
+        medusa_timespec_sub(&timer->_timespec, &now, &rem);
+        timeval->tv_sec = rem.tv_sec;
+        timeval->tv_usec = (rem.tv_nsec + 500) / 1000;
+        if (timeval->tv_usec >= 1000000) {
+                timeval->tv_sec++;
+                timeval->tv_usec -= 1000000;
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_get_remaining_timespec (const struct medusa_timer *timer, struct timespec *timespec)
+{
+        struct timespec now;
+        struct timespec rem;
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return -EINVAL;
+        }
+        if (!medusa_timer_get_enabled(timer)) {
+                return -EAGAIN;
+        }
+        medusa_clock_monotonic(&now);
+        if (!medusa_timespec_compare(&timer->_timespec, &now, >)) {
+                return 0;
+        }
+        medusa_timespec_sub(&timer->_timespec, &now, &rem);
+        timespec->tv_sec = rem.tv_sec;
+        timespec->tv_nsec = rem.tv_nsec;
+        return 0;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_timer_set_single_shot (struct medusa_timer *timer, int single_shot)
 {
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {

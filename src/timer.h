@@ -1,4 +1,7 @@
 
+#if !defined(MEDUSA_TIMER_H)
+#define MEDUSA_TIMER_H
+
 enum {
         MEDUSA_TIMER_RESOLUTION_DEFAULT         = 0,
         MEDUSA_TIMER_RESOLUTION_NANOSECOMDS     = 1,
@@ -38,6 +41,8 @@ int medusa_timer_set_interval_timespec (struct medusa_timer *timer, const struct
 double medusa_timer_get_interval (const struct medusa_timer *timer);
 
 double medusa_timer_get_remaining_time (const struct medusa_timer *timer);
+int medusa_timer_get_remaining_timeval (const struct medusa_timer *timer, struct timeval *timeval);
+int medusa_timer_get_remaining_timespec (const struct medusa_timer *timer, struct timespec *timespec);
 
 int medusa_timer_set_single_shot (struct medusa_timer *timer, int single_shot);
 int medusa_timer_get_single_shot (const struct medusa_timer *timer);
@@ -49,3 +54,5 @@ int medusa_timer_set_enabled (struct medusa_timer *timer, int enabled);
 int medusa_timer_get_enabled (const struct medusa_timer *timer);
 
 struct medusa_monitor * medusa_timer_get_monitor (struct medusa_timer *timer);
+
+#endif

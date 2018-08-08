@@ -1,4 +1,7 @@
 
+#if !defined(MEDUSA_BUFFER_H)
+#define MEDUSA_BUFFER_H
+
 struct medusa_buffer;
 
 struct medusa_buffer * medusa_buffer_create (void);
@@ -18,3 +21,5 @@ int medusa_buffer_push (struct medusa_buffer *buffer, const void *data, int leng
 int medusa_buffer_printf (struct medusa_buffer *buffer, const char *format, ...)  __attribute__((format(printf, 2, 3)));
 int medusa_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va);
 int medusa_buffer_eat (struct medusa_buffer *buffer, int length);
+
+#endif

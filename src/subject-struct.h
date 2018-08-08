@@ -1,4 +1,7 @@
 
+#if !defined(MEDUSA_SUBJECT_STRUCT_H)
+#define MEDUSA_SUBJECT_STRUCT_H
+
 enum {
         MEDUSA_SUBJECT_FLAG_ALLOC       = 0x00000001,
         MEDUSA_SUBJECT_FLAG_MOD         = 0x00000100,
@@ -28,3 +31,5 @@ struct medusa_subject {
         unsigned int flags;
         struct medusa_monitor *monitor;
 };
+
+#endif

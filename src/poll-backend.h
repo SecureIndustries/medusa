@@ -1,4 +1,7 @@
 
+#if !defined(MEDUSA_POLL_BACKEND_H)
+#define MEDUSA_POLL_BACKEND_H
+
 struct timespec;
 struct medusa_monitor;
 struct medusa_io;
@@ -13,3 +16,5 @@ struct medusa_poll_backend {
         void (*destroy) (struct medusa_poll_backend *backend);
         struct medusa_monitor *monitor;
 };
+
+#endif

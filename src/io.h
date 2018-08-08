@@ -1,4 +1,7 @@
 
+#if !defined(MEDUSA_IO_H)
+#define MEDUSA_IO_H
+
 struct medusa_io;
 struct medusa_monitor;
 
@@ -36,3 +39,5 @@ int medusa_io_set_enabled (struct medusa_io *io, int enabled);
 int medusa_io_get_enabled (const struct medusa_io *io);
 
 struct medusa_monitor * medusa_io_get_monitor (struct medusa_io *io);
+
+#endif

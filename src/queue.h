@@ -1,4 +1,7 @@
 
+#if !defined(MEDUSA_QUEUE_H)
+#define MEDUSA_QUEUE_H
+
 #include <sys/queue.h>
 
 /*
@@ -108,4 +111,6 @@
 
 #if !defined(TAILQ_PREV)
 #define TAILQ_PREV(elm, headname, field) (*(((struct headname *)((elm)->field.tqe_prev))->tqh_last))
+#endif
+
 #endif

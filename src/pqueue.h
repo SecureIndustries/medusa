@@ -1,4 +1,7 @@
 
+#if !defined(MEDUSA_PQUEUE_H)
+#define MEDUSA_PQUEUE_H
+
 struct pqueue_head;
 
 struct pqueue_head * pqueue_create (
@@ -17,3 +20,5 @@ int pqueue_verify (struct pqueue_head *head);
 
 void * pqueue_pop (struct pqueue_head *head);
 void * pqueue_peek (struct pqueue_head *head);
+
+#endif
