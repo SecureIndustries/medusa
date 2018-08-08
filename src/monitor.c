@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #include "queue.h"
 #include "pqueue.h"
@@ -94,16 +95,27 @@ static int monitor_break_io_onevent (struct medusa_io *io, unsigned int events, 
         unsigned int reason;
         (void) context;
         if (events & MEDUSA_IO_EVENT_IN) {
-                rc = read(io->subject.monitor->wakeup.fds[0], &reason, sizeof(reason));
-                if (rc != sizeof(reason)) {
-                        goto bail;
-                }
-                if (reason == WAKEUP_REASON_LOOP_BREAK) {
-                        io->subject.monitor->running = 0;
-                } else if (reason == WAKEUP_REASON_LOOP_CONTINUE) {
-                        io->subject.monitor->running = 1;
-                } else {
-                        goto bail;
+                while (1) {
+                        rc = read(io->subject.monitor->wakeup.fds[0], &reason, sizeof(reason));
+                        if (rc == 0) {
+                                break;
+                        } else if (rc < 0) {
+                                if (errno == EAGAIN ||
+                                    errno == EWOULDBLOCK ||
+                                    errno == EINTR) {
+                                        break;
+                                }
+                                goto bail;
+                        } else if (rc != sizeof(reason)) {
+                                goto bail;
+                        }
+                        if (reason == WAKEUP_REASON_LOOP_BREAK) {
+                                io->subject.monitor->running = 0;
+                        } else if (reason == WAKEUP_REASON_LOOP_CONTINUE) {
+                                io->subject.monitor->running = 1;
+                        } else {
+                                goto bail;
+                        }
                 }
         }
         return 0;
@@ -112,13 +124,24 @@ bail:   return -1;
 
 static int monitor_timer_io_onevent (struct medusa_io *io, unsigned int events, void *context)
 {
+        int rc;
+        uint64_t value;
         (void) context;
         if (events & MEDUSA_IO_EVENT_IN) {
-                int rc;
-                uint64_t value;
-                rc = read(io->fd, &value, sizeof(value));
-                if (rc != sizeof(value)) {
-                        goto bail;
+                while (1) {
+                        rc = read(io->fd, &value, sizeof(value));
+                        if (rc == 0) {
+                                break;
+                        } else if (rc < 0) {
+                                if (errno == EAGAIN ||
+                                    errno == EWOULDBLOCK ||
+                                    errno == EINTR) {
+                                        break;
+                                }
+                                goto bail;
+                        } else if (rc != sizeof(value)) {
+                                goto bail;
+                        }
                 }
                 io->subject.monitor->timer.fired = 1;
         }
@@ -419,7 +442,6 @@ bail:   return -1;
 
 __attribute__ ((visibility ("default"))) int medusa_monitor_del (struct medusa_subject *subject)
 {
-        int rc;
         if (subject == NULL) {
                 goto bail;
         }
@@ -439,7 +461,9 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_del (struct medusa_s
                 TAILQ_INSERT_TAIL(&subject->monitor->deletes, subject, subjects);
         }
         subject->flags |= MEDUSA_SUBJECT_FLAG_DEL;
+#if 1
         if (1) {
+                int rc;
                 if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
                         struct medusa_io *io;
                         io = (struct medusa_io *) subject;
@@ -463,11 +487,13 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_del (struct medusa_s
                         }
                 }
         } else {
+                int rc;
                 rc = medusa_monitor_process_deletes(subject->monitor);
                 if (rc != 0) {
                         goto bail;
                 }
         }
+#endif
         return 0;
 bail:   return -1;
 }

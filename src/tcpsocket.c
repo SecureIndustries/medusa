@@ -769,26 +769,29 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_write (struct medu
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events)
 {
         int rc;
+        unsigned int type;
         rc = 0;
+        type = tcpsocket->io.subject.flags & MEDUSA_SUBJECT_TYPE_MASK;
         if (tcpsocket->onevent != NULL) {
                 rc = tcpsocket->onevent(tcpsocket, events, tcpsocket->io.context);
         }
-        if ((rc != 1) &&
-            (events & MEDUSA_TCPSOCKET_EVENT_DESTROY)) {
-                medusa_buffer_uninit(&tcpsocket->rbuffer);
-                medusa_buffer_uninit(&tcpsocket->wbuffer);
-                if (tcpsocket->io.fd >= 0) {
-                        close(tcpsocket->io.fd);
-                        tcpsocket->io.fd = -1;
-                }
-                if (tcpsocket->io.subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
+        if (events & MEDUSA_TCPSOCKET_EVENT_DESTROY) {
+                if (type == (MEDUSA_SUBJECT_TYPE_IO | MEDUSA_SUBJECT_TYPE_TCPSOCKET)) {
+                        medusa_buffer_uninit(&tcpsocket->rbuffer);
+                        medusa_buffer_uninit(&tcpsocket->wbuffer);
+                        if (tcpsocket->io.fd >= 0) {
+                                close(tcpsocket->io.fd);
+                                tcpsocket->io.fd = -1;
+                        }
+                        if (tcpsocket->io.subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
 #if defined(MEDUSA_TCPSOCKET_USE_POOL) && (MEDUSA_TCPSOCKET_USE_POOL == 1)
-                        medusa_pool_free(tcpsocket);
+                                medusa_pool_free(tcpsocket);
 #else
-                        free(tcpsocket);
+                                free(tcpsocket);
 #endif
-                } else {
-                        memset(tcpsocket, 0, sizeof(struct medusa_tcpsocket));
+                        } else {
+                                memset(tcpsocket, 0, sizeof(struct medusa_tcpsocket));
+                        }
                 }
         }
         return rc;
