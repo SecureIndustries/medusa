@@ -780,7 +780,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_accept_init (struc
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
-        if (accepted == NULL) {
+        if (MEDUSA_IS_ERR_OR_NULL(accepted)) {
                 return -EINVAL;
         }
         if (MEDUSA_IS_ERR_OR_NULL(onevent)) {

@@ -4,6 +4,8 @@
 #include <string.h>
 #include <errno.h>
 
+#include "http_parser.h"
+
 #include "error.h"
 #include "tcpsocket.h"
 #include "http_parser.h"
@@ -15,14 +17,186 @@ struct callback {
         void *context;
 };
 
+struct client {
+        http_parser http_parser;
+        struct medusa_tcpsocket *tcpsocket;
+        struct medusa_http_server *server;
+};
+
 struct medusa_http_server {
         struct medusa_tcpsocket *tcpsocket;
 };
 
+static int client_http_on_message_begin (http_parser *http_parser)
+{
+        struct client *client = http_parser->data;
+        (void) client;
+        fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int client_http_on_url (http_parser *http_parser, const char *at, size_t length)
+{
+        struct client *client = http_parser->data;
+        (void) client;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int client_http_on_status (http_parser *http_parser, const char *at, size_t length)
+{
+        struct client *client = http_parser->data;
+        (void) client;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int client_http_on_header_field (http_parser *http_parser, const char *at, size_t length)
+{
+        struct client *client = http_parser->data;
+        (void) client;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int client_http_on_header_value (http_parser *http_parser, const char *at, size_t length)
+{
+        struct client *client = http_parser->data;
+        (void) client;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int client_http_on_headers_complete (http_parser *http_parser)
+{
+        struct client *client = http_parser->data;
+        (void) client;
+        fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int client_http_on_body (http_parser *http_parser, const char *at, size_t length)
+{
+        struct client *client = http_parser->data;
+        (void) client;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int client_http_on_message_complete (http_parser *http_parser)
+{
+        struct client *client = http_parser->data;
+        (void) client;
+        fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int client_http_on_chunk_header (http_parser *http_parser)
+{
+        struct client *client = http_parser->data;
+        (void) client;
+        fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int client_http_on_chunk_complete (http_parser *http_parser)
+{
+        struct client *client = http_parser->data;
+        (void) client;
+        fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
+{
+        int recved;
+        int parsed;
+        http_parser_settings http_parser_settings;
+        struct client *client = context;
+
+        memset(&http_parser_settings, 0, sizeof(http_parser_settings));
+        http_parser_settings.on_message_begin           = client_http_on_message_begin;
+        http_parser_settings.on_url                     = client_http_on_url;
+        http_parser_settings.on_status                  = client_http_on_status;
+        http_parser_settings.on_header_field            = client_http_on_header_field;
+        http_parser_settings.on_header_value            = client_http_on_header_value;
+        http_parser_settings.on_headers_complete        = client_http_on_headers_complete;
+        http_parser_settings.on_body                    = client_http_on_body;
+        http_parser_settings.on_message_complete        = client_http_on_message_complete;
+        http_parser_settings.on_chunk_header            = client_http_on_chunk_header;
+        http_parser_settings.on_chunk_complete          = client_http_on_chunk_complete;
+
+        if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
+                char buffer[64];
+                int buffer_length = sizeof(buffer);
+                while (1) {
+                        recved = medusa_tcpsocket_read(tcpsocket, buffer, buffer_length);
+                        if (recved < 0) {
+                                return recved;
+                        }
+                        if (recved == 0) {
+                                break;
+                        }
+                        parsed = http_parser_execute(&client->http_parser, &http_parser_settings, buffer, recved);
+                        if (parsed != recved) {
+                                return -EIO;
+                        }
+                }
+        }
+
+        if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
+                medusa_tcpsocket_destroy(tcpsocket);
+        }
+
+        if (events & MEDUSA_TCPSOCKET_EVENT_DESTROY) {
+                client->tcpsocket = NULL;
+                free(client);
+        }
+
+        return 0;
+}
+
 static int server_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
 {
+        int rc;
+        struct client *client;
         struct medusa_http_server *server = context;
-        (void) tcpsocket;
+        if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
+                client = malloc(sizeof(struct client));
+                if (client == NULL) {
+                        return -ENOMEM;
+                }
+                memset(client, 0, sizeof(struct client));
+                http_parser_init(&client->http_parser, HTTP_REQUEST);
+                client->http_parser.data = client;
+                client->server = server;
+                client->tcpsocket = medusa_tcpsocket_accept(tcpsocket, client_tcpsocket_onevent, client);
+                if (MEDUSA_IS_ERR_OR_NULL(client->tcpsocket)) {
+                        return MEDUSA_PTR_ERR(client->tcpsocket);
+                }
+                rc = medusa_tcpsocket_set_nonblocking(client->tcpsocket, 1);
+                if (rc < 0) {
+                        medusa_tcpsocket_destroy(client->tcpsocket);
+                        free(client);
+                        return rc;
+                }
+                rc = medusa_tcpsocket_set_enabled(client->tcpsocket, 1);
+                if (rc < 0) {
+                        medusa_tcpsocket_destroy(client->tcpsocket);
+                        free(client);
+                        return rc;
+                }
+        }
         if (events & MEDUSA_TCPSOCKET_EVENT_DESTROY) {
                 server->tcpsocket = NULL;
                 medusa_http_server_destroy(server);

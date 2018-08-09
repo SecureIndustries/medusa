@@ -289,15 +289,17 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
                 accepted = medusa_tcpsocket_accept(tcpsocket, tcpsocket_server_onevent, context);
-                if (accepted == NULL) {
-                        return -1;
+                if (MEDUSA_IS_ERR_OR_NULL(accepted)) {
+                        return MEDUSA_PTR_ERR(accepted);
                 }
                 rc = medusa_tcpsocket_set_nonblocking(accepted, 1);
                 if (rc < 0) {
+                        medusa_tcpsocket_destroy(accepted);
                         return -1;
                 }
                 rc = medusa_tcpsocket_set_enabled(accepted, 1);
                 if (rc < 0) {
+                        medusa_tcpsocket_destroy(accepted);
                         return -1;
                 }
         }
