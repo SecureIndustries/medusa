@@ -205,7 +205,7 @@ __attribute__ ((visibility ("default"))) void medusa_tcpsocket_uninit (struct me
                 return;
         }
         if ((tcpsocket->io.subject.flags & MEDUSA_SUBJECT_TYPE_TCPSOCKET) == 0) {
-             return;
+                return;
         }
         if (tcpsocket->io.subject.monitor != NULL) {
                 medusa_monitor_del(&tcpsocket->io.subject);
@@ -495,6 +495,38 @@ ipv6:
         if (tcpsocket->io.fd < 0) {
                 goto bail;
         }
+        {
+                int rc;
+                int flags;
+                flags = fcntl(tcpsocket->io.fd, F_GETFL, 0);
+                if (flags < 0) {
+                        goto bail;
+                }
+                flags = (!!tcpsocket_get_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NONBLOCKING)) ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
+                rc = fcntl(tcpsocket->io.fd, F_SETFL, flags);
+                if (rc != 0) {
+                        goto bail;
+                }
+        }
+        {
+                int rc;
+                int on;
+                on = !!tcpsocket_get_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_REUSEADDR);
+                rc = setsockopt(tcpsocket->io.fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
+        {
+                int rc;
+                int on;
+                on = !!tcpsocket_get_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_REUSEPORT);
+                rc = setsockopt(tcpsocket->io.fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+                if (rc < 0) {
+                        goto bail;
+                }
+
+        }
         rc = bind(tcpsocket->io.fd, sockaddr , length);
         if (rc != 0) {
                 goto bail;
@@ -607,6 +639,38 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect (struct me
                 tcpsocket->io.fd = socket(res->ai_family, SOCK_STREAM, 0);
                 if (tcpsocket->io.fd < 0) {
                         goto bail;
+                }
+                {
+                        int rc;
+                        int flags;
+                        flags = fcntl(tcpsocket->io.fd, F_GETFL, 0);
+                        if (flags < 0) {
+                                goto bail;
+                        }
+                        flags = (!!tcpsocket_get_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NONBLOCKING)) ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
+                        rc = fcntl(tcpsocket->io.fd, F_SETFL, flags);
+                        if (rc != 0) {
+                                goto bail;
+                        }
+                }
+                {
+                        int rc;
+                        int on;
+                        on = !!tcpsocket_get_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_REUSEADDR);
+                        rc = setsockopt(tcpsocket->io.fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                }
+                {
+                        int rc;
+                        int on;
+                        on = !!tcpsocket_get_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_REUSEPORT);
+                        rc = setsockopt(tcpsocket->io.fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+                        if (rc < 0) {
+                                goto bail;
+                        }
+
                 }
                 rc = connect(tcpsocket->io.fd, res->ai_addr, res->ai_addrlen);
                 if (rc != 0) {

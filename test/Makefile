@@ -25,6 +25,7 @@ define test-defaults
 		-lpthread
 
 	$1_depends-y = \
+		../dist/lib/libmedusa-http.a \
 		../dist/lib/libmedusa-socket.a \
 		../dist/lib/libmedusa-monitor.a
 endef
