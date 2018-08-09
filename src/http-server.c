@@ -32,7 +32,7 @@ static int server_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
 
 __attribute__ ((visibility ("default"))) int medusa_http_server_init_options_default (struct medusa_http_server_init_options *options)
 {
-        if (options == NULL) {
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
                 return -EINVAL;
         }
         memset(options, 0, sizeof(struct medusa_http_server_init_options));
@@ -70,7 +70,7 @@ __attribute__ ((visibility ("default"))) struct medusa_http_server * medusa_http
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
-        if (options == NULL) {
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
                 rc = medusa_http_server_init_options_default(&__options);
                 if (rc < 0) {
                         return MEDUSA_ERR_PTR(rc);

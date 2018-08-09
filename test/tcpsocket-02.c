@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <errno.h>
 
+#include "medusa/error.h"
 #include "medusa/tcpsocket.h"
 #include "medusa/monitor.h"
 
@@ -64,23 +65,23 @@ static int test_poll (unsigned int poll)
         }
 
         tcpsocket = medusa_tcpsocket_create(monitor, tcpsocket_bind_onevent, NULL);
-        if (tcpsocket == NULL) {
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 goto bail;
         }
         rc = medusa_tcpsocket_set_nonblocking(tcpsocket, 1);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         rc = medusa_tcpsocket_set_reuseaddr(tcpsocket, 0);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         rc = medusa_tcpsocket_set_reuseport(tcpsocket, 1);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         rc = medusa_tcpsocket_set_backlog(tcpsocket, 10);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         for (port = 12345; port < 65535; port++) {
@@ -95,31 +96,31 @@ static int test_poll (unsigned int poll)
         }
         fprintf(stderr, "port: %d\n", port);
         rc = medusa_tcpsocket_set_enabled(tcpsocket, 1);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
 
         tcpsocket = medusa_tcpsocket_create(monitor, tcpsocket_connect_onevent, NULL);
-        if (tcpsocket == NULL) {
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 goto bail;
         }
         rc = medusa_tcpsocket_set_nonblocking(tcpsocket, 1);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         rc = medusa_tcpsocket_connect(tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, "127.0.0.1", port);
-        if (rc != 0) {
-                fprintf(stderr, "  medusa_tcpsocket_connect failed\n");
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_connect failed\n");
                 goto bail;
         }
         rc = medusa_tcpsocket_set_enabled(tcpsocket, 1);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
 
         rc = medusa_monitor_run(monitor);
         if (rc != 0) {
-                fprintf(stderr, "  medusa_monitor_run failed\n");
+                fprintf(stderr, "medusa_monitor_run failed: %d\n", rc);
                 goto bail;
         }
 
@@ -154,7 +155,7 @@ int main (int argc, char *argv[])
 
                 rc = test_poll(g_polls[i]);
                 if (rc != 0) {
-                        fprintf(stderr, "  failed\n");
+                        fprintf(stderr, "failed\n");
                         return -1;
                 }
         }
