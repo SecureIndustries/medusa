@@ -23,7 +23,7 @@
 #include <medusa/io.h>
 #include <medusa/monitor.h>
 
-#include "http-parser.h"
+#include "http_parser.h"
 
 #if !defined(TAILQ_FOREACH_SAFE)
 #define TAILQ_FOREACH_SAFE(var, head, field, next)               \
