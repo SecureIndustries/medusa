@@ -59,7 +59,7 @@ static struct header * header_vcreate (const char *key, const char *value, va_li
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
         va_copy(cp, ap);
-        size = vsnprintf(NULL, 0, value, cp);
+        size = vsnprintf(header->value, size + 1, value, cp);
         va_end(cp);
         if (size < 0) {
                 header_destroy(header);
@@ -112,8 +112,10 @@ __attribute__ ((visibility ("default"))) void medusa_http_request_destroy (struc
         free(request);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_http_request_set_method (struct medusa_http_request *request, const char *method)
+__attribute__ ((visibility ("default"))) int medusa_http_request_set_method (struct medusa_http_request *request, const char *method, ...)
 {
+        int size;
+        va_list ap;
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return -EINVAL;
         }
@@ -122,16 +124,43 @@ __attribute__ ((visibility ("default"))) int medusa_http_request_set_method (str
         }
         if (request->method != NULL) {
                 free(request->method);
+                request->method = NULL;
         }
-        request->method = strdup(method);
+        va_start(ap, method);
+        size = vsnprintf(NULL, 0, method, ap);
+        va_end(ap);
+        if (size < 0) {
+                return -EIO;
+        }
+        request->method = malloc(size + 1);
         if (request->method == NULL) {
                 return -ENOMEM;
+        }
+        va_start(ap, method);
+        size = vsnprintf(request->method, size, method, ap);
+        va_end(ap);
+        if (size < 0) {
+                if (request->method != NULL) {
+                        free(request->method);
+                        request->method = NULL;
+                }
+                return -EIO;
         }
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_http_request_set_url (struct medusa_http_request *request, const char *url)
+__attribute__ ((visibility ("default"))) const char * medusa_http_request_get_method (const struct medusa_http_request *request)
 {
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return request->method;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_http_request_set_url (struct medusa_http_request *request, const char *url, ...)
+{
+        int size;
+        va_list ap;
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return -EINVAL;
         }
@@ -140,12 +169,37 @@ __attribute__ ((visibility ("default"))) int medusa_http_request_set_url (struct
         }
         if (request->url != NULL) {
                 free(request->url);
+                request->url = NULL;
         }
-        request->url = strdup(url);
+        va_start(ap, url);
+        size = vsnprintf(NULL, 0, url, ap);
+        va_end(ap);
+        if (size < 0) {
+                return -EIO;
+        }
+        request->url = malloc(size + 1);
         if (request->url == NULL) {
                 return -ENOMEM;
         }
+        va_start(ap, url);
+        size = vsnprintf(request->url, size, url, ap);
+        va_end(ap);
+        if (size < 0) {
+                if (request->url != NULL) {
+                        free(request->url);
+                        request->url = NULL;
+                }
+                return -EIO;
+        }
         return 0;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_http_request_get_url (const struct medusa_http_request *request)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return request->url;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_http_request_set_version (struct medusa_http_request *request, int major, int minor)
@@ -156,6 +210,22 @@ __attribute__ ((visibility ("default"))) int medusa_http_request_set_version (st
         request->major = major;
         request->minor = minor;
         return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_http_request_get_version_major (const struct medusa_http_request *request)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
+                return -EINVAL;
+        }
+        return request->major;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_http_request_get_version_minor (const struct medusa_http_request *request)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
+                return -EINVAL;
+        }
+        return request->minor;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_http_request_add_header (struct medusa_http_request *request, const char *key, const char *value, ...)
@@ -198,6 +268,23 @@ __attribute__ ((visibility ("default"))) int medusa_http_request_del_header (str
                 }
         }
         return 0;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_http_request_get_header_value (const struct medusa_http_request *request, const char *key)
+{
+        struct header *header;
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(key)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        TAILQ_FOREACH(header, &request->headers, list) {
+                if (strcasecmp(header->key, key) == 0) {
+                        return header->value;
+                }
+        }
+        return MEDUSA_ERR_PTR(-ENOENT);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_http_request_set_callback (struct medusa_http_request *request, const struct medusa_http_request_callback *callback, void *context)

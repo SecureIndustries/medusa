@@ -24,27 +24,30 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int http_server_callback_stat (struct medusa_http_server *server, void *cookie, const char *path, struct medusa_http_stat *stat)
+static int http_server_callback_stat (struct medusa_http_server *server, struct medusa_http_request *request, void *cookie, const char *path, struct medusa_http_stat *stat)
 {
         (void) server;
+        (void) request;
         (void) cookie;
         (void) path;
         (void) stat;
         return 0;
 }
 
-static void * http_server_callback_open (struct medusa_http_server *server, void *cookie, const char *path, unsigned int mode)
+static void * http_server_callback_open (struct medusa_http_server *server, struct medusa_http_request *request, void *cookie, const char *path, unsigned int mode)
 {
         (void) server;
+        (void) request;
         (void) cookie;
         (void) path;
         (void) mode;
         return NULL;
 }
 
-static int http_server_callback_read (struct medusa_http_server *server, void *cookie, void *handle, void *buffer, int length)
+static int http_server_callback_read (struct medusa_http_server *server, struct medusa_http_request *request, void *cookie, void *handle, void *buffer, int length)
 {
         (void) server;
+        (void) request;
         (void) cookie;
         (void) handle;
         (void) buffer;
@@ -52,9 +55,10 @@ static int http_server_callback_read (struct medusa_http_server *server, void *c
         return 0;
 }
 
-static int http_server_callback_write (struct medusa_http_server *server, void *cookie, void *handle, const void *buffer, int length)
+static int http_server_callback_write (struct medusa_http_server *server, struct medusa_http_request *request, void *cookie, void *handle, const void *buffer, int length)
 {
         (void) server;
+        (void) request;
         (void) cookie;
         (void) handle;
         (void) buffer;
@@ -62,9 +66,10 @@ static int http_server_callback_write (struct medusa_http_server *server, void *
         return 0;
 }
 
-static long long http_server_callback_seek (struct medusa_http_server *server, void *cookie, void *handle, long long offset, unsigned int whence)
+static long long http_server_callback_seek (struct medusa_http_server *server, struct medusa_http_request *request, void *cookie, void *handle, long long offset, unsigned int whence)
 {
         (void) server;
+        (void) request;
         (void) cookie;
         (void) handle;
         (void) offset;
@@ -72,9 +77,10 @@ static long long http_server_callback_seek (struct medusa_http_server *server, v
         return 0;
 }
 
-static int http_server_callback_close (struct medusa_http_server *server, void *cookie, void *handle)
+static int http_server_callback_close (struct medusa_http_server *server, struct medusa_http_request *request, void *cookie, void *handle)
 {
         (void) server;
+        (void) request;
         (void) cookie;
         (void) handle;
         return 0;

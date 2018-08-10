@@ -12,6 +12,8 @@
 #include "http_parser.h"
 #include "http.h"
 #include "http-server.h"
+#include "http-request.h"
+#include "http-request-struct.h"
 
 TAILQ_HEAD(callbacks, callback);
 struct callback {
@@ -25,6 +27,7 @@ struct client {
         http_parser http_parser;
         struct medusa_tcpsocket *tcpsocket;
         struct medusa_http_request *request;
+        void *handle;
         struct medusa_http_server *server;
 };
 
@@ -35,20 +38,45 @@ struct medusa_http_server {
 
 static int client_http_on_message_begin (http_parser *http_parser)
 {
+        int rc;
         struct client *client = http_parser->data;
-        (void) client;
         fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
         fprintf(stderr, "  method: %d\n", http_parser->method);
+        if (!MEDUSA_IS_ERR_OR_NULL(client->request)) {
+                return -EEXIST;
+        }
+        client->request = medusa_http_request_create();
+        if (MEDUSA_IS_ERR_OR_NULL(client->request)) {
+                return MEDUSA_PTR_ERR(client->request);
+        }
+        rc = medusa_http_request_set_method(client->request, http_method_str(http_parser->method));
+        if (rc < 0) {
+                return rc;
+        }
         return 0;
 }
 
 static int client_http_on_url (http_parser *http_parser, const char *at, size_t length)
 {
+        int rc;
+        struct http_parser_url url;
         struct client *client = http_parser->data;
-        (void) client;
-        (void) at;
-        (void) length;
         fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        fprintf(stderr, "  url: %.*s\n", (int) length, at);
+        if (MEDUSA_IS_ERR_OR_NULL(client->request)) {
+                return MEDUSA_PTR_ERR(client->request);
+        }
+        rc = http_parser_parse_url(at, length, http_parser->method == HTTP_CONNECT, &url);
+        if (rc != 0) {
+                return -EIO;
+        }
+        if ((url.field_set & (1 << UF_PATH)) == 0) {
+                return -EIO;
+        }
+        rc = medusa_http_request_set_url(client->request, "%*.s", url.field_data[UF_PATH].len, at + url.field_data[UF_PATH].off);
+        if (rc < 0) {
+                return rc;
+        }
         return 0;
 }
 
@@ -84,27 +112,73 @@ static int client_http_on_header_value (http_parser *http_parser, const char *at
 
 static int client_http_on_headers_complete (http_parser *http_parser)
 {
+        struct callback *callback;
         struct client *client = http_parser->data;
-        (void) client;
         fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        if (MEDUSA_IS_ERR_OR_NULL(client->request)) {
+                return MEDUSA_PTR_ERR(client->request);
+        }
+        TAILQ_FOREACH(callback, &client->server->callbacks, list) {
+                if (callback->path == NULL &&
+                    strcasecmp(callback->path, client->request->url) == 0) {
+                        break;
+                }
+        }
+        if (callback == NULL) {
+                TAILQ_FOREACH(callback, &client->server->callbacks, list) {
+                        if (callback->path == NULL) {
+                                break;
+                        }
+                }
+        }
+        if (callback == NULL) {
+                return -ENOENT;
+        }
+        if (callback->callback.open != NULL) {
+                client->handle = callback->callback.open(client->server, client->request, callback->context, callback->path, MEDUSA_HTTP_OPEN_MODE_READ);
+                if (MEDUSA_IS_ERR_OR_NULL(client->handle)) {
+                        return MEDUSA_PTR_ERR(client->handle);
+                }
+        }
         return 0;
 }
 
 static int client_http_on_body (http_parser *http_parser, const char *at, size_t length)
 {
+        struct callback *callback;
         struct client *client = http_parser->data;
-        (void) client;
         (void) at;
         (void) length;
         fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        if (MEDUSA_IS_ERR_OR_NULL(client->request)) {
+                return MEDUSA_PTR_ERR(client->request);
+        }
+        TAILQ_FOREACH(callback, &client->server->callbacks, list) {
+                if (callback->path == NULL &&
+                    strcasecmp(callback->path, client->request->url) == 0) {
+                        break;
+                }
+        }
+        if (callback == NULL) {
+                TAILQ_FOREACH(callback, &client->server->callbacks, list) {
+                        if (callback->path == NULL) {
+                                break;
+                        }
+                }
+        }
+        if (callback == NULL) {
+                return -ENOENT;
+        }
         return 0;
 }
 
 static int client_http_on_message_complete (http_parser *http_parser)
 {
         struct client *client = http_parser->data;
-        (void) client;
         fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        if (MEDUSA_IS_ERR_OR_NULL(client->request)) {
+                return MEDUSA_PTR_ERR(client->request);
+        }
         return 0;
 }
 
