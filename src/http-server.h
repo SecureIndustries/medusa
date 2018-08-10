@@ -17,12 +17,12 @@ struct medusa_http_server_init_options {
 };
 
 struct medusa_http_server_callback {
-        int (*stat) (struct medusa_http_server *server, void *cookie, const char *path, struct medusa_http_stat *stat);
-        void * (*open) (struct medusa_http_server *server, void *cookie, const char *path, unsigned int mode);
-        int (*read) (struct medusa_http_server *server, void *cookie, void *handle, void *buffer, int length);
-        int (*write) (struct medusa_http_server *server, void *cookie, void *handle, const void *buffer, int length);
-        long long (*seek) (struct medusa_http_server *server, void *cookie, void *handle, long long offset, unsigned int whence);
-        int (*close) (struct medusa_http_server *server, void *cookie, void *handle);
+        int (*stat) (struct medusa_http_server *server, void *context, const char *path, struct medusa_http_stat *stat);
+        void * (*open) (struct medusa_http_server *server, void *context, const char *path, unsigned int mode);
+        int (*read) (struct medusa_http_server *server, void *context, void *handle, void *buffer, int length);
+        int (*write) (struct medusa_http_server *server, void *context, void *handle, const void *buffer, int length);
+        long long (*seek) (struct medusa_http_server *server, void *context, void *handle, long long offset, unsigned int whence);
+        int (*close) (struct medusa_http_server *server, void *context, void *handle);
 };
 
 int medusa_http_server_init_options_default (struct medusa_http_server_init_options *options);
