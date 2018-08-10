@@ -66,7 +66,7 @@ static struct header * header_create (const char *key, const char *value)
         return header;
 }
 
-struct medusa_http_request * medusa_http_request_create (void)
+__attribute__ ((visibility ("default"))) struct medusa_http_request * medusa_http_request_create (void)
 {
         struct medusa_http_request *request;
         request = malloc(sizeof(struct medusa_http_request));
@@ -80,7 +80,7 @@ struct medusa_http_request * medusa_http_request_create (void)
         return request;
 }
 
-void medusa_http_request_destroy (struct medusa_http_request *request)
+__attribute__ ((visibility ("default"))) void medusa_http_request_destroy (struct medusa_http_request *request)
 {
         struct header *header;
         struct header *nheader;
@@ -100,7 +100,7 @@ void medusa_http_request_destroy (struct medusa_http_request *request)
         free(request);
 }
 
-int medusa_http_request_set_method (struct medusa_http_request *request, const char *method)
+__attribute__ ((visibility ("default"))) int medusa_http_request_set_method (struct medusa_http_request *request, const char *method)
 {
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return -EINVAL;
@@ -118,7 +118,7 @@ int medusa_http_request_set_method (struct medusa_http_request *request, const c
         return 0;
 }
 
-int medusa_http_request_set_url (struct medusa_http_request *request, const char *url)
+__attribute__ ((visibility ("default"))) int medusa_http_request_set_url (struct medusa_http_request *request, const char *url)
 {
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return -EINVAL;
@@ -136,7 +136,7 @@ int medusa_http_request_set_url (struct medusa_http_request *request, const char
         return 0;
 }
 
-int medusa_http_request_set_version (struct medusa_http_request *request, int major, int minor)
+__attribute__ ((visibility ("default"))) int medusa_http_request_set_version (struct medusa_http_request *request, int major, int minor)
 {
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return -EINVAL;
@@ -146,7 +146,7 @@ int medusa_http_request_set_version (struct medusa_http_request *request, int ma
         return 0;
 }
 
-int medusa_http_request_add_header (struct medusa_http_request *request, const char *key, const char *value)
+__attribute__ ((visibility ("default"))) int medusa_http_request_add_header (struct medusa_http_request *request, const char *key, const char *value)
 {
         struct header *header;
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
@@ -166,7 +166,7 @@ int medusa_http_request_add_header (struct medusa_http_request *request, const c
         return 0;
 }
 
-int medusa_http_request_del_header (struct medusa_http_request *request, const char *key)
+__attribute__ ((visibility ("default"))) int medusa_http_request_del_header (struct medusa_http_request *request, const char *key)
 {
         struct header *header;
         struct header *nheader;
@@ -185,7 +185,7 @@ int medusa_http_request_del_header (struct medusa_http_request *request, const c
         return 0;
 }
 
-int medusa_http_request_set_callback (struct medusa_http_request *request, const struct medusa_http_request_callback *callback, void *context)
+__attribute__ ((visibility ("default"))) int medusa_http_request_set_callback (struct medusa_http_request *request, const struct medusa_http_request_callback *callback, void *context)
 {
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return -EINVAL;
