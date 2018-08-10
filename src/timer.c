@@ -240,34 +240,30 @@ __attribute__ ((visibility ("default"))) double medusa_timer_get_initial (const 
 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_interval (struct medusa_timer *timer, double interval)
 {
+        struct timespec timespec;
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 return -EINVAL;
         }
         if (interval < 0) {
                 return -EINVAL;
         }
-        timer->interval.tv_sec = (long long) interval;
-        timer->interval.tv_nsec = (long long) ((interval - timer->interval.tv_sec) * 1e9);
-        if (timer->subject.monitor != NULL) {
-                return medusa_monitor_mod(&timer->subject);
-        }
-        return 0;
+        timespec.tv_sec = (long long) interval;
+        timespec.tv_nsec = (long long) ((interval - timer->interval.tv_sec) * 1e9);
+        return medusa_timer_set_interval_timespec(timer, &timespec);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_interval_timeval (struct medusa_timer *timer, const struct timeval *timeval)
 {
+        struct timespec timespec;
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 return -EINVAL;
         }
         if (MEDUSA_IS_ERR_OR_NULL(timeval)) {
                 return -EINVAL;
         }
-        timer->interval.tv_sec = timeval->tv_sec;
-        timer->interval.tv_nsec = timeval->tv_usec * 1e3;
-        if (timer->subject.monitor != NULL) {
-                return medusa_monitor_mod(&timer->subject);
-        }
-        return 0;
+        timespec.tv_sec = timeval->tv_sec;
+        timespec.tv_nsec = timeval->tv_usec * 1e3;
+        return medusa_timer_set_interval_timespec(timer, &timespec);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_interval_timespec (struct medusa_timer *timer, const struct timespec *timespec)
@@ -280,6 +276,9 @@ __attribute__ ((visibility ("default"))) int medusa_timer_set_interval_timespec 
         }
         timer->interval.tv_sec = timespec->tv_sec;
         timer->interval.tv_nsec = timespec->tv_nsec;
+        if (!medusa_timespec_isset(&timer->interval)) {
+                timer->interval.tv_nsec = 1;
+        }
         if (timer->subject.monitor != NULL) {
                 return medusa_monitor_mod(&timer->subject);
         }
