@@ -188,9 +188,6 @@ static void callback_destroy (struct callback *callback)
 static struct callback * callback_create (const char *path, const struct medusa_http_server_callback *function, void *context)
 {
         struct callback *callback;
-        if (path == NULL) {
-                return MEDUSA_ERR_PTR(-EINVAL);
-        }
         if (function == NULL) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
@@ -199,10 +196,12 @@ static struct callback * callback_create (const char *path, const struct medusa_
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
         memset(callback, 0, sizeof(struct callback));
-        callback->path = strdup(path);
-        if (callback->path == NULL) {
-                callback_destroy(callback);
-                return MEDUSA_ERR_PTR(-ENOMEM);
+        if (path != NULL) {
+                callback->path = strdup(path);
+                if (callback->path == NULL) {
+                        callback_destroy(callback);
+                        return MEDUSA_ERR_PTR(-ENOMEM);
+                }
         }
         memcpy(&callback->callback, function, sizeof(struct medusa_http_server_callback));
         callback->context = context;
@@ -387,7 +386,7 @@ __attribute__ ((visibility ("default"))) int medusa_http_server_add_path (struct
                 return -EINVAL;
         }
         callback = callback_create(path, function, context);
-        if (callback == NULL) {
+        if (MEDUSA_IS_ERR_OR_NULL(callback)) {
                 return MEDUSA_PTR_ERR(callback);
         }
         TAILQ_INSERT_TAIL(&server->callbacks, callback, list);
@@ -402,9 +401,17 @@ __attribute__ ((visibility ("default"))) int medusa_http_server_del_path (struct
                 return -EINVAL;
         }
         TAILQ_FOREACH_SAFE(callback, &server->callbacks, list, ncallback) {
-                if (strcasecmp(callback->path, path) == 0) {
-                        TAILQ_REMOVE(&server->callbacks, callback, list);
-                        callback_destroy(callback);
+                if (path == NULL) {
+                        if (callback->path == NULL) {
+                                TAILQ_REMOVE(&server->callbacks, callback, list);
+                                callback_destroy(callback);
+                        }
+                } else {
+                        if (callback->path != NULL &&
+                            strcasecmp(callback->path, path) == 0) {
+                                TAILQ_REMOVE(&server->callbacks, callback, list);
+                                callback_destroy(callback);
+                        }
                 }
         }
         return 0;
