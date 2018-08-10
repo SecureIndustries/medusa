@@ -209,6 +209,20 @@ __attribute__ ((visibility ("default"))) int medusa_http_request_set_callback (s
                 return -EINVAL;
         }
         memcpy(&request->callback, callback, sizeof(struct medusa_http_request_callback));
-        request->context = context;
+        request->callback_context = context;
         return 0;
+}
+
+int medusa_http_request_is_valid (const struct medusa_http_request *request)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
+                return 0;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(request->method)) {
+                return 0;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(request->url)) {
+                return 0;
+        }
+        return 1;
 }

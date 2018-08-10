@@ -13,9 +13,13 @@
 #include "http.h"
 #include "http-client.h"
 #include "http-request.h"
+#include "http-request-struct.h"
+#include "http-request-private.h"
 
 struct medusa_http_client {
         http_parser http_parser;
+        struct medusa_http_requests requests;
+        struct medusa_http_request *active;
         struct medusa_tcpsocket *tcpsocket;
 };
 
@@ -129,6 +133,10 @@ static int client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         http_parser_settings.on_chunk_header            = client_http_on_chunk_header;
         http_parser_settings.on_chunk_complete          = client_http_on_chunk_complete;
 
+        if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
+
+        }
+
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
                 char buffer[64];
                 int buffer_length = sizeof(buffer);
@@ -209,6 +217,7 @@ __attribute__ ((visibility ("default"))) struct medusa_http_client * medusa_http
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
         memset(client, 0, sizeof(struct medusa_http_client));
+        TAILQ_INIT(&client->requests);
         http_parser_init(&client->http_parser, HTTP_RESPONSE);
         client->tcpsocket = medusa_tcpsocket_create(monitor, client_tcpsocket_onevent, client);
         if (MEDUSA_IS_ERR_OR_NULL(client->tcpsocket)) {
@@ -228,7 +237,7 @@ __attribute__ ((visibility ("default"))) struct medusa_http_client * medusa_http
         } else if (_options->protocol == MEDUSA_HTTP_PROTOCOL_IPV6) {
                 tcpsocket_protocol = MEDUSA_TCPSOCKET_PROTOCOL_IPV6;
         }
-        rc = medusa_tcpsocket_bind(client->tcpsocket, tcpsocket_protocol, options->address, options->port);
+        rc = medusa_tcpsocket_connect(client->tcpsocket, tcpsocket_protocol, options->address, options->port);
         if (rc < 0) {
                 medusa_http_client_destroy(client);
                 return MEDUSA_ERR_PTR(rc);
@@ -244,6 +253,12 @@ __attribute__ ((visibility ("default"))) void medusa_http_client_destroy (struct
         if (!MEDUSA_IS_ERR_OR_NULL(client->tcpsocket)) {
                 medusa_tcpsocket_destroy(client->tcpsocket);
         } else {
+                struct medusa_http_request *request;
+                struct medusa_http_request *nrequest;
+                TAILQ_FOREACH_SAFE(request, &client->requests, list, nrequest) {
+                        TAILQ_REMOVE(&client->requests, request, list);
+                        medusa_http_request_destroy(request);
+                }
                 free(client);
         }
 }
@@ -272,9 +287,14 @@ __attribute__ ((visibility ("default"))) int medusa_http_client_add_request (str
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return -EINVAL;
         }
+        if (!medusa_http_request_is_valid(request)) {
+                return -EINVAL;
+        }
         if (MEDUSA_IS_ERR_OR_NULL(onevent)) {
                 return -EINVAL;
         }
-        (void) context;
+        TAILQ_INSERT_TAIL(&client->requests, request, list);
+        request->onevent = onevent;
+        request->onevent_context = context;
         return 0;
 }
