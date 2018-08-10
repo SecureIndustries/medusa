@@ -62,7 +62,7 @@ static struct option longopts[] = {
 
 static void usage (const char *pname)
 {
-        fprintf(stdout, "medusa http server benchmarking tool\n");
+        fprintf(stdout, "medusa http http benchmarking tool\n");
         fprintf(stdout, "\n");
         fprintf(stdout, "usage:\n");
         fprintf(stdout, "  %s [options] [http[s]://]hostname[:port]/path\n", pname);
@@ -1004,7 +1004,7 @@ int main (int argc, char *argv[])
                 TAILQ_INSERT_TAIL(&ports, port, ports);
         }
 
-        fprintf(stdout, "medusa server benchmark\n");
+        fprintf(stdout, "medusa http benchmark\n");
         fprintf(stdout, "\n");
         fprintf(stdout, "options:\n");
         fprintf(stdout, "  requests   : %lld\n", options.requests);
@@ -1088,7 +1088,7 @@ int main (int argc, char *argv[])
                         url_path,
                         (options.keepalive) ? "Connection: Keep-Alive\r\n" : "",
                         url_address,
-                        "MedusaServerBenchmark/1.0");
+                        "MedusaHTTPBenchmark/1.0");
         if (rc != 0) {
                 errorf("can not build request");
                 goto bail;

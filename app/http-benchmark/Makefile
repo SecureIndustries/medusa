@@ -1,29 +1,29 @@
 
 target-y = \
-	medusa-server-benchmark
+	medusa-http-benchmark
 
-medusa-server-benchmark_includes-y = \
+medusa-http-benchmark_includes-y = \
 	../../3rdparty/http-parser \
 	../../dist/include
 
-medusa-server-benchmark_libraries-y = \
+medusa-http-benchmark_libraries-y = \
 	../../dist/lib
 
-medusa-server-benchmark_files-y = \
+medusa-http-benchmark_files-y = \
 	../../3rdparty/http-parser/http_parser.c \
-	server-benchmark.c
+	http-benchmark.c
 
-medusa-server-benchmark_ldflags-y = \
+medusa-http-benchmark_ldflags-y = \
 	-Wl,-Bstatic \
 	-lmedusa-monitor \
 	-Wl,-Bdynamic
 
-medusa-server-benchmark_depends-y = \
+medusa-http-benchmark_depends-y = \
 	../../dist/lib/libmedusa-monitor.a
 
 dist.dir = ../../dist
 
 dist.bin-y = \
-	medusa-server-benchmark
+	medusa-http-benchmark
 
 include ../../Makefile.lib

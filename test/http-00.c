@@ -9,6 +9,7 @@
 
 #include "medusa/error.h"
 #include "medusa/http.h"
+#include "medusa/http-server.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {

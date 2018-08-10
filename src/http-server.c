@@ -10,6 +10,7 @@
 #include "tcpsocket.h"
 #include "http_parser.h"
 #include "http.h"
+#include "http-server.h"
 
 struct callback {
         char *path;
@@ -32,6 +33,7 @@ static int client_http_on_message_begin (http_parser *http_parser)
         struct client *client = http_parser->data;
         (void) client;
         fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        fprintf(stderr, "  method: %d\n", http_parser->method);
         return 0;
 }
 
@@ -333,7 +335,7 @@ __attribute__ ((visibility ("default"))) int medusa_http_server_add_path (struct
                 return -EINVAL;
         }
         if (MEDUSA_IS_ERR_OR_NULL(callback)) {
-                return medusa_http_server_del_path(server, path);
+                return -EINVAL;
         }
         (void) path;
         (void) context;
