@@ -248,7 +248,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_set_interval (struct m
                 return -EINVAL;
         }
         timespec.tv_sec = (long long) interval;
-        timespec.tv_nsec = (long long) ((interval - timer->interval.tv_sec) * 1e9);
+        timespec.tv_nsec = (long long) ((interval - timespec.tv_sec) * 1e9);
         return medusa_timer_set_interval_timespec(timer, &timespec);
 }
 

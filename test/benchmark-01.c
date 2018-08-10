@@ -47,30 +47,36 @@ static int test_poll (unsigned int poll, unsigned int count)
 
         monitor = medusa_monitor_create(&options);
         if (monitor == NULL) {
+                fprintf(stderr, "medusa_monitor_create failed\n");
                 goto bail;
         }
 
         for (i = 0; i < count; i++) {
                 timer = medusa_timer_create(monitor, timer_onevent, NULL);
                 if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                        fprintf(stderr, "medusa_timer_create failed\n");
                         goto bail;
                 }
                 rc = medusa_timer_set_interval(timer, rand());
                 if (rc < 0) {
+                        fprintf(stderr, "medusa_timer_set_interval failed\n");
                         goto bail;
                 }
                 rc = medusa_timer_set_singleshot(timer, rand() % 2);
                 if (rc < 0) {
+                        fprintf(stderr, "medusa_timer_set_singleshot failed\n");
                         goto bail;
                 }
                 rc = medusa_timer_set_enabled(timer, 1);
                 if (rc < 0) {
+                        fprintf(stderr, "medusa_timer_set_enabled failed\n");
                         goto bail;
                 }
         }
 
         rc = medusa_monitor_run_timeout(monitor, 0.0);
         if (rc < 0) {
+                fprintf(stderr, "medusa_monitor_run_timeout failed\n");
                 goto bail;
         }
 
