@@ -7,12 +7,16 @@
 #include "http_parser.h"
 
 #include "error.h"
+#include "queue.h"
 #include "tcpsocket.h"
 #include "http_parser.h"
 #include "http.h"
 #include "http-server.h"
+#include "http-request.h"
 
+TAILQ_HEAD(callbacks, callback);
 struct callback {
+        TAILQ_ENTRY(callback) list;
         char *path;
         struct medusa_http_server_callback callback;
         void *context;
@@ -21,10 +25,12 @@ struct callback {
 struct client {
         http_parser http_parser;
         struct medusa_tcpsocket *tcpsocket;
+        struct medusa_http_request *request;
         struct medusa_http_server *server;
 };
 
 struct medusa_http_server {
+        struct callbacks callbacks;
         struct medusa_tcpsocket *tcpsocket;
 };
 
@@ -168,6 +174,41 @@ static int client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         return 0;
 }
 
+static void callback_destroy (struct callback *callback)
+{
+        if (callback == NULL) {
+                return;
+        }
+        if (callback->path != NULL) {
+                free(callback->path);
+        }
+        free(callback);
+}
+
+static struct callback * callback_create (const char *path, const struct medusa_http_server_callback *function, void *context)
+{
+        struct callback *callback;
+        if (path == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (function == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        callback = malloc(sizeof(struct callback));
+        if (callback == NULL) {
+                return MEDUSA_ERR_PTR(-ENOMEM);
+        }
+        memset(callback, 0, sizeof(struct callback));
+        callback->path = strdup(path);
+        if (callback->path == NULL) {
+                callback_destroy(callback);
+                return MEDUSA_ERR_PTR(-ENOMEM);
+        }
+        memcpy(&callback->callback, function, sizeof(struct medusa_http_server_callback));
+        callback->context = context;
+        return callback;
+}
+
 static int server_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
 {
         int rc;
@@ -260,6 +301,7 @@ __attribute__ ((visibility ("default"))) struct medusa_http_server * medusa_http
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
         memset(server, 0, sizeof(struct medusa_http_server));
+        TAILQ_INIT(&server->callbacks);
         server->tcpsocket = medusa_tcpsocket_create(monitor, server_tcpsocket_onevent, server);
         if (MEDUSA_IS_ERR_OR_NULL(server->tcpsocket)) {
                 medusa_http_server_destroy(server);
@@ -309,6 +351,12 @@ __attribute__ ((visibility ("default"))) void medusa_http_server_destroy (struct
         if (!MEDUSA_IS_ERR_OR_NULL(server->tcpsocket)) {
                 medusa_tcpsocket_destroy(server->tcpsocket);
         } else {
+                struct callback *callback;
+                struct callback *ncallback;
+                TAILQ_FOREACH_SAFE(callback, &server->callbacks, list, ncallback) {
+                        TAILQ_REMOVE(&server->callbacks, callback, list);
+                        callback_destroy(callback);
+                }
                 free(server);
         }
 }
@@ -329,24 +377,35 @@ __attribute__ ((visibility ("default"))) int medusa_http_server_get_enabled (str
         return medusa_tcpsocket_get_enabled(server->tcpsocket);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_http_server_add_path (struct medusa_http_server *server, const char *path, const struct medusa_http_server_callback *callback, void *context)
+__attribute__ ((visibility ("default"))) int medusa_http_server_add_path (struct medusa_http_server *server, const char *path, const struct medusa_http_server_callback *function, void *context)
 {
+        struct callback *callback;
         if (MEDUSA_IS_ERR_OR_NULL(server)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(callback)) {
+        if (MEDUSA_IS_ERR_OR_NULL(function)) {
                 return -EINVAL;
         }
-        (void) path;
-        (void) context;
+        callback = callback_create(path, function, context);
+        if (callback == NULL) {
+                return MEDUSA_PTR_ERR(callback);
+        }
+        TAILQ_INSERT_TAIL(&server->callbacks, callback, list);
         return 0;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_http_server_del_path (struct medusa_http_server *server, const char *path)
 {
+        struct callback *callback;
+        struct callback *ncallback;
         if (MEDUSA_IS_ERR_OR_NULL(server)) {
                 return -EINVAL;
         }
-        (void) path;
+        TAILQ_FOREACH_SAFE(callback, &server->callbacks, list, ncallback) {
+                if (strcasecmp(callback->path, path) == 0) {
+                        TAILQ_REMOVE(&server->callbacks, callback, list);
+                        callback_destroy(callback);
+                }
+        }
         return 0;
 }
