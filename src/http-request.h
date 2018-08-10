@@ -18,7 +18,7 @@ void medusa_http_request_destroy (struct medusa_http_request *request);
 int medusa_http_request_set_method (struct medusa_http_request *request, const char *method);
 int medusa_http_request_set_url (struct medusa_http_request *request, const char *url);
 int medusa_http_request_set_version (struct medusa_http_request *request, int major, int minor);
-int medusa_http_request_add_header (struct medusa_http_request *request, const char *key, const char *value);
+int medusa_http_request_add_header (struct medusa_http_request *request, const char *key, const char *value, ...);
 int medusa_http_request_del_header (struct medusa_http_request *request, const char *key);
 int medusa_http_request_set_callback (struct medusa_http_request *request, const struct medusa_http_request_callback *callback, void *context);
 

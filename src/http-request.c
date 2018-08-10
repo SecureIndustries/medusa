@@ -2,28 +2,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include <errno.h>
 
 #include "error.h"
 #include "queue.h"
 #include "http-request.h"
-
-TAILQ_HEAD(headers, header);
-struct header {
-        TAILQ_ENTRY(header) list;
-        char *key;
-        char *value;
-};
-
-struct medusa_http_request {
-        char *method;
-        char *url;
-        int major;
-        int minor;
-        struct headers headers;
-        struct medusa_http_request_callback callback;
-        void *context;
-};
+#include "http-request-struct.h"
 
 static void header_destroy (struct header *header)
 {
@@ -39,9 +24,12 @@ static void header_destroy (struct header *header)
         free(header);
 }
 
-static struct header * header_create (const char *key, const char *value)
+static struct header * header_vcreate (const char *key, const char *value, va_list ap)
 {
+        int size;
+        va_list cp;
         struct header *header;
+        size = 0;
         if (key == NULL) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
@@ -58,11 +46,35 @@ static struct header * header_create (const char *key, const char *value)
                 header_destroy(header);
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
-        header->value = strdup(value);
+        va_copy(cp, ap);
+        size = vsnprintf(NULL, 0, value, cp);
+        va_end(cp);
+        if (size < 0) {
+                header_destroy(header);
+                return MEDUSA_ERR_PTR(-EIO);
+        }
+        header->value = malloc(size + 1);
         if (header->value == NULL) {
                 header_destroy(header);
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
+        va_copy(cp, ap);
+        size = vsnprintf(NULL, 0, value, cp);
+        va_end(cp);
+        if (size < 0) {
+                header_destroy(header);
+                return MEDUSA_ERR_PTR(-EIO);
+        }
+        return header;
+}
+
+__attribute__ ((__unused__)) static struct header * header_create (const char *key, const char *value, ...)
+{
+        va_list ap;
+        struct header *header;
+        va_start(ap, value);
+        header = header_vcreate(key, value, ap);
+        va_end(ap);
         return header;
 }
 
@@ -146,8 +158,9 @@ __attribute__ ((visibility ("default"))) int medusa_http_request_set_version (st
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_http_request_add_header (struct medusa_http_request *request, const char *key, const char *value)
+__attribute__ ((visibility ("default"))) int medusa_http_request_add_header (struct medusa_http_request *request, const char *key, const char *value, ...)
 {
+        va_list ap;
         struct header *header;
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return -EINVAL;
@@ -158,7 +171,9 @@ __attribute__ ((visibility ("default"))) int medusa_http_request_add_header (str
         if (MEDUSA_IS_ERR_OR_NULL(value)) {
                 return -EINVAL;
         }
-        header = header_create(key, value);
+        va_start(ap, value);
+        header = header_vcreate(key, value, ap);
+        va_end(ap);
         if (MEDUSA_IS_ERR_OR_NULL(header)) {
                 return MEDUSA_PTR_ERR(header);
         }

@@ -12,7 +12,6 @@
 #include "http_parser.h"
 #include "http.h"
 #include "http-server.h"
-#include "http-request.h"
 
 TAILQ_HEAD(callbacks, callback);
 struct callback {
