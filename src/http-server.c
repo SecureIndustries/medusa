@@ -254,7 +254,7 @@ static int client_reply_http_status_not_found (struct client *client)
         if (rc < 0) {
                 return rc;
         }
-        rc = medusa_http_response_add_header(client->response, "Content-Length", "%d", 0);
+        rc = medusa_http_response_add_header(client->response, "Connection", "close");
         if (rc < 0) {
                 return rc;
         }
@@ -273,6 +273,19 @@ static int client_reply_http_status_not_found (struct client *client)
                 }
         }
         rc = medusa_tcpsocket_printf(client->tcpsocket, "\r\n");
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_tcpsocket_printf(client->tcpsocket,
+                        "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
+                        "<html><head>\n"
+                        "<title>%d %s</title>\n"
+                        "</head><body>\n"
+                        "<h1>Not Found</h1>\n"
+                        "<p>The requested URL /a was not found on this server.</p>\n"
+                        "<hr>\n"
+                        "</body></html>\n",
+                        HTTP_STATUS_NOT_FOUND, http_status_str(HTTP_STATUS_NOT_FOUND));
         if (rc < 0) {
                 return rc;
         }

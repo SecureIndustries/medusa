@@ -929,7 +929,7 @@ int medusa_tcpsocket_printf (struct medusa_tcpsocket *tcpsocket, const char *for
         if (size < 0) {
                 return -EIO;
         }
-        rc = medusa_buffer_set_length(&tcpsocket->wbuffer, medusa_buffer_length(&tcpsocket->wbuffer) + size + 1);
+        rc = medusa_buffer_set_length(&tcpsocket->wbuffer, medusa_buffer_length(&tcpsocket->wbuffer) + size + 0);
         if (rc < 0) {
                 return rc;
         }
@@ -937,7 +937,7 @@ int medusa_tcpsocket_printf (struct medusa_tcpsocket *tcpsocket, const char *for
         if (rc < 0) {
                 return rc;
         }
-        return size + 1;
+        return size + 0;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events)
