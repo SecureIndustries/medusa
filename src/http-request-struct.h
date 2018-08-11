@@ -4,9 +4,9 @@
 
 struct medusa_http_client;
 
-TAILQ_HEAD(headers, header);
-struct header {
-        TAILQ_ENTRY(header) list;
+TAILQ_HEAD(medusa_http_request_headers, medusa_http_request_header);
+struct medusa_http_request_header {
+        TAILQ_ENTRY(medusa_http_request_header) list;
         char *key;
         char *value;
 };
@@ -18,7 +18,7 @@ struct medusa_http_request {
         char *url;
         int major;
         int minor;
-        struct headers headers;
+        struct medusa_http_request_headers headers;
         struct medusa_http_request_callback callback;
         void *callback_context;
         int (*onevent) (struct medusa_http_client *client, struct medusa_http_request *request, unsigned int events, void *context);

@@ -10,7 +10,7 @@
 #include "http-request.h"
 #include "http-request-struct.h"
 
-static void header_destroy (struct header *header)
+static void header_destroy (struct medusa_http_request_header *header)
 {
         if (header == NULL) {
                 return;
@@ -24,11 +24,11 @@ static void header_destroy (struct header *header)
         free(header);
 }
 
-static struct header * header_vcreate (const char *key, const char *value, va_list ap)
+static struct medusa_http_request_header * header_vcreate (const char *key, const char *value, va_list ap)
 {
         int size;
         va_list cp;
-        struct header *header;
+        struct medusa_http_request_header *header;
         size = 0;
         if (key == NULL) {
                 return MEDUSA_ERR_PTR(-EINVAL);
@@ -36,11 +36,11 @@ static struct header * header_vcreate (const char *key, const char *value, va_li
         if (value == NULL) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
-        header = malloc(sizeof(struct header));
+        header = malloc(sizeof(struct medusa_http_request_header));
         if (header == NULL) {
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
-        memset(header, 0, sizeof(struct header));
+        memset(header, 0, sizeof(struct medusa_http_request_header));
         header->key = strdup(key);
         if (header->key == NULL) {
                 header_destroy(header);
@@ -68,10 +68,10 @@ static struct header * header_vcreate (const char *key, const char *value, va_li
         return header;
 }
 
-__attribute__ ((__unused__)) static struct header * header_create (const char *key, const char *value, ...)
+__attribute__ ((__unused__)) static struct medusa_http_request_header * header_create (const char *key, const char *value, ...)
 {
         va_list ap;
-        struct header *header;
+        struct medusa_http_request_header *header;
         va_start(ap, value);
         header = header_vcreate(key, value, ap);
         va_end(ap);
@@ -94,10 +94,19 @@ __attribute__ ((visibility ("default"))) struct medusa_http_request * medusa_htt
 
 __attribute__ ((visibility ("default"))) void medusa_http_request_destroy (struct medusa_http_request *request)
 {
-        struct header *header;
-        struct header *nheader;
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return;
+        }
+        medusa_http_request_reset(request);
+        free(request);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_http_request_reset (struct medusa_http_request *request)
+{
+        struct medusa_http_request_header *header;
+        struct medusa_http_request_header *nheader;
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
+                return -EINVAL;
         }
         TAILQ_FOREACH_SAFE(header, &request->headers, list, nheader) {
                 TAILQ_REMOVE(&request->headers, header, list);
@@ -105,11 +114,15 @@ __attribute__ ((visibility ("default"))) void medusa_http_request_destroy (struc
         }
         if (request->method != NULL) {
                 free(request->method);
+                request->method = NULL;
         }
         if (request->url != NULL) {
                 free(request->url);
+                request->url = NULL;
         }
-        free(request);
+        request->major = 1;
+        request->minor = 0;
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_http_request_set_method (struct medusa_http_request *request, const char *method, ...)
@@ -231,7 +244,7 @@ __attribute__ ((visibility ("default"))) int medusa_http_request_get_version_min
 __attribute__ ((visibility ("default"))) int medusa_http_request_add_header (struct medusa_http_request *request, const char *key, const char *value, ...)
 {
         va_list ap;
-        struct header *header;
+        struct medusa_http_request_header *header;
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return -EINVAL;
         }
@@ -253,8 +266,8 @@ __attribute__ ((visibility ("default"))) int medusa_http_request_add_header (str
 
 __attribute__ ((visibility ("default"))) int medusa_http_request_del_header (struct medusa_http_request *request, const char *key)
 {
-        struct header *header;
-        struct header *nheader;
+        struct medusa_http_request_header *header;
+        struct medusa_http_request_header *nheader;
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return -EINVAL;
         }
@@ -272,7 +285,7 @@ __attribute__ ((visibility ("default"))) int medusa_http_request_del_header (str
 
 __attribute__ ((visibility ("default"))) const char * medusa_http_request_get_header_value (const struct medusa_http_request *request, const char *key)
 {
-        struct header *header;
+        struct medusa_http_request_header *header;
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }

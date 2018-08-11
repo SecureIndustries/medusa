@@ -15,6 +15,8 @@ struct medusa_http_request_callback {
 struct medusa_http_request * medusa_http_request_create (void);
 void medusa_http_request_destroy (struct medusa_http_request *request);
 
+int medusa_http_request_reset (struct medusa_http_request *request);
+
 int medusa_http_request_set_method (struct medusa_http_request *request, const char *method, ...);
 const char * medusa_http_request_get_method (const struct medusa_http_request *request);
 

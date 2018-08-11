@@ -94,7 +94,8 @@ libmedusa-http.a_files-y = \
 	../3rdparty/http-parser/http_parser.c \
 	http-server.c \
 	http-client.c \
-	http-request.c
+	http-request.c \
+	http-response.c
 
 libmedusa-http.so_cflags-y = \
 	${libmedusa-http.a_cflags-y}
