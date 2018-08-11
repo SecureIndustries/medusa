@@ -150,7 +150,7 @@ __attribute__ ((visibility ("default"))) int medusa_http_request_set_method (str
                 return -ENOMEM;
         }
         va_start(ap, method);
-        size = vsnprintf(request->method, size, method, ap);
+        size = vsnprintf(request->method, size + 1, method, ap);
         va_end(ap);
         if (size < 0) {
                 if (request->method != NULL) {
@@ -195,7 +195,7 @@ __attribute__ ((visibility ("default"))) int medusa_http_request_set_url (struct
                 return -ENOMEM;
         }
         va_start(ap, url);
-        size = vsnprintf(request->url, size, url, ap);
+        size = vsnprintf(request->url, size + 1, url, ap);
         va_end(ap);
         if (size < 0) {
                 if (request->url != NULL) {

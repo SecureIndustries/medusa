@@ -902,7 +902,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_write (struct medu
         return size;
 }
 
-int medusa_tcpsocket_printf (struct medusa_tcpsocket *tcpsocket, const char *format, ...)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_printf (struct medusa_tcpsocket *tcpsocket, const char *format, ...)
 {
         int rc;
         int size;

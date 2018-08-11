@@ -89,7 +89,7 @@ static int client_http_on_url (http_parser *http_parser, const char *at, size_t 
         if ((url.field_set & (1 << UF_PATH)) == 0) {
                 return -EIO;
         }
-        rc = medusa_http_request_set_url(client->request, "%*.s", url.field_data[UF_PATH].len, at + url.field_data[UF_PATH].off);
+        rc = medusa_http_request_set_url(client->request, "%.*s", url.field_data[UF_PATH].len, at + url.field_data[UF_PATH].off);
         if (rc < 0) {
                 return rc;
         }
@@ -150,7 +150,7 @@ static int client_http_on_headers_complete (http_parser *http_parser)
                 return rc;
         }
         TAILQ_FOREACH(callback, &client->server->callbacks, list) {
-                if (callback->path == NULL &&
+                if (callback->path != NULL &&
                     strcasecmp(callback->path, client->request->url) == 0) {
                         break;
                 }
@@ -186,7 +186,7 @@ static int client_http_on_body (http_parser *http_parser, const char *at, size_t
                 return -EINVAL;
         }
         TAILQ_FOREACH(callback, &client->server->callbacks, list) {
-                if (callback->path == NULL &&
+                if (callback->path != NULL &&
                     strcasecmp(callback->path, client->request->url) == 0) {
                         break;
                 }
