@@ -6,10 +6,10 @@ struct medusa_http_stat;
 struct medusa_http_request;
 
 struct medusa_http_request_callback {
-        int (*stat) (struct medusa_http_request *server, void *cookie, const char *path, struct medusa_http_stat *stat);
-        void * (*open) (struct medusa_http_request *server, void *cookie, const char *path, unsigned int mode);
-        int (*read) (struct medusa_http_request *server, void *cookie, void *handle, void *buffer, int length);
-        int (*close) (struct medusa_http_request *server, void *cookie, void *handle);
+        int (*stat) (struct medusa_http_request *request, void *cookie, const char *path, struct medusa_http_stat *stat);
+        void * (*open) (struct medusa_http_request *request, void *cookie, const char *path);
+        int (*read) (struct medusa_http_request *request, void *cookie, void *handle, void *buffer, int length);
+        int (*close) (struct medusa_http_request *request, void *cookie, void *handle);
 };
 
 struct medusa_http_request * medusa_http_request_create (void);

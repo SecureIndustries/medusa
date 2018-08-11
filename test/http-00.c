@@ -35,14 +35,13 @@ static int http_server_callback_stat (struct medusa_http_server *server, struct 
         return 0;
 }
 
-static void * http_server_callback_open (struct medusa_http_server *server, struct medusa_http_request *request, struct medusa_http_response *response, void *cookie, const char *path, unsigned int mode)
+static void * http_server_callback_open (struct medusa_http_server *server, struct medusa_http_request *request, struct medusa_http_response *response, void *cookie, const char *path)
 {
         (void) server;
         (void) request;
         (void) response;
         (void) cookie;
         (void) path;
-        (void) mode;
         return NULL;
 }
 
@@ -67,18 +66,6 @@ static int http_server_callback_write (struct medusa_http_server *server, struct
         (void) handle;
         (void) buffer;
         (void) length;
-        return 0;
-}
-
-static long long http_server_callback_seek (struct medusa_http_server *server, struct medusa_http_request *request, struct medusa_http_response *response, void *cookie, void *handle, long long offset, unsigned int whence)
-{
-        (void) server;
-        (void) request;
-        (void) response;
-        (void) cookie;
-        (void) handle;
-        (void) offset;
-        (void) whence;
         return 0;
 }
 
@@ -139,7 +126,6 @@ static int test_poll (unsigned int poll)
         http_server_callback.open = http_server_callback_open;
         http_server_callback.read = http_server_callback_read;
         http_server_callback.write = http_server_callback_write;
-        http_server_callback.seek = http_server_callback_seek;
         http_server_callback.close = http_server_callback_close;
         rc = medusa_http_server_add_path(http_server, NULL, &http_server_callback, NULL);
         if (rc < 0) {

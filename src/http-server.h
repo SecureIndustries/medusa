@@ -20,10 +20,9 @@ struct medusa_http_server_init_options {
 
 struct medusa_http_server_callback {
         int (*stat) (struct medusa_http_server *server, struct medusa_http_request *request, struct medusa_http_response *response, void *context, const char *path, struct medusa_http_stat *stat);
-        void * (*open) (struct medusa_http_server *server, struct medusa_http_request *request, struct medusa_http_response *response, void *context, const char *path, unsigned int mode);
+        void * (*open) (struct medusa_http_server *server, struct medusa_http_request *request, struct medusa_http_response *response, void *context, const char *path);
         int (*read) (struct medusa_http_server *server, struct medusa_http_request *request, struct medusa_http_response *response, void *context, void *handle, void *buffer, int length);
         int (*write) (struct medusa_http_server *server, struct medusa_http_request *request, struct medusa_http_response *response, void *context, void *handle, const void *buffer, int length);
-        long long (*seek) (struct medusa_http_server *server, struct medusa_http_request *request, struct medusa_http_response *response, void *context, void *handle, long long offset, unsigned int whence);
         int (*close) (struct medusa_http_server *server, struct medusa_http_request *request, struct medusa_http_response *response, void *context, void *handle);
 };
 
