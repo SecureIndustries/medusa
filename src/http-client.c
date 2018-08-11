@@ -114,8 +114,47 @@ static int client_http_on_chunk_complete (http_parser *http_parser)
         return 0;
 }
 
+static int client_request_activate (struct medusa_http_client *client)
+{
+        int rc;
+        struct medusa_http_request_header *request_header;
+        if (MEDUSA_IS_ERR_OR_NULL(client)) {
+                return -EINVAL;
+        }
+        if (medusa_tcpsocket_get_state(client->tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTED) {
+                return 0;
+        }
+        if (client->active != NULL) {
+                return 0;
+        }
+        if (TAILQ_EMPTY(&client->requests)) {
+                return 0;
+        }
+        client->active = TAILQ_FIRST(&client->requests);
+        rc = medusa_tcpsocket_printf(client->tcpsocket,
+                        "%s %s HTTP/%d.%d\r\n",
+                        client->active->method,
+                        client->active->url,
+                        client->active->major, client->active->minor);
+        if (rc < 0) {
+                return rc;
+        }
+        TAILQ_FOREACH(request_header, &client->active->headers, list) {
+                rc = medusa_tcpsocket_printf(client->tcpsocket, "%s: %s\r\n", request_header->key, request_header->value);
+                if (rc < 0) {
+                        return rc;
+                }
+        }
+        rc = medusa_tcpsocket_printf(client->tcpsocket, "\r\n");
+        if (rc < 0) {
+                return rc;
+        }
+        return 0;
+}
+
 static int client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
 {
+        int rc;
         int recved;
         int parsed;
         http_parser_settings http_parser_settings;
@@ -134,7 +173,10 @@ static int client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         http_parser_settings.on_chunk_complete          = client_http_on_chunk_complete;
 
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
-
+                rc = client_request_activate(client);
+                if (rc < 0) {
+                        return rc;
+                }
         }
 
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
@@ -153,6 +195,14 @@ static int client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                                 return -EIO;
                         }
                 }
+        }
+
+        if (events & MEDUSA_TCPSOCKET_EVENT_WRITTEN) {
+
+        }
+
+        if (events & MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED) {
+
         }
 
         if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
@@ -281,6 +331,7 @@ __attribute__ ((visibility ("default"))) int medusa_http_client_get_enabled (str
 
 __attribute__ ((visibility ("default"))) int medusa_http_client_add_request (struct medusa_http_client *client, struct medusa_http_request *request, int (*onevent) (struct medusa_http_client *client, struct medusa_http_request *request, unsigned int events, void *context), void *context)
 {
+        int rc;
         if (MEDUSA_IS_ERR_OR_NULL(client)) {
                 return -EINVAL;
         }
@@ -296,5 +347,9 @@ __attribute__ ((visibility ("default"))) int medusa_http_client_add_request (str
         TAILQ_INSERT_TAIL(&client->requests, request, list);
         request->onevent = onevent;
         request->onevent_context = context;
+        rc = client_request_activate(client);
+        if (rc < 0) {
+                return rc;
+        }
         return 0;
 }

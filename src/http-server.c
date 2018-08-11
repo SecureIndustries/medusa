@@ -17,6 +17,7 @@
 #include "http-request-struct.h"
 #include "http-response.h"
 #include "http-response-struct.h"
+#include "http-response-private.h"
 
 TAILQ_HEAD(callbacks, callback);
 struct callback {
@@ -301,6 +302,11 @@ static int client_http_on_message_complete (http_parser *http_parser)
                         return rc;
                 }
         }
+        if (medusa_http_response_is_valid(client->response)) {
+                client->status = HTTP_STATUS_OK;
+        } else {
+                client->status = HTTP_STATUS_OK;
+        }
         return 0;
 }
 
@@ -320,6 +326,65 @@ static int client_http_on_chunk_complete (http_parser *http_parser)
         fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
         if (MEDUSA_IS_ERR_OR_NULL(client)) {
                 return -EINVAL;
+        }
+        return 0;
+}
+
+static int client_reply_http_status_ok (struct client *client)
+{
+        int rc;
+        struct medusa_http_response_header *response_header;
+        if (MEDUSA_IS_ERR_OR_NULL(client)) {
+                return -EINVAL;
+        }
+        rc = medusa_http_response_reset(client->response);
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_http_response_set_version(client->response, client->request->major, client->request->minor);
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_http_response_set_status(client->response, HTTP_STATUS_OK, http_status_str(HTTP_STATUS_OK));
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_http_response_add_header(client->response, "Connection", "close");
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_tcpsocket_printf(client->tcpsocket,
+                        "HTTP/%d.%d %d %s\r\n",
+                        client->response->major, client->response->minor,
+                        client->response->code,
+                        (client->response->reason) ? client->response->reason : "");
+        if (rc < 0) {
+                return rc;
+        }
+        TAILQ_FOREACH(response_header, &client->response->headers, list) {
+                rc = medusa_tcpsocket_printf(client->tcpsocket, "%s: %s\r\n", response_header->key, response_header->value);
+                if (rc < 0) {
+                        return rc;
+                }
+        }
+        rc = medusa_tcpsocket_printf(client->tcpsocket, "\r\n");
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_tcpsocket_printf(client->tcpsocket,
+                        "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
+                        "<html><head>\n"
+                        "<title>%d %s</title>\n"
+                        "</head><body>\n"
+                        "<h1>%s</h1>\n"
+                        "<p>The requested URL %s was processed successfully.</p>\n"
+                        "<hr>\n"
+                        "</body></html>\n",
+                        HTTP_STATUS_OK, http_status_str(HTTP_STATUS_OK),
+                        http_status_str(HTTP_STATUS_OK),
+                        client->request->url);
+        if (rc < 0) {
+                return rc;
         }
         return 0;
 }
@@ -508,7 +573,12 @@ static int client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                         if (parsed != recved ||
                             client->status != 0 ||
                             client->http_parser.http_errno != 0) {
-                                if (client->status == HTTP_STATUS_NOT_FOUND) {
+                                if (client->status == HTTP_STATUS_OK) {
+                                        rc = client_reply_http_status_ok(client);
+                                        if (rc < 0) {
+                                                return rc;
+                                        }
+                                } else if (client->status == HTTP_STATUS_NOT_FOUND) {
                                         rc = client_reply_http_status_not_found(client);
                                         if (rc < 0) {
                                                 return rc;

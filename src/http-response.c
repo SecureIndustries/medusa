@@ -266,11 +266,13 @@ __attribute__ ((visibility ("default"))) int medusa_http_response_set_callback (
         if (MEDUSA_IS_ERR_OR_NULL(response)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(callback)) {
-                return -EINVAL;
+        if (callback == NULL) {
+                memset(&response->callback, 0, sizeof(struct medusa_http_response_callback));
+                response->callback_context = NULL;
+        } else {
+                memcpy(&response->callback, callback, sizeof(struct medusa_http_response_callback));
+                response->callback_context = context;
         }
-        memcpy(&response->callback, callback, sizeof(struct medusa_http_response_callback));
-        response->callback_context = context;
         return 0;
 }
 

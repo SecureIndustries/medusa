@@ -128,7 +128,8 @@ dist.include-y = \
 	http.h \
 	http-server.h \
 	http-client.h \
-	http-request.h
+	http-request.h \
+	http-response.h
 
 dist.lib-y = \
 	libmedusa-monitor.a \
