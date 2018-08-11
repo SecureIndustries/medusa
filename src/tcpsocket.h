@@ -100,6 +100,7 @@ struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcps
 
 int medusa_tcpsocket_read (struct medusa_tcpsocket *tcpsocket, void *data, int size);
 int medusa_tcpsocket_write (struct medusa_tcpsocket *tcpsocket, const void *data, int size);
+int medusa_tcpsocket_printf (struct medusa_tcpsocket *tcpsocket, const char *format, ...) __attribute__((format(printf, 2, 3)));
 
 int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 struct medusa_monitor * medusa_tcpsocket_get_monitor (struct medusa_tcpsocket *tcpsocket);

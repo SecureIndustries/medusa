@@ -148,7 +148,7 @@ __attribute__ ((visibility ("default"))) int medusa_http_response_set_status (st
                 return -ENOMEM;
         }
         va_start(ap, reason);
-        size = vsnprintf(response->reason, size, reason, ap);
+        size = vsnprintf(response->reason, size + 1, reason, ap);
         va_end(ap);
         if (size < 0) {
                 if (response->reason != NULL) {

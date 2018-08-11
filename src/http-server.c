@@ -65,6 +65,10 @@ static int client_http_on_message_begin (http_parser *http_parser)
         if (rc < 0) {
                 return rc;
         }
+        rc = medusa_http_request_set_version(client->request, http_parser->http_major, http_parser->http_minor);
+        if (rc < 0) {
+                return rc;
+        }
         return 0;
 }
 
@@ -86,6 +90,10 @@ static int client_http_on_url (http_parser *http_parser, const char *at, size_t 
                 return -EIO;
         }
         rc = medusa_http_request_set_url(client->request, "%*.s", url.field_data[UF_PATH].len, at + url.field_data[UF_PATH].off);
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_http_request_set_version(client->request, http_parser->http_major, http_parser->http_minor);
         if (rc < 0) {
                 return rc;
         }
@@ -130,11 +138,16 @@ static int client_http_on_header_value (http_parser *http_parser, const char *at
 
 static int client_http_on_headers_complete (http_parser *http_parser)
 {
+        int rc;
         struct callback *callback;
         struct client *client = http_parser->data;
         fprintf(stderr, "enter @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
         if (MEDUSA_IS_ERR_OR_NULL(client)) {
                 return -EINVAL;
+        }
+        rc = medusa_http_request_set_version(client->request, http_parser->http_major, http_parser->http_minor);
+        if (rc < 0) {
+                return rc;
         }
         TAILQ_FOREACH(callback, &client->server->callbacks, list) {
                 if (callback->path == NULL &&
@@ -225,6 +238,7 @@ static int client_http_on_chunk_complete (http_parser *http_parser)
 static int client_reply_http_status_not_found (struct client *client)
 {
         int rc;
+        struct medusa_http_response_header *response_header;
         if (MEDUSA_IS_ERR_OR_NULL(client)) {
                 return -EINVAL;
         }
@@ -232,7 +246,33 @@ static int client_reply_http_status_not_found (struct client *client)
         if (rc < 0) {
                 return rc;
         }
+        rc = medusa_http_response_set_version(client->response, client->request->major, client->request->minor);
+        if (rc < 0) {
+                return rc;
+        }
         rc = medusa_http_response_set_status(client->response, HTTP_STATUS_NOT_FOUND, http_status_str(HTTP_STATUS_NOT_FOUND));
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_http_response_add_header(client->response, "Content-Length", "%d", 0);
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_tcpsocket_printf(client->tcpsocket,
+                        "HTTP/%d.%d %d %s\r\n",
+                        client->response->major, client->response->minor,
+                        client->response->code,
+                        (client->response->reason) ? client->response->reason : "");
+        if (rc < 0) {
+                return rc;
+        }
+        TAILQ_FOREACH(response_header, &client->response->headers, list) {
+                rc = medusa_tcpsocket_printf(client->tcpsocket, "%s: %s\r\n", response_header->key, response_header->value);
+                if (rc < 0) {
+                        return rc;
+                }
+        }
+        rc = medusa_tcpsocket_printf(client->tcpsocket, "\r\n");
         if (rc < 0) {
                 return rc;
         }
@@ -303,6 +343,14 @@ static int client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                                 break;
                         }
                 }
+        }
+
+        if (events & MEDUSA_TCPSOCKET_EVENT_WRITTEN) {
+
+        }
+
+        if (events & MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED) {
+                medusa_tcpsocket_destroy(tcpsocket);
         }
 
         if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {

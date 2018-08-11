@@ -17,7 +17,7 @@ void medusa_http_response_destroy (struct medusa_http_response *response);
 
 int medusa_http_response_reset (struct medusa_http_response *response);
 
-int medusa_http_response_set_status (struct medusa_http_response *response, int code, const char *reason, ...);
+int medusa_http_response_set_status (struct medusa_http_response *response, int code, const char *reason, ...)  __attribute__((format(printf, 3, 4)));
 int medusa_http_response_get_status_code (const struct medusa_http_response *response);
 const char * medusa_http_response_get_status_reason (const struct medusa_http_response *response);
 
@@ -25,7 +25,7 @@ int medusa_http_response_set_version (struct medusa_http_response *response, int
 int medusa_http_response_get_version_major (const struct medusa_http_response *response);
 int medusa_http_response_get_version_minor (const struct medusa_http_response *response);
 
-int medusa_http_response_add_header (struct medusa_http_response *response, const char *key, const char *value, ...);
+int medusa_http_response_add_header (struct medusa_http_response *response, const char *key, const char *value, ...)  __attribute__((format(printf, 3, 4)));
 int medusa_http_response_del_header (struct medusa_http_response *response, const char *key);
 const char * medusa_http_response_get_header_value (const struct medusa_http_response *response, const char *key);
 

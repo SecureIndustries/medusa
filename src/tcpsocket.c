@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -899,6 +900,44 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_write (struct medu
                 return rc;
         }
         return size;
+}
+
+int medusa_tcpsocket_printf (struct medusa_tcpsocket *tcpsocket, const char *format, ...)
+{
+        int rc;
+        int size;
+        va_list ap;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(format)) {
+                return -EINVAL;
+        }
+        va_start(ap, format);
+        size = vsnprintf(NULL, 0, format, ap);
+        va_end(ap);
+        if (size < 0) {
+                return -EIO;
+        }
+        rc = medusa_buffer_grow(&tcpsocket->wbuffer, size + 1);
+        if (rc < 0) {
+                return rc;
+        }
+        va_start(ap, format);
+        size = vsnprintf(medusa_buffer_base(&tcpsocket->wbuffer) + medusa_buffer_length(&tcpsocket->wbuffer), size + 1, format, ap);
+        va_end(ap);
+        if (size < 0) {
+                return -EIO;
+        }
+        rc = medusa_buffer_set_length(&tcpsocket->wbuffer, medusa_buffer_length(&tcpsocket->wbuffer) + size + 1);
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_io_add_events(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
+        if (rc < 0) {
+                return rc;
+        }
+        return size + 1;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events)
