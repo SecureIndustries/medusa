@@ -457,6 +457,41 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod (struct medusa_s
                 TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
         }
         subject->flags |= MEDUSA_SUBJECT_FLAG_MOD;
+#if 1
+        if (1) {
+                int rc;
+                if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
+                        struct medusa_io *io;
+                        io = (struct medusa_io *) subject;
+                        if (!medusa_io_is_valid(io) &&
+                            (subject->flags & MEDUSA_SUBJECT_FLAG_POLL)) {
+                                rc = subject->monitor->poll.backend->del(subject->monitor->poll.backend, io);
+                                if (rc != 0) {
+                                        goto bail;
+                                }
+                                subject->flags &= ~MEDUSA_SUBJECT_FLAG_POLL;
+                        }
+                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
+                        struct medusa_timer *timer;
+                        timer = (struct medusa_timer *) subject;
+                        if (!medusa_timer_is_valid(timer) &&
+                             (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP)) {
+                                rc = pqueue_del(subject->monitor->timer.pqueue, timer);
+                                if (rc != 0) {
+                                        goto bail;
+                                }
+                                subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
+                                subject->monitor->timer.dirty = 1;
+                        }
+                }
+        } else {
+                int rc;
+                rc = medusa_monitor_process_deletes(subject->monitor);
+                if (rc != 0) {
+                        goto bail;
+                }
+        }
+#endif
         return 0;
 bail:   return -1;
 }

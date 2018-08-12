@@ -16,10 +16,13 @@
 static struct medusa_pool *g_pool;
 #endif
 
-__attribute__ ((visibility ("default"))) int medusa_buffer_resize (struct medusa_buffer *buffer, int size)
+__attribute__ ((visibility ("default"))) int medusa_buffer_resize (struct medusa_buffer *buffer, int64_t size)
 {
         void *data;
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (size < 0) {
                 return -EINVAL;
         }
         if (buffer->size >= size) {
@@ -43,9 +46,9 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_resize (struct medusa
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_buffer_grow (struct medusa_buffer *buffer, int size)
+__attribute__ ((visibility ("default"))) int medusa_buffer_grow (struct medusa_buffer *buffer, int64_t size)
 {
-        return medusa_buffer_resize(buffer, medusa_buffer_length(buffer) + size);
+        return medusa_buffer_resize(buffer, medusa_buffer_get_length(buffer) + size);
 }
 
 __attribute__ ((visibility ("default"))) void medusa_buffer_reset (struct medusa_buffer *buffer)
@@ -56,7 +59,7 @@ __attribute__ ((visibility ("default"))) void medusa_buffer_reset (struct medusa
         buffer->length = 0;
 }
 
-__attribute__ ((visibility ("default"))) void * medusa_buffer_base (const struct medusa_buffer *buffer)
+__attribute__ ((visibility ("default"))) void * medusa_buffer_get_base (const struct medusa_buffer *buffer)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
@@ -64,7 +67,7 @@ __attribute__ ((visibility ("default"))) void * medusa_buffer_base (const struct
         return buffer->buffer;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_buffer_length (const struct medusa_buffer *buffer)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_get_length (const struct medusa_buffer *buffer)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
@@ -72,9 +75,12 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_length (const struct 
         return buffer->length;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_buffer_set_length (struct medusa_buffer *buffer, int length)
+__attribute__ ((visibility ("default"))) int medusa_buffer_set_length (struct medusa_buffer *buffer, int64_t length)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (length < 0) {
                 return -EINVAL;
         }
         if (length > buffer->size) {
@@ -84,7 +90,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_set_length (struct me
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_buffer_push (struct medusa_buffer *buffer, const void *data, int length)
+__attribute__ ((visibility ("default"))) int medusa_buffer_push (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
@@ -134,7 +140,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_printf (struct medusa
         }
         va_end(va);
         va_start(va, format);
-        rc = vsnprintf(medusa_buffer_base(buffer) + medusa_buffer_length(buffer), size + 1, format, va);
+        rc = vsnprintf(medusa_buffer_get_base(buffer) + medusa_buffer_get_length(buffer), size + 1, format, va);
         if (rc <= 0) {
                 va_end(va);
                 return -EIO;
@@ -165,7 +171,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_vprintf (struct medus
         }
         va_end(vs);
         va_copy(vs, va);
-        rc = vsnprintf(medusa_buffer_base(buffer) + medusa_buffer_length(buffer), size + 1, format, vs);
+        rc = vsnprintf(medusa_buffer_get_base(buffer) + medusa_buffer_get_length(buffer), size + 1, format, vs);
         if (rc <= 0) {
                 va_end(vs);
                 return -EIO;
@@ -175,7 +181,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_vprintf (struct medus
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_buffer_eat (struct medusa_buffer *buffer, int length)
+__attribute__ ((visibility ("default"))) int medusa_buffer_eat (struct medusa_buffer *buffer, int64_t length)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
@@ -195,7 +201,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_eat (struct medusa_bu
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_buffer_size (const struct medusa_buffer *buffer)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_get_size (const struct medusa_buffer *buffer)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;

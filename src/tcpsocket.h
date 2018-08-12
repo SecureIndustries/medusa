@@ -2,6 +2,7 @@
 #if !defined(MEDUSA_TCPSOCKET_H)
 #define MEDUSA_TCPSOCKET_H
 
+struct medusa_buffer;
 struct medusa_monitor;
 struct medusa_tcpsocket;
 
@@ -72,7 +73,16 @@ enum {
 #define MEDUSA_TCPSOCKET_STATE_CONNECTED        MEDUSA_TCPSOCKET_STATE_CONNECTED
 };
 
+struct medusa_tcpsocket_init_options {
+        struct medusa_monitor *monitor;
+        int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context);
+        void *context;
+};
+
+int medusa_tcpsocket_init_options_default (struct medusa_tcpsocket_init_options *options);
+
 struct medusa_tcpsocket * medusa_tcpsocket_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context), void *context);
+struct medusa_tcpsocket * medusa_tcpsocket_create_with_options (const struct medusa_tcpsocket_init_options *options);
 void medusa_tcpsocket_destroy (struct medusa_tcpsocket *tcpsocket);
 
 unsigned int medusa_tcpsocket_get_state (const struct medusa_tcpsocket *tcpsocket);
@@ -98,8 +108,10 @@ int medusa_tcpsocket_bind (struct medusa_tcpsocket *tcpsocket, unsigned int prot
 int medusa_tcpsocket_connect (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
 struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context), void *context);
 
-int medusa_tcpsocket_read (struct medusa_tcpsocket *tcpsocket, void *data, int size);
-int medusa_tcpsocket_write (struct medusa_tcpsocket *tcpsocket, const void *data, int size);
+int medusa_tcpsocket_read (struct medusa_tcpsocket *tcpsocket, void *data, int64_t size);
+struct medusa_buffer * medusa_tcpsocket_get_read_buffer (struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_write (struct medusa_tcpsocket *tcpsocket, const void *data, int64_t size);
 int medusa_tcpsocket_printf (struct medusa_tcpsocket *tcpsocket, const char *format, ...) __attribute__((format(printf, 2, 3)));
 
 int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events);

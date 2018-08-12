@@ -131,9 +131,9 @@ static int client_http_on_header_field (http_parser *http_parser, const char *at
         if (MEDUSA_IS_ERR_OR_NULL(client)) {
                 return -EINVAL;
         }
-        if (medusa_buffer_length(client->header_field) > 0 &&
-            medusa_buffer_length(client->header_value) > 0) {
-                rc = medusa_http_request_add_header(client->request, medusa_buffer_base(client->header_field), medusa_buffer_base(client->header_value));
+        if (medusa_buffer_get_length(client->header_field) > 0 &&
+            medusa_buffer_get_length(client->header_value) > 0) {
+                rc = medusa_http_request_add_header(client->request, medusa_buffer_get_base(client->header_field), medusa_buffer_get_base(client->header_value));
                 if (rc < 0) {
                         return rc;
                 }
@@ -163,7 +163,7 @@ static int client_http_on_header_value (http_parser *http_parser, const char *at
         if (MEDUSA_IS_ERR_OR_NULL(client)) {
                 return -EINVAL;
         }
-        if (medusa_buffer_length(client->header_field) <= 0) {
+        if (medusa_buffer_get_length(client->header_field) <= 0) {
                 return -EIO;
         }
         rc = medusa_buffer_printf(client->header_value, "%.*s", (int) length, at);
@@ -191,9 +191,9 @@ static int client_http_on_headers_complete (http_parser *http_parser)
         if (rc < 0) {
                 return rc;
         }
-        if (medusa_buffer_length(client->header_field) > 0 &&
-            medusa_buffer_length(client->header_value) > 0) {
-                rc = medusa_http_request_add_header(client->request, medusa_buffer_base(client->header_field), medusa_buffer_base(client->header_value));
+        if (medusa_buffer_get_length(client->header_field) > 0 &&
+            medusa_buffer_get_length(client->header_value) > 0) {
+                rc = medusa_http_request_add_header(client->request, medusa_buffer_get_base(client->header_field), medusa_buffer_get_base(client->header_value));
                 if (rc < 0) {
                         return rc;
                 }
