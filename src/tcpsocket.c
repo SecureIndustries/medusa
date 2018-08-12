@@ -85,7 +85,6 @@ static inline void tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsi
                 if (tcpsocket->io.fd >= 0) {
                         close(tcpsocket->io.fd);
                         tcpsocket->io.fd = -1;
-                        sleep(1);
                 }
         }
         tcpsocket->flags = (tcpsocket->flags & ~(MEDUSA_TCPSOCKET_STATE_MASK << MEDUSA_TCPSOCKET_STATE_SHIFT)) |
