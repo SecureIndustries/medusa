@@ -91,7 +91,7 @@ static inline void tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsi
                            ((state & MEDUSA_TCPSOCKET_STATE_MASK) << MEDUSA_TCPSOCKET_STATE_SHIFT);
 }
 
-static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void *context)
+static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
 {
         int rc;
         int64_t length;
@@ -195,7 +195,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
 bail:   return -EIO;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_init (struct medusa_tcpsocket *tcpsocket, struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context), void *context)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_init (struct medusa_tcpsocket *tcpsocket, struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context)
 {
         int rc;
         struct medusa_tcpsocket_init_options options;
@@ -263,7 +263,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_options_defau
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context)
 {
         int rc;
         struct medusa_tcpsocket_init_options options;
@@ -807,7 +807,7 @@ bail:   if (result != NULL) {
         return ret;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_accept_init (struct medusa_tcpsocket *tcpsocket, struct medusa_tcpsocket *accepted, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context), void *context)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_accept_init (struct medusa_tcpsocket *tcpsocket, struct medusa_tcpsocket *accepted, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context)
 {
         int fd;
         int rc;
@@ -839,7 +839,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_accept_init (struc
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context)
 {
         int fd;
         int rc;

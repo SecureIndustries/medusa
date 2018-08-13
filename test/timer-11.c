@@ -25,7 +25,7 @@ static const unsigned int g_polls[] = {
 
 static struct medusa_monitor *g_monitor;
 
-static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context)
+static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
 {
         int *count;
         (void) timer;

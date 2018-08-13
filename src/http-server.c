@@ -535,7 +535,7 @@ static void client_destroy (struct client *client)
         }
 }
 
-static int client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
+static int client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
 {
         int rc;
 
@@ -650,7 +650,7 @@ static struct callback * callback_create (const char *path, const struct medusa_
         return callback;
 }
 
-static int server_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
+static int server_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
 {
         int rc;
         struct client *client;

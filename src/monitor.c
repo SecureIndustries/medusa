@@ -89,7 +89,7 @@ static int fd_set_blocking (int fd, int on)
         return 0;
 }
 
-static int monitor_break_io_onevent (struct medusa_io *io, unsigned int events, void *context)
+static int monitor_break_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
 {
         int rc;
         unsigned int reason;
@@ -122,7 +122,7 @@ static int monitor_break_io_onevent (struct medusa_io *io, unsigned int events, 
 bail:   return -1;
 }
 
-static int monitor_timer_io_onevent (struct medusa_io *io, unsigned int events, void *context)
+static int monitor_timer_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
 {
         int rc;
         uint64_t value;
@@ -457,7 +457,6 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod (struct medusa_s
                 TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, subjects);
         }
         subject->flags |= MEDUSA_SUBJECT_FLAG_MOD;
-#if 1
         if (1) {
                 int rc;
                 if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
@@ -484,14 +483,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod (struct medusa_s
                                 subject->monitor->timer.dirty = 1;
                         }
                 }
-        } else {
-                int rc;
-                rc = medusa_monitor_process_deletes(subject->monitor);
-                if (rc != 0) {
-                        goto bail;
-                }
         }
-#endif
         return 0;
 bail:   return -1;
 }
@@ -517,7 +509,6 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_del (struct medusa_s
                 TAILQ_INSERT_TAIL(&subject->monitor->deletes, subject, subjects);
         }
         subject->flags |= MEDUSA_SUBJECT_FLAG_DEL;
-#if 1
         if (1) {
                 int rc;
                 if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
@@ -542,14 +533,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_del (struct medusa_s
                                 subject->monitor->timer.dirty = 1;
                         }
                 }
-        } else {
-                int rc;
-                rc = medusa_monitor_process_deletes(subject->monitor);
-                if (rc != 0) {
-                        goto bail;
-                }
         }
-#endif
         return 0;
 bail:   return -1;
 }

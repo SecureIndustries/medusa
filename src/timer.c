@@ -40,7 +40,7 @@ enum {
 #define MEDUSA_TIMER_FLAG_SECONDS       MEDUSA_TIMER_FLAG_SECONDS
 };
 
-__attribute__ ((visibility ("default"))) int medusa_timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
+__attribute__ ((visibility ("default"))) int medusa_timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
 {
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
                 return -EINVAL;
@@ -77,7 +77,7 @@ __attribute__ ((visibility ("default"))) void medusa_timer_uninit (struct medusa
         }
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot (struct medusa_monitor *monitor, double interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
+__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot (struct medusa_monitor *monitor, double interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
 {
         struct timespec timespec;
         if (monitor == NULL) {
@@ -94,7 +94,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot (str
         return medusa_timer_create_singleshot_timespec(monitor, &timespec, onevent, context);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_timeval (struct medusa_monitor *monitor, const struct timeval *timeval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
+__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_timeval (struct medusa_monitor *monitor, const struct timeval *timeval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
 {
         struct timespec timespec;
         if (monitor == NULL) {
@@ -111,7 +111,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_time
         return medusa_timer_create_singleshot_timespec(monitor, &timespec, onevent, context);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_timespec (struct medusa_monitor *monitor, const struct timespec *timespec, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
+__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_timespec (struct medusa_monitor *monitor, const struct timespec *timespec, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
 {
         int rc;
         struct medusa_timer *timer;
@@ -147,7 +147,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_time
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
 {
         int rc;
         struct medusa_timer *timer;

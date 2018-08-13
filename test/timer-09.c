@@ -29,7 +29,7 @@ static int timer_set_count;
 static struct medusa_timer *timer_tik;
 static struct medusa_timer *timer_set;
 
-static int timer_set_onevent (struct medusa_timer *timer, unsigned int events, void *context)
+static int timer_set_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
 {
         int rc;
         (void) context;
@@ -53,7 +53,7 @@ static int timer_set_onevent (struct medusa_timer *timer, unsigned int events, v
 bail:   return -1;
 }
 
-static int timer_tik_onevent (struct medusa_timer *timer, unsigned int events, void *context)
+static int timer_tik_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
 {
         (void) context;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {

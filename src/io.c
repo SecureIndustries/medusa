@@ -60,7 +60,7 @@ static inline void io_set_enabled (struct medusa_io *io, unsigned int enabled)
                     ((enabled & MEDUSA_IO_ENABLE_MASK) << MEDUSA_IO_ENABLE_SHIFT);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_io_init (struct medusa_monitor *monitor, struct medusa_io *io, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context), void *context)
+__attribute__ ((visibility ("default"))) int medusa_io_init (struct medusa_monitor *monitor, struct medusa_io *io, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...), void *context)
 {
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
                 return -EINVAL;
@@ -100,7 +100,7 @@ __attribute__ ((visibility ("default"))) void medusa_io_uninit (struct medusa_io
         }
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create (struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create (struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...), void *context)
 {
         int rc;
         struct medusa_io *io;

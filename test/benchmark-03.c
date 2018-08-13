@@ -40,7 +40,7 @@ static unsigned int g_failures;
 
 static struct medusa_io **g_ios;
 
-static int io_onevent (struct medusa_io *io, unsigned int events, void *context)
+static int io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
 {
         uintptr_t id;
         unsigned int wid;

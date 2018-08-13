@@ -152,7 +152,7 @@ static int client_request_activate (struct medusa_http_client *client)
         return 0;
 }
 
-static int client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
+static int client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
 {
         int rc;
         int recved;

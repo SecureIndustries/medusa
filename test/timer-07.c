@@ -23,7 +23,7 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context)
+static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
 {
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 int *count = context;
@@ -33,7 +33,7 @@ static int timer_onevent (struct medusa_timer *timer, unsigned int events, void 
         return 0;
 }
 
-static int timer_check_callback (struct medusa_timer *timer, unsigned int events, void *context)
+static int timer_check_callback (struct medusa_timer *timer, unsigned int events, void *context, ...)
 {
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 int *count = context;

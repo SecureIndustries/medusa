@@ -44,7 +44,7 @@ static unsigned int g_failures;
 static struct medusa_io **g_ios;
 static struct medusa_timer **g_timers;
 
-static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context)
+static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
 {
         (void) timer;
         (void) events;
@@ -52,7 +52,7 @@ static int timer_onevent (struct medusa_timer *timer, unsigned int events, void 
         return 0;
 }
 
-static int io_onevent (struct medusa_io *io, unsigned int events, void *context)
+static int io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
 {
         int rc;
         uintptr_t id;

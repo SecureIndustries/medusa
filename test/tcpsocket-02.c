@@ -23,7 +23,7 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int tcpsocket_bind_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
+static int tcpsocket_bind_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
 {
         (void) tcpsocket;
         (void) events;
@@ -35,7 +35,7 @@ static int tcpsocket_bind_onevent (struct medusa_tcpsocket *tcpsocket, unsigned 
         return 0;
 }
 
-static int tcpsocket_connect_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context)
+static int tcpsocket_connect_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
 {
         (void) tcpsocket;
         (void) events;
