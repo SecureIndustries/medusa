@@ -16,7 +16,8 @@ medusa-http-benchmark_files-y = \
 medusa-http-benchmark_ldflags-y = \
 	-Wl,-Bstatic \
 	-lmedusa-monitor \
-	-Wl,-Bdynamic
+	-Wl,-Bdynamic \
+	-lrt
 
 medusa-http-benchmark_depends-y = \
 	../../dist/lib/libmedusa-monitor.a
