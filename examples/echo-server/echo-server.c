@@ -10,6 +10,7 @@
 #include <readline/history.h>
 
 #include "medusa/error.h"
+#include "medusa/buffer.h"
 #include "medusa/io.h"
 #include "medusa/tcpsocket.h"
 #include "medusa/monitor.h"
@@ -221,24 +222,39 @@ static int readline_medusa_io_onevent (struct medusa_io *io, unsigned int events
 
 static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
 {
-        int rlen;
-        int wlen;
-        int value;
+        int rc;
+        void *rbase;
+        int64_t rlen;
+        int64_t wlen;
+        struct medusa_buffer *rbuffer;
         (void) context;
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
+                rbuffer = medusa_tcpsocket_get_read_buffer(tcpsocket);
+                if (rbuffer == NULL) {
+                        return MEDUSA_PTR_ERR(rbuffer);
+                }
                 while (1) {
-                        rlen = medusa_tcpsocket_read(tcpsocket, &value, sizeof(value));
+                        rlen = medusa_buffer_get_length(rbuffer);
+                        if (rlen < 0) {
+                                return rlen;
+                        }
                         if (rlen == 0) {
                                 break;
                         }
-                        if (rlen < 0) {
-                                fprintf(stderr, "medusa_tcpsocket_read failed\n");
-                                return -1;
+                        rbase = medusa_buffer_get_base(rbuffer);
+                        if (MEDUSA_IS_ERR_OR_NULL(rbase)) {
+                                return MEDUSA_PTR_ERR(rbase);
                         }
-                        wlen = medusa_tcpsocket_write(tcpsocket, &value, rlen);
-                        if (wlen != rlen) {
-                                fprintf(stderr, "medusa_tcpsocket_write failed\n");
-                                return -1;
+                        wlen = medusa_tcpsocket_write(tcpsocket, rbase, rlen);
+                        if (wlen < 0) {
+                                return wlen;
+                        }
+                        if (wlen == 0) {
+                                return -EIO;
+                        }
+                        rc = medusa_buffer_eat(rbuffer, wlen);
+                        if (rc < 0) {
+                                return rc;
                         }
                 }
         }
