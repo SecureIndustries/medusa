@@ -1,5 +1,5 @@
 [submodule "libmakefile"]
-	path = libmakefile
+	path = 3rdparty/libmakefile
 	url = https://github.com/alperakcan/libmakefile.git
 [submodule "3rdparty/http-parser"]
 	path = 3rdparty/http-parser
