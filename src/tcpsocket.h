@@ -77,6 +77,20 @@ struct medusa_tcpsocket_init_options {
         struct medusa_monitor *monitor;
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...);
         void *context;
+        int nonblocking;
+        int reuseaddr;
+        int reuseport;
+        int backlog;
+        int enabled;
+};
+
+struct medusa_tcpsocket_accept_options {
+        struct medusa_tcpsocket *tcpsocket;
+        struct medusa_monitor *monitor;
+        int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...);
+        void *context;
+        int nonblocking;
+        int enabled;
 };
 
 int medusa_tcpsocket_init_options_default (struct medusa_tcpsocket_init_options *options);
@@ -106,7 +120,11 @@ int medusa_tcpsocket_get_fd (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_bind (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
 int medusa_tcpsocket_connect (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
+
+int medusa_tcpsocket_accept_options_default (struct medusa_tcpsocket_accept_options *options);
+
 struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
+struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options (const struct medusa_tcpsocket_accept_options *options);
 
 int medusa_tcpsocket_read (struct medusa_tcpsocket *tcpsocket, void *data, int64_t size);
 struct medusa_buffer * medusa_tcpsocket_get_read_buffer (struct medusa_tcpsocket *tcpsocket);

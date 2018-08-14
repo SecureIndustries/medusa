@@ -25,7 +25,19 @@ enum {
 #define MEDUSA_IO_EVENT_DESTROY MEDUSA_IO_EVENT_DESTROY
 };
 
+struct medusa_io_init_options {
+        struct medusa_monitor *monitor;
+        int fd;
+        int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...);
+        void *context;
+        unsigned int events;
+        int enabled;
+};
+
+int medusa_io_init_options_default (struct medusa_io_init_options *options);
+
 struct medusa_io * medusa_io_create (struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...), void *context);
+struct medusa_io * medusa_io_create_with_options (const struct medusa_io_init_options *options);
 void medusa_io_destroy (struct medusa_io *io);
 
 int medusa_io_get_fd (const struct medusa_io *io);
@@ -38,6 +50,6 @@ unsigned int medusa_io_get_events (const struct medusa_io *io);
 int medusa_io_set_enabled (struct medusa_io *io, int enabled);
 int medusa_io_get_enabled (const struct medusa_io *io);
 
-struct medusa_monitor * medusa_io_get_monitor (struct medusa_io *io);
+struct medusa_monitor * medusa_io_get_monitor (const struct medusa_io *io);
 
 #endif

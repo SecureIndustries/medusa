@@ -646,7 +646,7 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_init(monitor, &monitor->wakeup.io, monitor->wakeup.fds[0], monitor_break_io_onevent, NULL);
+        rc = medusa_io_init(&monitor->wakeup.io, monitor, monitor->wakeup.fds[0], monitor_break_io_onevent, NULL);
         if (rc < 0) {
                 goto bail;
         }
@@ -658,7 +658,7 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_io_init(monitor, &monitor->timer.io, monitor->timer.backend->fd(monitor->timer.backend), monitor_timer_io_onevent, NULL);
+        rc = medusa_io_init(&monitor->timer.io, monitor, monitor->timer.backend->fd(monitor->timer.backend), monitor_timer_io_onevent, NULL);
         if (rc < 0) {
                 goto bail;
         }
