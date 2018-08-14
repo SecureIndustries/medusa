@@ -14,6 +14,8 @@
 #include "medusa/tcpsocket.h"
 #include "medusa/monitor.h"
 
+static int g_running;
+
 #define OPTION_PORT_DEFAULT     12345
 #define OPTION_ADDRESS_DEFAULT  "0.0.0.0"
 
@@ -45,6 +47,7 @@ static int command_quit (int argc, char *argv[])
 {
         (void) argc;
         (void) argv;
+        g_running = 0;
         return 1;
 }
 
@@ -223,15 +226,20 @@ static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
         int value;
         (void) context;
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
-                rlen = medusa_tcpsocket_read(tcpsocket, &value, sizeof(value));
-                if (rlen <= 0) {
-                        fprintf(stderr, "medusa_tcpsocket_read failed\n");
-                        return -1;
-                }
-                wlen = medusa_tcpsocket_write(tcpsocket, &value, rlen);
-                if (wlen != rlen) {
-                        fprintf(stderr, "medusa_tcpsocket_write failed\n");
-                        return -1;
+                while (1) {
+                        rlen = medusa_tcpsocket_read(tcpsocket, &value, sizeof(value));
+                        if (rlen == 0) {
+                                break;
+                        }
+                        if (rlen < 0) {
+                                fprintf(stderr, "medusa_tcpsocket_read failed\n");
+                                return -1;
+                        }
+                        wlen = medusa_tcpsocket_write(tcpsocket, &value, rlen);
+                        if (wlen != rlen) {
+                                fprintf(stderr, "medusa_tcpsocket_write failed\n");
+                                return -1;
+                        }
                 }
         }
         return 0;
@@ -290,6 +298,8 @@ int main (int argc, char *argv[])
 
         option_port   = OPTION_PORT_DEFAULT;
         option_address = OPTION_ADDRESS_DEFAULT;
+
+        g_running = 1;
 
         while ((c = getopt_long(argc, argv, "hp:a:", longopts, NULL)) != -1) {
                 switch (c) {
@@ -363,8 +373,8 @@ int main (int argc, char *argv[])
 
         rl_callback_handler_install("medusa-echo-server> ", readline_process_line);
 
-        while (1) {
-                rc = medusa_monitor_run(medusa_monitor);
+        while (g_running == 1) {
+                rc = medusa_monitor_run_once(medusa_monitor);
                 if (rc < 0) {
                         err = rc;
                         goto out;
@@ -374,5 +384,7 @@ int main (int argc, char *argv[])
 out:    if (!MEDUSA_IS_ERR_OR_NULL(medusa_monitor)) {
                 medusa_monitor_destroy(medusa_monitor);
         }
+        rl_cleanup_after_signal();
+        clear_history();
         return err;
 }

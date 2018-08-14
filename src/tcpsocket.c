@@ -948,10 +948,12 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_read (struct medus
                 return -EINVAL;
         }
         length = MIN(size, medusa_buffer_get_length(&tcpsocket->rbuffer));
-        memcpy(data, medusa_buffer_get_base(&tcpsocket->rbuffer), length);
-        rc = medusa_buffer_eat(&tcpsocket->rbuffer, length);
-        if (rc < 0) {
-                return rc;
+        if (length > 0) {
+                memcpy(data, medusa_buffer_get_base(&tcpsocket->rbuffer), length);
+                rc = medusa_buffer_eat(&tcpsocket->rbuffer, length);
+                if (rc < 0) {
+                        return rc;
+                }
         }
         return length;
 }
