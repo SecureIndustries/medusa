@@ -19,23 +19,27 @@ static int g_running;
 
 #define OPTION_ADDRESS_DEFAULT  "0.0.0.0"
 #define OPTION_PORT_DEFAULT     12345
+#define OPTION_CLI_DEFAULT      0
 
 #define OPTION_HELP             'h'
 #define OPTION_ADDRESS          'a'
 #define OPTION_PORT             'p'
+#define OPTION_CLI              'c'
 static struct option longopts[] = {
         { "help",               no_argument,            NULL,   OPTION_HELP     },
         { "address",            required_argument,      NULL,   OPTION_ADDRESS  },
         { "port",               required_argument,      NULL,   OPTION_PORT     },
-        { NULL,                 0,                      NULL,   0               },
+        { "cli",                required_argument,      NULL,   OPTION_CLI      },
+        { NULL,                 0,                      NULL,   0               }
 };
 
-static void usage (void)
+static void usage (const char *pname)
 {
-        fprintf(stdout, "medusa-echo-server arguments:\n");
+        fprintf(stdout, "usage: %s [-a address] [-p port] [-c cli]:\n", pname);
         fprintf(stdout, "  -h. --help   : this text\n");
-        fprintf(stdout, "  -a, --address: listening address (Default: %s)\n", OPTION_ADDRESS_DEFAULT);
-        fprintf(stdout, "  -p. --port   : listening port (default: %d)\n", OPTION_PORT_DEFAULT);
+        fprintf(stdout, "  -a, --address: listening address (values: interface ip address, default: %s)\n", OPTION_ADDRESS_DEFAULT);
+        fprintf(stdout, "  -p. --port   : listening port (values: 0 < port < 65536, default: %d)\n", OPTION_PORT_DEFAULT);
+        fprintf(stdout, "  -c. --cli    : enable cli (values: 1 / 0, default: %d)\n", OPTION_CLI_DEFAULT);
 }
 
 struct command {
@@ -296,6 +300,7 @@ int main (int argc, char *argv[])
         int c;
         int option_port;
         const char *option_address;
+        int option_cli;
 
         struct medusa_io *medusa_io;
         struct medusa_io_init_options medusa_io_init_options;
@@ -309,24 +314,28 @@ int main (int argc, char *argv[])
         (void) argc;
         (void) argv;
 
-        err = 0;
-        medusa_monitor = NULL;
+        err             = 0;
+        medusa_monitor  = NULL;
 
-        option_port   = OPTION_PORT_DEFAULT;
-        option_address = OPTION_ADDRESS_DEFAULT;
+        option_port     = OPTION_PORT_DEFAULT;
+        option_address  = OPTION_ADDRESS_DEFAULT;
+        option_cli      = OPTION_CLI_DEFAULT;
 
         g_running = 1;
 
-        while ((c = getopt_long(argc, argv, "hp:a:", longopts, NULL)) != -1) {
+        while ((c = getopt_long(argc, argv, "ha:p:c:", longopts, NULL)) != -1) {
                 switch (c) {
                         case OPTION_HELP:
-                                usage();
+                                usage(argv[0]);
                                 goto out;
+                        case OPTION_ADDRESS:
+                                option_address = optarg;
+                                break;
                         case OPTION_PORT:
                                 option_port = atoi(optarg);
                                 break;
-                        case OPTION_ADDRESS:
-                                option_address = optarg;
+                        case OPTION_CLI:
+                                option_cli = atoi(optarg);
                                 break;
                         default:
                                 fprintf(stderr, "unknown option: %d\n", optopt);
@@ -346,21 +355,23 @@ int main (int argc, char *argv[])
                 goto out;
         }
 
-        rc = medusa_io_init_options_default(&medusa_io_init_options);
-        if (rc < 0) {
-                err = rc;
-                goto out;
-        }
-        medusa_io_init_options.monitor = medusa_monitor;
-        medusa_io_init_options.fd      = 0;
-        medusa_io_init_options.onevent = readline_medusa_io_onevent;
-        medusa_io_init_options.context = NULL;
-        medusa_io_init_options.events  = MEDUSA_IO_EVENT_IN;
-        medusa_io_init_options.enabled = 1;
-        medusa_io = medusa_io_create_with_options(&medusa_io_init_options);
-        if (MEDUSA_IS_ERR_OR_NULL(medusa_io)) {
-                err = MEDUSA_PTR_ERR(medusa_io);
-                goto out;
+        if (option_cli) {
+                rc = medusa_io_init_options_default(&medusa_io_init_options);
+                if (rc < 0) {
+                        err = rc;
+                        goto out;
+                }
+                medusa_io_init_options.monitor = medusa_monitor;
+                medusa_io_init_options.fd      = 0;
+                medusa_io_init_options.onevent = readline_medusa_io_onevent;
+                medusa_io_init_options.context = NULL;
+                medusa_io_init_options.events  = MEDUSA_IO_EVENT_IN;
+                medusa_io_init_options.enabled = 1;
+                medusa_io = medusa_io_create_with_options(&medusa_io_init_options);
+                if (MEDUSA_IS_ERR_OR_NULL(medusa_io)) {
+                        err = MEDUSA_PTR_ERR(medusa_io);
+                        goto out;
+                }
         }
 
         rc = medusa_tcpsocket_init_options_default(&medusa_tcpsocket_init_options);
@@ -387,7 +398,9 @@ int main (int argc, char *argv[])
                 goto out;
         }
 
-        rl_callback_handler_install("medusa-echo-server> ", readline_process_line);
+        if (option_cli) {
+                rl_callback_handler_install("medusa-echo-server> ", readline_process_line);
+        }
 
         while (g_running == 1) {
                 rc = medusa_monitor_run_once(medusa_monitor);
@@ -400,7 +413,9 @@ int main (int argc, char *argv[])
 out:    if (!MEDUSA_IS_ERR_OR_NULL(medusa_monitor)) {
                 medusa_monitor_destroy(medusa_monitor);
         }
-        rl_cleanup_after_signal();
-        clear_history();
+        if (option_cli) {
+                rl_cleanup_after_signal();
+                clear_history();
+        }
         return err;
 }
