@@ -1,17 +1,17 @@
 
 target-y = \
-	medusa-echo-server
+	medusa-echo-client
 
-medusa-echo-server_includes-y = \
+medusa-echo-client_includes-y = \
 	../../dist/include
 
-medusa-echo-server_libraries-y = \
+medusa-echo-client_libraries-y = \
 	../../dist/lib
 
-medusa-echo-server_files-y = \
-	echo-server.c
+medusa-echo-client_files-y = \
+	echo-client.c
 
-medusa-echo-server_ldflags-y = \
+medusa-echo-client_ldflags-y = \
 	-Wl,-Bstatic \
 	-lmedusa-socket \
 	-lmedusa-monitor \
@@ -19,13 +19,13 @@ medusa-echo-server_ldflags-y = \
 	-lrt \
 	-lreadline
 
-medusa-echo-server_depends-y = \
+medusa-echo-client_depends-y = \
 	../../dist/lib/libmedusa-socket.a \
 	../../dist/lib/libmedusa-monitor.a
 
 dist.dir = ../../dist
 
 dist.bin-y = \
-	medusa-echo-server
+	medusa-echo-client
 
 include ../../Makefile.lib

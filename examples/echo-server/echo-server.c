@@ -17,16 +17,16 @@
 
 static int g_running;
 
-#define OPTION_PORT_DEFAULT     12345
 #define OPTION_ADDRESS_DEFAULT  "0.0.0.0"
+#define OPTION_PORT_DEFAULT     12345
 
-#define OPTION_HELP             0x100
-#define OPTION_PORT             0x101
-#define OPTION_ADDRESS          0x102
+#define OPTION_HELP             'h'
+#define OPTION_ADDRESS          'a'
+#define OPTION_PORT             'p'
 static struct option longopts[] = {
         { "help",               no_argument,            NULL,   OPTION_HELP     },
-        { "port",               required_argument,      NULL,   OPTION_PORT     },
         { "address",            required_argument,      NULL,   OPTION_ADDRESS  },
+        { "port",               required_argument,      NULL,   OPTION_PORT     },
         { NULL,                 0,                      NULL,   0               },
 };
 
@@ -34,8 +34,8 @@ static void usage (void)
 {
         fprintf(stdout, "medusa-echo-server arguments:\n");
         fprintf(stdout, "  -h. --help   : this text\n");
-        fprintf(stdout, "  -p. --port   : listening port (default: %d)\n", OPTION_PORT_DEFAULT);
         fprintf(stdout, "  -a, --address: listening address (Default: %s)\n", OPTION_ADDRESS_DEFAULT);
+        fprintf(stdout, "  -p. --port   : listening port (default: %d)\n", OPTION_PORT_DEFAULT);
 }
 
 struct command {
