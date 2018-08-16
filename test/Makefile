@@ -22,7 +22,8 @@ define test-defaults
 		-lmedusa-socket \
 		-lmedusa-monitor \
 		-Wl,-Bdynamic \
-		-lpthread -lrt
+		-lpthread \
+		-lrt
 
 	$1_depends-y = \
 		../dist/lib/libmedusa-http.a \

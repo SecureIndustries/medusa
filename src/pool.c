@@ -4,6 +4,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <pthread.h>
+
 #include "queue.h"
 #include "pool.h"
 
@@ -38,6 +40,7 @@ struct medusa_pool {
         void (*constructor) (void *ptr, void *context);
         void (*destructor) (void *ptr, void *context);
         void *context;
+        pthread_mutex_t mutex;
 };
 
 static inline int aligncount (unsigned int size, unsigned int count, unsigned int header, unsigned int page_size)
@@ -111,6 +114,10 @@ __attribute__ ((visibility ("default"))) struct medusa_pool * medusa_pool_create
         if (count == 0) {
                 count = 1;
         }
+        if (flags == MEDUSA_POOL_FLAG_DEFAULT) {
+                flags  = 0;
+                flags |= MEDUSA_POOL_FLAG_RESERVE_HEURISTIC;
+        }
         pool = malloc(sizeof(struct medusa_pool));
         if (pool == NULL) {
                 goto bail;
@@ -119,6 +126,9 @@ __attribute__ ((visibility ("default"))) struct medusa_pool * medusa_pool_create
         TAILQ_INIT(&pool->free);
         TAILQ_INIT(&pool->half);
         TAILQ_INIT(&pool->full);
+        if (flags & MEDUSA_POOL_FLAG_THREAD_SAFE) {
+                pthread_mutex_init(&pool->mutex, NULL);
+        }
         if (name != NULL) {
                 pool->name = strdup(name);
                 if (pool->name == NULL) {
@@ -129,16 +139,11 @@ __attribute__ ((visibility ("default"))) struct medusa_pool * medusa_pool_create
         pool->size = (pool->size + align - 1) & ~(align - 1);
         pool->count = count;
         pool->flags = flags;
-        if (pool->flags == MEDUSA_POOL_FLAG_DEFAULT) {
-                pool->flags  = 0;
-                pool->flags |= MEDUSA_POOL_FLAG_RESERVE_HEURISTIC;
-        }
         pool->constructor = constructor;
         pool->destructor = destructor;
         pool->context = context;
         pool->page_size = getpagesize();
         pool->block_count = aligncount(pool->size, pool->count, sizeof(struct block), pool->page_size);
-        fprintf(stderr, "pool name: %s, size: %d, count: %d, bcount: %d\n", pool->name, pool->size, pool->count, pool->block_count);
         return pool;
 bail:   if (pool != NULL) {
                 medusa_pool_destroy(pool);
@@ -168,6 +173,9 @@ __attribute__ ((visibility ("default"))) void medusa_pool_destroy (struct medusa
                 TAILQ_REMOVE(&pool->full, block, list);
                 block_destroy(block);
         }
+        if (pool->flags & MEDUSA_POOL_FLAG_THREAD_SAFE) {
+                pthread_mutex_destroy(&pool->mutex);
+        }
         free(pool);
 }
 
@@ -179,6 +187,9 @@ __attribute__ ((visibility ("default"))) void * medusa_pool_malloc (struct medus
         struct blocks *ablocks;
         if (pool == NULL) {
                 goto bail;
+        }
+        if (pool->flags & MEDUSA_POOL_FLAG_THREAD_SAFE) {
+                pthread_mutex_lock(&pool->mutex);
         }
         if (!TAILQ_EMPTY(&pool->half)) {
                 rblocks = &pool->half;
@@ -210,8 +221,16 @@ __attribute__ ((visibility ("default"))) void * medusa_pool_malloc (struct medus
                 TAILQ_INSERT_HEAD(ablocks, block, list);
         }
         entry->list.sle_next = (void *) block;
+        if (pool->flags & MEDUSA_POOL_FLAG_THREAD_SAFE) {
+                pthread_mutex_unlock(&pool->mutex);
+        }
         return entry->data;
-bail:   return NULL;
+bail:   if (pool != NULL) {
+                if (pool->flags & MEDUSA_POOL_FLAG_THREAD_SAFE) {
+                        pthread_mutex_unlock(&pool->mutex);
+                }
+        }
+        return NULL;
 }
 
 __attribute__ ((visibility ("default"))) void medusa_pool_free (void *ptr)
@@ -225,6 +244,9 @@ __attribute__ ((visibility ("default"))) void medusa_pool_free (void *ptr)
         entry = (struct entry *) (((unsigned char *) ptr) - sizeof(struct entry));
         block = (struct block *) entry->list.sle_next;
         pool = block->pool;
+        if (pool->flags & MEDUSA_POOL_FLAG_THREAD_SAFE) {
+                pthread_mutex_lock(&pool->mutex);
+        }
         if (SLIST_EMPTY(&block->free)) {
                 TAILQ_REMOVE(&pool->full, block, list);
         } else {
@@ -259,5 +281,8 @@ __attribute__ ((visibility ("default"))) void medusa_pool_free (void *ptr)
                 }
         } else {
                 TAILQ_INSERT_HEAD(&pool->half, block, list);
+        }
+        if (pool->flags & MEDUSA_POOL_FLAG_THREAD_SAFE) {
+                pthread_mutex_unlock(&pool->mutex);
         }
 }

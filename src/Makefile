@@ -65,6 +65,10 @@ libmedusa-monitor.so_cflags-y = \
 libmedusa-monitor.so_files-y = \
 	${libmedusa-monitor.a_files-y}
 
+libmedusa-monitor.so_ldflags-y = \
+	-lpthread \
+	-lrt
+
 libmedusa-socket.a_cflags-y = \
 	-fvisibility=hidden
 

@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include <pthread.h>
+
 #include "error.h"
 #include "pool.h"
 #include "queue.h"
