@@ -40,26 +40,43 @@ enum {
 #define MEDUSA_TIMER_FLAG_SECONDS       MEDUSA_TIMER_FLAG_SECONDS
 };
 
-__attribute__ ((visibility ("default"))) int medusa_timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_timer_init (struct medusa_timer *timer, struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
 {
-        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
+        int rc;
+        struct medusa_timer_init_options options;
+        rc = medusa_timer_init_options_default(&options);
+        if (rc < 0) {
+                return rc;
+        }
+        options.monitor = monitor;
+        options.onevent = onevent;
+        options.context = context;
+        return medusa_timer_init_with_options(timer, &options);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_init_with_options (struct medusa_timer *timer, const struct medusa_timer_init_options *options)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(options->monitor)) {
                 return -EINVAL;
         }
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(onevent)) {
+        if (MEDUSA_IS_ERR_OR_NULL(options->onevent)) {
                 return -EINVAL;
         }
         memset(timer, 0, sizeof(struct medusa_timer));
-        timer->onevent = onevent;
-        timer->context = context;
+        timer->onevent = options->onevent;
+        timer->context = options->context;
         timer->flags |= MEDUSA_TIMER_FLAG_MILLISECONDS;
         medusa_timespec_clear(&timer->initial);
         medusa_timespec_clear(&timer->interval);
         timer->subject.flags = MEDUSA_SUBJECT_TYPE_TIMER;
         timer->subject.monitor = NULL;
-        return medusa_monitor_add(monitor, &timer->subject);
+        return medusa_monitor_add(options->monitor, &timer->subject);
 }
 
 __attribute__ ((visibility ("default"))) void medusa_timer_uninit (struct medusa_timer *timer)
@@ -75,6 +92,16 @@ __attribute__ ((visibility ("default"))) void medusa_timer_uninit (struct medusa
         } else {
                 medusa_timer_onevent(timer, MEDUSA_TIMER_EVENT_DESTROY);
         }
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_init_options_default (struct medusa_timer_init_options *options)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return -EINVAL;
+        }
+        memset(options, 0, sizeof(struct medusa_timer_init_options));
+        options->resolution = MEDUSA_TIMER_RESOLUTION_DEFAULT;
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot (struct medusa_monitor *monitor, double interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
@@ -150,11 +177,22 @@ __attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_time
 __attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
 {
         int rc;
-        struct medusa_timer *timer;
-        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
-                return MEDUSA_ERR_PTR(-EINVAL);
+        struct medusa_timer_init_options options;
+        rc = medusa_timer_init_options_default(&options);
+        if (rc < 0) {
+                return MEDUSA_ERR_PTR(rc);
         }
-        if (MEDUSA_IS_ERR_OR_NULL(onevent)) {
+        options.monitor = monitor;
+        options.onevent = onevent;
+        options.context = context;
+        return medusa_timer_create_with_options(&options);
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_create_with_options (const struct medusa_timer_init_options *options)
+{
+        int rc;
+        struct medusa_timer *timer;
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
 #if defined(MEDUSA_TIMER_USE_POOL) && (MEDUSA_TIMER_USE_POOL == 1)
@@ -165,7 +203,7 @@ __attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_crea
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
-        rc = medusa_timer_init(monitor, timer, onevent, context);
+        rc = medusa_timer_init_with_options(timer, options);
         if (rc < 0) {
                 medusa_timer_destroy(timer);
                 return MEDUSA_ERR_PTR(rc);

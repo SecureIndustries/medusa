@@ -2,6 +2,9 @@
 #if !defined(MEDUSA_TIMER_STRUCT_H)
 #define MEDUSA_TIMER_STRUCT_H
 
+struct medusa_monitor;
+struct medusa_timer_init_options;
+
 struct medusa_timer {
         struct medusa_subject subject;
 
@@ -16,7 +19,8 @@ struct medusa_timer {
         unsigned int _position;
 };
 
-int medusa_timer_init (struct medusa_monitor *monitor, struct medusa_timer *timer, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context);
+int medusa_timer_init (struct medusa_timer *timer, struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context);
+int medusa_timer_init_with_options (struct medusa_timer *timer, const struct medusa_timer_init_options *options);
 void medusa_timer_uninit (struct medusa_timer *timer);
 
 #endif
