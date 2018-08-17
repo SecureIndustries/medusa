@@ -19,14 +19,14 @@ struct pqueue_head {
         unsigned int count;
         unsigned int size;
         unsigned int step;
-        int (*cmp) (void *a, void *b);
+        int (*compare) (void *a, void *b);
         void (*setpos) (void *entry, unsigned int position);
         unsigned int (*getpos) (void *entry);
 };
 
 struct pqueue_head * pqueue_create (
         unsigned int size, unsigned int step,
-        int (*cmp) (void *a, void *b),
+        int (*compare) (void *a, void *b),
         void (*setpos) (void *entry, unsigned int position),
         unsigned int (*getpos) (void *entry))
 {
@@ -38,7 +38,7 @@ struct pqueue_head * pqueue_create (
         memset(head, 0, sizeof(struct pqueue_head));
         head->size = size;
         head->step = step ? step : 1;
-        head->cmp = cmp;
+        head->compare = compare;
         head->setpos = setpos;
         head->getpos = getpos;
         head->count = 1;
@@ -77,7 +77,7 @@ static inline void pqueue_shift_up (struct pqueue_head *head, unsigned int i)
         unsigned int p;
         e = head->entries[i];
         p = pqueue_parent(i);
-        while ((i > 1) && (head->cmp(head->entries[p], e) > 0)) {
+        while ((i > 1) && (head->compare(head->entries[p], e) > 0)) {
                 head->entries[i] = head->entries[p];
                 head->setpos(head->entries[i], i);
                 i = p;
@@ -98,10 +98,10 @@ static inline void pqueue_shift_down (struct pqueue_head *head, unsigned int i)
                         break;
                 }
                 if ((c + 1 < head->count) &&
-                    (head->cmp(head->entries[c], head->entries[c + 1]) > 0)) {
+                    (head->compare(head->entries[c], head->entries[c + 1]) > 0)) {
                         c += 1;
                 }
-                if (!(head->cmp(e, head->entries[c]) > 0)) {
+                if (!(head->compare(e, head->entries[c]) > 0)) {
                         break;
                 }
                 head->entries[i] = head->entries[c];
@@ -141,11 +141,11 @@ int pqueue_add (struct pqueue_head *head, void *entry)
 bail:   return -1;
 }
 
-int pqueue_mod (struct pqueue_head *head, void *entry, int cmp)
+int pqueue_mod (struct pqueue_head *head, void *entry, int compare)
 {
         unsigned int i;
         i = head->getpos(entry);
-        if (cmp > 0) {
+        if (compare > 0) {
                 pqueue_shift_up(head, i);
         } else {
                 pqueue_shift_down(head, i);
@@ -161,7 +161,7 @@ int pqueue_del (struct pqueue_head *head, void *entry)
                 goto bail;
         }
         head->entries[i] = head->entries[--head->count];
-        if (head->cmp(entry, head->entries[i]) > 0) {
+        if (head->compare(entry, head->entries[i]) > 0) {
                 pqueue_shift_up(head, i);
         } else {
                 pqueue_shift_down(head, i);
@@ -197,7 +197,7 @@ void * pqueue_peek (struct pqueue_head *head)
 static int pqueue_is_valid_actual (struct pqueue_head *head, unsigned int pos)
 {
         if (pqueue_left(pos) < head->count) {
-                if (head->cmp(head->entries[pos], head->entries[pqueue_left(pos)]) > 0) {
+                if (head->compare(head->entries[pos], head->entries[pqueue_left(pos)]) > 0) {
                         return 0;
                 }
                 if (!pqueue_is_valid_actual(head, pqueue_left(pos))) {
@@ -205,7 +205,7 @@ static int pqueue_is_valid_actual (struct pqueue_head *head, unsigned int pos)
                 }
         }
         if (pqueue_right(pos) < head->count) {
-                if (head->cmp(head->entries[pos], head->entries[pqueue_right(pos)]) > 0) {
+                if (head->compare(head->entries[pos], head->entries[pqueue_right(pos)]) > 0) {
                         return 0;
                 }
                 if (!pqueue_is_valid_actual(head, pqueue_right(pos))) {
