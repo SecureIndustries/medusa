@@ -34,6 +34,7 @@
 #include "timer-backend.h"
 
 enum {
+        WAKEUP_REASON_NONE,
         WAKEUP_REASON_LOOP_BREAK,
         WAKEUP_REASON_LOOP_CONTINUE,
         WAKEUP_REASON_SUBJECT_ADD,
@@ -99,6 +100,7 @@ static int monitor_break_io_onevent (struct medusa_io *io, unsigned int events, 
         unsigned int reason;
         struct medusa_monitor *monitor = (struct medusa_monitor *) context;
         if (events & MEDUSA_IO_EVENT_IN) {
+                reason = WAKEUP_REASON_NONE;
                 while (1) {
                         rc = read(io->fd, &reason, sizeof(reason));
                         if (rc == 0) {
@@ -113,13 +115,17 @@ static int monitor_break_io_onevent (struct medusa_io *io, unsigned int events, 
                         } else if (rc != sizeof(reason)) {
                                 goto bail;
                         }
-                        if (reason == WAKEUP_REASON_LOOP_BREAK) {
-                                monitor->running = 0;
-                        } else if (reason == WAKEUP_REASON_LOOP_CONTINUE) {
-                                monitor->running = 1;
-                        } else {
-                                goto bail;
-                        }
+                }
+                if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
+                        pthread_mutex_lock(&monitor->mutex);
+                }
+                if (reason == WAKEUP_REASON_LOOP_BREAK) {
+                        monitor->running = 0;
+                } else if (reason == WAKEUP_REASON_LOOP_CONTINUE) {
+                        monitor->running = 1;
+                }
+                if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
+                        pthread_mutex_unlock(&monitor->mutex);
                 }
         }
         return 0;

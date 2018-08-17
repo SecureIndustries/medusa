@@ -114,10 +114,6 @@ __attribute__ ((visibility ("default"))) struct medusa_pool * medusa_pool_create
         if (count == 0) {
                 count = 1;
         }
-        if (flags == MEDUSA_POOL_FLAG_DEFAULT) {
-                flags  = 0;
-                flags |= MEDUSA_POOL_FLAG_RESERVE_HEURISTIC;
-        }
         pool = malloc(sizeof(struct medusa_pool));
         if (pool == NULL) {
                 goto bail;
