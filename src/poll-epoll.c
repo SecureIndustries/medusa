@@ -7,7 +7,6 @@
 
 #include <sys/epoll.h>
 
-#include "time.h"
 #include "queue.h"
 #include "subject-struct.h"
 #include "io.h"

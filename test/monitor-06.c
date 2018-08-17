@@ -104,13 +104,13 @@ static int test_poll (unsigned int poll)
 
         monitor = medusa_monitor_create(&options);
         if (monitor == NULL) {
-                fprintf(stderr, "can not create monitor\n");
+                fprintf(stderr, "medusa_monitor_create failed\n");
                 goto bail;
         }
 
         rc = socketpair(AF_LOCAL, SOCK_STREAM, 0, sv);
         if (rc != 0) {
-                fprintf(stderr, "can not create socket pair\n");
+                fprintf(stderr, "socketpair failed\n");
                 goto bail;
         }
 
@@ -118,26 +118,34 @@ static int test_poll (unsigned int poll)
 
         io[0] = medusa_io_create(monitor, sv[0], io_onevent, &write_length);
         if (MEDUSA_IS_ERR_OR_NULL(io[0])) {
-                fprintf(stderr, "can not create io\n");
+                fprintf(stderr, "medusa_io_create failed\n");
                 goto bail;
         }
-        rc  = medusa_io_set_events(io[0], MEDUSA_IO_EVENT_OUT);
-        rc |= medusa_io_set_enabled(io[0], 1);
+        rc = medusa_io_set_events(io[0], MEDUSA_IO_EVENT_OUT);
         if (rc < 0) {
-                fprintf(stderr, "can not setup io[0]\n");
+                fprintf(stderr, "medusa_io_set_events failed\n");
+                goto bail;
+        }
+        rc = medusa_io_set_enabled(io[0], 1);
+        if (rc < 0) {
+                fprintf(stderr, "medusa_io_set_enabled failed\n");
                 goto bail;
         }
         fprintf(stderr, "  io: %p\n", io[0]);
 
         io[1] = medusa_io_create(monitor, sv[1], io_onevent, &read_length);
         if (MEDUSA_IS_ERR_OR_NULL(io[1])) {
-                fprintf(stderr, "can not create io\n");
+                fprintf(stderr, "medusa_io_create failed\n");
                 goto bail;
         }
-        rc  = medusa_io_set_events(io[1], MEDUSA_IO_EVENT_IN);
-        rc |= medusa_io_set_enabled(io[1], 1);
+        rc = medusa_io_set_events(io[1], MEDUSA_IO_EVENT_IN);
         if (rc < 0) {
-                fprintf(stderr, "can not setup io[1]\n");
+                fprintf(stderr, "medusa_io_set_events failed\n");
+                goto bail;
+        }
+        rc = medusa_io_set_enabled(io[1], 1);
+        if (rc < 0) {
+                fprintf(stderr, "medusa_io_set_enabled failed\n");
                 goto bail;
         }
         fprintf(stderr, "  io: %p\n", io[1]);
@@ -145,8 +153,8 @@ static int test_poll (unsigned int poll)
         while (1) {
                 fprintf(stderr, "running monitor\n");
                 rc = medusa_monitor_run_once(monitor);
-                if (rc != 0) {
-                        fprintf(stderr, "can not run monitor\n");
+                if (rc < 0) {
+                        fprintf(stderr, "medusa_monitor_run_once failed\n");
                         goto bail;
                 }
                 fprintf(stderr, "loop:\n");
@@ -156,7 +164,7 @@ static int test_poll (unsigned int poll)
                         fprintf(stderr, "    disable writer\n");
                         rc = medusa_io_set_enabled(io[0], 0);
                         if (rc < 0) {
-                                fprintf(stderr, "can not setup io\n");
+                                fprintf(stderr, "medusa_io_set_enabled failed\n");
                                 goto bail;
                         }
                         write_finished = 1;

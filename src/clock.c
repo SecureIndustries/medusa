@@ -1,6 +1,5 @@
 
 #include <time.h>
-#include "time.h"
 
 __attribute__ ((visibility ("default"))) int medusa_clock_monotonic (struct timespec *timespec)
 {

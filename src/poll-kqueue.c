@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "queue.h"
-#include "time.h"
 #include "subject-struct.h"
 #include "io.h"
 #include "io-private.h"

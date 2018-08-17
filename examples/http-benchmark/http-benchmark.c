@@ -1282,9 +1282,6 @@ int main (int argc, char *argv[])
                         break;
                 }
                 rc = medusa_monitor_run_timeout(monitor, 1.0);
-                if (rc == 0) {
-                        continue;
-                }
                 if (rc < 0) {
                         errorf("monitor failed");
                         goto bail;

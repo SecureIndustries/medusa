@@ -24,7 +24,15 @@ enum {
 #define MEDUSA_MONITOR_TIMER_TIMERFD    MEDUSA_MONITOR_TIMER_TIMERFD
 };
 
+enum {
+        MEDUSA_MONITOR_FLAG_DEFAULT     = 0x00000000,
+        MEDUSA_MONITOR_FLAG_THREAD_SAFE = 0x00000001
+#define MEDUSA_MONITOR_FLAG_DEFAULT     MEDUSA_MONITOR_FLAG_DEFAULT
+#define MEDUSA_MONITOR_FLAG_THREAD_SAFE MEDUSA_MONITOR_FLAG_THREAD_SAFE
+};
+
 struct medusa_monitor_init_options {
+        unsigned int flags;
         struct {
                 unsigned int type;
                 union {
