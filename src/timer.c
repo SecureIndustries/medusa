@@ -332,7 +332,7 @@ __attribute__ ((visibility ("default"))) double medusa_timer_get_interval (const
 
 __attribute__ ((visibility ("default"))) double medusa_timer_get_remaining_time (const struct medusa_timer *timer)
 {
-        struct timespec now;
+        int rc;
         struct timespec rem;
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 return -EINVAL;
@@ -340,11 +340,10 @@ __attribute__ ((visibility ("default"))) double medusa_timer_get_remaining_time 
         if (!medusa_timer_get_enabled(timer)) {
                 return -EAGAIN;
         }
-        medusa_clock_monotonic(&now);
-        if (!medusa_timespec_compare(&timer->_timespec, &now, >)) {
-                return 0;
+        rc = medusa_timer_get_remaining_timespec(timer, &rem);
+        if (rc < 0) {
+                return rc;
         }
-        medusa_timespec_sub(&timer->_timespec, &now, &rem);
         return rem.tv_sec + rem.tv_nsec * 1e-9;
 }
 
@@ -383,6 +382,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_get_remaining_timespec
         }
         medusa_clock_monotonic(&now);
         if (!medusa_timespec_compare(&timer->_timespec, &now, >)) {
+                medusa_timespec_clear(timespec);
                 return 0;
         }
         medusa_timespec_sub(&timer->_timespec, &now, &rem);
