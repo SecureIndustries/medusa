@@ -230,7 +230,7 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
         struct medusa_subject *subject;
         struct medusa_subject *nsubject;
         rc = medusa_clock_monotonic(&now);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->changes, subjects, nsubject) {
@@ -355,7 +355,7 @@ static int medusa_monitor_check_timer (struct medusa_monitor *monitor)
         struct timespec now;
         struct medusa_timer *timer;
         rc = medusa_clock_monotonic(&now);
-        if (rc != 0) {
+        if (rc < 0) {
                 goto bail;
         }
         if (monitor->timer.fired != 0) {
