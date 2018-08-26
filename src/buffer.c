@@ -261,7 +261,7 @@ __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_cr
 __attribute__ ((constructor)) static void buffer_constructor (void)
 {
 #if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
-        g_pool = medusa_pool_create("medusa-buffer", sizeof(struct medusa_buffer), 0, 0, MEDUSA_POOL_FLAG_DEFAULT, NULL, NULL, NULL);
+        g_pool = medusa_pool_create("medusa-buffer", sizeof(struct medusa_buffer), 0, 0, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
 #endif
 }
 

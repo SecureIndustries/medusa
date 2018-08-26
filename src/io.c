@@ -62,7 +62,7 @@ static inline void io_set_enabled (struct medusa_io *io, unsigned int enabled)
                     ((enabled & MEDUSA_IO_ENABLE_MASK) << MEDUSA_IO_ENABLE_SHIFT);
 }
 
-static int medusa_io_init_with_options_impl (struct medusa_io *io, const struct medusa_io_init_options *options)
+static int io_init_with_options (struct medusa_io *io, const struct medusa_io_init_options *options)
 {
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 return -EINVAL;
@@ -123,7 +123,7 @@ __attribute__ ((visibility ("default"))) int medusa_io_init_with_options (struct
         if (MEDUSA_IS_ERR_OR_NULL(options)) {
                 return -EINVAL;
         }
-        rc = medusa_io_init_with_options_impl(io, options);
+        rc = io_init_with_options(io, options);
         if (rc < 0) {
                 return rc;
         }
@@ -175,7 +175,7 @@ struct medusa_io * medusa_io_create_with_options (const struct medusa_io_init_op
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
-        rc = medusa_io_init_with_options_impl(io, options);
+        rc = io_init_with_options(io, options);
         if (rc < 0) {
 #if defined(MEDUSA_IO_USE_POOL) && (MEDUSA_IO_USE_POOL == 1)
                 medusa_pool_free(io);
@@ -323,7 +323,7 @@ int medusa_io_is_valid (const struct medusa_io *io)
 __attribute__ ((constructor)) static void io_constructor (void)
 {
 #if defined(MEDUSA_IO_USE_POOL) && (MEDUSA_IO_USE_POOL == 1)
-        g_pool = medusa_pool_create("medusa-io", sizeof(struct medusa_io), 0, 0, MEDUSA_POOL_FLAG_DEFAULT, NULL, NULL, NULL);
+        g_pool = medusa_pool_create("medusa-io", sizeof(struct medusa_io), 0, 0, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
 #endif
 }
 

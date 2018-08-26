@@ -539,7 +539,7 @@ int medusa_timer_is_valid (const struct medusa_timer *timer)
 __attribute__ ((constructor)) static void timer_constructor (void)
 {
 #if defined(MEDUSA_TIMER_USE_POOL) && (MEDUSA_TIMER_USE_POOL == 1)
-        g_pool = medusa_pool_create("medusa-timer", sizeof(struct medusa_timer), 0, 0, MEDUSA_POOL_FLAG_DEFAULT, NULL, NULL, NULL);
+        g_pool = medusa_pool_create("medusa-timer", sizeof(struct medusa_timer), 0, 0, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
 #endif
 }
 
