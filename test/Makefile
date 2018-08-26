@@ -36,12 +36,13 @@ include ../Makefile.lib
 tests: all
 	${Q}echo "running tests";
 	${Q}for T in ${tests}; do \
-		printf "  $${T} ... "; \
+		printf "  $${T} ..."; \
 		./$${T} 2>/dev/null 1>/dev/null; \
 		retval=$$?; \
 		if [ $$retval != 0 ]; then \
-			echo "fail (rc: $$retval)"; \
+			printf " fail (rc: $$retval)"; \
 		else \
-			echo "success"; \
-		fi \
+			printf " success"; \
+		fi; \
+		printf "\n"; \
 	done

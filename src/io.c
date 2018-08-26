@@ -389,12 +389,14 @@ __attribute__ ((visibility ("default"))) int medusa_io_onevent_unlocked (struct 
 {
         int rc;
         unsigned int type;
+        struct medusa_monitor *monitor;
         rc = 0;
         type = io->subject.flags & MEDUSA_SUBJECT_TYPE_MASK;
+        monitor = io->subject.monitor;
         if (io->onevent != NULL) {
-                medusa_monitor_unlock(io->subject.monitor);
+                medusa_monitor_unlock(monitor);
                 rc = io->onevent(io, events, io->context);
-                medusa_monitor_lock(io->subject.monitor);
+                medusa_monitor_lock(monitor);
         }
         if (events & MEDUSA_IO_EVENT_DESTROY) {
                 if (type == MEDUSA_SUBJECT_TYPE_IO) {

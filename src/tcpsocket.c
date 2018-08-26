@@ -29,12 +29,12 @@
 #define MEDUSA_TCPSOCKET_DEFAULT_BACKLOG        1
 
 enum {
-        MEDUSA_TCPSOCKET_FLAG_DEFAULT           = 0x00000000,
+        MEDUSA_TCPSOCKET_FLAG_NONE              = 0x00000000,
         MEDUSA_TCPSOCKET_FLAG_NONBLOCKING       = 0x00000001,
         MEDUSA_TCPSOCKET_FLAG_REUSEADDR         = 0x00000002,
         MEDUSA_TCPSOCKET_FLAG_REUSEPORT         = 0x00000004,
         MEDUSA_TCPSOCKET_FLAG_BACKLOG           = 0x00000008,
-#define MEDUSA_TCPSOCKET_FLAG_DEFAULT           MEDUSA_TCPSOCKET_FLAG_DEFAULT
+#define MEDUSA_TCPSOCKET_FLAG_NONE              MEDUSA_TCPSOCKET_FLAG_NONE
 #define MEDUSA_TCPSOCKET_FLAG_NONBLOCKING       MEDUSA_TCPSOCKET_FLAG_NONBLOCKING
 #define MEDUSA_TCPSOCKET_FLAG_REUSEADDR         MEDUSA_TCPSOCKET_FLAG_REUSEADDR
 #define MEDUSA_TCPSOCKET_FLAG_REUSEPORT         MEDUSA_TCPSOCKET_FLAG_REUSEPORT
@@ -232,7 +232,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_with_options 
         medusa_io_set_enabled(&tcpsocket->io, 0);
         tcpsocket->io.subject.flags = MEDUSA_SUBJECT_TYPE_IO | MEDUSA_SUBJECT_TYPE_TCPSOCKET;
         tcpsocket->io.subject.monitor = NULL;
-        tcpsocket_set_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_DEFAULT);
+        tcpsocket_set_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NONE);
         tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
         tcpsocket->onevent = options->onevent;
         medusa_buffer_init(&tcpsocket->rbuffer);

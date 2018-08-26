@@ -848,12 +848,14 @@ __attribute__ ((visibility ("default"))) int medusa_timer_onevent_unlocked (stru
 {
         int rc;
         unsigned int type;
+        struct medusa_monitor *monitor;
         rc = 0;
         type = timer->subject.flags & MEDUSA_SUBJECT_TYPE_MASK;
+        monitor = timer->subject.monitor;
         if (timer->onevent != NULL) {
-                medusa_monitor_unlock(timer->subject.monitor);
+                medusa_monitor_unlock(monitor);
                 rc = timer->onevent(timer, events, timer->context);
-                medusa_monitor_lock(timer->subject.monitor);
+                medusa_monitor_lock(monitor);
         }
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 if (timer->flags & MEDUSA_TIMER_FLAG_AUTO_DESTROY) {
