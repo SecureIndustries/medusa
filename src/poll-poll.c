@@ -28,6 +28,7 @@ struct internal {
 
 static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *io)
 {
+        unsigned int events;
         struct pollfd *pfd;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
@@ -39,7 +40,8 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->fd < 0) {
                 goto bail;
         }
-        if (medusa_io_get_events(io) == 0) {
+        events = medusa_io_get_events_unlocked(io);
+        if (events == 0) {
                 goto bail;
         }
         if (internal->npfds + 1 >= internal->spfds) {
@@ -72,13 +74,13 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         }
         pfd = &internal->pfds[internal->npfds];
         pfd->events = 0;
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_IN) {
+        if (events & MEDUSA_IO_EVENT_IN) {
                 pfd->events |= POLLIN;
         }
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_OUT) {
+        if (events & MEDUSA_IO_EVENT_OUT) {
                 pfd->events |= POLLOUT;
         }
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_PRI) {
+        if (events & MEDUSA_IO_EVENT_PRI) {
                 pfd->events |= POLLPRI;
         }
         pfd->fd = io->fd;
@@ -91,6 +93,7 @@ bail:   return -1;
 static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *io)
 {
         int i;
+        unsigned int events;
         struct pollfd *pfd;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
@@ -102,7 +105,8 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->fd < 0) {
                 goto bail;
         }
-        if (medusa_io_get_events(io) == 0) {
+        events = medusa_io_get_events_unlocked(io);
+        if (events == 0) {
                 goto bail;
         }
         for (i = 0; i < internal->npfds; i++) {
@@ -115,13 +119,13 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
         }
         pfd = &internal->pfds[i];
         pfd->events = 0;
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_IN) {
+        if (events & MEDUSA_IO_EVENT_IN) {
                 pfd->events |= POLLIN;
         }
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_OUT) {
+        if (events & MEDUSA_IO_EVENT_OUT) {
                 pfd->events |= POLLOUT;
         }
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_PRI) {
+        if (events & MEDUSA_IO_EVENT_PRI) {
                 pfd->events |= POLLPRI;
         }
         return 0;

@@ -82,14 +82,17 @@ static int fd_set_blocking (int fd, int on)
 {
         int rc;
         int flags;
+        if (fd < 0) {
+                return -EINVAL;
+        }
         flags = fcntl(fd, F_GETFL, 0);
         if (flags < 0) {
-                return -1;
+                return -errno;
         }
         flags = on ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
         rc = fcntl(fd, F_SETFL, flags);
         if (rc != 0) {
-                return -1;
+                return -errno;
         }
         return 0;
 }
@@ -116,17 +119,13 @@ static int monitor_break_io_onevent (struct medusa_io *io, unsigned int events, 
                                 goto bail;
                         }
                 }
-                if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                        pthread_mutex_lock(&monitor->mutex);
-                }
+                medusa_monitor_lock(monitor);
                 if (reason == WAKEUP_REASON_LOOP_BREAK) {
                         monitor->running = 0;
                 } else if (reason == WAKEUP_REASON_LOOP_CONTINUE) {
                         monitor->running = 1;
                 }
-                if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                        pthread_mutex_unlock(&monitor->mutex);
-                }
+                medusa_monitor_unlock(monitor);
         }
         return 0;
 bail:   return -1;
@@ -153,13 +152,9 @@ static int monitor_timer_io_onevent (struct medusa_io *io, unsigned int events, 
                                 goto bail;
                         }
                 }
-                if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                        pthread_mutex_lock(&monitor->mutex);
-                }
+                medusa_monitor_lock(monitor);
                 monitor->timer.fired = 1;
-                if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                        pthread_mutex_unlock(&monitor->mutex);
-                }
+                medusa_monitor_unlock(monitor);
         }
         return 0;
 bail:   return -1;
@@ -203,7 +198,9 @@ static int medusa_monitor_process_deletes (struct medusa_monitor *monitor)
                                 }
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_POLL;
                         }
-                        rc = medusa_io_onevent(io, MEDUSA_IO_EVENT_DESTROY);
+                        medusa_monitor_unlock(monitor);
+                        rc = medusa_io_onevent_unlocked(io, MEDUSA_IO_EVENT_DESTROY);
+                        medusa_monitor_lock(monitor);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -217,7 +214,9 @@ static int medusa_monitor_process_deletes (struct medusa_monitor *monitor)
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                                 monitor->timer.dirty = 1;
                         }
-                        rc = medusa_timer_onevent(timer, MEDUSA_TIMER_EVENT_DESTROY);
+                        medusa_monitor_unlock(monitor);
+                        rc = medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_DESTROY);
+                        medusa_monitor_lock(monitor);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -242,7 +241,7 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
         TAILQ_FOREACH_SAFE(subject, &monitor->changes, list, nsubject) {
                 if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
                         io = (struct medusa_io *) subject;
-                        if (!medusa_io_is_valid(io)) {
+                        if (!medusa_io_is_valid_unlocked(io)) {
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_POLL) {
                                         rc = monitor->poll.backend->del(monitor->poll.backend, io);
                                         if (rc != 0) {
@@ -274,7 +273,7 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
                         }
                 } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
                         timer = (struct medusa_timer *) subject;
-                        if (!medusa_timer_is_valid(timer) ||
+                        if (!medusa_timer_is_valid_unlocked(timer) ||
                             (medusa_timespec_isset(&timer->_timespec) && !medusa_timespec_isset(&timer->interval))) {
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                         rc = pqueue_del(monitor->timer.pqueue, timer);
@@ -307,7 +306,7 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
                                 if (!medusa_timespec_isset(&timer->_timespec)) {
                                         goto bail;
                                 }
-                                resolution = medusa_timer_get_resolution(timer);
+                                resolution = medusa_timer_get_resolution_unlocked(timer);
                                 if (resolution == MEDUSA_TIMER_RESOLUTION_NANOSECOMDS) {
                                         if (timer->_timespec.tv_nsec >= 1000000000) {
                                                 timer->_timespec.tv_sec++;
@@ -355,6 +354,22 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
 bail:   return -1;
 }
 
+static int medusa_monitor_setup_timer (struct medusa_monitor *monitor)
+{
+        int rc;
+        struct medusa_timer *timer;
+        if (monitor->timer.dirty != 0) {
+                timer = pqueue_peek(monitor->timer.pqueue);
+                rc = monitor->timer.backend->set(monitor->timer.backend, (timer) ? &timer->_timespec : NULL);
+                if (rc != 0) {
+                        goto bail;
+                }
+                monitor->timer.dirty = 0;
+        }
+        return 0;
+bail:   return -1;
+}
+
 static int medusa_monitor_check_timer (struct medusa_monitor *monitor)
 {
         int rc;
@@ -378,40 +393,24 @@ static int medusa_monitor_check_timer (struct medusa_monitor *monitor)
                                 break;
                         }
                         timer->subject.flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
-                        if (medusa_timer_get_singleshot(timer) ||
+                        monitor->timer.dirty = 1;
+                        if (medusa_timer_get_singleshot_unlocked(timer) ||
                             !medusa_timespec_isset(&timer->interval)) {
-                                rc = medusa_timer_set_enabled(timer, 0);
+                                rc = medusa_timer_set_enabled_unlocked(timer, 0);
                                 if (rc < 0) {
                                         goto bail;
                                 }
                         }
-                        monitor->timer.dirty = 1;
-                        rc = medusa_monitor_mod(&timer->subject);
+                        rc = medusa_monitor_mod_unlocked(&timer->subject);
                         if (rc != 0) {
                                 goto bail;
                         }
-                        rc = medusa_timer_onevent(timer, MEDUSA_TIMER_EVENT_TIMEOUT);
+                        rc = medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_TIMEOUT);
                         if (rc != 0) {
                                 goto bail;
                         }
                 }
                 monitor->timer.fired = 0;
-        }
-        return 0;
-bail:   return -1;
-}
-
-static int medusa_monitor_setup_timer (struct medusa_monitor *monitor)
-{
-        int rc;
-        struct medusa_timer *timer;
-        if (monitor->timer.dirty != 0) {
-                timer = pqueue_peek(monitor->timer.pqueue);
-                rc = monitor->timer.backend->set(monitor->timer.backend, (timer) ? &timer->_timespec : NULL);
-                if (rc != 0) {
-                        goto bail;
-                }
-                monitor->timer.dirty = 0;
         }
         return 0;
 bail:   return -1;
@@ -428,8 +427,31 @@ static int medusa_monitor_signal (struct medusa_monitor *monitor, unsigned int r
 bail:   return -1;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_monitor_add (struct medusa_monitor *monitor, struct medusa_subject *subject)
+__attribute__ ((visibility ("default"))) int medusa_monitor_lock (struct medusa_monitor *monitor)
 {
+        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
+                return -EINVAL;
+        }
+        if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
+                pthread_mutex_lock(&monitor->mutex);
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_monitor_unlock (struct medusa_monitor *monitor)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
+                return -EINVAL;
+        }
+        if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
+                pthread_mutex_unlock(&monitor->mutex);
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_monitor_add_unlocked (struct medusa_monitor *monitor, struct medusa_subject *subject)
+{
+        int rc;
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
                 return -EINVAL;
         }
@@ -439,19 +461,35 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_add (struct medusa_m
         if (!MEDUSA_IS_ERR_OR_NULL(subject->monitor)) {
                 return -EALREADY;
         }
-        if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_lock(&monitor->mutex);
-        }
         TAILQ_INSERT_TAIL(&monitor->changes, subject, list);
         subject->monitor = monitor;
         subject->flags |= MEDUSA_SUBJECT_FLAG_MOD;
-        if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_unlock(&monitor->mutex);
+        rc = medusa_monitor_signal(monitor, WAKEUP_REASON_SUBJECT_ADD);
+        if (rc < 0) {
+                return rc;
         }
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_monitor_mod (struct medusa_subject *subject)
+__attribute__ ((visibility ("default"))) int medusa_monitor_add (struct medusa_monitor *monitor, struct medusa_subject *subject)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(subject)) {
+                return -EINVAL;
+        }
+        if (!MEDUSA_IS_ERR_OR_NULL(subject->monitor)) {
+                return -EALREADY;
+        }
+        medusa_monitor_lock(monitor);
+        rc = medusa_monitor_add_unlocked(monitor, subject);
+        medusa_monitor_unlock(monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_monitor_mod_unlocked (struct medusa_subject *subject)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(subject)) {
@@ -459,9 +497,6 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod (struct medusa_s
         }
         if (MEDUSA_IS_ERR_OR_NULL(subject->monitor)) {
                 return -EINVAL;
-        }
-        if (subject->monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_lock(&subject->monitor->mutex);
         }
         if (subject->flags & MEDUSA_SUBJECT_FLAG_DEL) {
         } else if (subject->flags & MEDUSA_SUBJECT_FLAG_MOD) {
@@ -479,7 +514,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod (struct medusa_s
                 if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
                         struct medusa_io *io;
                         io = (struct medusa_io *) subject;
-                        if (!medusa_io_is_valid(io) &&
+                        if (!medusa_io_is_valid_unlocked(io) &&
                             (subject->flags & MEDUSA_SUBJECT_FLAG_POLL)) {
                                 rc = subject->monitor->poll.backend->del(subject->monitor->poll.backend, io);
                                 if (rc < 0) {
@@ -490,7 +525,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod (struct medusa_s
                 } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
                         struct medusa_timer *timer;
                         timer = (struct medusa_timer *) subject;
-                        if (!medusa_timer_is_valid(timer) &&
+                        if (!medusa_timer_is_valid_unlocked(timer) &&
                             (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP)) {
                                 rc = pqueue_del(subject->monitor->timer.pqueue, timer);
                                 if (rc < 0) {
@@ -501,14 +536,14 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod (struct medusa_s
                         }
                 }
         }
-out:
-        if (subject->monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_unlock(&subject->monitor->mutex);
+        rc = medusa_monitor_signal(subject->monitor, WAKEUP_REASON_SUBJECT_MOD);
+        if (rc < 0) {
+                return rc;
         }
-        return rc;
+out:    return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_monitor_del (struct medusa_subject *subject)
+__attribute__ ((visibility ("default"))) int medusa_monitor_mod (struct medusa_subject *subject)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(subject)) {
@@ -517,8 +552,20 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_del (struct medusa_s
         if (MEDUSA_IS_ERR_OR_NULL(subject->monitor)) {
                 return -EINVAL;
         }
-        if (subject->monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_lock(&subject->monitor->mutex);
+        medusa_monitor_lock(subject->monitor);
+        rc = medusa_monitor_mod_unlocked(subject);
+        medusa_monitor_unlock(subject->monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_monitor_del_unlocked (struct medusa_subject *subject)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(subject)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(subject->monitor)) {
+                return -EINVAL;
         }
         if (subject->flags & MEDUSA_SUBJECT_FLAG_DEL) {
         } else if (subject->flags & MEDUSA_SUBJECT_FLAG_MOD) {
@@ -558,10 +605,25 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_del (struct medusa_s
                         }
                 }
         }
-out:
-        if (subject->monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_unlock(&subject->monitor->mutex);
+        rc = medusa_monitor_signal(subject->monitor, WAKEUP_REASON_SUBJECT_DEL);
+        if (rc < 0) {
+                return rc;
         }
+out:    return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_monitor_del (struct medusa_subject *subject)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(subject)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(subject->monitor)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(subject->monitor);
+        rc = medusa_monitor_del_unlocked(subject);
+        medusa_monitor_unlock(subject->monitor);
         return rc;
 }
 
@@ -716,17 +778,18 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
         if (monitor == NULL) {
                 return;
         }
+        medusa_monitor_lock(monitor);
         while (!TAILQ_EMPTY(&monitor->rogues)) {
                 subject = TAILQ_FIRST(&monitor->rogues);
-                medusa_monitor_del(subject);
+                medusa_monitor_del_unlocked(subject);
         }
         while (!TAILQ_EMPTY(&monitor->changes)) {
                 subject = TAILQ_FIRST(&monitor->changes);
-                medusa_monitor_del(subject);
+                medusa_monitor_del_unlocked(subject);
         }
         while (!TAILQ_EMPTY(&monitor->actives)) {
                 subject = TAILQ_FIRST(&monitor->actives);
-                medusa_monitor_del(subject);
+                medusa_monitor_del_unlocked(subject);
         }
         while (!TAILQ_EMPTY(&monitor->deletes)) {
                 subject = TAILQ_FIRST(&monitor->deletes);
@@ -738,14 +801,18 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                                 monitor->poll.backend->del(monitor->poll.backend, io);
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_POLL;
                         }
-                        medusa_io_onevent(io, MEDUSA_IO_EVENT_DESTROY);
+                        medusa_monitor_unlock(monitor);
+                        medusa_io_onevent_unlocked(io, MEDUSA_IO_EVENT_DESTROY);
+                        medusa_monitor_lock(monitor);
                 } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
                         timer = (struct medusa_timer *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 pqueue_del(monitor->timer.pqueue, timer);
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         }
-                        medusa_timer_onevent(timer, MEDUSA_TIMER_EVENT_DESTROY);
+                        medusa_monitor_unlock(monitor);
+                        medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_DESTROY);
+                        medusa_monitor_lock(monitor);
                 }
         }
         if (monitor->poll.backend != NULL) {
@@ -763,6 +830,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
         if (monitor->timer.pqueue != NULL) {
                 pqueue_destroy(monitor->timer.pqueue);
         }
+        medusa_monitor_unlock(monitor);
         if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
              pthread_mutex_destroy(&monitor->mutex);
         }
@@ -775,13 +843,9 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_get_running (struct 
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
                 return -EINVAL;
         }
-        if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_lock(&monitor->mutex);
-        }
-        running =  monitor->running;
-        if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_unlock(&monitor->mutex);
-        }
+        medusa_monitor_lock(monitor);
+        running = monitor->running;
+        medusa_monitor_unlock(monitor);
         return running;
 }
 
@@ -791,13 +855,9 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_break (struct medusa
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
                 return -EINVAL;
         }
-        if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_lock(&monitor->mutex);
-        }
+        medusa_monitor_lock(monitor);
         rc = medusa_monitor_signal(monitor, WAKEUP_REASON_LOOP_BREAK);
-        if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_unlock(&monitor->mutex);
-        }
+        medusa_monitor_unlock(monitor);
         return rc;
 }
 
@@ -807,13 +867,9 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_continue (struct med
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
                 return -EINVAL;
         }
-        if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_lock(&monitor->mutex);
-        }
+        medusa_monitor_lock(monitor);
         rc = medusa_monitor_signal(monitor, WAKEUP_REASON_LOOP_CONTINUE);
-        if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_unlock(&monitor->mutex);
-        }
+        medusa_monitor_unlock(monitor);
         return rc;
 }
 
@@ -835,9 +891,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
                 timespec->tv_nsec = (timeout - timespec->tv_sec) * 1e9;
         }
 
-        if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_lock(&monitor->mutex);
-        }
+        medusa_monitor_lock(monitor);
 
         rc = medusa_monitor_process_deletes(monitor);
         if (rc < 0) {
@@ -852,15 +906,11 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
                 goto bail;
         }
 
-        if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_unlock(&monitor->mutex);
-        }
+        medusa_monitor_unlock(monitor);
 
         rc = monitor->poll.backend->run(monitor->poll.backend, timespec);
 
-        if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_lock(&monitor->mutex);
-        }
+        medusa_monitor_lock(monitor);
 
         if (rc < 0) {
                 goto bail;
@@ -872,9 +922,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
 
         rc = monitor->running;
 
-bail:   if (monitor->flags & MEDUSA_MONITOR_FLAG_THREAD_SAFE) {
-                pthread_mutex_unlock(&monitor->mutex);
-        }
+bail:   medusa_monitor_unlock(monitor);
         return rc;
 }
 

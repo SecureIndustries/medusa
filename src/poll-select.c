@@ -34,6 +34,7 @@ struct internal {
 
 static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *io)
 {
+        unsigned int events;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
@@ -44,7 +45,8 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->fd < 0) {
                 goto bail;
         }
-        if (medusa_io_get_events(io) == 0) {
+        events = medusa_io_get_events_unlocked(io);
+        if (events == 0) {
                 goto bail;
         }
 #if defined(__DARWIN__) && (__DARWIN__ == 1)
@@ -57,13 +59,13 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         FD_CLR(io->fd, &internal->rfds);
         FD_CLR(io->fd, &internal->wfds);
         FD_CLR(io->fd, &internal->efds);
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_IN) {
+        if (events & MEDUSA_IO_EVENT_IN) {
                 FD_SET(io->fd, &internal->rfds);
         }
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_OUT) {
+        if (events & MEDUSA_IO_EVENT_OUT) {
                 FD_SET(io->fd, &internal->wfds);
         }
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_PRI) {
+        if (events & MEDUSA_IO_EVENT_PRI) {
                 FD_SET(io->fd, &internal->rfds);
         }
         FD_SET(io->fd, &internal->efds);
@@ -74,6 +76,7 @@ bail:   return -1;
 
 static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *io)
 {
+        unsigned int events;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
@@ -84,7 +87,8 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->fd < 0) {
                 goto bail;
         }
-        if (medusa_io_get_events(io) == 0) {
+        events = medusa_io_get_events_unlocked(io);
+        if (events == 0) {
                 goto bail;
         }
         if (internal->ios[io->fd] != io) {
@@ -93,13 +97,13 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
         FD_CLR(io->fd, &internal->rfds);
         FD_CLR(io->fd, &internal->wfds);
         FD_CLR(io->fd, &internal->efds);
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_IN) {
+        if (events & MEDUSA_IO_EVENT_IN) {
                 FD_SET(io->fd, &internal->rfds);
         }
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_OUT) {
+        if (events & MEDUSA_IO_EVENT_OUT) {
                 FD_SET(io->fd, &internal->wfds);
         }
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_PRI) {
+        if (events & MEDUSA_IO_EVENT_PRI) {
                 FD_SET(io->fd, &internal->rfds);
         }
         FD_SET(io->fd, &internal->efds);
