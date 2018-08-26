@@ -14,13 +14,11 @@ endif
 
 target.a-y = \
 	libmedusa-monitor.a \
-	libmedusa-socket.a \
-	libmedusa-http.a
+	libmedusa-socket.a
 
 target.so-y = \
 	libmedusa-monitor.so \
-	libmedusa-socket.so \
-	libmedusa-http.so
+	libmedusa-socket.so
 
 libmedusa-monitor.a_cflags-y = \
 	-fvisibility=hidden
@@ -88,35 +86,6 @@ libmedusa-socket.so_depends-y = \
 	libmedusa-monitor.a \
 	libmedusa-monitor.so
 
-libmedusa-http.a_cflags-y = \
-	-fvisibility=hidden
-
-libmedusa-http.a_includes-y = \
-	../3rdparty/http-parser
-	
-libmedusa-http.a_files-y = \
-	../3rdparty/http-parser/http_parser.c \
-	http-server.c \
-	http-client.c \
-	http-request.c \
-	http-response.c
-
-libmedusa-http.so_cflags-y = \
-	${libmedusa-http.a_cflags-y}
-
-libmedusa-http.so_includes-y = \
-	${libmedusa-http.a_includes-y}
-
-libmedusa-http.so_files-y = \
-	${libmedusa-http.a_files-y}
-
-libmedusa-http.so_ldflags-y = \
-	-lmedusa-socket
-
-libmedusa-http.so_depends-y = \
-	libmedusa-socket.a \
-	libmedusa-socket.so
-
 dist.dir = ../dist
 dist.base = medusa
 
@@ -128,19 +97,12 @@ dist.include-y = \
 	buffer.h \
 	io.h \
 	timer.h \
-	tcpsocket.h \
-	http.h \
-	http-server.h \
-	http-client.h \
-	http-request.h \
-	http-response.h
+	tcpsocket.h
 
 dist.lib-y = \
 	libmedusa-monitor.a \
 	libmedusa-monitor.so \
 	libmedusa-socket.a \
-	libmedusa-socket.so \
-	libmedusa-http.a \
-	libmedusa-http.so
+	libmedusa-socket.so
 
 include ../Makefile.lib

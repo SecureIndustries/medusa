@@ -62,22 +62,7 @@ static inline void io_set_enabled (struct medusa_io *io, unsigned int enabled)
                     ((enabled & MEDUSA_IO_ENABLE_MASK) << MEDUSA_IO_ENABLE_SHIFT);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_io_init (struct medusa_io *io, struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...), void *context)
-{
-        int rc;
-        struct medusa_io_init_options options;
-        rc = medusa_io_init_options_default(&options);
-        if (rc < 0) {
-                return rc;
-        }
-        options.monitor = monitor;
-        options.fd = fd;
-        options.onevent = onevent;
-        options.context = context;
-        return medusa_io_init_with_options(io, &options);
-}
-
-__attribute__ ((visibility ("default"))) int medusa_io_init_with_options (struct medusa_io *io, const struct medusa_io_init_options *options)
+static int medusa_io_init_with_options_impl (struct medusa_io *io, const struct medusa_io_init_options *options)
 {
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 return -EINVAL;
@@ -102,6 +87,46 @@ __attribute__ ((visibility ("default"))) int medusa_io_init_with_options (struct
         io_set_enabled(io, options->enabled);
         io->subject.flags = MEDUSA_SUBJECT_TYPE_IO;
         io->subject.monitor = NULL;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_init_options_default (struct medusa_io_init_options *options)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return -EINVAL;
+        }
+        memset(options, 0, sizeof(struct medusa_io_init_options));
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_init (struct medusa_io *io, struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...), void *context)
+{
+        int rc;
+        struct medusa_io_init_options options;
+        rc = medusa_io_init_options_default(&options);
+        if (rc < 0) {
+                return rc;
+        }
+        options.monitor = monitor;
+        options.fd = fd;
+        options.onevent = onevent;
+        options.context = context;
+        return medusa_io_init_with_options(io, &options);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_init_with_options (struct medusa_io *io, const struct medusa_io_init_options *options)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(io)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return -EINVAL;
+        }
+        rc = medusa_io_init_with_options_impl(io, options);
+        if (rc < 0) {
+                return rc;
+        }
         return medusa_monitor_add(options->monitor, &io->subject);
 }
 
@@ -118,15 +143,6 @@ __attribute__ ((visibility ("default"))) void medusa_io_uninit (struct medusa_io
         } else {
                 medusa_io_onevent(io, MEDUSA_IO_EVENT_DESTROY);
         }
-}
-
-__attribute__ ((visibility ("default"))) int medusa_io_init_options_default (struct medusa_io_init_options *options)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(options)) {
-                return -EINVAL;
-        }
-        memset(options, 0, sizeof(struct medusa_io_init_options));
-        return 0;
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create (struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...), void *context)
@@ -148,6 +164,9 @@ struct medusa_io * medusa_io_create_with_options (const struct medusa_io_init_op
 {
         int rc;
         struct medusa_io *io;
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
 #if defined(MEDUSA_IO_USE_POOL) && (MEDUSA_IO_USE_POOL == 1)
         io = medusa_pool_malloc(g_pool);
 #else
@@ -156,12 +175,21 @@ struct medusa_io * medusa_io_create_with_options (const struct medusa_io_init_op
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
-        rc = medusa_io_init_with_options(io, options);
+        rc = medusa_io_init_with_options_impl(io, options);
+        if (rc < 0) {
+#if defined(MEDUSA_IO_USE_POOL) && (MEDUSA_IO_USE_POOL == 1)
+                medusa_pool_free(io);
+#else
+                free(io);
+#endif
+                return MEDUSA_ERR_PTR(rc);
+        }
+        io->subject.flags |= MEDUSA_SUBJECT_FLAG_ALLOC;
+        rc = medusa_monitor_add(options->monitor, &io->subject);
         if (rc < 0) {
                 medusa_io_destroy(io);
                 return MEDUSA_ERR_PTR(rc);
         }
-        io->subject.flags |= MEDUSA_SUBJECT_FLAG_ALLOC;
         return io;
 }
 

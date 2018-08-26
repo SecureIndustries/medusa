@@ -18,7 +18,6 @@ define test-defaults
 
 	$1_ldflags-y = \
 		-Wl,-Bstatic \
-		-lmedusa-http \
 		-lmedusa-socket \
 		-lmedusa-monitor \
 		-Wl,-Bdynamic \
@@ -26,7 +25,6 @@ define test-defaults
 		-lrt
 
 	$1_depends-y = \
-		../dist/lib/libmedusa-http.a \
 		../dist/lib/libmedusa-socket.a \
 		../dist/lib/libmedusa-monitor.a
 endef
