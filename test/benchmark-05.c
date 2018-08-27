@@ -185,9 +185,9 @@ int main (int argc, char *argv[])
         unsigned int i;
 
         g_nsamples  = 1;
-        g_ntests    = 1;
-        g_npackets  = 1000;
-        g_pinterval = 0.050;
+        g_ntests    = 10;
+        g_npackets  = 10;
+        g_pinterval = 0.001;
 
         while ((c = getopt(argc, argv, "hs:t:p:i:")) != -1) {
                 switch (c) {
