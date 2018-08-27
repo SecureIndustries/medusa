@@ -131,8 +131,6 @@ static int test_poll (unsigned int poll)
                                 goto bail;
                         }
 
-                        g_active_receivers += 1;
-
                         g_senders[i].fd       = g_pipes[i * 2 + 1];
                         g_senders[i].npackets = 0;
 
@@ -150,12 +148,14 @@ static int test_poll (unsigned int poll)
                                 goto bail;
                         }
 
-                        g_active_senders += 1;
                 }
                 rc = medusa_monitor_run_timeout(monitor, 0.0);
                 if (rc < 0) {
                         goto bail;
                 }
+
+                g_active_senders   = g_ntests;
+                g_active_receivers = g_ntests;
 
                 while (1) {
                         rc = medusa_monitor_run_once(monitor);
