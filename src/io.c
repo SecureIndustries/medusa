@@ -53,7 +53,7 @@ static inline unsigned int io_get_events (const struct medusa_io *io)
 
 static inline unsigned int io_get_enabled (const struct medusa_io *io)
 {
-        return (io->flags >> MEDUSA_IO_ENABLE_SHIFT);
+        return (io->flags >> MEDUSA_IO_ENABLE_SHIFT) & MEDUSA_IO_ENABLE_MASK;
 }
 
 static inline void io_set_enabled (struct medusa_io *io, unsigned int enabled)
