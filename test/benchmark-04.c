@@ -229,7 +229,7 @@ int main (int argc, char *argv[])
         g_nwrites  = g_npipes;
         g_ntimers  = 0;
 
-        while ((c = getopt(argc, argv, "n:a:w:s:t:")) != -1) {
+        while ((c = getopt(argc, argv, "hn:a:w:s:t:")) != -1) {
                 switch (c) {
                         case 'n':
                                 g_npipes = atoi(optarg);
@@ -246,8 +246,11 @@ int main (int argc, char *argv[])
                         case 't':
                                 g_ntimers = !!atoi(optarg);
                                 break;
+                        case 'h':
+                                fprintf(stderr, "%s [-n pipes] [-w writes] [-a actives] [-s samples] [-t timers]\n", argv[0]);
+                                return 0;
                         default:
-                                fprintf(stderr, "unknown param: %c", c);
+                                fprintf(stderr, "unknown param: %c\n", c);
                                 return -1;
                 }
         }
@@ -271,6 +274,7 @@ int main (int argc, char *argv[])
                 rc = socketpair(AF_UNIX, SOCK_STREAM, 0, &g_pipes[i * 2]);
 #endif
                 if (rc != 0) {
+                        fprintf(stderr, "can not create pair: %d\n", i);
                         return -1;
                 }
         }
