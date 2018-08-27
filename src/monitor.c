@@ -308,27 +308,22 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
                                 }
                                 resolution = medusa_timer_get_resolution_unlocked(timer);
                                 if (resolution == MEDUSA_TIMER_RESOLUTION_NANOSECOMDS) {
-                                        if (timer->_timespec.tv_nsec >= 1000000000) {
-                                                timer->_timespec.tv_sec++;
-                                                timer->_timespec.tv_nsec -= 1000000000;
-                                        }
                                 } else if (resolution == MEDUSA_TIMER_RESOLUTION_MICROSECONDS) {
-                                        timer->_timespec.tv_nsec = ((timer->_timespec.tv_nsec + 500) / 1e3) * 1e3;
-                                        if (timer->_timespec.tv_nsec >= 1000000000) {
-                                                timer->_timespec.tv_sec++;
-                                                timer->_timespec.tv_nsec -= 1000000000;
-                                        }
+                                        timer->_timespec.tv_nsec += 500;
+                                        timer->_timespec.tv_nsec /= 1e3;
+                                        timer->_timespec.tv_nsec *= 1e3;
                                 } else if (resolution == MEDUSA_TIMER_RESOLUTION_MILLISECONDS) {
-                                        timer->_timespec.tv_nsec = ((timer->_timespec.tv_nsec + 500000) / 1e6) * 1e6;
-                                        if (timer->_timespec.tv_nsec >= 1000000000) {
-                                                timer->_timespec.tv_sec++;
-                                                timer->_timespec.tv_nsec -= 1000000000;
-                                        }
+                                        timer->_timespec.tv_nsec += 500000;
+                                        timer->_timespec.tv_nsec /= 1e6;
+                                        timer->_timespec.tv_nsec *= 1e6;
                                 } else if (resolution == MEDUSA_TIMER_RESOLUTION_SECONDS) {
-                                        if (timer->_timespec.tv_nsec >= 500000000) {
-                                                timer->_timespec.tv_sec += 1;
-                                        }
-                                        timer->_timespec.tv_nsec = 0;
+                                        timer->_timespec.tv_nsec += 500000000;
+                                        timer->_timespec.tv_nsec /= 1e9;
+                                        timer->_timespec.tv_nsec *= 1e9;
+                                }
+                                if (timer->_timespec.tv_nsec >= 1000000000) {
+                                        timer->_timespec.tv_sec++;
+                                        timer->_timespec.tv_nsec -= 1000000000;
                                 }
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                         rc = pqueue_mod(monitor->timer.pqueue, timer, medusa_timespec_compare(&_timespec, &timer->_timespec, >));

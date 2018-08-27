@@ -112,7 +112,7 @@ static int test_poll (unsigned int poll)
 
         for (j = 0; j < g_nsamples; j++) {
                 monitor = medusa_monitor_create(&monitor_init_options);
-                if (monitor == NULL) {
+                if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
                         goto bail;
                 }
                 for (i = 0; i < g_ntests; i++) {
@@ -135,7 +135,7 @@ static int test_poll (unsigned int poll)
                         g_senders[i].npackets = 0;
 
                         medusa_timer_init_options_default(&timer_init_options);
-                        timer_init_options.initial    = 0;
+                        timer_init_options.initial    = drand48();
                         timer_init_options.interval   = g_pinterval;
                         timer_init_options.resolution = MEDUSA_TIMER_RESOLUTION_MILLISECONDS;
                         timer_init_options.singleshot = 0;
@@ -201,7 +201,7 @@ int main (int argc, char *argv[])
                                 g_npackets = atoi(optarg);
                                 break;
                         case 'i':
-                                g_pinterval = atoi(optarg);
+                                g_pinterval = atof(optarg);
                                 break;
                         case 'h':
                                 fprintf(stderr, "%s [-s samples] [-t tests] [-p packets] [-i interval]\n", argv[0]);
