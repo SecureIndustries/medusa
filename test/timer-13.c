@@ -46,6 +46,7 @@ static int test_poll (unsigned int poll)
         int rc;
         unsigned int i;
 
+        struct medusa_timer *timer;
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
@@ -62,8 +63,14 @@ static int test_poll (unsigned int poll)
         }
 
         for (i = 0; i < g_ntimers; i++) {
-                rc = medusa_timer_create_singleshot(monitor, 0.05, timer_onevent, NULL);
-                if (rc < 0) {
+                timer = medusa_timer_create(monitor, timer_onevent, NULL);
+                if (timer == NULL) {
+                        goto bail;
+                }
+                rc  = medusa_timer_set_singleshot(timer, 0);
+                rc |= medusa_timer_set_interval(timer, 0.05);
+                rc |= medusa_timer_set_enabled(timer, 1);
+                if (rc != 0) {
                         fprintf(stderr, "medusa_timer_create_singleshot failed\n");
                         goto bail;
                 }
@@ -75,8 +82,7 @@ static int test_poll (unsigned int poll)
                         fprintf(stderr, "can not run monitor\n");
                         return -1;
                 }
-                if (g_ntimeouts == g_ntimers &&
-                    g_ndestroys == g_ntimers) {
+                if (g_ntimeouts == g_ntimers) {
                         break;
                 }
         }
