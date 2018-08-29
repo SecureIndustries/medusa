@@ -499,7 +499,9 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod_unlocked (struct
                 return -EINVAL;
         }
         if (subject->flags & MEDUSA_SUBJECT_FLAG_DEL) {
+                return 0;
         } else if (subject->flags & MEDUSA_SUBJECT_FLAG_MOD) {
+                return 0;
         } else if (subject->flags & MEDUSA_SUBJECT_FLAG_ROGUE) {
                 TAILQ_REMOVE(&subject->monitor->rogues, subject, list);
                 TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, list);
@@ -568,6 +570,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_del_unlocked (struct
                 return -EINVAL;
         }
         if (subject->flags & MEDUSA_SUBJECT_FLAG_DEL) {
+                return 0;
         } else if (subject->flags & MEDUSA_SUBJECT_FLAG_MOD) {
                 TAILQ_REMOVE(&subject->monitor->changes, subject, list);
                 TAILQ_INSERT_TAIL(&subject->monitor->deletes, subject, list);
