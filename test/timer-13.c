@@ -67,7 +67,7 @@ static int test_poll (unsigned int poll)
                 if (timer == NULL) {
                         goto bail;
                 }
-                rc  = medusa_timer_set_singleshot(timer, 0);
+                rc  = medusa_timer_set_singleshot(timer, 1);
                 rc |= medusa_timer_set_interval(timer, 0.05);
                 rc |= medusa_timer_set_enabled(timer, 1);
                 if (rc != 0) {
