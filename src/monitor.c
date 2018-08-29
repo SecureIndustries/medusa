@@ -61,6 +61,7 @@ struct medusa_monitor {
         } timer;
         struct {
                 int fds[2];
+                int fired;
                 struct medusa_io io;
         } wakeup;
         pthread_mutex_t mutex;
@@ -120,11 +121,7 @@ static int monitor_break_io_onevent (struct medusa_io *io, unsigned int events, 
                         }
                 }
                 medusa_monitor_lock(monitor);
-                if (reason == WAKEUP_REASON_LOOP_BREAK) {
-                        monitor->running = 0;
-                } else if (reason == WAKEUP_REASON_LOOP_CONTINUE) {
-                        monitor->running = 1;
-                }
+                monitor->wakeup.fired = 0;
                 medusa_monitor_unlock(monitor);
         }
         return 0;
@@ -179,7 +176,7 @@ static unsigned int monitor_timer_subject_get_position (void *entry)
         return timer->_position;
 }
 
-static int medusa_monitor_process_deletes (struct medusa_monitor *monitor)
+static int monitor_process_deletes (struct medusa_monitor *monitor)
 {
         int rc;
         struct medusa_io *io;
@@ -226,7 +223,7 @@ static int medusa_monitor_process_deletes (struct medusa_monitor *monitor)
 bail:   return -1;
 }
 
-static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
+static int monitor_process_changes (struct medusa_monitor *monitor)
 {
         int rc;
         struct timespec now;
@@ -349,7 +346,7 @@ static int medusa_monitor_process_changes (struct medusa_monitor *monitor)
 bail:   return -1;
 }
 
-static int medusa_monitor_setup_timer (struct medusa_monitor *monitor)
+static int monitor_setup_timer (struct medusa_monitor *monitor)
 {
         int rc;
         struct medusa_timer *timer;
@@ -365,7 +362,7 @@ static int medusa_monitor_setup_timer (struct medusa_monitor *monitor)
 bail:   return -1;
 }
 
-static int medusa_monitor_check_timer (struct medusa_monitor *monitor)
+static int monitor_check_timer (struct medusa_monitor *monitor)
 {
         int rc;
         struct timespec now;
@@ -411,12 +408,20 @@ static int medusa_monitor_check_timer (struct medusa_monitor *monitor)
 bail:   return -1;
 }
 
-static int medusa_monitor_signal (struct medusa_monitor *monitor, unsigned int reason)
+static int monitor_signal (struct medusa_monitor *monitor, unsigned int reason)
 {
         int rc;
-        rc = write(monitor->wakeup.fds[1], &reason, sizeof(reason));
-        if (rc != sizeof(reason)) {
-                goto bail;
+        if (monitor->wakeup.fired == 0) {
+                rc = write(monitor->wakeup.fds[1], &reason, sizeof(reason));
+                if (rc != sizeof(reason)) {
+                        goto bail;
+                }
+                monitor->wakeup.fired = 1;
+        }
+        if (reason == WAKEUP_REASON_LOOP_BREAK) {
+                monitor->running = 0;
+        } else if (reason == WAKEUP_REASON_LOOP_CONTINUE) {
+                monitor->running = 1;
         }
         return 0;
 bail:   return -1;
@@ -459,7 +464,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_add_unlocked (struct
         TAILQ_INSERT_TAIL(&monitor->changes, subject, list);
         subject->monitor = monitor;
         subject->flags |= MEDUSA_SUBJECT_FLAG_MOD;
-        rc = medusa_monitor_signal(monitor, WAKEUP_REASON_SUBJECT_ADD);
+        rc = monitor_signal(monitor, WAKEUP_REASON_SUBJECT_ADD);
         if (rc < 0) {
                 return rc;
         }
@@ -531,7 +536,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod_unlocked (struct
                         }
                 }
         }
-        rc = medusa_monitor_signal(subject->monitor, WAKEUP_REASON_SUBJECT_MOD);
+        rc = monitor_signal(subject->monitor, WAKEUP_REASON_SUBJECT_MOD);
         if (rc < 0) {
                 return rc;
         }
@@ -600,7 +605,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_del_unlocked (struct
                         }
                 }
         }
-        rc = medusa_monitor_signal(subject->monitor, WAKEUP_REASON_SUBJECT_DEL);
+        rc = monitor_signal(subject->monitor, WAKEUP_REASON_SUBJECT_DEL);
         if (rc < 0) {
                 return rc;
         }
@@ -851,7 +856,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_break (struct medusa
                 return -EINVAL;
         }
         medusa_monitor_lock(monitor);
-        rc = medusa_monitor_signal(monitor, WAKEUP_REASON_LOOP_BREAK);
+        rc = monitor_signal(monitor, WAKEUP_REASON_LOOP_BREAK);
         medusa_monitor_unlock(monitor);
         return rc;
 }
@@ -863,7 +868,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_continue (struct med
                 return -EINVAL;
         }
         medusa_monitor_lock(monitor);
-        rc = medusa_monitor_signal(monitor, WAKEUP_REASON_LOOP_CONTINUE);
+        rc = monitor_signal(monitor, WAKEUP_REASON_LOOP_CONTINUE);
         medusa_monitor_unlock(monitor);
         return rc;
 }
@@ -888,15 +893,15 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
 
         medusa_monitor_lock(monitor);
 
-        rc = medusa_monitor_process_deletes(monitor);
+        rc = monitor_process_deletes(monitor);
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_monitor_process_changes(monitor);
+        rc = monitor_process_changes(monitor);
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_monitor_setup_timer(monitor);
+        rc = monitor_setup_timer(monitor);
         if (rc < 0) {
                 goto bail;
         }
@@ -910,7 +915,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_monitor_check_timer(monitor);
+        rc = monitor_check_timer(monitor);
         if (rc < 0) {
                 goto bail;
         }

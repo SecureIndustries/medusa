@@ -120,7 +120,7 @@ static int test_poll (unsigned int poll)
                         g_receivers[i].npackets = 0;
 
                         medusa_io_init_options_default(&io_init_options);
-                        io_init_options.fd      = g_pipes[i * 2];
+                        io_init_options.fd      = g_receivers[i].fd;
                         io_init_options.events  = MEDUSA_IO_EVENT_IN;
                         io_init_options.onevent = receiver_io_onevent;
                         io_init_options.context = &g_receivers[i];

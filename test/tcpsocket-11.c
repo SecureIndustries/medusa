@@ -135,7 +135,6 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 if (c != 'e') {
                         return -1;
                 }
-                return medusa_monitor_break(medusa_tcpsocket_get_monitor(tcpsocket));
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
                 return medusa_monitor_break(medusa_tcpsocket_get_monitor(tcpsocket));
@@ -406,7 +405,15 @@ static int test_poll (unsigned int poll)
                         MEDUSA_TCPSOCKET_EVENT_WRITTEN |
                         MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED |
                         MEDUSA_TCPSOCKET_EVENT_DISCONNECTED)) {
-                fprintf(stderr, "client   events: 0x%08x invalid\n", cevents);
+                fprintf(stderr, "client   events: 0x%08x != 0x%08x invalid\n", cevents,
+                                                (MEDUSA_TCPSOCKET_EVENT_RESOLVING |
+                                                MEDUSA_TCPSOCKET_EVENT_RESOLVED |
+                                                MEDUSA_TCPSOCKET_EVENT_CONNECTING |
+                                                MEDUSA_TCPSOCKET_EVENT_CONNECTED |
+                                                MEDUSA_TCPSOCKET_EVENT_READ |
+                                                MEDUSA_TCPSOCKET_EVENT_WRITTEN |
+                                                MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED |
+                                                MEDUSA_TCPSOCKET_EVENT_DISCONNECTED));
                 goto bail;
         }
 

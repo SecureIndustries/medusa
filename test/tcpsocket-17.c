@@ -136,7 +136,6 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                         return -1;
                 }
                 medusa_tcpsocket_destroy(tcpsocket);
-                return medusa_monitor_break(medusa_tcpsocket_get_monitor(tcpsocket));
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
                 return medusa_monitor_break(medusa_tcpsocket_get_monitor(tcpsocket));
