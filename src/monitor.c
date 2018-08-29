@@ -429,6 +429,7 @@ static int monitor_check_timer (struct medusa_monitor *monitor)
                 }
 #else
                 struct medusa_timer tk;
+                memset(&tk, 0, sizeof(struct medusa_timer));
                 tk._timespec = now;
                 rc = pqueue_search(monitor->timer.pqueue, &tk, monitor_hit_timer, monitor);
                 if (rc != 0) {
