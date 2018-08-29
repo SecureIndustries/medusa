@@ -90,6 +90,32 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_set_length (struct me
         return 0;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_buffer_prepend (struct medusa_buffer *buffer, const void *data, int64_t length)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (length < 0) {
+                return -EINVAL;
+        }
+        if (length == 0) {
+                return 0;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(data)) {
+                return -EINVAL;
+        }
+        rc = medusa_buffer_resize(buffer, buffer->length + length);
+        if (rc < 0) {
+                return rc;
+        }
+        memmove(buffer->buffer + length, buffer->buffer, buffer->length);
+        memcpy(buffer->buffer, data, length);
+        buffer->length += length;
+
+        return 0;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_buffer_push (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
         int rc;
