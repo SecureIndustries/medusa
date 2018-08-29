@@ -116,7 +116,7 @@ int main (int argc, char *argv[])
         srand(time(NULL));
         signal(SIGALRM, alarm_handler);
 
-        g_ntimers = 1000000;
+        g_ntimers = 100000;
 
         for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
                 alarm(5);
