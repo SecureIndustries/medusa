@@ -362,16 +362,42 @@ static int monitor_setup_timer (struct medusa_monitor *monitor)
 bail:   return -1;
 }
 
+static __attribute__ ((__unused__))  int monitor_hit_timer (void *context, void *a)
+{
+        int rc;
+        struct medusa_timer *timer = a;
+        struct medusa_monitor *monitor = context;
+        (void) monitor;
+        if (medusa_timer_get_singleshot_unlocked(timer) ||
+            !medusa_timespec_isset(&timer->interval)) {
+                rc = medusa_timer_set_enabled_unlocked(timer, 0);
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
+        rc = medusa_monitor_mod_unlocked(&timer->subject);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_TIMEOUT);
+        if (rc != 0) {
+                goto bail;
+        }
+        return 0;
+bail:   return -1;
+}
+
 static int monitor_check_timer (struct medusa_monitor *monitor)
 {
         int rc;
         struct timespec now;
-        struct medusa_timer *timer;
         rc = medusa_clock_monotonic(&now);
         if (rc < 0) {
                 goto bail;
         }
         if (monitor->timer.fired != 0) {
+#if 0
+                struct medusa_timer *timer;
                 while (1) {
                         timer = pqueue_peek(monitor->timer.pqueue);
                         if (timer == NULL) {
@@ -402,6 +428,14 @@ static int monitor_check_timer (struct medusa_monitor *monitor)
                                 goto bail;
                         }
                 }
+#else
+                struct medusa_timer tk;
+                tk._timespec = now;
+                rc = pqueue_search(monitor->timer.pqueue, &tk, monitor_hit_timer, monitor);
+                if (rc != 0) {
+                        goto bail;
+                }
+#endif
                 monitor->timer.fired = 0;
         }
         return 0;
@@ -511,7 +545,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod_unlocked (struct
                 TAILQ_INSERT_TAIL(&subject->monitor->changes, subject, list);
         }
         subject->flags |= MEDUSA_SUBJECT_FLAG_MOD;
-        {
+        if (1) {
                 rc = 0;
                 if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
                         struct medusa_io *io;
@@ -524,6 +558,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod_unlocked (struct
                                 }
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_POLL;
                         }
+#if 0
                 } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
                         struct medusa_timer *timer;
                         timer = (struct medusa_timer *) subject;
@@ -536,6 +571,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod_unlocked (struct
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                                 subject->monitor->timer.dirty = 1;
                         }
+#endif
                 }
         }
         rc = monitor_signal(subject->monitor, WAKEUP_REASON_SUBJECT_MOD);
