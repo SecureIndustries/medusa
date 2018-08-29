@@ -76,12 +76,14 @@ static int sender_timer_onevent (struct medusa_timer *timer, unsigned int events
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 rc = write(sender->fd, "e", 1);
                 if (rc != 1) {
+                        fprintf(stderr, "can not write\n");
                         return -1;
                 }
                 sender->npackets += 1;
                 if (sender->npackets >= g_npackets) {
                         rc = medusa_timer_set_enabled(timer, 0);
                         if (rc < 0) {
+                                fprintf(stderr, "can not disable\n");
                                 return -1;
                         }
                         g_active_senders -= 1;
@@ -110,6 +112,9 @@ static int test_poll (unsigned int poll)
         medusa_monitor_init_options_default(&monitor_init_options);
         monitor_init_options.poll.type = poll;
 
+        g_active_senders   = g_ntests;
+        g_active_receivers = g_ntests;
+
         for (j = 0; j < g_nsamples; j++) {
                 monitor = medusa_monitor_create(&monitor_init_options);
                 if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
@@ -128,6 +133,7 @@ static int test_poll (unsigned int poll)
                         io_init_options.monitor = monitor;
                         io = medusa_io_create_with_options(&io_init_options);
                         if (MEDUSA_IS_ERR_OR_NULL(io)) {
+                                fprintf(stderr, "can not create io\n");
                                 goto bail;
                         }
 
@@ -145,21 +151,21 @@ static int test_poll (unsigned int poll)
                         timer_init_options.monitor    = monitor;
                         timer = medusa_timer_create_with_options(&timer_init_options);
                         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                                fprintf(stderr, "can not create timer\n");
                                 goto bail;
                         }
 
                 }
-                rc = medusa_monitor_run_timeout(monitor, 0.0);
+                rc = medusa_monitor_run_once(monitor);
                 if (rc < 0) {
+                        fprintf(stderr, "can not run monitor\n");
                         goto bail;
                 }
 
-                g_active_senders   = g_ntests;
-                g_active_receivers = g_ntests;
-
                 while (1) {
-                        rc = medusa_monitor_run_once(monitor);
+                        rc = medusa_monitor_run_timeout(monitor, 1.0);
                         if (rc < 0) {
+                                fprintf(stderr, "can not run monitor\n");
                                 goto bail;
                         }
                         if (g_active_senders == 0 &&
@@ -244,11 +250,14 @@ int main (int argc, char *argv[])
         }
 
         for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
-                fprintf(stderr, "testing poll: %d\n", g_polls[i]);
+                fprintf(stderr, "testing poll: %d ... ", g_polls[i]);
 
                 rc = test_poll(g_polls[i]);
                 if (rc != 0) {
+                        fprintf(stderr, "fail\n");
                         return -1;
+                } else {
+                        fprintf(stderr, "success\n");
                 }
 
                 break;

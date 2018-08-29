@@ -98,13 +98,12 @@ static int fd_set_blocking (int fd, int on)
         return 0;
 }
 
-static int monitor_break_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
+static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
 {
         int rc;
         unsigned int reason;
         struct medusa_monitor *monitor = (struct medusa_monitor *) context;
         if (events & MEDUSA_IO_EVENT_IN) {
-                reason = WAKEUP_REASON_NONE;
                 while (1) {
                         rc = read(io->fd, &reason, sizeof(reason));
                         if (rc == 0) {
@@ -778,7 +777,7 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_init(&monitor->wakeup.io, monitor, monitor->wakeup.fds[0], monitor_break_io_onevent, monitor);
+        rc = medusa_io_init(&monitor->wakeup.io, monitor, monitor->wakeup.fds[0], monitor_wakeup_io_onevent, monitor);
         if (rc < 0) {
                 goto bail;
         }
