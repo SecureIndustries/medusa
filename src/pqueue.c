@@ -171,6 +171,16 @@ int pqueue_del (struct pqueue_head *head, void *entry)
 bail:   return -1;
 }
 
+void * pqueue_peek (struct pqueue_head *head)
+{
+        void *e;
+        if (head->count == 1) {
+                return NULL;
+        }
+        e = head->entries[1];
+        return e;
+}
+
 void * pqueue_pop (struct pqueue_head *head)
 {
         void *e;
@@ -184,14 +194,52 @@ void * pqueue_pop (struct pqueue_head *head)
         return e;
 }
 
-void * pqueue_peek (struct pqueue_head *head)
+static int pqueue_search_actual (struct pqueue_head *head, void *key, int (*callback) (void *context, void *entry), void *context, unsigned int pos)
 {
-        void *e;
-        if (head->count == 1) {
-                return NULL;
+        int rc;
+        if (pqueue_left(pos) < head->count) {
+                if (head->compare(head->entries[pqueue_left(pos)], key) <= 0) {
+                        rc = callback(context, head->entries[pqueue_left(pos)]);
+                        if (rc != 0) {
+                                return rc;
+                        }
+                        rc = pqueue_search_actual(head, key, callback, context, pqueue_left(pos));
+                        if (rc != 0) {
+                                return rc;
+                        }
+                }
         }
-        e = head->entries[1];
-        return e;
+        if (pqueue_right(pos) < head->count) {
+                if (head->compare(head->entries[pqueue_right(pos)], key) <= 0) {
+                        rc = callback(context, head->entries[pqueue_right(pos)]);
+                        if (rc != 0) {
+                                return rc;
+                        }
+                        rc = pqueue_search_actual(head, key, callback, context, pqueue_right(pos));
+                        if (rc != 0) {
+                                return rc;
+                        }
+                }
+        }
+        return 0;
+}
+
+int pqueue_search (struct pqueue_head *head, void *key, int (*callback) (void *context, void *entry), void *context)
+{
+        int rc;
+        if (1 < head->count) {
+                if (head->compare(head->entries[1], key) <= 0) {
+                        rc = callback(context, head->entries[1]);
+                        if (rc != 0) {
+                                return rc;
+                        }
+                        rc = pqueue_search_actual(head, key, callback, context, 1);
+                        if (rc != 0) {
+                                return rc;
+                        }
+                }
+        }
+        return 0;
 }
 
 static int pqueue_is_valid_actual (struct pqueue_head *head, unsigned int pos)
