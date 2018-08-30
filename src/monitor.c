@@ -300,6 +300,7 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                                         }
                                 }
                                 if (!medusa_timespec_isset(&timer->_timespec)) {
+                                        rc = -1;
                                         goto bail;
                                 }
                                 resolution = medusa_timer_get_resolution_unlocked(timer);
@@ -342,7 +343,7 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                 }
         }
         return 0;
-bail:   return -1;
+bail:   return rc;
 }
 
 static int monitor_setup_timer (struct medusa_monitor *monitor)
