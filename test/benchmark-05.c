@@ -26,6 +26,7 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
+static int g_backend;
 static unsigned int g_nsamples;
 static unsigned int g_ntests;
 static unsigned int g_npackets;
@@ -190,13 +191,17 @@ int main (int argc, char *argv[])
         int rc;
         unsigned int i;
 
+        g_backend   = -1;
         g_nsamples  = 1;
         g_ntests    = 100;
         g_npackets  = 100;
         g_pinterval = 0.001;
 
-        while ((c = getopt(argc, argv, "hs:t:p:i:")) != -1) {
+        while ((c = getopt(argc, argv, "hb:s:t:p:i:")) != -1) {
                 switch (c) {
+                        case 'b':
+                                g_backend = atoi(optarg);
+                                break;
                         case 's':
                                 g_nsamples = atoi(optarg);
                                 break;
@@ -210,7 +215,12 @@ int main (int argc, char *argv[])
                                 g_pinterval = atof(optarg);
                                 break;
                         case 'h':
-                                fprintf(stderr, "%s [-s samples] [-t tests] [-p packets] [-i interval]\n", argv[0]);
+                                fprintf(stderr, "%s [-b backend] [-s samples] [-t tests] [-p packets] [-i interval]\n", argv[0]);
+                                fprintf(stderr, "  -b: poll backend (default: %d)\n", g_backend);
+                                fprintf(stderr, "  -s: sample count (default: %d)\n", g_nsamples);
+                                fprintf(stderr, "  -t: number of concurrent tests (default: %d)\n", g_ntests);
+                                fprintf(stderr, "  -p: number of packets for each test (default: %d)\n", g_npackets);
+                                fprintf(stderr, "  -i: packet interval in floating seconds (default: %f)\n", g_pinterval);
                                 return 0;
                         default:
                                 fprintf(stderr, "unknown param: %c\n", c);
@@ -218,6 +228,7 @@ int main (int argc, char *argv[])
                 }
         }
 
+        fprintf(stderr, "backend : %d\n", g_backend);
         fprintf(stderr, "samples : %d\n", g_nsamples);
         fprintf(stderr, "tests   : %d\n", g_ntests);
         fprintf(stderr, "packets : %d\n", g_npackets);
@@ -249,18 +260,28 @@ int main (int argc, char *argv[])
                 return -1;
         }
 
-        for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
-                fprintf(stderr, "testing poll: %d ... ", g_polls[i]);
+        if (g_backend >= 0 && g_backend < (int) (sizeof(g_polls) / sizeof(g_polls[0]))) {
+                fprintf(stderr, "testing poll: %d ... ", g_backend);
 
-                rc = test_poll(g_polls[i]);
+                rc = test_poll(g_backend);
                 if (rc != 0) {
                         fprintf(stderr, "fail\n");
                         return -1;
                 } else {
                         fprintf(stderr, "success\n");
                 }
+        } else {
+                for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
+                        fprintf(stderr, "testing poll: %d ... ", g_polls[i]);
 
-                break;
+                        rc = test_poll(g_polls[i]);
+                        if (rc != 0) {
+                                fprintf(stderr, "fail\n");
+                                return -1;
+                        } else {
+                                fprintf(stderr, "success\n");
+                        }
+                }
         }
 
         for (i = 0; i < g_ntests; i++) {
