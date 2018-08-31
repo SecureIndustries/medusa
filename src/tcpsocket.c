@@ -167,6 +167,9 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                 } else if (errno == ECONNREFUSED) {
                                         tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
                                         es |= MEDUSA_TCPSOCKET_EVENT_DISCONNECTED;
+                                } else if (errno == ETIMEDOUT) {
+                                        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                        es |= MEDUSA_TCPSOCKET_EVENT_DISCONNECTED;
                                 } else {
                                         goto bail;
                                 }
