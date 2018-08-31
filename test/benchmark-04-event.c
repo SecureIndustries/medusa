@@ -16,6 +16,7 @@
 #include <event2/thread.h>
 
 static int g_backend;
+static unsigned int g_nloops;
 static unsigned int g_nsamples;
 static unsigned int g_ntimers;
 static unsigned int g_npipes;
@@ -111,7 +112,7 @@ static int test_poll (unsigned int poll)
         timerclear(&apply_finish);
         timerclear(&run_finish);
 
-        for (j = 0; j < g_nsamples; j++) {
+        for (j = 0; j < g_nloops; j++) {
                 gettimeofday(&create_start, NULL);
                 event_base = event_base_new();
                 if (event_base == NULL) {
@@ -236,17 +237,21 @@ int main (int argc, char *argv[])
         signal(SIGALRM, alarm_handler);
 
         g_backend  = -1;
-        g_nsamples  = 10;
+        g_nloops   = 10;
+        g_nsamples = 10;
         g_pipes    = NULL;
         g_npipes   = 10;
         g_nactives = 2;
         g_nwrites  = g_npipes;
         g_ntimers  = 0;
 
-        while ((c = getopt(argc, argv, "hb:n:a:w:s:t:")) != -1) {
+        while ((c = getopt(argc, argv, "hb:l:s:n:a:w:t:")) != -1) {
                 switch (c) {
                         case 'b':
                                 g_backend = atoi(optarg);
+                                break;
+                        case 'l':
+                                g_nloops = atoi(optarg);
                                 break;
                         case 's':
                                 g_nsamples = atoi(optarg);
@@ -264,8 +269,9 @@ int main (int argc, char *argv[])
                                 g_ntimers = !!atoi(optarg);
                                 break;
                         case 'h':
-                                fprintf(stderr, "%s [-s samples] [-n pipes] [-a actives] [-w writes] [-t timers]\n", argv[0]);
+                                fprintf(stderr, "%s [-b backend] [-l loops] [-s samples] [-n pipes] [-a actives] [-w writes] [-t timers]\n", argv[0]);
                                 fprintf(stderr, "  -b: poll backend (default: %d)\n", g_backend);
+                                fprintf(stderr, "  -l: loop count (default: %d)\n", g_nloops);
                                 fprintf(stderr, "  -s: sample count (default: %d)\n", g_nsamples);
                                 fprintf(stderr, "  -n: number of pipes (default: %d)\n", g_npipes);
                                 fprintf(stderr, "  -a: number of actives (default: %d)\n", g_nactives);
@@ -279,6 +285,7 @@ int main (int argc, char *argv[])
         }
 
         fprintf(stderr, "backend : %d\n", g_backend);
+        fprintf(stderr, "loops   : %d\n", g_nloops);
         fprintf(stderr, "samples : %d\n", g_nsamples);
         fprintf(stderr, "pipes   : %d\n", g_npipes);
         fprintf(stderr, "actives : %d\n", g_nactives);

@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -108,15 +109,39 @@ static int test_poll (unsigned int poll)
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options monitor_init_options;
 
+        struct timeval create_start;
+        struct timeval create_finish;
+        struct timeval create_total;
+        struct timeval destroy_start;
+        struct timeval destroy_finish;
+        struct timeval destroy_total;
+        struct timeval run_start;
+        struct timeval run_finish;
+        struct timeval run_total;
+
+        timerclear(&create_total);
+        timerclear(&destroy_total);
+        timerclear(&run_total);
+
+        timerclear(&create_start);
+        timerclear(&destroy_start);
+        timerclear(&run_start);
+
+        timerclear(&create_finish);
+        timerclear(&destroy_finish);
+        timerclear(&run_finish);
+
         monitor = NULL;
 
         medusa_monitor_init_options_default(&monitor_init_options);
         monitor_init_options.poll.type = poll;
 
-        g_active_senders   = g_ntests;
-        g_active_receivers = g_ntests;
-
         for (j = 0; j < g_nsamples; j++) {
+                g_active_senders   = g_ntests;
+                g_active_receivers = g_ntests;
+
+                gettimeofday(&create_start, NULL);
+
                 monitor = medusa_monitor_create(&monitor_init_options);
                 if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
                         goto bail;
@@ -142,7 +167,7 @@ static int test_poll (unsigned int poll)
                         g_senders[i].npackets = 0;
 
                         medusa_timer_init_options_default(&timer_init_options);
-                        timer_init_options.initial    = drand48();
+                        timer_init_options.initial    = 0;//drand48();
                         timer_init_options.interval   = g_pinterval;
                         timer_init_options.resolution = MEDUSA_TIMER_RESOLUTION_MILLISECONDS;
                         timer_init_options.singleshot = 0;
@@ -163,8 +188,14 @@ static int test_poll (unsigned int poll)
                         goto bail;
                 }
 
+                gettimeofday(&create_finish, NULL);
+                timersub(&create_finish, &create_start, &create_finish);
+                timeradd(&create_finish, &create_total, &create_total);
+
+                gettimeofday(&run_start, NULL);
+
                 while (1) {
-                        rc = medusa_monitor_run_timeout(monitor, 1.0);
+                        rc = medusa_monitor_run_once(monitor);
                         if (rc < 0) {
                                 fprintf(stderr, "can not run monitor\n");
                                 goto bail;
@@ -175,8 +206,28 @@ static int test_poll (unsigned int poll)
                         }
                 }
 
+                gettimeofday(&run_finish, NULL);
+                timersub(&run_finish, &run_start, &run_finish);
+                timeradd(&run_finish, &run_total, &run_total);
+
+                gettimeofday(&destroy_start, NULL);
+
                 medusa_monitor_destroy(monitor);
+
+                gettimeofday(&destroy_finish, NULL);
+                timersub(&destroy_finish, &destroy_start, &destroy_finish);
+                timeradd(&destroy_finish, &destroy_total, &destroy_total);
+
+                fprintf(stderr, "%8ld %8ld %8ld\n",
+                                create_finish.tv_sec * 1000000 + create_finish.tv_usec,
+                                run_finish.tv_sec * 1000000 + run_finish.tv_usec,
+                                destroy_finish.tv_sec * 1000000 + destroy_finish.tv_usec);
         }
+
+        fprintf(stderr, "%8ld %8ld %8ld\n",
+                        create_total.tv_sec * 1000000 + create_total.tv_usec,
+                        run_total.tv_sec * 1000000 + run_total.tv_usec,
+                        destroy_total.tv_sec * 1000000 + destroy_total.tv_usec);
 
         return 0;
 bail:   if (monitor != NULL) {
@@ -193,8 +244,8 @@ int main (int argc, char *argv[])
 
         g_backend   = -1;
         g_nsamples  = 1;
-        g_ntests    = 100;
-        g_npackets  = 100;
+        g_ntests    = 10;
+        g_npackets  = 10;
         g_pinterval = 0.001;
 
         while ((c = getopt(argc, argv, "hb:s:t:p:i:")) != -1) {
@@ -261,7 +312,7 @@ int main (int argc, char *argv[])
         }
 
         if (g_backend >= 0) {
-                fprintf(stderr, "testing poll: %d ... ", g_backend);
+                fprintf(stderr, "testing poll: %d ... \n", g_backend);
 
                 rc = test_poll(g_backend);
                 if (rc != 0) {
@@ -272,7 +323,7 @@ int main (int argc, char *argv[])
                 }
         } else {
                 for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
-                        fprintf(stderr, "testing poll: %d ... ", g_polls[i]);
+                        fprintf(stderr, "testing poll: %d ... \n", g_polls[i]);
 
                         rc = test_poll(g_polls[i]);
                         if (rc != 0) {

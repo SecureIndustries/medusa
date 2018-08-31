@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -91,12 +92,39 @@ static int test_poll (unsigned int poll)
 
         struct event_base *event_base;
 
+        struct timeval create_start;
+        struct timeval create_finish;
+        struct timeval create_total;
+        struct timeval destroy_start;
+        struct timeval destroy_finish;
+        struct timeval destroy_total;
+        struct timeval run_start;
+        struct timeval run_finish;
+        struct timeval run_total;
+
         (void) poll;
+
+        timerclear(&create_total);
+        timerclear(&destroy_total);
+        timerclear(&run_total);
+
+        timerclear(&create_start);
+        timerclear(&destroy_start);
+        timerclear(&run_start);
+
+        timerclear(&create_finish);
+        timerclear(&destroy_finish);
+        timerclear(&run_finish);
 
         event_base = NULL;
         evthread_use_pthreads();
 
         for (j = 0; j < g_nsamples; j++) {
+                g_active_senders   = g_ntests;
+                g_active_receivers = g_ntests;
+
+                gettimeofday(&create_start, NULL);
+
                 event_base = event_base_new();
                 if (event_base == NULL) {
                         goto bail;
@@ -139,8 +167,11 @@ static int test_poll (unsigned int poll)
                         goto bail;
                 }
 
-                g_active_senders   = g_ntests;
-                g_active_receivers = g_ntests;
+                gettimeofday(&create_finish, NULL);
+                timersub(&create_finish, &create_start, &create_finish);
+                timeradd(&create_finish, &create_total, &create_total);
+
+                gettimeofday(&run_start, NULL);
 
                 while (1) {
                         rc = event_base_loop(event_base, EVLOOP_ONCE);
@@ -153,8 +184,32 @@ static int test_poll (unsigned int poll)
                         }
                 }
 
+                gettimeofday(&run_finish, NULL);
+                timersub(&run_finish, &run_start, &run_finish);
+                timeradd(&run_finish, &run_total, &run_total);
+
+                gettimeofday(&destroy_start, NULL);
+
+                for (i = 0; i < g_ntests; i++) {
+                        event_free(g_senders[i].event);
+                        event_free(g_receivers[i].event);
+                }
                 event_base_free(event_base);
+
+                gettimeofday(&destroy_finish, NULL);
+                timersub(&destroy_finish, &destroy_start, &destroy_finish);
+                timeradd(&destroy_finish, &destroy_total, &destroy_total);
+
+                fprintf(stderr, "%8ld %8ld %8ld\n",
+                                create_finish.tv_sec * 1000000 + create_finish.tv_usec,
+                                run_finish.tv_sec * 1000000 + run_finish.tv_usec,
+                                destroy_finish.tv_sec * 1000000 + destroy_finish.tv_usec);
         }
+
+        fprintf(stderr, "%8ld %8ld %8ld\n",
+                        create_total.tv_sec * 1000000 + create_total.tv_usec,
+                        run_total.tv_sec * 1000000 + run_total.tv_usec,
+                        destroy_total.tv_sec * 1000000 + destroy_total.tv_usec);
 
         return 0;
 bail:   if (event_base != NULL) {
