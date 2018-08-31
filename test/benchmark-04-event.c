@@ -12,23 +12,8 @@
 #include <time.h>
 #include <signal.h>
 
-#include "medusa/error.h"
-#include "medusa/clock.h"
-#include "medusa/io.h"
-#include "medusa/timer.h"
-#include "medusa/monitor.h"
-
-static const unsigned int g_polls[] = {
-        MEDUSA_MONITOR_POLL_DEFAULT,
-#if defined(__LINUX__)
-        MEDUSA_MONITOR_POLL_EPOLL,
-#endif
-#if defined(__APPLE__)
-        MEDUSA_MONITOR_POLL_KQUEUE,
-#endif
-        MEDUSA_MONITOR_POLL_POLL,
-        MEDUSA_MONITOR_POLL_SELECT
-};
+#include <event2/event.h>
+#include <event2/thread.h>
 
 static int g_backend;
 static unsigned int g_nsamples;
@@ -42,20 +27,10 @@ static unsigned int g_writes;
 static unsigned int g_failures;
 
 static int *g_pipes;
-static struct medusa_io **g_ios;
-static struct medusa_timer **g_timers;
+static struct event **g_events;
 
-static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static void io_onevent (evutil_socket_t fd, short events, void *context)
 {
-        (void) timer;
-        (void) events;
-        (void) context;
-        return 0;
-}
-
-static int io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
-{
-        int rc;
         uintptr_t id;
         unsigned int wid;
         unsigned char ch;
@@ -64,14 +39,15 @@ static int io_onevent (struct medusa_io *io, unsigned int events, void *context,
         id = (uintptr_t) context;
         wid = id + 1;
 
-        if (events & MEDUSA_IO_EVENT_IN) {
+        if (events & EV_READ) {
                 if (g_ntimers) {
-                        rc = medusa_timer_set_interval(g_timers[id], 10 + drand48());
-                        if (rc < 0) {
-                                return -1;
-                        }
+                        struct timeval tv;
+                        event_del(g_events[id]);
+                        tv.tv_sec  = 10;
+                        tv.tv_usec = drand48() * 1e6;
+                        event_add(g_events[id], &tv);
                 }
-                n = read(medusa_io_get_fd(io), (char *) &ch, sizeof(ch));
+                n = read(fd, (char *) &ch, sizeof(ch));
                 if (n >= 0) {
                         g_count += 1;
                 } else {
@@ -89,8 +65,6 @@ static int io_onevent (struct medusa_io *io, unsigned int events, void *context,
                         g_fired++;
                 }
         }
-
-        return 0;
 }
 
 static int test_poll (unsigned int poll)
@@ -101,8 +75,8 @@ static int test_poll (unsigned int poll)
         unsigned int k;
         unsigned int space;
 
-        struct medusa_monitor *monitor;
-        struct medusa_monitor_init_options options;
+        struct timeval event_timeval;
+        struct event_base *event_base;
 
         struct timeval create_start;
         struct timeval create_finish;
@@ -117,10 +91,10 @@ static int test_poll (unsigned int poll)
         struct timeval run_finish;
         struct timeval run_total;
 
-        monitor = NULL;
+        (void) poll;
 
-        medusa_monitor_init_options_default(&options);
-        options.poll.type = poll;
+        event_base = NULL;
+        evthread_use_pthreads();
 
         timerclear(&create_total);
         timerclear(&destroy_total);
@@ -139,24 +113,30 @@ static int test_poll (unsigned int poll)
 
         for (j = 0; j < g_nsamples; j++) {
                 gettimeofday(&create_start, NULL);
-                monitor = medusa_monitor_create(&options);
-                if (monitor == NULL) {
+                event_base = event_base_new();
+                if (event_base == NULL) {
                         goto bail;
                 }
                 for (i = 0; i < g_npipes; i++) {
-                        g_ios[i] = medusa_io_create(monitor, g_pipes[i * 2], io_onevent, (void *) ((uintptr_t) i));
-                        if (MEDUSA_IS_ERR_OR_NULL(g_ios[i])) {
+                        g_events[i] = event_new(event_base, g_pipes[i * 2], EV_READ | EV_PERSIST, io_onevent, (void *) ((uintptr_t) i));
+                        if (g_events[i] == NULL) {
                                 goto bail;
                         }
-
                         if (g_ntimers) {
-                                g_timers[i] = medusa_timer_create(monitor, timer_onevent, (void *) ((uintptr_t) i));
-                                if (MEDUSA_IS_ERR_OR_NULL(g_timers[i])) {
+                                event_timeval.tv_sec  = 10.;
+                                event_timeval.tv_usec = drand48() * 1e6;
+                                rc = event_add(g_events[i], &event_timeval);
+                                if (rc != 0) {
+                                        goto bail;
+                                }
+                        } else {
+                                rc = event_add(g_events[i], NULL);
+                                if (rc != 0) {
                                         goto bail;
                                 }
                         }
                 }
-                rc = medusa_monitor_run_timeout(monitor, 0.0);
+                rc = event_base_loop(event_base, EVLOOP_ONCE | EVLOOP_NONBLOCK);
                 if (rc < 0) {
                         goto bail;
                 }
@@ -167,28 +147,22 @@ static int test_poll (unsigned int poll)
                 for (k = 0; k < g_nsamples; k++) {
                         gettimeofday(&apply_start, NULL);
                         for (i = 0; i < g_npipes; i++) {
-                                rc = 0;
-                                if (medusa_io_get_enabled(g_ios[i])) {
-                                        rc |= medusa_io_set_enabled(g_ios[i], 0);
-                                }
-                                rc |= medusa_io_set_events(g_ios[i], MEDUSA_IO_EVENT_IN);
-                                rc |= medusa_io_set_enabled(g_ios[i], 1);
-                                if (rc < 0) {
-                                        goto bail;
-                                }
-
+                                event_del(g_events[i]);
                                 if (g_ntimers) {
-                                        if (medusa_timer_get_enabled(g_timers[i])) {
-                                                rc |= medusa_timer_set_enabled(g_timers[i], 0);
+                                        event_timeval.tv_sec  = 10.;
+                                        event_timeval.tv_usec = drand48() * 1e6;
+                                        rc = event_add(g_events[i], &event_timeval);
+                                        if (rc != 0) {
+                                                goto bail;
                                         }
-                                        rc |= medusa_timer_set_interval(g_timers[i], 10.0 + drand48());
-                                        rc |= medusa_timer_set_enabled(g_timers[i], 1);
+                                } else {
+                                        rc = event_add(g_events[i], NULL);
                                         if (rc != 0) {
                                                 goto bail;
                                         }
                                 }
                         }
-                        rc = medusa_monitor_run_timeout(monitor, 0.0);
+                        rc = event_base_loop(event_base, EVLOOP_ONCE | EVLOOP_NONBLOCK);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -208,7 +182,7 @@ static int test_poll (unsigned int poll)
 
                         gettimeofday(&run_start, NULL);
                         do {
-                                rc = medusa_monitor_run_timeout(monitor, 0.0);
+                                rc = event_base_loop(event_base, EVLOOP_ONCE | EVLOOP_NONBLOCK);
                                 if (rc < 0) {
                                         goto bail;
                                 }
@@ -224,7 +198,10 @@ static int test_poll (unsigned int poll)
                                         destroy_finish.tv_sec * 1000000 + destroy_finish.tv_usec);
                 }
                 gettimeofday(&destroy_start, NULL);
-                medusa_monitor_destroy(monitor);
+                for (i = 0; i < g_npipes; i++) {
+                        event_free(g_events[i]);
+                }
+                event_base_free(event_base);
                 gettimeofday(&destroy_finish, NULL);
                 timersub(&destroy_finish, &destroy_start, &destroy_finish);
                 timeradd(&destroy_finish, &destroy_total, &destroy_total);
@@ -237,8 +214,8 @@ static int test_poll (unsigned int poll)
                         destroy_total.tv_sec * 1000000 + destroy_total.tv_usec);
 
         return 0;
-bail:   if (monitor != NULL) {
-                medusa_monitor_destroy(monitor);
+bail:   if (event_base != NULL) {
+                event_base_free(event_base);
         }
         return -1;
 }
@@ -308,12 +285,8 @@ int main (int argc, char *argv[])
         fprintf(stderr, "writes  : %d\n", g_nwrites);
         fprintf(stderr, "timers  : %d\n", g_ntimers);
 
-        g_ios = malloc(sizeof(struct medusa_io *) * g_npipes);
-        if (g_ios == NULL) {
-                return -1;
-        }
-        g_timers = malloc(sizeof(struct medusa_timer *) * g_npipes);
-        if (g_timers == NULL) {
+        g_events = malloc(sizeof(struct medusa_io *) * g_npipes);
+        if (g_events == NULL) {
                 return -1;
         }
         g_pipes = malloc(sizeof(int[2]) * g_npipes);
@@ -332,28 +305,9 @@ int main (int argc, char *argv[])
                 }
         }
 
-        if (g_backend >= 0) {
-                fprintf(stderr, "testing poll: %d ...\n", g_backend);
-
-                rc = test_poll(g_backend);
-                if (rc != 0) {
-                        fprintf(stderr, "fail\n");
-                        return -1;
-                } else {
-                        fprintf(stderr, "success\n");
-                }
-        } else {
-                for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
-                        fprintf(stderr, "testing poll: %d ...\n", g_polls[i]);
-
-                        rc = test_poll(g_polls[i]);
-                        if (rc != 0) {
-                                fprintf(stderr, "fail\n");
-                                return -1;
-                        } else {
-                                fprintf(stderr, "success\n");
-                        }
-                }
+        rc = test_poll(0);
+        if (rc != 0) {
+                return -1;
         }
 
         for (i = 0; i < g_npipes; i++) {
@@ -361,7 +315,6 @@ int main (int argc, char *argv[])
                 close(g_pipes[i * 2 + 1]);
         }
         free(g_pipes);
-        free(g_timers);
-        free(g_ios);
+        free(g_events);
         return 0;
 }

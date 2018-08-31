@@ -260,7 +260,7 @@ int main (int argc, char *argv[])
                 return -1;
         }
 
-        if (g_backend >= 0 && g_backend < (int) (sizeof(g_polls) / sizeof(g_polls[0]))) {
+        if (g_backend >= 0) {
                 fprintf(stderr, "testing poll: %d ... ", g_backend);
 
                 rc = test_poll(g_backend);

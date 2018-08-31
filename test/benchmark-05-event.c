@@ -94,7 +94,6 @@ static int test_poll (unsigned int poll)
         (void) poll;
 
         event_base = NULL;
-
         evthread_use_pthreads();
 
         for (j = 0; j < g_nsamples; j++) {
