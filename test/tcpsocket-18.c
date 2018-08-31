@@ -280,7 +280,7 @@ int main (int argc, char *argv[])
         fprintf(stderr, "clients : %d\n", g_nclients);
 
         if (g_backend >= 0) {
-                alarm(5);
+                alarm(30);
                 fprintf(stderr, "testing poll: %d ... \n", g_backend);
 
                 rc = test_poll(g_backend);
@@ -292,7 +292,7 @@ int main (int argc, char *argv[])
                 }
         } else {
                 for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
-                        alarm(5);
+                        alarm(30);
                         fprintf(stderr, "testing poll: %d ... \n", g_polls[i]);
 
                         rc = test_poll(g_polls[i]);
