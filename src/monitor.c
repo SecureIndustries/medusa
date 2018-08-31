@@ -269,8 +269,7 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                         }
                 } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
                         timer = (struct medusa_timer *) subject;
-                        if (!medusa_timer_is_valid_unlocked(timer) ||
-                            (medusa_timespec_isset(&timer->_timespec) && !medusa_timespec_isset(&timer->interval))) {
+                        if (!medusa_timer_is_valid_unlocked(timer)) {
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                         rc = pqueue_del(monitor->timer.pqueue, timer);
                                         if (rc != 0) {
@@ -285,42 +284,11 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                                 subject->flags |= MEDUSA_SUBJECT_FLAG_ROGUE;
                         } else {
-                                unsigned int resolution;
                                 struct timespec _timespec;
-                                medusa_timespec_clear(&_timespec);
-                                if (medusa_timespec_isset(&timer->_timespec)) {
-                                        _timespec = timer->_timespec;
-                                        medusa_timespec_add(&timer->_timespec, &timer->interval, &timer->_timespec);
-                                } else {
-                                        medusa_timespec_clear(&timer->_timespec);
-                                        if (medusa_timespec_isset(&timer->initial)) {
-                                                medusa_timespec_add(&timer->initial, &now, &timer->_timespec);
-                                        } else {
-                                                medusa_timespec_add(&timer->interval, &now, &timer->_timespec);
-                                        }
-                                }
-                                if (!medusa_timespec_isset(&timer->_timespec)) {
-                                        rc = -1;
+                                _timespec = timer->_timespec;
+                                rc = medusa_timer_update_timespec_unlocked(timer, &now);
+                                if (rc < 0) {
                                         goto bail;
-                                }
-                                resolution = medusa_timer_get_resolution_unlocked(timer);
-                                if (resolution == MEDUSA_TIMER_RESOLUTION_NANOSECOMDS) {
-                                } else if (resolution == MEDUSA_TIMER_RESOLUTION_MICROSECONDS) {
-                                        timer->_timespec.tv_nsec += 500;
-                                        timer->_timespec.tv_nsec /= 1e3;
-                                        timer->_timespec.tv_nsec *= 1e3;
-                                } else if (resolution == MEDUSA_TIMER_RESOLUTION_MILLISECONDS) {
-                                        timer->_timespec.tv_nsec += 500000;
-                                        timer->_timespec.tv_nsec /= 1e6;
-                                        timer->_timespec.tv_nsec *= 1e6;
-                                } else if (resolution == MEDUSA_TIMER_RESOLUTION_SECONDS) {
-                                        timer->_timespec.tv_nsec += 500000000;
-                                        timer->_timespec.tv_nsec /= 1e9;
-                                        timer->_timespec.tv_nsec *= 1e9;
-                                }
-                                if (timer->_timespec.tv_nsec >= 1000000000) {
-                                        timer->_timespec.tv_sec++;
-                                        timer->_timespec.tv_nsec -= 1000000000;
                                 }
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                         rc = pqueue_mod(monitor->timer.pqueue, timer, medusa_timespec_compare(&_timespec, &timer->_timespec, >));
@@ -368,18 +336,11 @@ static __attribute__ ((__unused__))  int monitor_hit_timer (void *context, void 
         struct medusa_timer *timer = a;
         struct medusa_monitor *monitor = context;
         (void) monitor;
-        if (medusa_timer_get_singleshot_unlocked(timer) ||
-            !medusa_timespec_isset(&timer->interval)) {
-                rc = medusa_timer_set_enabled_unlocked(timer, 0);
-                if (rc < 0) {
-                        goto bail;
-                }
-        }
-        rc = medusa_monitor_mod_unlocked(&timer->subject);
+        rc = medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_TIMEOUT);
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_TIMEOUT);
+        rc = medusa_monitor_mod_unlocked(&timer->subject);
         if (rc != 0) {
                 goto bail;
         }
@@ -412,18 +373,11 @@ static int monitor_check_timer (struct medusa_monitor *monitor)
                         }
                         timer->subject.flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         monitor->timer.dirty = 1;
-                        if (medusa_timer_get_singleshot_unlocked(timer) ||
-                            !medusa_timespec_isset(&timer->interval)) {
-                                rc = medusa_timer_set_enabled_unlocked(timer, 0);
-                                if (rc < 0) {
-                                        goto bail;
-                                }
-                        }
-                        rc = medusa_monitor_mod_unlocked(&timer->subject);
+                        rc = medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_TIMEOUT);
                         if (rc != 0) {
                                 goto bail;
                         }
-                        rc = medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_TIMEOUT);
+                        rc = medusa_monitor_mod_unlocked(&timer->subject);
                         if (rc != 0) {
                                 goto bail;
                         }

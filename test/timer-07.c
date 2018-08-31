@@ -86,7 +86,7 @@ static int test_poll (unsigned int poll)
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 goto bail;
         }
-        rc = medusa_timer_set_interval(timer, 0.4);
+        rc = medusa_timer_set_interval(timer, 0.5);
         if (rc < 0) {
                 goto bail;
         }

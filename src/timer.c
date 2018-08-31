@@ -29,7 +29,10 @@ enum {
         MEDUSA_TIMER_FLAG_NANOSECONDS   = 0x00000008,
         MEDUSA_TIMER_FLAG_MICROSECONDS  = 0x00000010,
         MEDUSA_TIMER_FLAG_MILLISECONDS  = 0x00000020,
-        MEDUSA_TIMER_FLAG_SECONDS       = 0x00000040
+        MEDUSA_TIMER_FLAG_SECONDS       = 0x00000040,
+        MEDUSA_TIMER_FLAG_FIRED         = 0x00000080,
+        MEDUSA_TIMER_FLAG_INITIAL       = 0x00000100,
+        MEDUSA_TIMER_FLAG_INTERVAL      = 0x00000200,
 #define MEDUSA_TIMER_FLAG_ENABLED       MEDUSA_TIMER_FLAG_ENABLED
 #define MEDUSA_TIMER_FLAG_SINGLE_SHOT   MEDUSA_TIMER_FLAG_SINGLE_SHOT
 #define MEDUSA_TIMER_FLAG_AUTO_DESTROY  MEDUSA_TIMER_FLAG_AUTO_DESTROY
@@ -37,6 +40,9 @@ enum {
 #define MEDUSA_TIMER_FLAG_MICROSECONDS  MEDUSA_TIMER_FLAG_MICROSECONDS
 #define MEDUSA_TIMER_FLAG_MILLISECONDS  MEDUSA_TIMER_FLAG_MILLISECONDS
 #define MEDUSA_TIMER_FLAG_SECONDS       MEDUSA_TIMER_FLAG_SECONDS
+#define MEDUSA_TIMER_FLAG_FIRED         MEDUSA_TIMER_FLAG_FIRED
+#define MEDUSA_TIMER_FLAG_INITIAL       MEDUSA_TIMER_FLAG_INITIAL
+#define MEDUSA_TIMER_FLAG_INTERVAL      MEDUSA_TIMER_FLAG_INTERVAL
 };
 
 static int timer_set_initial_timespec (struct medusa_timer *timer, const struct timespec *initial)
@@ -49,6 +55,7 @@ static int timer_set_initial_timespec (struct medusa_timer *timer, const struct 
         }
         timer->initial.tv_sec = initial->tv_sec;
         timer->initial.tv_nsec = initial->tv_nsec;
+        timer->flags |= MEDUSA_TIMER_FLAG_INITIAL;
         return 0;
 }
 
@@ -76,6 +83,7 @@ static int timer_set_interval_timespec (struct medusa_timer *timer, const struct
         }
         timer->interval.tv_sec = interval->tv_sec;
         timer->interval.tv_nsec = interval->tv_nsec;
+        timer->flags |= MEDUSA_TIMER_FLAG_INTERVAL;
         return 0;
 }
 
@@ -136,8 +144,10 @@ static int timer_set_enabled (struct medusa_timer *timer, int enabled)
         }
         if (enabled) {
                 timer->flags |= MEDUSA_TIMER_FLAG_ENABLED;
+                timer->flags &= ~MEDUSA_TIMER_FLAG_FIRED;
         } else {
                 timer->flags &= ~MEDUSA_TIMER_FLAG_ENABLED;
+                timer->flags &= ~MEDUSA_TIMER_FLAG_FIRED;
         }
         return 0;
 }
@@ -423,14 +433,17 @@ __attribute__ ((visibility ("default"))) int medusa_timer_set_initial_timeval (s
 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_initial_timespec_unlocked (struct medusa_timer *timer, const struct timespec *initial)
 {
+        int rc;
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 return -EINVAL;
         }
         if (MEDUSA_IS_ERR_OR_NULL(initial)) {
                 return -EINVAL;
         }
-        timer->initial.tv_sec = initial->tv_sec;
-        timer->initial.tv_nsec = initial->tv_nsec;
+        rc = timer_set_initial_timespec(timer, initial);
+        if (rc < 0) {
+                return rc;
+        }
         if (!medusa_timespec_isset(&timer->initial)) {
                 timer->initial.tv_nsec = 1;
         }
@@ -523,14 +536,17 @@ __attribute__ ((visibility ("default"))) int medusa_timer_set_interval_timeval (
 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_interval_timespec_unlocked (struct medusa_timer *timer, const struct timespec *interval)
 {
+        int rc;
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 return -EINVAL;
         }
         if (MEDUSA_IS_ERR_OR_NULL(interval)) {
                 return -EINVAL;
         }
-        timer->interval.tv_sec = interval->tv_sec;
-        timer->interval.tv_nsec = interval->tv_nsec;
+        rc = timer_set_interval_timespec(timer, interval);
+        if (rc < 0) {
+                return rc;
+        }
         if (!medusa_timespec_isset(&timer->interval)) {
                 timer->interval.tv_nsec = 1;
         }
@@ -672,13 +688,13 @@ __attribute__ ((visibility ("default"))) int medusa_timer_get_remaining_timespec
 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_singleshot_unlocked (struct medusa_timer *timer, int singleshot)
 {
+        int rc;
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 return -EINVAL;
         }
-        if (singleshot) {
-                timer->flags |= MEDUSA_TIMER_FLAG_SINGLE_SHOT;
-        } else {
-                timer->flags &= ~MEDUSA_TIMER_FLAG_SINGLE_SHOT;
+        rc = timer_set_singleshot(timer, singleshot);
+        if (rc < 0) {
+                return rc;
         }
         return medusa_monitor_mod_unlocked(&timer->subject);
 }
@@ -717,23 +733,13 @@ __attribute__ ((visibility ("default"))) int medusa_timer_get_singleshot (const 
 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_resolution_unlocked (struct medusa_timer *timer, unsigned int resolution)
 {
+        int rc;
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 return -EINVAL;
         }
-        timer->flags &= ~MEDUSA_TIMER_FLAG_NANOSECONDS;
-        timer->flags &= ~MEDUSA_TIMER_FLAG_MICROSECONDS;
-        timer->flags &= ~MEDUSA_TIMER_FLAG_MILLISECONDS;
-        timer->flags &= ~MEDUSA_TIMER_FLAG_SECONDS;
-        if (resolution == MEDUSA_TIMER_RESOLUTION_NANOSECOMDS) {
-                timer->flags |= MEDUSA_TIMER_FLAG_NANOSECONDS;
-        } else if (resolution == MEDUSA_TIMER_RESOLUTION_MICROSECONDS) {
-                timer->flags |= MEDUSA_TIMER_FLAG_MICROSECONDS;
-        } else if (resolution == MEDUSA_TIMER_RESOLUTION_MILLISECONDS) {
-                timer->flags |= MEDUSA_TIMER_FLAG_MILLISECONDS;
-        } else if (resolution == MEDUSA_TIMER_RESOLUTION_SECONDS) {
-                timer->flags |= MEDUSA_TIMER_FLAG_SECONDS;
-        } else {
-                timer->flags |= MEDUSA_TIMER_FLAG_MILLISECONDS;
+        rc = timer_set_resolution(timer, resolution);
+        if (rc < 0) {
+                return rc;
         }
         return medusa_monitor_mod_unlocked(&timer->subject);
 }
@@ -781,13 +787,13 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_timer_get_resolutio
 
 __attribute__ ((visibility ("default"))) int medusa_timer_set_enabled_unlocked (struct medusa_timer *timer, int enabled)
 {
+        int rc;
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 return -EINVAL;
         }
-        if (enabled) {
-                timer->flags |= MEDUSA_TIMER_FLAG_ENABLED;
-        } else {
-                timer->flags &= ~MEDUSA_TIMER_FLAG_ENABLED;
+        rc = timer_set_enabled(timer, enabled);
+        if (rc < 0) {
+                return rc;
         }
         return medusa_monitor_mod_unlocked(&timer->subject);
 }
@@ -824,6 +830,49 @@ __attribute__ ((visibility ("default"))) int medusa_timer_get_enabled (const str
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_timer_update_timespec_unlocked (struct medusa_timer *timer, struct timespec *now)
+{
+        unsigned int resolution;
+        if (timer->flags & MEDUSA_TIMER_FLAG_FIRED) {
+                if (timer->flags & MEDUSA_TIMER_FLAG_INTERVAL) {
+                        medusa_timespec_add(&timer->interval, now, &timer->_timespec);
+                } else {
+                        medusa_timespec_add(&timer->_timespec, &timer->interval, &timer->_timespec);
+                }
+        } else {
+                if (medusa_timespec_isset(&timer->initial)) {
+                        medusa_timespec_add(&timer->initial, now, &timer->_timespec);
+                } else {
+                        medusa_timespec_add(&timer->interval, now, &timer->_timespec);
+                }
+        }
+        timer->flags &= ~MEDUSA_TIMER_FLAG_INITIAL;
+        timer->flags &= ~MEDUSA_TIMER_FLAG_INTERVAL;
+        if (!medusa_timespec_isset(&timer->_timespec)) {
+                return -EIO;
+        }
+        resolution = medusa_timer_get_resolution_unlocked(timer);
+        if (resolution == MEDUSA_TIMER_RESOLUTION_NANOSECOMDS) {
+        } else if (resolution == MEDUSA_TIMER_RESOLUTION_MICROSECONDS) {
+                timer->_timespec.tv_nsec += 500;
+                timer->_timespec.tv_nsec /= 1e3;
+                timer->_timespec.tv_nsec *= 1e3;
+        } else if (resolution == MEDUSA_TIMER_RESOLUTION_MILLISECONDS) {
+                timer->_timespec.tv_nsec += 500000;
+                timer->_timespec.tv_nsec /= 1e6;
+                timer->_timespec.tv_nsec *= 1e6;
+        } else if (resolution == MEDUSA_TIMER_RESOLUTION_SECONDS) {
+                timer->_timespec.tv_nsec += 500000000;
+                timer->_timespec.tv_nsec /= 1e9;
+                timer->_timespec.tv_nsec *= 1e9;
+        }
+        if (timer->_timespec.tv_nsec >= 1000000000) {
+                timer->_timespec.tv_sec++;
+                timer->_timespec.tv_nsec -= 1000000000;
+        }
+        return 0;
+}
+
 __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_timer_get_monitor_unlocked (const struct medusa_timer *timer)
 {
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
@@ -852,6 +901,16 @@ __attribute__ ((visibility ("default"))) int medusa_timer_onevent_unlocked (stru
         rc = 0;
         type = timer->subject.flags & MEDUSA_SUBJECT_TYPE_MASK;
         monitor = timer->subject.monitor;
+        if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
+                timer->flags |= MEDUSA_TIMER_FLAG_FIRED;
+                if (medusa_timer_get_singleshot_unlocked(timer) ||
+                    !medusa_timespec_isset(&timer->interval)) {
+                        rc = medusa_timer_set_enabled_unlocked(timer, 0);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                }
+        }
         if (timer->onevent != NULL) {
                 medusa_monitor_unlock(monitor);
                 rc = timer->onevent(timer, events, timer->context);
@@ -881,6 +940,10 @@ __attribute__ ((visibility ("default"))) int medusa_timer_onevent_unlocked (stru
 __attribute__ ((visibility ("default"))) int medusa_timer_is_valid_unlocked (const struct medusa_timer *timer)
 {
         if (!medusa_timespec_isset(&timer->initial) &&
+            !medusa_timespec_isset(&timer->interval)) {
+                return 0;
+        }
+        if ((timer->flags & MEDUSA_TIMER_FLAG_FIRED) &&
             !medusa_timespec_isset(&timer->interval)) {
                 return 0;
         }

@@ -30,6 +30,8 @@ unsigned int medusa_timer_get_resolution_unlocked (const struct medusa_timer *ti
 int medusa_timer_set_enabled_unlocked (struct medusa_timer *timer, int enabled);
 int medusa_timer_get_enabled_unlocked (const struct medusa_timer *timer);
 
+int medusa_timer_update_timespec_unlocked (struct medusa_timer *timer, struct timespec *now);
+
 struct medusa_monitor * medusa_timer_get_monitor_unlocked (const struct medusa_timer *timer);
 
 int medusa_timer_onevent_unlocked (struct medusa_timer *timer, unsigned int events);
