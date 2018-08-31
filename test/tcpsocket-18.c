@@ -150,7 +150,7 @@ static int test_poll (unsigned int poll)
         tcpsocket_init_options.nonblocking = 1;
         tcpsocket_init_options.reuseaddr = 1;
         tcpsocket_init_options.reuseport = 1;
-        tcpsocket_init_options.backlog = 10000;
+        tcpsocket_init_options.backlog = g_nclients + 1000;
         tcpsocket_init_options.enabled = 1;
         tcpsocket_init_options.onevent = tcpsocket_listener_onevent;
         tcpsocket_init_options.context = NULL;
@@ -180,7 +180,7 @@ static int test_poll (unsigned int poll)
                 tcpsocket_init_options.nonblocking = 1;
                 tcpsocket_init_options.reuseaddr = 1;
                 tcpsocket_init_options.reuseport = 1;
-                tcpsocket_init_options.backlog = g_nclients + 1000;
+                tcpsocket_init_options.backlog = 0;
                 tcpsocket_init_options.enabled = 1;
                 tcpsocket_init_options.onevent = tcpsocket_client_onevent;
                 tcpsocket_init_options.context = NULL;
