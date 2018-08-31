@@ -252,6 +252,7 @@ __attribute__ ((visibility ("default"))) void medusa_buffer_uninit (struct medus
         if (buffer->buffer != NULL) {
                 free(buffer->buffer);
         }
+        memset(buffer, 0, sizeof(struct medusa_buffer));
 }
 
 __attribute__ ((visibility ("default"))) void medusa_buffer_destroy (struct medusa_buffer *buffer)
