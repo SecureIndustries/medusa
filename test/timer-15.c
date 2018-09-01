@@ -24,30 +24,25 @@ static const unsigned int g_polls[] = {
 };
 
 static struct medusa_monitor *g_monitor;
+static int g_timer_singlehot_count;
 static struct medusa_timer *g_timer_singlehot;
-static struct medusa_timer *g_timer_setinterval;
 
 static int timer_singleshot_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
 {
+        int rc;
         (void) timer;
         (void) context;
         fprintf(stderr, "events: 0x%08x\n", events);
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
-                return medusa_monitor_break(g_monitor);
-        }
-        return 0;
-}
-
-static int timer_setinterval_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
-{
-        struct medusa_timer *t = context;
-        (void) timer;
-        fprintf(stderr, "events: 0x%08x\n", events);
-        if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
-                medusa_timer_set_interval(t, 0.500);
-        }
-        if (events & MEDUSA_TIMER_EVENT_DESTROY) {
-                return medusa_monitor_break(g_monitor);
+                g_timer_singlehot_count += 1;
+                if (g_timer_singlehot_count == 5) {
+                        return medusa_monitor_break(g_monitor);
+                }
+                rc  = medusa_timer_set_interval(g_timer_singlehot, 0.10);
+                rc |= medusa_timer_set_enabled(g_timer_singlehot, 1);
+                if (rc < 0) {
+                        return rc;
+                }
         }
         return 0;
 }
@@ -61,6 +56,7 @@ static int test_poll (unsigned int poll)
 
         count = 0;
         g_monitor = NULL;
+        g_timer_singlehot_count = 0;
 
         medusa_monitor_init_options_default(&options);
         options.poll.type = poll;
@@ -76,22 +72,9 @@ static int test_poll (unsigned int poll)
                 fprintf(stderr, "medusa_timer_create_singleshot failed\n");
                 goto bail;
         }
-        rc  = medusa_timer_set_interval(g_timer_singlehot, 10.00);
+        rc  = medusa_timer_set_interval(g_timer_singlehot, 0.10);
         rc |= medusa_timer_set_singleshot(g_timer_singlehot, 1);
         rc |= medusa_timer_set_enabled(g_timer_singlehot, 1);
-        if (rc < 0) {
-                fprintf(stderr, "medusa_timer_create_singleshot failed\n");
-                goto bail;
-        }
-
-        g_timer_setinterval = medusa_timer_create(g_monitor, timer_setinterval_onevent, g_timer_singlehot);
-        if (MEDUSA_IS_ERR_OR_NULL(g_timer_setinterval)) {
-                fprintf(stderr, "medusa_timer_create_singleshot failed\n");
-                goto bail;
-        }
-        rc  = medusa_timer_set_interval(g_timer_setinterval, 0.250);
-        rc |= medusa_timer_set_singleshot(g_timer_setinterval, 1);
-        rc |= medusa_timer_set_enabled(g_timer_setinterval, 1);
         if (rc < 0) {
                 fprintf(stderr, "medusa_timer_create_singleshot failed\n");
                 goto bail;

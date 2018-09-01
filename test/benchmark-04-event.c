@@ -208,11 +208,25 @@ static int test_poll (unsigned int poll)
                 timeradd(&destroy_finish, &destroy_total, &destroy_total);
         }
 
-        fprintf(stderr, "%8ld %8ld %8ld %8ld\n",
+        fprintf(stderr, "%8ld %8ld %8ld %8ld %8ld\n",
                         create_total.tv_sec * 1000000 + create_total.tv_usec,
                         apply_total.tv_sec * 1000000 + apply_total.tv_usec,
                         run_total.tv_sec * 1000000 + run_total.tv_usec,
-                        destroy_total.tv_sec * 1000000 + destroy_total.tv_usec);
+                        destroy_total.tv_sec * 1000000 + destroy_total.tv_usec,
+                        (create_total.tv_sec * 1000000 + create_total.tv_usec) +
+                        (apply_total.tv_sec * 1000000 + apply_total.tv_usec) +
+                        (run_total.tv_sec * 1000000 + run_total.tv_usec) +
+                        (destroy_total.tv_sec * 1000000 + destroy_total.tv_usec));
+
+        fprintf(stderr, "%8ld %8ld %8ld %8ld %8ld\n",
+                        (create_total.tv_sec * 1000000 + create_total.tv_usec) / g_nloops,
+                        (apply_total.tv_sec * 1000000 + apply_total.tv_usec) / (g_nloops * g_nsamples),
+                        (run_total.tv_sec * 1000000 + run_total.tv_usec) / (g_nloops * g_nsamples),
+                        (destroy_total.tv_sec * 1000000 + destroy_total.tv_usec) / g_nloops,
+                        ((create_total.tv_sec * 1000000 + create_total.tv_usec) / g_nloops) +
+                        ((apply_total.tv_sec * 1000000 + apply_total.tv_usec) / (g_nloops * g_nsamples)) +
+                        ((run_total.tv_sec * 1000000 + run_total.tv_usec) / (g_nloops * g_nsamples)) +
+                        ((destroy_total.tv_sec * 1000000 + destroy_total.tv_usec) / g_nloops));
 
         return 0;
 bail:   if (event_base != NULL) {
@@ -314,8 +328,10 @@ int main (int argc, char *argv[])
 
         rc = test_poll(0);
         if (rc != 0) {
+                fprintf(stderr, "fail\n");
                 return -1;
         }
+        fprintf(stderr, "success\n");
 
         for (i = 0; i < g_npipes; i++) {
                 close(g_pipes[i * 2]);
