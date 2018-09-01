@@ -68,3 +68,4 @@ tests: all
 
 clean:
 	${Q}${RM} *.out
+	${Q}${RM} *.png
