@@ -65,3 +65,6 @@ tests: all
 		fi; \
 		printf "\n"; \
 	done
+
+clean:
+	${Q}${RM} *.out
