@@ -27,6 +27,8 @@ libmedusa-monitor.a_files-y = \
 	clock.c \
 	pool.c \
 	buffer.c \
+	buffer-simple.c \
+	buffer-chunked.c \
 	pqueue.c \
 	io.c \
 	timer.c \

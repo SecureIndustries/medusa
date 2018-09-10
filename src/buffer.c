@@ -7,64 +7,63 @@
 #include <errno.h>
 
 #include "error.h"
-#include "pool.h"
 #include "buffer.h"
 #include "buffer-struct.h"
-
-#define MEDUSA_BUFFER_USE_POOL      1
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
-static struct medusa_pool *g_pool;
-#endif
+#include "buffer-simple.h"
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_resize (struct medusa_buffer *buffer, int64_t size)
 {
-        void *data;
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
-        if (size < 0) {
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
                 return -EINVAL;
         }
-        if (buffer->size >= size) {
-                return 0;
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->resize)) {
+                return -EINVAL;
         }
-        data = realloc(buffer->buffer, size);
-        if (data == NULL) {
-                data = malloc(size);
-                if (data == NULL) {
-                        return -ENOMEM;
-                }
-                if (buffer->length > 0) {
-                        memcpy(data, buffer->buffer, buffer->length);
-                }
-                free(buffer->buffer);
-                buffer->buffer = data;
-        } else {
-                buffer->buffer = data;
-        }
-        buffer->size = size;
-        return 0;
+        return buffer->backend->resize(buffer, size);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_grow (struct medusa_buffer *buffer, int64_t size)
 {
-        return medusa_buffer_resize(buffer, medusa_buffer_get_length(buffer) + size);
+        int64_t length;
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        length = medusa_buffer_get_length(buffer);
+        if (length < 0) {
+                return length;
+        }
+        return medusa_buffer_resize(buffer, length + size);
 }
 
-__attribute__ ((visibility ("default"))) void medusa_buffer_reset (struct medusa_buffer *buffer)
+__attribute__ ((visibility ("default"))) int medusa_buffer_reset (struct medusa_buffer *buffer)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return;
+                return -EINVAL;
         }
-        buffer->length = 0;
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->reset)) {
+                return -EINVAL;
+        }
+        return buffer->backend->reset(buffer);
 }
 
-__attribute__ ((visibility ("default"))) void * medusa_buffer_get_base (const struct medusa_buffer *buffer)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_get_size (const struct medusa_buffer *buffer)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return MEDUSA_ERR_PTR(-EINVAL);
+                return -EINVAL;
         }
-        return buffer->buffer;
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->get_size)) {
+                return -EINVAL;
+        }
+        return buffer->backend->get_size(buffer);
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_get_length (const struct medusa_buffer *buffer)
@@ -72,78 +71,58 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_get_length (const
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
-        return buffer->length;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_set_length (struct medusa_buffer *buffer, int64_t length)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
                 return -EINVAL;
         }
-        if (length < 0) {
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->get_length)) {
                 return -EINVAL;
         }
-        if (length > buffer->size) {
-                return -EINVAL;
-        }
-        buffer->length = length;
-        return 0;
+        return buffer->backend->get_length(buffer);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_prepend (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
-        int rc;
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(data)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->prepend)) {
                 return -EINVAL;
         }
         if (length < 0) {
                 return -EINVAL;
         }
-        if (length == 0) {
-                return 0;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(data)) {
-                return -EINVAL;
-        }
-        rc = medusa_buffer_resize(buffer, buffer->length + length);
-        if (rc < 0) {
-                return rc;
-        }
-        memmove(buffer->buffer + length, buffer->buffer, buffer->length);
-        memcpy(buffer->buffer, data, length);
-        buffer->length += length;
-
-        return 0;
+        return buffer->backend->prepend(buffer, data, length);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_buffer_push (struct medusa_buffer *buffer, const void *data, int64_t length)
+__attribute__ ((visibility ("default"))) int medusa_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
-        int rc;
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->append)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(data)) {
                 return -EINVAL;
         }
         if (length < 0) {
                 return -EINVAL;
         }
-        if (length == 0) {
-                return 0;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(data)) {
-                return -EINVAL;
-        }
-        rc = medusa_buffer_resize(buffer, buffer->length + length);
-        if (rc < 0) {
-                return rc;
-        }
-        memcpy(buffer->buffer + buffer->length, data, length);
-        buffer->length += length;
-        return 0;
+        return buffer->backend->append(buffer, data, length);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_printf (struct medusa_buffer *buffer, const char *format, ...)
 {
         int rc;
-        int size;
         va_list va;
         va_start(va, format);
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
@@ -154,105 +133,72 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_printf (struct medusa
                 va_end(va);
                 return -EINVAL;
         }
-        size = vsnprintf(NULL, 0, format, va);
-        if (size < 0) {
-                va_end(va);
-                return -EIO;
-        }
-        rc = medusa_buffer_grow(buffer, size + 1);
-        if (rc < 0) {
-                va_end(va);
-                return rc;
-        }
+        rc = medusa_buffer_vprintf(buffer, format, va);
         va_end(va);
-        va_start(va, format);
-        rc = vsnprintf(medusa_buffer_get_base(buffer) + medusa_buffer_get_length(buffer), size + 1, format, va);
-        if (rc <= 0) {
-                va_end(va);
-                return -EIO;
-        }
-        buffer->length += rc;
-        va_end(va);
-        return 0;
+        return rc;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va)
 {
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->vprintf)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(format)) {
+                return -EINVAL;
+        }
+        return buffer->backend->vprintf(buffer, format, va);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_choke (struct medusa_buffer *buffer, int64_t length)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->choke)) {
+                return -EINVAL;
+        }
+        return buffer->backend->choke(buffer, length);
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_create (unsigned int type)
+{
         int rc;
-        int size;
-        va_list vs;
-        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return -EINVAL;
-        }
-        va_copy(vs, va);
-        size = vsnprintf(NULL, 0, format, vs);
-        if (size < 0) {
-                va_end(vs);
-                return -EIO;
-        }
-        rc = medusa_buffer_grow(buffer, size + 1);
+        struct medusa_buffer_init_options options;
+        rc = medusa_buffer_init_options_default(&options);
         if (rc < 0) {
-                va_end(vs);
-                return rc;
+                return MEDUSA_ERR_PTR(rc);
         }
-        va_end(vs);
-        va_copy(vs, va);
-        rc = vsnprintf(medusa_buffer_get_base(buffer) + medusa_buffer_get_length(buffer), size + 1, format, vs);
-        if (rc <= 0) {
-                va_end(vs);
-                return -EIO;
-        }
-        buffer->length += rc;
-        va_end(vs);
-        return 0;
+        options.type = type;
+        return medusa_buffer_create_with_options(&options);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_buffer_eat (struct medusa_buffer *buffer, int64_t length)
+struct medusa_buffer * medusa_buffer_create_with_options (const struct medusa_buffer_init_options *options)
 {
-        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return -EINVAL;
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
         }
-        if (length < 0) {
-                length = buffer->length;
-        }
-        if (buffer->length < length) {
-                length = buffer->length;
-        }
-        if (buffer->length > length) {
-                memmove(buffer->buffer, buffer->buffer + length, buffer->length - length);
-                buffer->length -= length;
+        if (options->type == MEDUSA_BUFFER_TYPE_SIMPLE) {
+                int rc;
+                struct medusa_buffer_simple_init_options simple_options;
+                rc = medusa_buffer_simple_init_options_default(&simple_options);
+                if (rc < 0) {
+                        return MEDUSA_ERR_PTR(rc);
+                }
+                simple_options.flags = MEDUSA_BUFFER_SIMPLE_FLAG_DEFAULT;
+                simple_options.grow = options->u.simple.grow_size;
+                return medusa_buffer_simple_create_with_options(&simple_options);
         } else {
-                buffer->length = 0;
+                return NULL;
         }
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_get_size (const struct medusa_buffer *buffer)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return -EINVAL;
-        }
-        return buffer->size;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_init (struct medusa_buffer *buffer)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return -EINVAL;
-        }
-        memset(buffer, 0, sizeof(struct medusa_buffer));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) void medusa_buffer_uninit (struct medusa_buffer *buffer)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return;
-        }
-        if (buffer->buffer != NULL) {
-                free(buffer->buffer);
-        }
-        memset(buffer, 0, sizeof(struct medusa_buffer));
 }
 
 __attribute__ ((visibility ("default"))) void medusa_buffer_destroy (struct medusa_buffer *buffer)
@@ -260,43 +206,11 @@ __attribute__ ((visibility ("default"))) void medusa_buffer_destroy (struct medu
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return;
         }
-        if (buffer->buffer != NULL) {
-                free(buffer->buffer);
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
+                return;
         }
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
-        medusa_pool_free(buffer);
-#else
-        free(buffer);
-#endif
-}
-
-__attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_create (void)
-{
-        struct medusa_buffer *buffer;
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
-        buffer = medusa_pool_malloc(g_pool);
-#else
-        buffer = malloc(sizeof(struct medusa_buffer));
-#endif
-        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return MEDUSA_ERR_PTR(-ENOMEM);
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->destroy)) {
+                return;
         }
-        memset(buffer, 0, sizeof(struct medusa_buffer));
-        return buffer;
-}
-
-__attribute__ ((constructor)) static void buffer_constructor (void)
-{
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
-        g_pool = medusa_pool_create("medusa-buffer", sizeof(struct medusa_buffer), 0, 0, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
-#endif
-}
-
-__attribute__ ((destructor)) static void buffer_destructor (void)
-{
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
-        if (g_pool != NULL) {
-                medusa_pool_destroy(g_pool);
-        }
-#endif
+        buffer->backend->destroy(buffer);
 }
