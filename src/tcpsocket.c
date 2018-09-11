@@ -108,21 +108,33 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
 
         if (events & MEDUSA_IO_EVENT_OUT) {
                 if (tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_CONNECTING) {
-                        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_CONNECTED);
-                        tevents |= MEDUSA_TCPSOCKET_EVENT_CONNECTED;
-                        length = medusa_buffer_get_length(tcpsocket->wbuffer);
-                        if (length > 0) {
-                                rc = medusa_io_add_events(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
-                                if (rc < 0) {
-                                        goto bail;
-                                }
-                        } else if (length == 0) {
-                                rc = medusa_io_del_events(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
-                                if (rc < 0) {
-                                        goto bail;
-                                }
-                        } else {
+                        int valopt;
+                        socklen_t vallen;
+                        vallen = sizeof(valopt);
+                        rc = getsockopt(tcpsocket->io.fd, SOL_SOCKET, SO_ERROR, (void*) &valopt, &vallen);
+                        if (rc < 0) {
                                 goto bail;
+                        }
+                        if (valopt != 0) {
+                                tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                tevents |= MEDUSA_TCPSOCKET_EVENT_DISCONNECTED;
+                        } else {
+                                tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_CONNECTED);
+                                tevents |= MEDUSA_TCPSOCKET_EVENT_CONNECTED;
+                                length = medusa_buffer_get_length(tcpsocket->wbuffer);
+                                if (length > 0) {
+                                        rc = medusa_io_add_events(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
+                                        if (rc < 0) {
+                                                goto bail;
+                                        }
+                                } else if (length == 0) {
+                                        rc = medusa_io_del_events(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
+                                        if (rc < 0) {
+                                                goto bail;
+                                        }
+                                } else {
+                                        goto bail;
+                                }
                         }
                 } else if (tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_CONNECTED) {
                         length = medusa_buffer_get_length(tcpsocket->wbuffer);
