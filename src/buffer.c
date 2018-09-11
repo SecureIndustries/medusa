@@ -10,6 +10,7 @@
 #include "buffer.h"
 #include "buffer-struct.h"
 #include "buffer-simple.h"
+#include "buffer-chunked.h"
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_resize (struct medusa_buffer *buffer, int64_t size)
 {
@@ -264,8 +265,18 @@ __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_cr
                 simple_options.flags = MEDUSA_BUFFER_SIMPLE_FLAG_DEFAULT;
                 simple_options.grow = options->u.simple.grow_size;
                 return medusa_buffer_simple_create_with_options(&simple_options);
+        } else if (options->type == MEDUSA_BUFFER_TYPE_CHUNKED) {
+                int rc;
+                struct medusa_buffer_chunked_init_options chunked_options;
+                rc = medusa_buffer_chunked_init_options_default(&chunked_options);
+                if (rc < 0) {
+                        return MEDUSA_ERR_PTR(rc);
+                }
+                chunked_options.flags = MEDUSA_BUFFER_CHUNKED_FLAG_DEFAULT;
+                chunked_options.grow = options->u.chunked.chunk_size;
+                return medusa_buffer_chunked_create_with_options(&chunked_options);
         } else {
-                return NULL;
+                return MEDUSA_ERR_PTR(-ENOENT);
         }
 }
 

@@ -268,11 +268,11 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_with_options 
         tcpsocket_set_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NONE);
         tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
         tcpsocket->onevent = options->onevent;
-        tcpsocket->rbuffer = medusa_buffer_create(MEDUSA_BUFFER_TYPE_SIMPLE);
+        tcpsocket->rbuffer = medusa_buffer_create(MEDUSA_BUFFER_TYPE_CHUNKED);
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->rbuffer)) {
                 return MEDUSA_PTR_ERR(tcpsocket->rbuffer);
         }
-        tcpsocket->wbuffer = medusa_buffer_create(MEDUSA_BUFFER_TYPE_SIMPLE);
+        tcpsocket->wbuffer = medusa_buffer_create(MEDUSA_BUFFER_TYPE_CHUNKED);
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->wbuffer)) {
                 return MEDUSA_PTR_ERR(tcpsocket->wbuffer);
         }
