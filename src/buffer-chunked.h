@@ -9,7 +9,7 @@ enum {
         MEDUSA_BUFFER_CHUNKED_FLAG_DEFAULT       = MEDUSA_BUFFER_CHUNKED_FLAG_NONE,
 };
 
-#define MEDUSA_BUFFER_CHUNKED_DEFAULT_GROW       1024
+#define MEDUSA_BUFFER_CHUNKED_DEFAULT_CHUNK_SIZE        128
 
 struct medusa_buffer_chunked_init_options {
         unsigned int flags;
