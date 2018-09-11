@@ -6,8 +6,6 @@ struct medusa_buffer;
 struct medusa_buffer_iovec;
 
 struct medusa_buffer_backend {
-        int (*resize) (struct medusa_buffer *buffer, int64_t size);
-
         int64_t (*get_size) (const struct medusa_buffer *buffer);
         int64_t (*get_length) (const struct medusa_buffer *buffer);
 

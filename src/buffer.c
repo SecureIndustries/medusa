@@ -12,33 +12,6 @@
 #include "buffer-simple.h"
 #include "buffer-chunked.h"
 
-__attribute__ ((visibility ("default"))) int medusa_buffer_resize (struct medusa_buffer *buffer, int64_t size)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->resize)) {
-                return -EINVAL;
-        }
-        return buffer->backend->resize(buffer, size);
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_grow (struct medusa_buffer *buffer, int64_t size)
-{
-        int64_t length;
-        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return -EINVAL;
-        }
-        length = medusa_buffer_get_length(buffer);
-        if (length < 0) {
-                return length;
-        }
-        return medusa_buffer_resize(buffer, length + size);
-}
-
 __attribute__ ((visibility ("default"))) int medusa_buffer_reset (struct medusa_buffer *buffer)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {

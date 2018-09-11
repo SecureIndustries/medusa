@@ -198,11 +198,12 @@ static int simple_buffer_commit (struct medusa_buffer *buffer, const struct medu
                 return -EINVAL;
         }
         if ((simple->data > iovecs[0].data) ||
+            (simple->data + simple->length > iovecs[0].data) ||
             (simple->data + simple->size < iovecs[0].data + iovecs[0].length)) {
                 return -EINVAL;
         }
         simple->length += iovecs->length;
-        return 0;
+        return niovecs;
 }
 
 static int simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs)
@@ -217,9 +218,6 @@ static int simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int
         if (niovecs < 0) {
                 return -EINVAL;
         }
-        if (niovecs == 0) {
-                return 1;
-        }
         if (length < 0) {
                 length = simple->length;
         } else {
@@ -227,6 +225,9 @@ static int simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int
         }
         if (length == 0) {
                 return 0;
+        }
+        if (niovecs == 0) {
+                return 1;
         }
         iovecs[0].data = simple->data;
         iovecs[0].length = length;
@@ -281,8 +282,6 @@ static void simple_buffer_destroy (struct medusa_buffer *buffer)
 }
 
 const struct medusa_buffer_backend simple_buffer_backend = {
-        .resize         = simple_buffer_resize,
-
         .get_size       = simple_buffer_get_size,
         .get_length     = simple_buffer_get_length,
 
