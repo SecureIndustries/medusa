@@ -3,6 +3,7 @@
 #define MEDUSA_BUFFER_STRUCT_H
 
 struct medusa_buffer;
+struct medusa_buffer_iovec;
 
 struct medusa_buffer_backend {
         int (*resize) (struct medusa_buffer *buffer, int64_t size);
@@ -13,6 +14,12 @@ struct medusa_buffer_backend {
         int (*prepend) (struct medusa_buffer *buffer, const void *data, int64_t length);
         int (*append) (struct medusa_buffer *buffer, const void *data, int64_t length);
         int (*vprintf) (struct medusa_buffer *buffer, const char *format, va_list va);
+
+        int (*reserve) (struct medusa_buffer *buffer, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs);
+        int (*commit) (struct medusa_buffer *buffer, const struct medusa_buffer_iovec *iovecs, int niovecs);
+
+        int (*peek) (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs);
+
         int (*choke) (struct medusa_buffer *buffer, int64_t length);
 
         int (*reset) (struct medusa_buffer *buffer);

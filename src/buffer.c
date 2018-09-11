@@ -155,6 +155,48 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_vprintf (struct medus
         return buffer->backend->vprintf(buffer, format, va);
 }
 
+__attribute__ ((visibility ("default"))) int medusa_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->reserve)) {
+                return -EINVAL;
+        }
+        return buffer->backend->reserve(buffer, length, iovecs, niovecs);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_commit (struct medusa_buffer *buffer, const struct medusa_buffer_iovec *iovecs, int niovecs)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->commit)) {
+                return -EINVAL;
+        }
+        return buffer->backend->commit(buffer, iovecs, niovecs);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->peek)) {
+                return -EINVAL;
+        }
+        return buffer->backend->peek(buffer, offset, length, iovecs, niovecs);
+}
+
 __attribute__ ((visibility ("default"))) int medusa_buffer_choke (struct medusa_buffer *buffer, int64_t length)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
@@ -169,6 +211,17 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_choke (struct medusa_
         return buffer->backend->choke(buffer, length);
 }
 
+__attribute__ ((visibility ("default"))) int medusa_buffer_init_options_default (struct medusa_buffer_init_options *options)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return -EINVAL;
+        }
+        memset(options, 0, sizeof(struct medusa_buffer_init_options));
+        options->type = MEDUSA_BUFFER_TYPE_DEFAULT;
+        options->flags = MEDUSA_BUFFER_FLAG_DEFAULT;
+        return 0;
+}
+
 __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_create (unsigned int type)
 {
         int rc;
@@ -181,7 +234,7 @@ __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_cr
         return medusa_buffer_create_with_options(&options);
 }
 
-struct medusa_buffer * medusa_buffer_create_with_options (const struct medusa_buffer_init_options *options)
+__attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_create_with_options (const struct medusa_buffer_init_options *options)
 {
         if (MEDUSA_IS_ERR_OR_NULL(options)) {
                 return MEDUSA_ERR_PTR(-EINVAL);

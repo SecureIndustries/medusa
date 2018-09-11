@@ -44,6 +44,9 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
         int64_t rlength;
         struct medusa_buffer *rbuffer;
 
+        int niovecs;
+        struct medusa_buffer_iovec iovecs[1];
+
         const char *option_string = context;
 
         (void) tcpsocket;
@@ -66,14 +69,22 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
                 if (rlength > (int) strlen(option_string) + 1) {
                         return -EIO;
                 }
-                if (rlength == (int) strlen(option_string) + 1) {
-                        if (strcmp(medusa_buffer_get_base(rbuffer), option_string) == 0) {
-                                medusa_tcpsocket_destroy(tcpsocket);
-                                g_running = 0;
-                                return 0;
-                        } else {
-                                return -EIO;
-                        }
+                niovecs = medusa_buffer_peek(rbuffer, 0, -1, iovecs, 1);
+                if (niovecs < 0) {
+                        return niovecs;
+                }
+                if (niovecs == 0) {
+                        return -EIO;
+                }
+                if (iovecs[0].length != (int) strlen(option_string) + 1) {
+                        return -EIO;
+                }
+                if (strcmp(iovecs[0].data, option_string) == 0) {
+                        medusa_tcpsocket_destroy(tcpsocket);
+                        g_running = 0;
+                        return 0;
+                } else {
+                        return -EIO;
                 }
         }
 

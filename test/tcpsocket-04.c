@@ -36,7 +36,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 fprintf(stderr, "write\n");
                 rc = medusa_tcpsocket_write(tcpsocket, "e", 1);
                 if (rc != 1) {
-                        fprintf(stderr, "medusa_tcpsocket_write failed\n");
+                        fprintf(stderr, "medusa_tcpsocket_write failed: %d, %s\n", rc, medusa_strerror(rc));
                         return -1;
                 }
         }

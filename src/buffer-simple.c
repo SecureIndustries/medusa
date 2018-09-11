@@ -195,7 +195,11 @@ static void simple_buffer_destroy (struct medusa_buffer *buffer)
         if (simple->data != NULL) {
                 free(simple->data);
         }
+#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
+        medusa_pool_free(simple);
+#else
         free(simple);
+#endif
 }
 
 const struct medusa_buffer_backend simple_buffer_backend = {
@@ -255,6 +259,9 @@ struct medusa_buffer * medusa_buffer_simple_create_with_options (const struct me
         }
         memset(simple, 0, sizeof(struct medusa_buffer_simple));
         simple->grow = options->grow;
+        if (simple->grow <= 0) {
+                simple->grow = MEDUSA_BUFFER_SIMPLE_DEFAULT_GROW;
+        }
         simple->buffer.backend = &simple_buffer_backend;
         return &simple->buffer;
 }

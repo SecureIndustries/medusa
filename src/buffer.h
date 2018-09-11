@@ -38,6 +38,11 @@ struct medusa_buffer_init_options {
         } u;
 };
 
+struct medusa_buffer_iovec {
+        void *data;
+        int64_t length;
+};
+
 int medusa_buffer_init_options_default (struct medusa_buffer_init_options *options);
 
 struct medusa_buffer * medusa_buffer_create (unsigned int type);
@@ -55,6 +60,12 @@ int medusa_buffer_prepend (struct medusa_buffer *buffer, const void *data, int64
 int medusa_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length);
 int medusa_buffer_printf (struct medusa_buffer *buffer, const char *format, ...)  __attribute__((format(printf, 2, 3)));
 int medusa_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va);
+
+int medusa_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs);
+int medusa_buffer_commit (struct medusa_buffer *buffer, const struct medusa_buffer_iovec *iovecs, int niovecs);
+
+int medusa_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs);
+
 int medusa_buffer_choke (struct medusa_buffer *buffer, int64_t length);
 
 #endif

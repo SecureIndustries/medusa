@@ -227,10 +227,10 @@ static int readline_medusa_io_onevent (struct medusa_io *io, unsigned int events
 static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
 {
         int rc;
-        void *rbase;
-        int64_t rlen;
         int64_t wlen;
         struct medusa_buffer *rbuffer;
+        int niovecs;
+        struct medusa_buffer_iovec iovecs[1];
         (void) context;
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
                 rbuffer = medusa_tcpsocket_get_read_buffer(tcpsocket);
@@ -238,25 +238,21 @@ static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
                         return MEDUSA_PTR_ERR(rbuffer);
                 }
                 while (1) {
-                        rlen = medusa_buffer_get_length(rbuffer);
-                        if (rlen < 0) {
-                                return rlen;
+                        niovecs = medusa_buffer_peek(rbuffer, 0, -1, iovecs, 1);
+                        if (niovecs < 0) {
+                                return niovecs;
                         }
-                        if (rlen == 0) {
+                        if (niovecs == 0) {
                                 break;
                         }
-                        rbase = medusa_buffer_get_base(rbuffer);
-                        if (MEDUSA_IS_ERR_OR_NULL(rbase)) {
-                                return MEDUSA_PTR_ERR(rbase);
-                        }
-                        wlen = medusa_tcpsocket_write(tcpsocket, rbase, rlen);
+                        wlen = medusa_tcpsocket_write(tcpsocket, iovecs[0].data, iovecs[0].length);
                         if (wlen < 0) {
                                 return wlen;
                         }
-                        if (wlen == 0) {
+                        if (wlen != iovecs[0].length) {
                                 return -EIO;
                         }
-                        rc = medusa_buffer_eat(rbuffer, wlen);
+                        rc = medusa_buffer_choke(rbuffer, wlen);
                         if (rc < 0) {
                                 return rc;
                         }
