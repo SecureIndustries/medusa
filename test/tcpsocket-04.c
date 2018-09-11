@@ -44,7 +44,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 fprintf(stderr, "  read\n");
                 rc = medusa_tcpsocket_read(tcpsocket, &c, 1);
                 if (rc != 1) {
-                        fprintf(stderr, "medusa_tcpsocket_read failed\n");
+                        fprintf(stderr, "medusa_tcpsocket_read failed: %d, %s\n", rc, medusa_strerror(rc));
                         return -1;
                 }
                 if (c != 'e') {
@@ -70,11 +70,11 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 fprintf(stderr, "  read\n");
                 rc = medusa_tcpsocket_read(tcpsocket, &c, 1);
                 if (rc != 1) {
-                        fprintf(stderr, "medusa_tcpsocket_read failed\n");
+                        fprintf(stderr, "medusa_tcpsocket_read failed: %d, %s\n", rc, medusa_strerror(rc));
                         return -1;
                 }
                 if (c != 'e') {
-                        fprintf(stderr, "medusa_tcpsocket_read failed\n");
+                        fprintf(stderr, "medusa_tcpsocket_read failed: c != 'e'\n");
                         return -1;
                 }
                 fprintf(stderr, "  write\n");

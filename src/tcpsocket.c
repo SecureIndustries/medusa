@@ -174,10 +174,6 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                 if (tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_LISTENING) {
                         tevents |= MEDUSA_TCPSOCKET_EVENT_CONNECTION;
                 } else if (tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_CONNECTED) {
-                        rc = medusa_buffer_grow(tcpsocket->rbuffer, 4096);
-                        if (rc < 0) {
-                                goto bail;
-                        }
                         while (1) {
                                 niovecs = medusa_buffer_reserve(tcpsocket->rbuffer, 4096, &iovec, 1);
                                 if (niovecs < 0) {

@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <errno.h>
 
-#include <sys/queue.h>
+#include "queue.h"
 
 #include "error.h"
 #include "pool.h"
@@ -17,7 +17,7 @@
 
 #define MIN(a, b)                               (((a) < (b)) ? (a) : (b))
 
-#define MEDUSA_BUFFER_USE_POOL      1
+#define MEDUSA_BUFFER_USE_POOL      0
 #if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
 static struct medusa_pool *g_pool_buffer_chunked;
 #endif
@@ -265,6 +265,7 @@ static int chunked_buffer_reserve (struct medusa_buffer *buffer, int64_t length,
                 w += l;
                 iovecs[n].data   = entry->data + entry->length;
                 iovecs[n].length = l;
+                entry = TAILQ_NEXT(entry, list);
                 n += 1;
         }
         return n;
@@ -280,27 +281,34 @@ static int chunked_buffer_commit (struct medusa_buffer *buffer, const struct med
         if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
                 return -EINVAL;
         }
-        if (niovecs <= 0) {
+        if (niovecs < 0) {
                 return -EINVAL;
+        }
+        if (niovecs == 0) {
+                return 0;
         }
         if (MEDUSA_IS_ERR_OR_NULL(chunked->active)) {
                 return -EIO;
         }
         for (i = 0; i < niovecs; i++) {
-                if ((chunked->active->data > (uint8_t *) iovecs[i].data) ||
-                    (chunked->active->data + chunked->active->length > (uint8_t *) iovecs[i].data) ||
-                    (chunked->active->data + chunked->active->size < (uint8_t *) iovecs[i].data + iovecs[i].length)) {
+                if (chunked->active->data > (uint8_t *) iovecs[i].data) {
+                        return -EINVAL;
+                }
+                if (chunked->active->data + chunked->active->length > (uint8_t *) iovecs[i].data) {
+                        return -EINVAL;
+                }
+                if (chunked->active->data + chunked->active->size < (uint8_t *) iovecs[i].data + iovecs[i].length) {
                         return -EINVAL;
                 }
                 chunked->active->length += iovecs[i].length;
                 chunked->active = TAILQ_NEXT(chunked->active, list);
+                chunked->total_length += iovecs[i].length;
         }
         return i;
 }
 
 static int chunked_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs)
 {
-        int rc;
         int n;
         int64_t w;
         int64_t l;
@@ -330,24 +338,22 @@ static int chunked_buffer_peek (struct medusa_buffer *buffer, int64_t offset, in
                 c /= chunked->chunk_size;
                 return c;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(chunked->active)) {
-                return -EIO;
-        }
         n = 0;
         w = 0;
-        entry = chunked->active;
+        entry = TAILQ_FIRST(&chunked->entries);
         while (n < niovecs && w != length) {
                 if (entry == NULL) {
                         return -EIO;
                 }
-                if (entry->size - entry->length <= 0) {
+                if (entry->length - entry->offset <= 0) {
                         entry = TAILQ_NEXT(entry, list);
                         continue;
                 }
-                l = MIN(length - w, entry->size - entry->length);
+                l = MIN(length - w, entry->length - entry->offset);
                 w += l;
-                iovecs[n].data   = entry->data + entry->length;
+                iovecs[n].data   = entry->data + entry->offset;
                 iovecs[n].length = l;
+                entry = TAILQ_NEXT(entry, list);
                 n += 1;
         }
         return n;
@@ -355,43 +361,81 @@ static int chunked_buffer_peek (struct medusa_buffer *buffer, int64_t offset, in
 
 static int chunked_buffer_choke (struct medusa_buffer *buffer, int64_t length)
 {
+        int64_t w;
+        int64_t l;
+        struct medusa_buffer_chunked_entry *entry;
+        struct medusa_buffer_chunked_entry *nentry;
         struct medusa_buffer_chunked *chunked = (struct medusa_buffer_chunked *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(chunked)) {
                 return -EINVAL;
         }
         if (length < 0) {
-                length = chunked->length;
+                length = chunked->total_length;
         }
-        if (chunked->length < length) {
-                length = chunked->length;
+        if (chunked->total_length < length) {
+                length = chunked->total_length;
         }
-        if (chunked->length > length) {
-                memmove(chunked->data, chunked->data + length, chunked->length - length);
-                chunked->length -= length;
+        if (chunked->total_length > length) {
+                w = 0;
+                TAILQ_FOREACH_SAFE(entry, &chunked->entries, list, nentry) {
+                        if (w == length) {
+                                break;
+                        }
+                        l = MIN(length - w, entry->size - entry->offset - entry->length);
+                        if (l < entry->size - entry->offset - entry->length) {
+                                entry->offset += l;
+                        } else {
+                                if (entry == chunked->active) {
+                                        chunked->active = NULL;
+                                }
+                                TAILQ_REMOVE(&chunked->entries, entry, list);
+                                free(entry);
+                        }
+                        w += l;
+                        chunked->total_length -= l;
+                        chunked->total_size -= entry->size;
+                }
         } else {
-                chunked->length = 0;
+                TAILQ_FOREACH_SAFE(entry, &chunked->entries, list, nentry) {
+                        TAILQ_REMOVE(&chunked->entries, entry, list);
+                        free(entry);
+                }
+                chunked->total_length = 0;
+                chunked->total_size = 0;
+                chunked->active = NULL;
         }
         return 0;
 }
 
 static int chunked_buffer_reset (struct medusa_buffer *buffer)
 {
+        struct medusa_buffer_chunked_entry *entry;
+        struct medusa_buffer_chunked_entry *nentry;
         struct medusa_buffer_chunked *chunked = (struct medusa_buffer_chunked *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(chunked)) {
                 return -EINVAL;
         }
-        chunked->length = 0;
+        TAILQ_FOREACH_SAFE(entry, &chunked->entries, list, nentry) {
+                TAILQ_REMOVE(&chunked->entries, entry, list);
+                free(entry);
+        }
+        chunked->total_length = 0;
+        chunked->total_size = 0;
+        chunked->active = NULL;
         return 0;
 }
 
 static void chunked_buffer_destroy (struct medusa_buffer *buffer)
 {
+        struct medusa_buffer_chunked_entry *entry;
+        struct medusa_buffer_chunked_entry *nentry;
         struct medusa_buffer_chunked *chunked = (struct medusa_buffer_chunked *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(chunked)) {
                 return;;
         }
-        if (chunked->data != NULL) {
-                free(chunked->data);
+        TAILQ_FOREACH_SAFE(entry, &chunked->entries, list, nentry) {
+                TAILQ_REMOVE(&chunked->entries, entry, list);
+                free(entry);
         }
 #if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
         medusa_pool_free(chunked);
@@ -401,8 +445,6 @@ static void chunked_buffer_destroy (struct medusa_buffer *buffer)
 }
 
 const struct medusa_buffer_backend chunked_buffer_backend = {
-        .resize         = chunked_buffer_resize,
-
         .get_size       = chunked_buffer_get_size,
         .get_length     = chunked_buffer_get_length,
 
@@ -429,7 +471,7 @@ int medusa_buffer_chunked_init_options_default (struct medusa_buffer_chunked_ini
         }
         memset(options, 0, sizeof(struct medusa_buffer_chunked_init_options));
         options->flags = MEDUSA_BUFFER_CHUNKED_FLAG_DEFAULT;
-        options->grow = MEDUSA_BUFFER_CHUNKED_DEFAULT_GROW;
+        options->chunk = MEDUSA_BUFFER_CHUNKED_DEFAULT_GROW;
         return 0;
 }
 
@@ -442,7 +484,7 @@ struct medusa_buffer * medusa_buffer_chunked_create (unsigned int flags, unsigne
                 return MEDUSA_ERR_PTR(rc);
         }
         options.flags = flags;
-        options.grow = grow;
+        options.chunk = grow;
         return medusa_buffer_chunked_create_with_options(&options);
 
 }
@@ -462,9 +504,10 @@ struct medusa_buffer * medusa_buffer_chunked_create_with_options (const struct m
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
         memset(chunked, 0, sizeof(struct medusa_buffer_chunked));
-        chunked->grow = options->grow;
-        if (chunked->grow <= 0) {
-                chunked->grow = MEDUSA_BUFFER_CHUNKED_DEFAULT_GROW;
+        TAILQ_INIT(&chunked->entries);
+        chunked->chunk_size = options->chunk;
+        if (chunked->chunk_size <= 0) {
+                chunked->chunk_size = MEDUSA_BUFFER_CHUNKED_DEFAULT_GROW;
         }
         chunked->buffer.backend = &chunked_buffer_backend;
         return &chunked->buffer;

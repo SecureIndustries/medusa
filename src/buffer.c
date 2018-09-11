@@ -163,7 +163,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_commit (struct medusa
         if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
                 return -EINVAL;
         }
-        if (niovecs <= 0) {
+        if (niovecs < 0) {
                 return -EINVAL;
         }
         return buffer->backend->commit(buffer, iovecs, niovecs);
@@ -246,7 +246,7 @@ __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_cr
                         return MEDUSA_ERR_PTR(rc);
                 }
                 chunked_options.flags = MEDUSA_BUFFER_CHUNKED_FLAG_DEFAULT;
-                chunked_options.grow = options->u.chunked.chunk_size;
+                chunked_options.chunk = options->u.chunked.chunk_size;
                 return medusa_buffer_chunked_create_with_options(&chunked_options);
         } else {
                 return MEDUSA_ERR_PTR(-ENOENT);

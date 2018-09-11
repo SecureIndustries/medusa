@@ -13,7 +13,7 @@ enum {
 
 struct medusa_buffer_chunked_init_options {
         unsigned int flags;
-        unsigned int grow;
+        unsigned int chunk;
 };
 
 int medusa_buffer_chunked_init_options_default (struct medusa_buffer_chunked_init_options *options);

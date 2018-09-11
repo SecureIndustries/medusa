@@ -194,6 +194,9 @@ static int simple_buffer_commit (struct medusa_buffer *buffer, const struct medu
         if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
                 return -EINVAL;
         }
+        if (niovecs == 0) {
+                return 0;
+        }
         if (niovecs != 1) {
                 return -EINVAL;
         }
