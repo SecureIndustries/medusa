@@ -166,6 +166,12 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_reserve (struct medus
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->reserve)) {
                 return -EINVAL;
         }
+        if (length < 0) {
+                return -EINVAL;
+        }
+        if (niovecs < 0) {
+                return -EINVAL;
+        }
         return buffer->backend->reserve(buffer, length, iovecs, niovecs);
 }
 
@@ -180,6 +186,12 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_commit (struct medusa
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->commit)) {
                 return -EINVAL;
         }
+        if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
+                return -EINVAL;
+        }
+        if (niovecs <= 0) {
+                return -EINVAL;
+        }
         return buffer->backend->commit(buffer, iovecs, niovecs);
 }
 
@@ -192,6 +204,9 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_peek (struct medusa_b
                 return -EINVAL;
         }
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->peek)) {
+                return -EINVAL;
+        }
+        if (offset < 0) {
                 return -EINVAL;
         }
         return buffer->backend->peek(buffer, offset, length, iovecs, niovecs);
