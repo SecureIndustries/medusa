@@ -9,6 +9,7 @@
 #include <errno.h>
 
 #include "medusa/error.h"
+#include "medusa/clock.h"
 #include "medusa/buffer.h"
 #include "medusa/tcpsocket.h"
 #include "medusa/monitor.h"
@@ -260,6 +261,10 @@ int main (int argc, char *argv[])
         int rc;
         unsigned int i;
 
+        struct timespec timespec_start;
+        struct timespec timespec_finish;
+        struct timespec timespec_total;
+
         srand(time(NULL));
         signal(SIGALRM, sigalarm_handler);
         signal(SIGINT, sigint_handler);
@@ -293,6 +298,7 @@ int main (int argc, char *argv[])
                 alarm(30);
                 fprintf(stderr, "testing poll: %d ... \n", g_backend);
 
+                medusa_clock_monotonic(&timespec_start);
                 rc = test_poll(g_backend);
                 if (rc != 0) {
                         fprintf(stderr, "fail\n");
@@ -300,11 +306,15 @@ int main (int argc, char *argv[])
                 } else {
                         fprintf(stderr, "success\n");
                 }
+                medusa_clock_monotonic(&timespec_finish);
+                medusa_timespec_sub(&timespec_finish, &timespec_start, &timespec_total);
+                fprintf(stderr, "timespec: %.6f\n", timespec_total.tv_sec + timespec_total.tv_nsec * 1e-9);
         } else {
                 for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
                         alarm(30);
                         fprintf(stderr, "testing poll: %d ... \n", g_polls[i]);
 
+                        medusa_clock_monotonic(&timespec_start);
                         rc = test_poll(g_polls[i]);
                         if (rc != 0) {
                                 fprintf(stderr, "fail\n");
@@ -312,6 +322,9 @@ int main (int argc, char *argv[])
                         } else {
                                 fprintf(stderr, "success\n");
                         }
+                        medusa_clock_monotonic(&timespec_finish);
+                        medusa_timespec_sub(&timespec_finish, &timespec_start, &timespec_total);
+                        fprintf(stderr, "timespec: %.6f\n", timespec_total.tv_sec + timespec_total.tv_nsec * 1e-9);
                 }
         }
 
