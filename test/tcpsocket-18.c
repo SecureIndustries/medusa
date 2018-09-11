@@ -29,10 +29,12 @@ static const unsigned int g_polls[] = {
 static int g_backend;
 static int g_nclients;
 
+static int g_clients_connection;
 static int g_clients_connected;
 static int g_clients_read_finished;
 static int g_clients_disconnected;
 
+static int g_server_connection;
 static int g_server_connected;
 static int g_server_write_finished;
 static int g_server_disconnected;
@@ -127,6 +129,7 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
                 if (MEDUSA_IS_ERR_OR_NULL(accepted)) {
                         return MEDUSA_PTR_ERR(accepted);
                 }
+                g_server_connection += 1;
         }
         return 0;
 }
@@ -182,6 +185,16 @@ static int test_poll (unsigned int poll)
 
         fprintf(stderr, "port: %d\n", port);
 
+        g_clients_connection    = 0;
+        g_clients_connected     = 0;
+        g_clients_read_finished = 0;
+        g_clients_disconnected  = 0;
+
+        g_server_connection     = 0;
+        g_server_connected      = 0;
+        g_server_write_finished = 0;
+        g_server_disconnected   = 0;
+
         for (i = 0; i < g_nclients; i++) {
                 rc = medusa_tcpsocket_init_options_default(&tcpsocket_init_options);
                 if (rc < 0) {
@@ -205,15 +218,8 @@ static int test_poll (unsigned int poll)
                         fprintf(stderr, "can not connect tcpsocket\n");
                         goto bail;
                 }
+                g_clients_connection += 1;
         }
-
-        g_clients_connected     = 0;
-        g_clients_read_finished = 0;
-        g_clients_disconnected  = 0;
-
-        g_server_connected      = 0;
-        g_server_write_finished = 0;
-        g_server_disconnected   = 0;
 
         while (1) {
                 rc = medusa_monitor_run_once(monitor);
@@ -222,8 +228,8 @@ static int test_poll (unsigned int poll)
                         goto bail;
                 }
                 fprintf(stderr, "monitor run:\n");
-                fprintf(stderr, "  client connected: %8d, read-finished : %8d, disconnected: %8d\n", g_clients_connected, g_clients_read_finished, g_clients_disconnected);
-                fprintf(stderr, "  server connected: %8d, write-finished: %8d, disconnected: %8d\n", g_server_connected, g_server_write_finished, g_server_disconnected);
+                fprintf(stderr, "  client connected: %8d / %8d, read-finished : %8d, disconnected: %8d\n", g_clients_connection, g_clients_connected, g_clients_read_finished, g_clients_disconnected);
+                fprintf(stderr, "  server connected: %8d / %8d, write-finished: %8d, disconnected: %8d\n", g_server_connection, g_server_connected, g_server_write_finished, g_server_disconnected);
 
                 if (g_clients_connected == g_nclients &&
                     g_clients_read_finished == g_nclients &&
