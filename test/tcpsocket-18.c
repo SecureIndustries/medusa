@@ -53,10 +53,13 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         int rc;
         struct medusa_buffer *rbuffer;
         (void) context;
+        fprintf(stderr, "client  : %p, events: 0x%08x\n", tcpsocket, events);
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
+                fprintf(stderr, "  connected\n");
                 g_clients_connected += 1;
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
+                fprintf(stderr, "  read\n");
                 rbuffer = medusa_tcpsocket_get_read_buffer(tcpsocket);
                 if (MEDUSA_IS_ERR_OR_NULL(rbuffer)) {
                         return MEDUSA_PTR_ERR(rbuffer);
@@ -71,6 +74,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_DESTROY) {
+                fprintf(stderr, "  destroy\n");
                 g_clients_disconnected += 1;
         }
         return 0;
@@ -80,17 +84,21 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
 {
         int rc;
         (void) context;
+        fprintf(stderr, "server  : %p, events: 0x%08x\n", tcpsocket, events);
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
+                fprintf(stderr, "  connected\n");
                 g_server_connected += 1;
-                rc = medusa_tcpsocket_printf(tcpsocket, g_greeting);
+                rc = medusa_tcpsocket_printf(tcpsocket, "%s", g_greeting);
                 if (rc < 0) {
                         return rc;
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED) {
+                fprintf(stderr, "  write finished\n");
                 g_server_write_finished += 1;
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
+                fprintf(stderr, "  disconnected\n");
                 g_server_disconnected += 1;
         }
         return 0;
@@ -101,7 +109,9 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
         int rc;
         struct medusa_tcpsocket *accepted;
         struct medusa_tcpsocket_accept_options accepted_options;
+        fprintf(stderr, "listener: %p, events: 0x%08x\n", tcpsocket, events);
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
+                fprintf(stderr, "  accept\n");
                 rc = medusa_tcpsocket_accept_options_default(&accepted_options);
                 if (rc < 0) {
                         return rc;

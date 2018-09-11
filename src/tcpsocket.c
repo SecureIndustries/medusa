@@ -156,7 +156,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                         }
                                         tevents |= MEDUSA_TCPSOCKET_EVENT_WRITTEN;
                                 }
-                                //break;
+                                break;
                         }
                         length = medusa_buffer_get_length(tcpsocket->wbuffer);
                         if (length <= 0) {
@@ -211,6 +211,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                         }
                                         tevents |= MEDUSA_TCPSOCKET_EVENT_READ;
                                 }
+                                break;
                         }
                 } else {
                         goto bail;

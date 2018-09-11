@@ -97,8 +97,7 @@ static int simple_buffer_prepend (struct medusa_buffer *buffer, const void *data
         memmove(simple->data + length, simple->data, simple->length);
         memcpy(simple->data, data, length);
         simple->length += length;
-
-        return 0;
+        return length;
 }
 
 static int simple_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length)
@@ -123,7 +122,7 @@ static int simple_buffer_append (struct medusa_buffer *buffer, const void *data,
         }
         memcpy(simple->data + simple->length, data, length);
         simple->length += length;
-        return 0;
+        return length;
 }
 
 static int simple_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va)
@@ -155,7 +154,7 @@ static int simple_buffer_vprintf (struct medusa_buffer *buffer, const char *form
         }
         simple->length += rc;
         va_end(vs);
-        return 0;
+        return rc;
 }
 
 static int simple_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs)
@@ -225,6 +224,9 @@ static int simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int
                 length = simple->length;
         } else {
                 length = MIN(length, simple->length);
+        }
+        if (length == 0) {
+                return 0;
         }
         iovecs[0].data = simple->data;
         iovecs[0].length = length;
