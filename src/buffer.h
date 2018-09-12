@@ -34,6 +34,7 @@ struct medusa_buffer_init_options {
                 } simple;
                 struct {
                         unsigned int chunk_size;
+                        unsigned int chunk_count;
                 } chunked;
         } u;
 };

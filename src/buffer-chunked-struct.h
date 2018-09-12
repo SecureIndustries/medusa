@@ -26,8 +26,10 @@ struct medusa_buffer_chunked {
         struct medusa_buffer_chunked_entries entries;
         struct medusa_buffer_chunked_entry *active;
         int64_t chunk_size;
+        int64_t chunk_count;
         int64_t total_size;
         int64_t total_length;
+        struct medusa_buffer_chunked_entry_pool *chunk_pool;
 };
 
 #endif

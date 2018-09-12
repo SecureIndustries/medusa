@@ -246,7 +246,8 @@ __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_cr
                         return MEDUSA_ERR_PTR(rc);
                 }
                 chunked_options.flags = MEDUSA_BUFFER_CHUNKED_FLAG_DEFAULT;
-                chunked_options.chunk = options->u.chunked.chunk_size;
+                chunked_options.chunk_size = options->u.chunked.chunk_size;
+                chunked_options.chunk_count = options->u.chunked.chunk_count;
                 return medusa_buffer_chunked_create_with_options(&chunked_options);
         } else {
                 return MEDUSA_ERR_PTR(-ENOENT);

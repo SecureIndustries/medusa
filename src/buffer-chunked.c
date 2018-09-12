@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <pthread.h>
 #include <errno.h>
 
 #include "queue.h"
@@ -17,13 +18,23 @@
 
 #define MIN(a, b)                               (((a) < (b)) ? (a) : (b))
 
-#define MEDUSA_BUFFER_USE_POOL      1
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
-static struct medusa_pool *g_pool_buffer_chunked;
-static struct medusa_pool *g_pool_buffer_chunked_entry_128;
-static struct medusa_pool *g_pool_buffer_chunked_entry_256;
-static struct medusa_pool *g_pool_buffer_chunked_entry_512;
-static struct medusa_pool *g_pool_buffer_chunked_entry_1024;
+#define MEDUSA_BUFFER_CHUNK_USE_POOL      1
+
+#if defined(MEDUSA_BUFFER_CHUNK_USE_POOL) && (MEDUSA_BUFFER_CHUNK_USE_POOL == 1)
+
+TAILQ_HEAD(medusa_buffer_chunked_entry_pools, medusa_buffer_chunked_entry_pool);
+struct medusa_buffer_chunked_entry_pool {
+        TAILQ_ENTRY(medusa_buffer_chunked_entry_pool) list;
+        unsigned int size;
+        struct medusa_pool *pool;
+};
+
+static struct medusa_buffer_chunked_entry_pools g_buffer_chunked_entry_pools;
+static pthread_mutex_t g_buffer_chunked_entry_pools_mutex;
+
+static struct medusa_pool *g_buffer_chunked_pool;
+static struct medusa_pool *g_buffer_chunked_entry_pool_pool;
+
 #endif
 
 static int chunked_buffer_resize (struct medusa_buffer *buffer, int64_t size)
@@ -47,19 +58,8 @@ static int chunked_buffer_resize (struct medusa_buffer *buffer, int64_t size)
         c /= chunked->chunk_size;
         for (i = 0; i < c; i++) {
                 falloc = 0;
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
-                if (chunked->chunk_size == 128) {
-                        entry = medusa_pool_malloc(g_pool_buffer_chunked_entry_128);
-                } else if (chunked->chunk_size == 256) {
-                        entry = medusa_pool_malloc(g_pool_buffer_chunked_entry_256);
-                } else if (chunked->chunk_size == 512) {
-                        entry = medusa_pool_malloc(g_pool_buffer_chunked_entry_512);
-                } else if (chunked->chunk_size == 1024) {
-                        entry = medusa_pool_malloc(g_pool_buffer_chunked_entry_1024);
-                } else {
-                        entry = malloc(sizeof(struct medusa_buffer_chunked_entry) + chunked->chunk_size);
-                        falloc = MEDUSA_BUFFER_CHUNKED_ENTRY_FLAG_ALLOC;
-                }
+#if defined(MEDUSA_BUFFER_CHUNK_USE_POOL) && (MEDUSA_BUFFER_CHUNK_USE_POOL == 1)
+                entry = medusa_pool_malloc(chunked->chunk_pool->pool);
 #else
                 entry = malloc(sizeof(struct medusa_buffer_chunked_entry) + chunked->chunk_size);
                 falloc = MEDUSA_BUFFER_CHUNKED_ENTRY_FLAG_ALLOC;
@@ -122,19 +122,8 @@ static int chunked_buffer_prepend (struct medusa_buffer *buffer, const void *dat
         c /= chunked->chunk_size;
         for (i = 0; i < c; i++) {
                 falloc = 0;
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
-                if (chunked->chunk_size == 128) {
-                        entry = medusa_pool_malloc(g_pool_buffer_chunked_entry_128);
-                } else if (chunked->chunk_size == 256) {
-                        entry = medusa_pool_malloc(g_pool_buffer_chunked_entry_256);
-                } else if (chunked->chunk_size == 512) {
-                        entry = medusa_pool_malloc(g_pool_buffer_chunked_entry_512);
-                } else if (chunked->chunk_size == 1024) {
-                        entry = medusa_pool_malloc(g_pool_buffer_chunked_entry_1024);
-                } else {
-                        entry = malloc(sizeof(struct medusa_buffer_chunked_entry) + chunked->chunk_size);
-                        falloc = MEDUSA_BUFFER_CHUNKED_ENTRY_FLAG_ALLOC;
-                }
+#if defined(MEDUSA_BUFFER_CHUNK_USE_POOL) && (MEDUSA_BUFFER_CHUNK_USE_POOL == 1)
+                entry = medusa_pool_malloc(chunked->chunk_pool->pool);
 #else
                 entry = malloc(sizeof(struct medusa_buffer_chunked_entry) + chunked->chunk_size);
                 falloc = MEDUSA_BUFFER_CHUNKED_ENTRY_FLAG_ALLOC;
@@ -493,7 +482,7 @@ static void chunked_buffer_destroy (struct medusa_buffer *buffer)
                         medusa_pool_free(entry);
                 }
         }
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
+#if defined(MEDUSA_BUFFER_CHUNK_USE_POOL) && (MEDUSA_BUFFER_CHUNK_USE_POOL == 1)
         medusa_pool_free(chunked);
 #else
         free(chunked);
@@ -527,11 +516,12 @@ int medusa_buffer_chunked_init_options_default (struct medusa_buffer_chunked_ini
         }
         memset(options, 0, sizeof(struct medusa_buffer_chunked_init_options));
         options->flags = MEDUSA_BUFFER_CHUNKED_FLAG_DEFAULT;
-        options->chunk = MEDUSA_BUFFER_CHUNKED_DEFAULT_CHUNK_SIZE;
+        options->chunk_size = MEDUSA_BUFFER_CHUNKED_DEFAULT_CHUNK_SIZE;
+        options->chunk_count = MEDUSA_BUFFER_CHUNKED_DEFAULT_CHUNK_COUNT;
         return 0;
 }
 
-struct medusa_buffer * medusa_buffer_chunked_create (unsigned int flags, unsigned int grow)
+struct medusa_buffer * medusa_buffer_chunked_create (unsigned int flags, unsigned int chunk_size, unsigned int chunk_count)
 {
         int rc;
         struct medusa_buffer_chunked_init_options options;
@@ -540,7 +530,8 @@ struct medusa_buffer * medusa_buffer_chunked_create (unsigned int flags, unsigne
                 return MEDUSA_ERR_PTR(rc);
         }
         options.flags = flags;
-        options.chunk = grow;
+        options.chunk_size = chunk_size;
+        options.chunk_count = chunk_count;
         return medusa_buffer_chunked_create_with_options(&options);
 
 }
@@ -548,11 +539,14 @@ struct medusa_buffer * medusa_buffer_chunked_create (unsigned int flags, unsigne
 struct medusa_buffer * medusa_buffer_chunked_create_with_options (const struct medusa_buffer_chunked_init_options *options)
 {
         struct medusa_buffer_chunked *chunked;
+#if defined(MEDUSA_BUFFER_CHUNK_USE_POOL) && (MEDUSA_BUFFER_CHUNK_USE_POOL == 1)
+        struct medusa_buffer_chunked_entry_pool *pool;
+#endif
         if (MEDUSA_IS_ERR_OR_NULL(options)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
-        chunked = medusa_pool_malloc(g_pool_buffer_chunked);
+#if defined(MEDUSA_BUFFER_CHUNK_USE_POOL) && (MEDUSA_BUFFER_CHUNK_USE_POOL == 1)
+        chunked = medusa_pool_malloc(g_buffer_chunked_pool);
 #else
         chunked = malloc(sizeof(struct medusa_buffer_chunked));
 #endif
@@ -561,42 +555,70 @@ struct medusa_buffer * medusa_buffer_chunked_create_with_options (const struct m
         }
         memset(chunked, 0, sizeof(struct medusa_buffer_chunked));
         TAILQ_INIT(&chunked->entries);
-        chunked->chunk_size = options->chunk;
+        chunked->chunk_size = options->chunk_size;
         if (chunked->chunk_size <= 0) {
                 chunked->chunk_size = MEDUSA_BUFFER_CHUNKED_DEFAULT_CHUNK_SIZE;
         }
+        chunked->chunk_count = options->chunk_count;
+        if (chunked->chunk_count <= 0) {
+                chunked->chunk_count = MEDUSA_BUFFER_CHUNKED_DEFAULT_CHUNK_COUNT;
+        }
+#if defined(MEDUSA_BUFFER_CHUNK_USE_POOL) && (MEDUSA_BUFFER_CHUNK_USE_POOL == 1)
+        pthread_mutex_lock(&g_buffer_chunked_entry_pools_mutex);
+        TAILQ_FOREACH(pool, &g_buffer_chunked_entry_pools, list) {
+                if (pool->size == chunked->chunk_size) {
+                        break;
+                }
+        }
+        if (pool == NULL) {
+                pool = medusa_pool_malloc(g_buffer_chunked_entry_pool_pool);
+                if (pool == NULL) {
+                        pthread_mutex_unlock(&g_buffer_chunked_entry_pools_mutex);
+                        return MEDUSA_ERR_PTR(-ENOMEM);
+                }
+                memset(pool, 0, sizeof(struct medusa_buffer_chunked_entry_pool));
+                pool->pool = medusa_pool_create("medusa-buffer-chunked-entry", sizeof(struct medusa_buffer_chunked) + chunked->chunk_size, 0, chunked->chunk_count, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
+                if (pool->pool == NULL) {
+                        free(pool);
+                        pthread_mutex_unlock(&g_buffer_chunked_entry_pools_mutex);
+                        return MEDUSA_ERR_PTR(MEDUSA_PTR_ERR(pool->pool));
+                }
+                pool->size = chunked->chunk_size;
+                TAILQ_INSERT_TAIL(&g_buffer_chunked_entry_pools, pool, list);
+        }
+        chunked->chunk_pool = pool;
+        pthread_mutex_unlock(&g_buffer_chunked_entry_pools_mutex);
+#endif
         chunked->buffer.backend = &chunked_buffer_backend;
         return &chunked->buffer;
 }
 
 __attribute__ ((constructor)) static void buffer_chunked_constructor (void)
 {
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
-        g_pool_buffer_chunked = medusa_pool_create("medusa-buffer-chunked", sizeof(struct medusa_buffer_chunked), 0, 0, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
-        g_pool_buffer_chunked_entry_128 = medusa_pool_create("medusa-buffer-chunked-entry-128", sizeof(struct medusa_buffer_chunked_entry) + 128, 0, 128, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
-        g_pool_buffer_chunked_entry_256 = medusa_pool_create("medusa-buffer-chunked-entry-256", sizeof(struct medusa_buffer_chunked_entry) + 256, 0, 128, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
-        g_pool_buffer_chunked_entry_512 = medusa_pool_create("medusa-buffer-chunked-entry-512", sizeof(struct medusa_buffer_chunked_entry) + 512, 0, 128, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
-        g_pool_buffer_chunked_entry_1024 = medusa_pool_create("medusa-buffer-chunked-entry-1024", sizeof(struct medusa_buffer_chunked_entry) + 1024, 0, 128, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
+#if defined(MEDUSA_BUFFER_CHUNK_USE_POOL) && (MEDUSA_BUFFER_CHUNK_USE_POOL == 1)
+        pthread_mutex_init(&g_buffer_chunked_entry_pools_mutex, NULL);
+        TAILQ_INIT(&g_buffer_chunked_entry_pools);
+        g_buffer_chunked_pool = medusa_pool_create("medusa-buffer-chunked", sizeof(struct medusa_buffer_chunked), 0, 0, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
+        g_buffer_chunked_entry_pool_pool = medusa_pool_create("medusa-buffer-chunked-entry-pool-pool", sizeof(struct medusa_buffer_chunked_entry_pool), 0, 0, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
 #endif
 }
 
 __attribute__ ((destructor)) static void buffer_chunked_destructor (void)
 {
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
-        if (g_pool_buffer_chunked != NULL) {
-                medusa_pool_destroy(g_pool_buffer_chunked);
+#if defined(MEDUSA_BUFFER_CHUNK_USE_POOL) && (MEDUSA_BUFFER_CHUNK_USE_POOL == 1)
+        struct medusa_buffer_chunked_entry_pool *pool;
+        struct medusa_buffer_chunked_entry_pool *npool;
+        TAILQ_FOREACH_SAFE(pool, &g_buffer_chunked_entry_pools, list, npool) {
+                TAILQ_REMOVE(&g_buffer_chunked_entry_pools, pool, list);
+                medusa_pool_destroy(pool->pool);
+                medusa_pool_free(pool);
         }
-        if (g_pool_buffer_chunked_entry_128 != NULL) {
-                medusa_pool_destroy(g_pool_buffer_chunked_entry_128);
+        if (g_buffer_chunked_entry_pool_pool != NULL) {
+                medusa_pool_destroy(g_buffer_chunked_entry_pool_pool);
         }
-        if (g_pool_buffer_chunked_entry_256 != NULL) {
-                medusa_pool_destroy(g_pool_buffer_chunked_entry_256);
+        if (g_buffer_chunked_pool != NULL) {
+                medusa_pool_destroy(g_buffer_chunked_pool);
         }
-        if (g_pool_buffer_chunked_entry_512 != NULL) {
-                medusa_pool_destroy(g_pool_buffer_chunked_entry_512);
-        }
-        if (g_pool_buffer_chunked_entry_1024 != NULL) {
-                medusa_pool_destroy(g_pool_buffer_chunked_entry_1024);
-        }
+        pthread_mutex_destroy(&g_buffer_chunked_entry_pools_mutex);
 #endif
 }

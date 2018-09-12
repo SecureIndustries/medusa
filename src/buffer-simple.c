@@ -15,8 +15,8 @@
 
 #define MIN(a, b)                               (((a) < (b)) ? (a) : (b))
 
-#define MEDUSA_BUFFER_USE_POOL      1
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
+#define MEDUSA_BUFFER_SIMPLE_USE_POOL      1
+#if defined(MEDUSA_BUFFER_SIMPLE_USE_POOL) && (MEDUSA_BUFFER_SIMPLE_USE_POOL == 1)
 static struct medusa_pool *g_pool_buffer_simple;
 #endif
 
@@ -277,7 +277,7 @@ static void simple_buffer_destroy (struct medusa_buffer *buffer)
         if (simple->data != NULL) {
                 free(simple->data);
         }
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
+#if defined(MEDUSA_BUFFER_SIMPLE_USE_POOL) && (MEDUSA_BUFFER_SIMPLE_USE_POOL == 1)
         medusa_pool_free(simple);
 #else
         free(simple);
@@ -335,7 +335,7 @@ struct medusa_buffer * medusa_buffer_simple_create_with_options (const struct me
         if (MEDUSA_IS_ERR_OR_NULL(options)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
+#if defined(MEDUSA_BUFFER_SIMPLE_USE_POOL) && (MEDUSA_BUFFER_SIMPLE_USE_POOL == 1)
         simple = medusa_pool_malloc(g_pool_buffer_simple);
 #else
         simple = malloc(sizeof(struct medusa_buffer_simple));
@@ -354,14 +354,14 @@ struct medusa_buffer * medusa_buffer_simple_create_with_options (const struct me
 
 __attribute__ ((constructor)) static void buffer_simple_constructor (void)
 {
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
+#if defined(MEDUSA_BUFFER_SIMPLE_USE_POOL) && (MEDUSA_BUFFER_SIMPLE_USE_POOL == 1)
         g_pool_buffer_simple = medusa_pool_create("medusa-buffer-simple", sizeof(struct medusa_buffer_simple), 0, 0, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
 #endif
 }
 
 __attribute__ ((destructor)) static void buffer_simple_destructor (void)
 {
-#if defined(MEDUSA_BUFFER_USE_POOL) && (MEDUSA_BUFFER_USE_POOL == 1)
+#if defined(MEDUSA_BUFFER_SIMPLE_USE_POOL) && (MEDUSA_BUFFER_SIMPLE_USE_POOL == 1)
         if (g_pool_buffer_simple != NULL) {
                 medusa_pool_destroy(g_pool_buffer_simple);
         }
