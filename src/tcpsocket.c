@@ -1126,6 +1126,25 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_vprintf (struct me
         return size;
 }
 
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_get_write_length (const struct medusa_tcpsocket *tcpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->rbuffer)) {
+                return -EIO;
+        }
+        return medusa_buffer_get_length(tcpsocket->rbuffer);
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_tcpsocket_get_write_buffer (struct medusa_tcpsocket *tcpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return tcpsocket->wbuffer;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events)
 {
         int rc;
