@@ -127,6 +127,7 @@ struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcps
 struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options (const struct medusa_tcpsocket_accept_options *options);
 
 int medusa_tcpsocket_read (struct medusa_tcpsocket *tcpsocket, void *data, int64_t size);
+int64_t medusa_tcpsocket_get_read_length (const struct medusa_tcpsocket *tcpsocket);
 struct medusa_buffer * medusa_tcpsocket_get_read_buffer (struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_write (struct medusa_tcpsocket *tcpsocket, const void *data, int64_t size);
