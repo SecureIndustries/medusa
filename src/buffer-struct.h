@@ -10,7 +10,6 @@ struct medusa_buffer_backend {
         int64_t (*get_length) (const struct medusa_buffer *buffer);
 
         int (*prepend) (struct medusa_buffer *buffer, const void *data, int64_t length);
-        int (*append) (struct medusa_buffer *buffer, const void *data, int64_t length);
         int (*appendv) (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs);
         int (*vprintf) (struct medusa_buffer *buffer, const char *format, va_list va);
 

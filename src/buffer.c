@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <errno.h>
 
+#include <sys/uio.h>
+
 #include "error.h"
 #include "buffer.h"
 #include "buffer-struct.h"
@@ -76,13 +78,9 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_prepend (struct medus
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
+        int niovecs;
+        struct iovec iovecs[1];
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->append)) {
                 return -EINVAL;
         }
         if (MEDUSA_IS_ERR_OR_NULL(data)) {
@@ -91,7 +89,13 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_append (struct medusa
         if (length < 0) {
                 return -EINVAL;
         }
-        return buffer->backend->append(buffer, data, length);
+        if (length == 0) {
+                return 0;
+        }
+        niovecs = 1;
+        iovecs[0].iov_base = (void *) data;
+        iovecs[0].iov_len  = length;
+        return medusa_buffer_appendv(buffer, iovecs, niovecs);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_appendv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)

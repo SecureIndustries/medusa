@@ -319,7 +319,6 @@ const struct medusa_buffer_backend simple_buffer_backend = {
         .get_length     = simple_buffer_get_length,
 
         .prepend        = simple_buffer_prepend,
-        .append         = simple_buffer_append,
         .appendv        = simple_buffer_appendv,
         .vprintf        = simple_buffer_vprintf,
 

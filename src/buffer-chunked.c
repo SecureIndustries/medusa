@@ -528,7 +528,6 @@ const struct medusa_buffer_backend chunked_buffer_backend = {
         .get_length     = chunked_buffer_get_length,
 
         .prepend        = chunked_buffer_prepend,
-        .append         = chunked_buffer_append,
         .appendv        = chunked_buffer_appendv,
         .vprintf        = chunked_buffer_vprintf,
 
