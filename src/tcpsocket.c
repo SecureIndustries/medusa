@@ -26,6 +26,10 @@
 
 #define MIN(a, b)                               (((a) < (b)) ? (a) : (b))
 
+#define MEDUSA_TCPSOCKET_USE_POOL               1
+#define MEDUSA_TCPSOCKET_USE_READV              1
+#define MEDUSA_TCPSOCKET_USE_WRITEV             1
+
 #define MEDUSA_TCPSOCKET_DEFAULT_BACKLOG        128
 #define MEDUSA_TCPSOCKET_DEFAULT_IOVECS         4
 
@@ -48,7 +52,6 @@ enum {
 #define MEDUSA_TCPSOCKET_STATE_MASK             0xff
 #define MEDUSA_TCPSOCKET_STATE_SHIFT            0x18
 
-#define MEDUSA_TCPSOCKET_USE_POOL       1
 #if defined(MEDUSA_TCPSOCKET_USE_POOL) && (MEDUSA_TCPSOCKET_USE_POOL == 1)
 static struct medusa_pool *g_pool;
 #endif
@@ -142,7 +145,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                         if (length <= 0) {
                                 goto bail;
                         }
-#if 1
+#if defined(MEDUSA_TCPSOCKET_USE_WRITEV) && (MEDUSA_TCPSOCKET_USE_WRITEV == 1)
                         niovecs = medusa_buffer_peek(tcpsocket->wbuffer, 0, -1, NULL, 0);
                         if (niovecs <= 0) {
                                 goto bail;
@@ -241,7 +244,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                         if (n < 0) {
                                 goto bail;
                         }
-#if 1
+#if defined(MEDUSA_TCPSOCKET_USE_READV) && (MEDUSA_TCPSOCKET_USE_READV == 1)
                         niovecs = medusa_buffer_reserve(tcpsocket->rbuffer, n, NULL, 0);
                         if (niovecs < 0) {
                                 goto bail;
@@ -290,12 +293,15 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                 tevents |= MEDUSA_TCPSOCKET_EVENT_READ;
                         }
 #else
+                        struct iovec iovec;
                         while (1) {
                                 niovecs = medusa_buffer_reserve(tcpsocket->rbuffer, n, &iovec, 1);
                                 if (niovecs < 0) {
                                         goto bail;
                                 }
                                 if (niovecs == 0) {
+                                        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                        tevents |= MEDUSA_TCPSOCKET_EVENT_DISCONNECTED;
                                         break;
                                 }
                                 rc = recv(tcpsocket->io.fd, iovec.iov_base, iovec.iov_len, 0);

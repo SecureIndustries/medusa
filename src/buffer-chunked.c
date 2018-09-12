@@ -302,6 +302,9 @@ static int chunked_buffer_reserve (struct medusa_buffer *buffer, int64_t length,
         if (chunked->active == NULL) {
                 chunked->active = TAILQ_FIRST(&chunked->entries);
         }
+        while (chunked->active->size - chunked->active->length <= 0) {
+                chunked->active = TAILQ_NEXT(chunked->active, list);
+        }
         n = 0;
         w = 0;
         entry = chunked->active;
@@ -364,6 +367,9 @@ static int chunked_buffer_commit (struct medusa_buffer *buffer, const struct iov
                 chunked->active->length += iovecs[i].iov_len;
                 chunked->active = TAILQ_NEXT(chunked->active, list);
                 chunked->total_length += iovecs[i].iov_len;
+        }
+        if (chunked->active == NULL) {
+                chunked->active = TAILQ_LAST(&chunked->entries, medusa_buffer_chunked_entries);
         }
         return i;
 }
