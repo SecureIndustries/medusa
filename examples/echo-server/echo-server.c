@@ -246,7 +246,7 @@ static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
                         return niovecs;
                 }
                 for (rlen = 0, i = 0; i < niovecs; i++) {
-                        rlen = iovecs[i].iov_len;
+                        rlen += iovecs[i].iov_len;
                 }
                 wlen = medusa_tcpsocket_writev(tcpsocket, iovecs, niovecs);
                 if (wlen < 0) {
