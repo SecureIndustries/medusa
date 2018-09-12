@@ -6,6 +6,8 @@
 #include <getopt.h>
 #include <errno.h>
 
+#include <sys/uio.h>
+
 #include "medusa/error.h"
 #include "medusa/buffer.h"
 #include "medusa/io.h"
@@ -64,7 +66,7 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
 
                         int i;
                         int niovecs;
-                        struct medusa_buffer_iovec *iovecs;
+                        struct iovec *iovecs;
 
                         rbuffer = medusa_tcpsocket_get_read_buffer(tcpsocket);
                         if (MEDUSA_IS_ERR_OR_NULL(rbuffer)) {
@@ -87,7 +89,7 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
                                 return -EIO;
                         }
 
-                        iovecs = malloc(sizeof(struct medusa_buffer_iovec) * niovecs);
+                        iovecs = malloc(sizeof(struct iovec) * niovecs);
                         if (iovecs == NULL) {
                                 return -ENOMEM;
                         }
@@ -103,7 +105,7 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
 
                         rlength = 0;
                         for (i = 0; i < niovecs; i++) {
-                                rlength += iovecs[i].length;
+                                rlength += iovecs[i].iov_len;
                         }
                         if (rlength != (int) strlen(option_string) + 1) {
                                 free(iovecs);
@@ -112,12 +114,12 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
 
                         rlength = 0;
                         for (i = 0; i < niovecs; i++) {
-                                rc = memcmp(iovecs[i].data, option_string + rlength, iovecs[i].length);
+                                rc = memcmp(iovecs[i].iov_base, option_string + rlength, iovecs[i].iov_len);
                                 if (rc != 0) {
                                         free(iovecs);
                                         return -EIO;
                                 }
-                                rlength += iovecs[i].length;
+                                rlength += iovecs[i].iov_len;
                         }
                         free(iovecs);
                 } else {

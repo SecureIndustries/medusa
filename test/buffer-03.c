@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <sys/uio.h>
 
 #include "medusa/error.h"
 #include "medusa/clock.h"
@@ -24,7 +25,7 @@ static int test_buffer (unsigned int type, unsigned int count)
         struct medusa_buffer *buffer;
 
         int niovecs;
-        struct medusa_buffer_iovec *iovecs;
+        struct iovec *iovecs;
 
         data = malloc(count);
         if (data == NULL) {
@@ -46,7 +47,7 @@ static int test_buffer (unsigned int type, unsigned int count)
                 fprintf(stderr, "medusa_buffer_reserve failed\n");
                 return -1;
         }
-        iovecs = malloc(sizeof(struct medusa_buffer_iovec) * niovecs);
+        iovecs = malloc(sizeof(struct iovec) * niovecs);
         if (iovecs == NULL) {
                 fprintf(stderr, "malloc failed\n");
                 return -1;
@@ -60,11 +61,11 @@ static int test_buffer (unsigned int type, unsigned int count)
 
         j = 0;
         for (i = 0; i < (unsigned int) niovecs; i++) {
-                if (iovecs[i].length > count - j) {
+                if (iovecs[i].iov_len > count - j) {
                         return -1;
                 }
-                memcpy(iovecs[i].data, data + j, iovecs[i].length);
-                j += iovecs[i].length;
+                memcpy(iovecs[i].iov_base, data + j, iovecs[i].iov_len);
+                j += iovecs[i].iov_len;
         }
 
         rc = medusa_buffer_commit(buffer, iovecs, niovecs);
@@ -81,7 +82,7 @@ static int test_buffer (unsigned int type, unsigned int count)
                 return -1;
         }
 
-        iovecs = malloc(sizeof(struct medusa_buffer_iovec) * niovecs);
+        iovecs = malloc(sizeof(struct iovec) * niovecs);
         if (iovecs == NULL) {
                 fprintf(stderr, "malloc failed\n");
                 return -1;
@@ -95,15 +96,15 @@ static int test_buffer (unsigned int type, unsigned int count)
 
         j = 0;
         for (i = 0; i < (unsigned int) niovecs; i++) {
-                if (iovecs[i].length > count - j) {
+                if (iovecs[i].iov_len > count - j) {
                         return -1;
                 }
-                rc = memcmp(data + j, iovecs[i].data, iovecs[i].length);
+                rc = memcmp(data + j, iovecs[i].iov_base, iovecs[i].iov_len);
                 if (rc != 0) {
-                        fprintf(stderr, "data mismatch @ i: %d / %d, j: %d / %d, iov: %ld\n", i, niovecs, j, count, iovecs[i].length);
+                        fprintf(stderr, "data mismatch @ i: %d / %d, j: %d / %d, iov: %ld\n", i, niovecs, j, count, iovecs[i].iov_len);
                         return -1;
                 }
-                j += iovecs[i].length;
+                j += iovecs[i].iov_len;
         }
         if (count != j) {
                 fprintf(stderr, "count: %d != j: %d, i: %d / %d\n", count, j, i, niovecs);

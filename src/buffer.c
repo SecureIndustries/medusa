@@ -94,6 +94,29 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_append (struct medusa
         return buffer->backend->append(buffer, data, length);
 }
 
+__attribute__ ((visibility ("default"))) int medusa_buffer_appendv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->appendv)) {
+                return -EINVAL;
+        }
+        if (niovecs < 0) {
+                return -EINVAL;
+        }
+        if (niovecs == 0) {
+                return 0;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
+                return -EINVAL;
+        }
+        return buffer->backend->appendv(buffer, iovecs, niovecs);
+}
+
 __attribute__ ((visibility ("default"))) int medusa_buffer_printf (struct medusa_buffer *buffer, const char *format, ...)
 {
         int rc;
@@ -129,7 +152,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_vprintf (struct medus
         return buffer->backend->vprintf(buffer, format, va);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs)
+__attribute__ ((visibility ("default"))) int medusa_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int niovecs)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
@@ -149,7 +172,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_reserve (struct medus
         return buffer->backend->reserve(buffer, length, iovecs, niovecs);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_buffer_commit (struct medusa_buffer *buffer, const struct medusa_buffer_iovec *iovecs, int niovecs)
+__attribute__ ((visibility ("default"))) int medusa_buffer_commit (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
@@ -169,7 +192,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_commit (struct medusa
         return buffer->backend->commit(buffer, iovecs, niovecs);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs)
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int niovecs)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
@@ -206,8 +229,10 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_init_options_default 
                 return -EINVAL;
         }
         memset(options, 0, sizeof(struct medusa_buffer_init_options));
-        options->type = MEDUSA_BUFFER_TYPE_DEFAULT;
+        options->type = MEDUSA_BUFFER_TYPE_CHUNKED;
         options->flags = MEDUSA_BUFFER_FLAG_DEFAULT;
+        options->u.chunked.chunk_size = MEDUSA_BUFFER_DEFAULT_CHUNK_SIZE;
+        options->u.chunked.chunk_count = MEDUSA_BUFFER_DEFAULT_CHUNK_COUNT;
         return 0;
 }
 

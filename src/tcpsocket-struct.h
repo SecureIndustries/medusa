@@ -9,6 +9,8 @@ struct medusa_tcpsocket {
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...);
         struct medusa_buffer *rbuffer;
         struct medusa_buffer *wbuffer;
+        struct iovec *iovecs;
+        int niovecs;
 };
 
 int medusa_tcpsocket_init (struct medusa_tcpsocket *tcpsocket, struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);

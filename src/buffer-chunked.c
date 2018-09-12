@@ -7,6 +7,8 @@
 #include <pthread.h>
 #include <errno.h>
 
+#include <sys/uio.h>
+
 #include "queue.h"
 
 #include "error.h"
@@ -194,6 +196,34 @@ static int chunked_buffer_append (struct medusa_buffer *buffer, const void *data
         return length;
 }
 
+static int chunked_buffer_appendv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
+{
+        int rc;
+        int i;
+        int64_t wlen;
+        struct medusa_buffer_chunked *chunked = (struct medusa_buffer_chunked *) buffer;
+        if (MEDUSA_IS_ERR_OR_NULL(chunked)) {
+                return -EINVAL;
+        }
+        if (niovecs < 0) {
+                return -EINVAL;
+        }
+        if (niovecs == 0) {
+                return 0;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
+                return -EINVAL;
+        }
+        for (wlen = 0, i = 0; i < niovecs; i++) {
+                rc = chunked_buffer_append(buffer, iovecs[i].iov_base, iovecs[i].iov_len);
+                if (rc < 0) {
+                        return rc;
+                }
+                wlen += rc;
+        }
+        return wlen;
+}
+
 static int chunked_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va)
 {
         int rc;
@@ -245,13 +275,12 @@ static int chunked_buffer_vprintf (struct medusa_buffer *buffer, const char *for
         return rc;
 }
 
-static int chunked_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs)
+static int chunked_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int niovecs)
 {
         int rc;
         int n;
         int64_t w;
         int64_t l;
-        unsigned int c;
         struct medusa_buffer_chunked_entry *entry;
         struct medusa_buffer_chunked *chunked = (struct medusa_buffer_chunked *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(chunked)) {
@@ -266,12 +295,6 @@ static int chunked_buffer_reserve (struct medusa_buffer *buffer, int64_t length,
         if (niovecs < 0) {
                 return -EINVAL;
         }
-        if (niovecs == 0) {
-                c  = length;
-                c += chunked->chunk_size - 1;
-                c /= chunked->chunk_size;
-                return c;
-        }
         rc = chunked_buffer_resize(buffer, chunked->total_length + length);
         if (rc < 0) {
                 return rc;
@@ -282,7 +305,14 @@ static int chunked_buffer_reserve (struct medusa_buffer *buffer, int64_t length,
         n = 0;
         w = 0;
         entry = chunked->active;
-        while (n < niovecs && w != length) {
+        while (1) {
+                if (niovecs!= 0 &&
+                    n >= niovecs) {
+                        break;
+                }
+                if (w == length) {
+                        break;
+                }
                 if (entry == NULL) {
                         return -EIO;
                 }
@@ -292,15 +322,17 @@ static int chunked_buffer_reserve (struct medusa_buffer *buffer, int64_t length,
                 }
                 l = MIN(length - w, entry->size - entry->length);
                 w += l;
-                iovecs[n].data   = entry->data + entry->length;
-                iovecs[n].length = l;
+                if (niovecs != 0) {
+                        iovecs[n].iov_base = entry->data + entry->length;
+                        iovecs[n].iov_len  = l;
+                }
                 entry = TAILQ_NEXT(entry, list);
                 n += 1;
         }
         return n;
 }
 
-static int chunked_buffer_commit (struct medusa_buffer *buffer, const struct medusa_buffer_iovec *iovecs, int niovecs)
+static int chunked_buffer_commit (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
 {
         int i;
         struct medusa_buffer_chunked *chunked = (struct medusa_buffer_chunked *) buffer;
@@ -320,28 +352,27 @@ static int chunked_buffer_commit (struct medusa_buffer *buffer, const struct med
                 return -EIO;
         }
         for (i = 0; i < niovecs; i++) {
-                if (chunked->active->data > (uint8_t *) iovecs[i].data) {
+                if (chunked->active->data > (uint8_t *) iovecs[i].iov_base) {
                         return -EINVAL;
                 }
-                if (chunked->active->data + chunked->active->length > (uint8_t *) iovecs[i].data) {
+                if (chunked->active->data + chunked->active->length > (uint8_t *) iovecs[i].iov_base) {
                         return -EINVAL;
                 }
-                if (chunked->active->data + chunked->active->size < (uint8_t *) iovecs[i].data + iovecs[i].length) {
+                if (chunked->active->data + chunked->active->size < (uint8_t *) iovecs[i].iov_base + iovecs[i].iov_len) {
                         return -EINVAL;
                 }
-                chunked->active->length += iovecs[i].length;
+                chunked->active->length += iovecs[i].iov_len;
                 chunked->active = TAILQ_NEXT(chunked->active, list);
-                chunked->total_length += iovecs[i].length;
+                chunked->total_length += iovecs[i].iov_len;
         }
         return i;
 }
 
-static int chunked_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs)
+static int chunked_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int niovecs)
 {
         int n;
         int64_t w;
         int64_t l;
-        unsigned int c;
         struct medusa_buffer_chunked_entry *entry;
         struct medusa_buffer_chunked *chunked = (struct medusa_buffer_chunked *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(chunked)) {
@@ -361,16 +392,17 @@ static int chunked_buffer_peek (struct medusa_buffer *buffer, int64_t offset, in
         if (length == 0) {
                 return 0;
         }
-        if (niovecs == 0) {
-                c  = length;
-                c += chunked->chunk_size - 1;
-                c /= chunked->chunk_size;
-                return c;
-        }
         n = 0;
         w = 0;
         entry = TAILQ_FIRST(&chunked->entries);
-        while (n < niovecs && w != length) {
+        while (1) {
+                if (niovecs!= 0 &&
+                    n >= niovecs) {
+                        break;
+                }
+                if (w == length) {
+                        break;
+                }
                 if (entry == NULL) {
                         return -EIO;
                 }
@@ -380,8 +412,10 @@ static int chunked_buffer_peek (struct medusa_buffer *buffer, int64_t offset, in
                 }
                 l = MIN(length - w, entry->length - entry->offset);
                 w += l;
-                iovecs[n].data   = entry->data + entry->offset;
-                iovecs[n].length = l;
+                if (niovecs != 0) {
+                        iovecs[n].iov_base = entry->data + entry->offset;
+                        iovecs[n].iov_len  = l;
+                }
                 entry = TAILQ_NEXT(entry, list);
                 n += 1;
         }
@@ -495,6 +529,7 @@ const struct medusa_buffer_backend chunked_buffer_backend = {
 
         .prepend        = chunked_buffer_prepend,
         .append         = chunked_buffer_append,
+        .appendv        = chunked_buffer_appendv,
         .vprintf        = chunked_buffer_vprintf,
 
         .reserve        = chunked_buffer_reserve,

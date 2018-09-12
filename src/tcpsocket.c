@@ -98,7 +98,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
         unsigned int tevents;
 
         int niovecs;
-        struct medusa_buffer_iovec iovec;
+        struct iovec iovec;
 
         struct medusa_tcpsocket *tcpsocket = (struct medusa_tcpsocket *) io;
 
@@ -141,6 +141,49 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                         if (length <= 0) {
                                 goto bail;
                         }
+#if 1
+                        niovecs = medusa_buffer_peek(tcpsocket->wbuffer, 0, -1, NULL, 0);
+                        if (niovecs <= 0) {
+                                goto bail;
+                        }
+                        if (niovecs > tcpsocket->niovecs) {
+                                struct iovec *tmp;
+                                tmp = realloc(tcpsocket->iovecs, sizeof(struct iovec) * niovecs);
+                                if (tmp == NULL) {
+                                        tmp = malloc(sizeof(struct iovec) * niovecs);
+                                        if (tmp == NULL) {
+                                                goto bail;
+                                        }
+                                        if (tcpsocket->iovecs != NULL) {
+                                                free(tcpsocket->iovecs);
+                                        }
+                                }
+                                tcpsocket->iovecs = tmp;
+                                tcpsocket->niovecs = niovecs;
+                        }
+                        niovecs = medusa_buffer_peek(tcpsocket->wbuffer, 0, -1, tcpsocket->iovecs, tcpsocket->niovecs);
+                        if (niovecs <= 0) {
+                                goto bail;
+                        }
+                        fprintf(stderr, "write niovecs: %d\n", niovecs);
+                        rc = writev(tcpsocket->io.fd, tcpsocket->iovecs, niovecs);
+                        if (rc < 0) {
+                                if (errno == EINTR) {
+                                } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                                } else {
+                                        goto bail;
+                                }
+                        } else if (rc == 0) {
+                                tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                tevents |= MEDUSA_TCPSOCKET_EVENT_DISCONNECTED;
+                        } else {
+                                rc = medusa_buffer_choke(tcpsocket->wbuffer, rc);
+                                if (rc < 0) {
+                                        goto bail;
+                                }
+                                tevents |= MEDUSA_TCPSOCKET_EVENT_WRITTEN;
+                        }
+#else
                         while (1) {
                                 niovecs = medusa_buffer_peek(tcpsocket->wbuffer, 0, -1, &iovec, 1);
                                 if (niovecs < 0) {
@@ -149,7 +192,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                 if (niovecs == 0) {
                                         break;
                                 }
-                                rc = send(tcpsocket->io.fd, iovec.data, iovec.length, 0);
+                                rc = send(tcpsocket->io.fd, iovec.iov_base, iovec.iov_len, 0);
                                 if (rc < 0) {
                                         if (errno == EINTR) {
                                                 break;
@@ -170,6 +213,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                 }
                                 break;
                         }
+#endif
                         length = medusa_buffer_get_length(tcpsocket->wbuffer);
                         if (length <= 0) {
                                 tevents |= MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED;
@@ -194,7 +238,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                 if (niovecs == 0) {
                                         break;
                                 }
-                                rc = recv(tcpsocket->io.fd, iovec.data, iovec.length, 0);
+                                rc = recv(tcpsocket->io.fd, iovec.iov_base, iovec.iov_len, 0);
                                 if (rc < 0) {
                                         if (errno == EINTR) {
                                                 break;
@@ -212,7 +256,7 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                         tevents |= MEDUSA_TCPSOCKET_EVENT_DISCONNECTED;
                                         break;
                                 } else {
-                                        iovec.length = rc;
+                                        iovec.iov_len = rc;
                                         rc = medusa_buffer_commit(tcpsocket->rbuffer, &iovec, 1);
                                         if (rc < 0) {
                                                 goto bail;
@@ -984,7 +1028,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_read (struct medus
         int64_t length;
         int i;
         int niovecs;
-        struct medusa_buffer_iovec *iovecs;
+        struct iovec *iovecs;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
@@ -1011,7 +1055,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_read (struct medus
         if (niovecs == 0) {
                 return 0;
         }
-        iovecs = malloc(sizeof(struct medusa_buffer_iovec) * niovecs);
+        iovecs = malloc(sizeof(struct iovec) * niovecs);
         if (iovecs == NULL) {
                 return -ENOMEM;
         }
@@ -1025,8 +1069,8 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_read (struct medus
                 return -EIO;
         }
         for (length = 0, i = 0; i < niovecs; i++) {
-                memcpy(data + length, iovecs[i].data, iovecs[i].length);
-                length += iovecs[i].length;
+                memcpy(data + length, iovecs[i].iov_base, iovecs[i].iov_len);
+                length += iovecs[i].iov_len;
         }
         rc = medusa_buffer_choke(tcpsocket->rbuffer, length);
         if (rc < 0) {
@@ -1086,9 +1130,36 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_write (struct medu
         if (data == NULL) {
                 return -EINVAL;
         }
-        rc = medusa_buffer_append(tcpsocket->wbuffer, data, size);
+        size = medusa_buffer_append(tcpsocket->wbuffer, data, size);
+        if (size < 0) {
+                return size;
+        }
+        rc = medusa_io_add_events(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
         if (rc < 0) {
                 return rc;
+        }
+        return size;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_writev (struct medusa_tcpsocket *tcpsocket, const struct iovec *iovecs, int niovecs)
+{
+        int rc;
+        int64_t size;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (niovecs < 0) {
+                return -EINVAL;
+        }
+        if (niovecs == 0) {
+                return 0;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
+                return -EINVAL;
+        }
+        size = medusa_buffer_appendv(tcpsocket->wbuffer, iovecs, niovecs);
+        if (size < 0) {
+                return size;
         }
         rc = medusa_io_add_events(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
         if (rc < 0) {
@@ -1193,6 +1264,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent (struct me
                         if (tcpsocket->wbuffer != NULL) {
                                 medusa_buffer_destroy(tcpsocket->wbuffer);
                                 tcpsocket->wbuffer = NULL;
+                        }
+                        if (tcpsocket->iovecs != NULL) {
+                                free(tcpsocket->iovecs);
                         }
                         if (tcpsocket->io.fd >= 0) {
                                 close(tcpsocket->io.fd);

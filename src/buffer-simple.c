@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <errno.h>
 
+#include <sys/uio.h>
+
 #include "error.h"
 #include "pool.h"
 #include "buffer.h"
@@ -125,6 +127,34 @@ static int simple_buffer_append (struct medusa_buffer *buffer, const void *data,
         return length;
 }
 
+static int simple_buffer_appendv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
+{
+        int rc;
+        int i;
+        int64_t wlen;
+        struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
+        if (MEDUSA_IS_ERR_OR_NULL(simple)) {
+                return -EINVAL;
+        }
+        if (niovecs < 0) {
+                return -EINVAL;
+        }
+        if (niovecs == 0) {
+                return 0;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
+                return -EINVAL;
+        }
+        for (wlen = 0, i = 0; i < niovecs; i++) {
+                rc = simple_buffer_append(buffer, iovecs[i].iov_base, iovecs[i].iov_len);
+                if (rc < 0) {
+                        return rc;
+                }
+                wlen += rc;
+        }
+        return wlen;
+}
+
 static int simple_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va)
 {
         int rc;
@@ -157,7 +187,7 @@ static int simple_buffer_vprintf (struct medusa_buffer *buffer, const char *form
         return rc;
 }
 
-static int simple_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs)
+static int simple_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int niovecs)
 {
         int rc;
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
@@ -180,12 +210,12 @@ static int simple_buffer_reserve (struct medusa_buffer *buffer, int64_t length, 
         if (rc < 0) {
                 return rc;
         }
-        iovecs[0].data = simple->data + simple->length;
-        iovecs[0].length = simple->size - simple->length;
+        iovecs[0].iov_base = simple->data + simple->length;
+        iovecs[0].iov_len  = simple->size - simple->length;
         return 1;
 }
 
-static int simple_buffer_commit (struct medusa_buffer *buffer, const struct medusa_buffer_iovec *iovecs, int niovecs)
+static int simple_buffer_commit (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
 {
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
@@ -200,16 +230,16 @@ static int simple_buffer_commit (struct medusa_buffer *buffer, const struct medu
         if (niovecs != 1) {
                 return -EINVAL;
         }
-        if ((simple->data > iovecs[0].data) ||
-            (simple->data + simple->length > iovecs[0].data) ||
-            (simple->data + simple->size < iovecs[0].data + iovecs[0].length)) {
+        if ((simple->data > iovecs[0].iov_base) ||
+            (simple->data + simple->length > iovecs[0].iov_base) ||
+            (simple->data + simple->size < iovecs[0].iov_base + iovecs[0].iov_len)) {
                 return -EINVAL;
         }
-        simple->length += iovecs->length;
+        simple->length += iovecs[0].iov_len;
         return niovecs;
 }
 
-static int simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct medusa_buffer_iovec *iovecs, int niovecs)
+static int simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int niovecs)
 {
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
@@ -232,8 +262,8 @@ static int simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int
         if (niovecs == 0) {
                 return 1;
         }
-        iovecs[0].data = simple->data;
-        iovecs[0].length = length;
+        iovecs[0].iov_base = simple->data;
+        iovecs[0].iov_len  = length;
         return 1;
 }
 
@@ -290,6 +320,7 @@ const struct medusa_buffer_backend simple_buffer_backend = {
 
         .prepend        = simple_buffer_prepend,
         .append         = simple_buffer_append,
+        .appendv        = simple_buffer_appendv,
         .vprintf        = simple_buffer_vprintf,
 
         .reserve        = simple_buffer_reserve,
