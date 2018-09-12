@@ -1048,6 +1048,21 @@ __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_get_read_lengt
         return medusa_buffer_get_length(tcpsocket->rbuffer);
 }
 
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_read_buffer (struct medusa_tcpsocket *tcpsocket, struct medusa_buffer *buffer)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->rbuffer)) {
+                medusa_buffer_destroy(tcpsocket->rbuffer);
+        }
+        tcpsocket->rbuffer = buffer;
+        return 0;
+}
+
 __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_tcpsocket_get_read_buffer (struct medusa_tcpsocket *tcpsocket)
 {
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
@@ -1135,6 +1150,21 @@ __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_get_write_leng
                 return -EIO;
         }
         return medusa_buffer_get_length(tcpsocket->rbuffer);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_write_buffer (struct medusa_tcpsocket *tcpsocket, struct medusa_buffer *buffer)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->wbuffer)) {
+                medusa_buffer_destroy(tcpsocket->wbuffer);
+        }
+        tcpsocket->wbuffer = buffer;
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_tcpsocket_get_write_buffer (struct medusa_tcpsocket *tcpsocket)
