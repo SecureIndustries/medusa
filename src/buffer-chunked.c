@@ -421,14 +421,15 @@ static int chunked_buffer_choke (struct medusa_buffer *buffer, int64_t length)
                         if (w == length) {
                                 break;
                         }
-                        l = MIN(length - w, entry->size - entry->offset - entry->length);
-                        if (l < entry->size - entry->offset - entry->length) {
+                        l = MIN(length - w, entry->length - entry->offset);
+                        if (l < entry->length - entry->offset) {
                                 entry->offset += l;
                         } else {
                                 if (entry == chunked->active) {
                                         chunked->active = NULL;
                                 }
                                 TAILQ_REMOVE(&chunked->entries, entry, list);
+                                chunked->total_size -= entry->size;
                                 if (entry->flags & MEDUSA_BUFFER_CHUNKED_ENTRY_FLAG_ALLOC) {
                                         free(entry);
                                 } else {
@@ -437,7 +438,6 @@ static int chunked_buffer_choke (struct medusa_buffer *buffer, int64_t length)
                         }
                         w += l;
                         chunked->total_length -= l;
-                        chunked->total_size -= entry->size;
                 }
         } else {
                 TAILQ_FOREACH_SAFE(entry, &chunked->entries, list, nentry) {

@@ -982,8 +982,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_read (struct medus
 {
         int rc;
         int64_t length;
+        int i;
         int niovecs;
-        struct medusa_buffer_iovec iovec;
+        struct medusa_buffer_iovec *iovecs;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
@@ -1003,20 +1004,48 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_read (struct medus
         if (length == 0) {
                 return 0;
         }
-        niovecs = medusa_buffer_peek(tcpsocket->rbuffer, 0, size, &iovec, 1);
+        niovecs = medusa_buffer_peek(tcpsocket->rbuffer, 0, size, NULL, 0);
         if (niovecs < 0) {
                 return niovecs;
         }
         if (niovecs == 0) {
                 return 0;
         }
-        length = MIN(size, iovec.length);
-        memcpy(data, iovec.data, length);
+        iovecs = malloc(sizeof(struct medusa_buffer_iovec) * niovecs);
+        if (iovecs == NULL) {
+                return -ENOMEM;
+        }
+        niovecs = medusa_buffer_peek(tcpsocket->rbuffer, 0, size, iovecs, niovecs);
+        if (niovecs < 0) {
+                free(iovecs);
+                return niovecs;
+        }
+        if (niovecs == 0) {
+                free(iovecs);
+                return -EIO;
+        }
+        for (length = 0, i = 0; i < niovecs; i++) {
+                memcpy(data + length, iovecs[i].data, iovecs[i].length);
+                length += iovecs[i].length;
+        }
         rc = medusa_buffer_choke(tcpsocket->rbuffer, length);
         if (rc < 0) {
+                free(iovecs);
                 return rc;
         }
+        free(iovecs);
         return length;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_get_read_length (const struct medusa_tcpsocket *tcpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->rbuffer)) {
+                return -EIO;
+        }
+        return medusa_buffer_get_length(tcpsocket->rbuffer);
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_tcpsocket_get_read_buffer (struct medusa_tcpsocket *tcpsocket)

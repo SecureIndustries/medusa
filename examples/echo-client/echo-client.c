@@ -13,20 +13,24 @@
 #include "medusa/monitor.h"
 
 static int g_running;
+static int g_use_iovec;
 
 #define OPTION_ADDRESS_DEFAULT  "0.0.0.0"
 #define OPTION_PORT_DEFAULT     12345
 #define OPTION_STRING_DEFAULT   "hello from medusa echo client"
+#define OPTION_IOVEC_DEFAULT    0
 
 #define OPTION_HELP             'h'
 #define OPTION_ADDRESS          'a'
 #define OPTION_PORT             'p'
 #define OPTION_STRING           's'
+#define OPTION_IOVEC            'i'
 static struct option longopts[] = {
         { "help",               no_argument,            NULL,   OPTION_HELP     },
         { "address",            required_argument,      NULL,   OPTION_ADDRESS  },
         { "port",               required_argument,      NULL,   OPTION_PORT     },
         { "string",             required_argument,      NULL,   OPTION_STRING   },
+        { "iovec",              required_argument,      NULL,   OPTION_IOVEC    },
         { NULL,                 0,                      NULL,   0               },
 };
 
@@ -37,16 +41,12 @@ static void usage (const char *pname)
         fprintf(stdout, "  -a, --address: server address (default: %s)\n", OPTION_ADDRESS_DEFAULT);
         fprintf(stdout, "  -p. --port   : server port (default: %d)\n", OPTION_PORT_DEFAULT);
         fprintf(stdout, "  -s. --string : string to send (default: %s)\n", OPTION_STRING_DEFAULT);
+        fprintf(stdout, "  -i, --iovec  : use iovec read (default: %d)\n", OPTION_IOVEC_DEFAULT);
 }
 
 static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
 {
-        int64_t rlength;
-        struct medusa_buffer *rbuffer;
-
-        int niovecs;
-        struct medusa_buffer_iovec iovecs[1];
-
+        int rc;
         const char *option_string = context;
 
         (void) tcpsocket;
@@ -58,34 +58,95 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
         }
 
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
-                rbuffer = medusa_tcpsocket_get_read_buffer(tcpsocket);
-                if (MEDUSA_IS_ERR_OR_NULL(rbuffer)) {
-                        return MEDUSA_PTR_ERR(rbuffer);
-                }
-                rlength = medusa_buffer_get_length(rbuffer);
-                if (rlength < (int) strlen(option_string) + 1) {
-                        return 0;
-                }
-                if (rlength > (int) strlen(option_string) + 1) {
-                        return -EIO;
-                }
-                niovecs = medusa_buffer_peek(rbuffer, 0, -1, iovecs, 1);
-                if (niovecs < 0) {
-                        return niovecs;
-                }
-                if (niovecs == 0) {
-                        return -EIO;
-                }
-                if (iovecs[0].length != (int) strlen(option_string) + 1) {
-                        return -EIO;
-                }
-                if (strcmp(iovecs[0].data, option_string) == 0) {
-                        medusa_tcpsocket_destroy(tcpsocket);
-                        g_running = 0;
-                        return 0;
+                if (g_use_iovec != 0) {
+                        int64_t rlength;
+                        struct medusa_buffer *rbuffer;
+
+                        int i;
+                        int niovecs;
+                        struct medusa_buffer_iovec *iovecs;
+
+                        rbuffer = medusa_tcpsocket_get_read_buffer(tcpsocket);
+                        if (MEDUSA_IS_ERR_OR_NULL(rbuffer)) {
+                                return MEDUSA_PTR_ERR(rbuffer);
+                        }
+
+                        rlength = medusa_buffer_get_length(rbuffer);
+                        if (rlength < (int) strlen(option_string) + 1) {
+                                return 0;
+                        }
+                        if (rlength > (int) strlen(option_string) + 1) {
+                                return -EIO;
+                        }
+
+                        niovecs = medusa_buffer_peek(rbuffer, 0, -1, NULL, 0);
+                        if (niovecs < 0) {
+                                return niovecs;
+                        }
+                        if (niovecs == 0) {
+                                return -EIO;
+                        }
+
+                        iovecs = malloc(sizeof(struct medusa_buffer_iovec) * niovecs);
+                        if (iovecs == NULL) {
+                                return -ENOMEM;
+                        }
+                        niovecs = medusa_buffer_peek(rbuffer, 0, -1, iovecs, niovecs);
+                        if (niovecs < 0) {
+                                free(iovecs);
+                                return niovecs;
+                        }
+                        if (niovecs == 0) {
+                                free(iovecs);
+                                return -EIO;
+                        }
+
+                        rlength = 0;
+                        for (i = 0; i < niovecs; i++) {
+                                rlength += iovecs[i].length;
+                        }
+                        if (rlength != (int) strlen(option_string) + 1) {
+                                free(iovecs);
+                                return -EIO;
+                        }
+
+                        rlength = 0;
+                        for (i = 0; i < niovecs; i++) {
+                                rc = memcmp(iovecs[i].data, option_string + rlength, iovecs[i].length);
+                                if (rc != 0) {
+                                        free(iovecs);
+                                        return -EIO;
+                                }
+                                rlength += iovecs[i].length;
+                        }
+                        free(iovecs);
                 } else {
-                        return -EIO;
+                        int64_t rlength;
+                        char *data;
+                        rlength = medusa_tcpsocket_get_read_length(tcpsocket);
+                        if (rlength < (int) strlen(option_string) + 1) {
+                                return 0;
+                        }
+                        if (rlength > (int) strlen(option_string) + 1) {
+                                return -EIO;
+                        }
+                        data = malloc(rlength);
+                        if (data == NULL) {
+                                return -ENOMEM;
+                        }
+                        rc = medusa_tcpsocket_read(tcpsocket, data, rlength);
+                        if (rc < 0) {
+                                free(data);
+                                return rc;
+                        }
+                        rc = strcmp(data, option_string);
+                        if (rc != 0) {
+                                free(data);
+                                return -EIO;
+                        }
+                        free(data);
                 }
+                g_running = 0;
         }
 
         if (events & MEDUSA_TCPSOCKET_EVENT_DESTROY) {
@@ -121,8 +182,9 @@ int main (int argc, char *argv[])
         option_string   = OPTION_STRING_DEFAULT;
 
         g_running = 1;
+        g_use_iovec = 1;
 
-        while ((c = getopt_long(argc, argv, "ha:p:s:", longopts, NULL)) != -1) {
+        while ((c = getopt_long(argc, argv, "ha:p:s:i:", longopts, NULL)) != -1) {
                 switch (c) {
                         case OPTION_HELP:
                                 usage(argv[0]);
@@ -135,6 +197,9 @@ int main (int argc, char *argv[])
                                 break;
                         case OPTION_STRING:
                                 option_string = optarg;
+                                break;
+                        case OPTION_IOVEC:
+                                g_use_iovec = !!atoi(optarg);
                                 break;
                         default:
                                 fprintf(stderr, "unknown option: %d\n", optopt);
