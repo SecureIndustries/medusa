@@ -2,6 +2,7 @@
 #if !defined(MEDUSA_TCPSOCKET_H)
 #define MEDUSA_TCPSOCKET_H
 
+struct iovec;
 struct medusa_buffer;
 struct medusa_monitor;
 struct medusa_tcpsocket;
@@ -127,10 +128,19 @@ struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcps
 struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options (const struct medusa_tcpsocket_accept_options *options);
 
 int medusa_tcpsocket_read (struct medusa_tcpsocket *tcpsocket, void *data, int64_t size);
+int64_t medusa_tcpsocket_get_read_length (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_read_buffer (struct medusa_tcpsocket *tcpsocket, struct medusa_buffer *buffer);
 struct medusa_buffer * medusa_tcpsocket_get_read_buffer (struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_write (struct medusa_tcpsocket *tcpsocket, const void *data, int64_t size);
+int medusa_tcpsocket_writev (struct medusa_tcpsocket *tcpsocket, const struct iovec *iovecs, int niovecs);
 int medusa_tcpsocket_printf (struct medusa_tcpsocket *tcpsocket, const char *format, ...) __attribute__((format(printf, 2, 3)));
+int medusa_tcpsocket_vprintf (struct medusa_tcpsocket *tcpsocket, const char *format, va_list va);
+int64_t medusa_tcpsocket_get_write_length (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_write_buffer (struct medusa_tcpsocket *tcpsocket, struct medusa_buffer *buffer);
+struct medusa_buffer * medusa_tcpsocket_get_write_buffer (struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 struct medusa_monitor * medusa_tcpsocket_get_monitor (struct medusa_tcpsocket *tcpsocket);

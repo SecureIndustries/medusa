@@ -6,6 +6,8 @@
 #include <getopt.h>
 #include <errno.h>
 
+#include <sys/uio.h>
+
 #include <readline/readline.h>
 #include <readline/history.h>
 
@@ -227,39 +229,35 @@ static int readline_medusa_io_onevent (struct medusa_io *io, unsigned int events
 static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
 {
         int rc;
-        void *rbase;
         int64_t rlen;
         int64_t wlen;
         struct medusa_buffer *rbuffer;
+        int i;
+        int niovecs;
+        struct iovec iovecs[16];
         (void) context;
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
                 rbuffer = medusa_tcpsocket_get_read_buffer(tcpsocket);
                 if (rbuffer == NULL) {
                         return MEDUSA_PTR_ERR(rbuffer);
                 }
-                while (1) {
-                        rlen = medusa_buffer_get_length(rbuffer);
-                        if (rlen < 0) {
-                                return rlen;
-                        }
-                        if (rlen == 0) {
-                                break;
-                        }
-                        rbase = medusa_buffer_get_base(rbuffer);
-                        if (MEDUSA_IS_ERR_OR_NULL(rbase)) {
-                                return MEDUSA_PTR_ERR(rbase);
-                        }
-                        wlen = medusa_tcpsocket_write(tcpsocket, rbase, rlen);
-                        if (wlen < 0) {
-                                return wlen;
-                        }
-                        if (wlen == 0) {
-                                return -EIO;
-                        }
-                        rc = medusa_buffer_eat(rbuffer, wlen);
-                        if (rc < 0) {
-                                return rc;
-                        }
+                niovecs = medusa_buffer_peek(rbuffer, 0, -1, iovecs, 16);
+                if (niovecs < 0) {
+                        return niovecs;
+                }
+                for (rlen = 0, i = 0; i < niovecs; i++) {
+                        rlen += iovecs[i].iov_len;
+                }
+                wlen = medusa_tcpsocket_writev(tcpsocket, iovecs, niovecs);
+                if (wlen < 0) {
+                        return wlen;
+                }
+                if (wlen != rlen) {
+                        return -EIO;
+                }
+                rc = medusa_buffer_choke(rbuffer, wlen);
+                if (rc < 0) {
+                        return rc;
                 }
         }
         return 0;

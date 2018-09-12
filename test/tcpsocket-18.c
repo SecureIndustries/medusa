@@ -9,6 +9,7 @@
 #include <errno.h>
 
 #include "medusa/error.h"
+#include "medusa/clock.h"
 #include "medusa/buffer.h"
 #include "medusa/tcpsocket.h"
 #include "medusa/monitor.h"
@@ -28,10 +29,12 @@ static const unsigned int g_polls[] = {
 static int g_backend;
 static int g_nclients;
 
+static int g_clients_connection;
 static int g_clients_connected;
 static int g_clients_read_finished;
 static int g_clients_disconnected;
 
+static int g_server_connection;
 static int g_server_connected;
 static int g_server_write_finished;
 static int g_server_disconnected;
@@ -53,10 +56,13 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         int rc;
         struct medusa_buffer *rbuffer;
         (void) context;
+        fprintf(stderr, "client  : %p, events: 0x%08x\n", tcpsocket, events);
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
+                fprintf(stderr, "  connected\n");
                 g_clients_connected += 1;
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
+                fprintf(stderr, "  read\n");
                 rbuffer = medusa_tcpsocket_get_read_buffer(tcpsocket);
                 if (MEDUSA_IS_ERR_OR_NULL(rbuffer)) {
                         return MEDUSA_PTR_ERR(rbuffer);
@@ -71,6 +77,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_DESTROY) {
+                fprintf(stderr, "  destroy\n");
                 g_clients_disconnected += 1;
         }
         return 0;
@@ -80,17 +87,21 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
 {
         int rc;
         (void) context;
+        fprintf(stderr, "server  : %p, events: 0x%08x\n", tcpsocket, events);
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
+                fprintf(stderr, "  connected\n");
                 g_server_connected += 1;
-                rc = medusa_tcpsocket_printf(tcpsocket, g_greeting);
+                rc = medusa_tcpsocket_printf(tcpsocket, "%s", g_greeting);
                 if (rc < 0) {
                         return rc;
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED) {
+                fprintf(stderr, "  write finished\n");
                 g_server_write_finished += 1;
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
+                fprintf(stderr, "  disconnected\n");
                 g_server_disconnected += 1;
         }
         return 0;
@@ -101,7 +112,9 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
         int rc;
         struct medusa_tcpsocket *accepted;
         struct medusa_tcpsocket_accept_options accepted_options;
+        fprintf(stderr, "listener: %p, events: 0x%08x\n", tcpsocket, events);
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
+                fprintf(stderr, "  accept\n");
                 rc = medusa_tcpsocket_accept_options_default(&accepted_options);
                 if (rc < 0) {
                         return rc;
@@ -116,6 +129,7 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
                 if (MEDUSA_IS_ERR_OR_NULL(accepted)) {
                         return MEDUSA_PTR_ERR(accepted);
                 }
+                g_server_connection += 1;
         }
         return 0;
 }
@@ -171,6 +185,16 @@ static int test_poll (unsigned int poll)
 
         fprintf(stderr, "port: %d\n", port);
 
+        g_clients_connection    = 0;
+        g_clients_connected     = 0;
+        g_clients_read_finished = 0;
+        g_clients_disconnected  = 0;
+
+        g_server_connection     = 0;
+        g_server_connected      = 0;
+        g_server_write_finished = 0;
+        g_server_disconnected   = 0;
+
         for (i = 0; i < g_nclients; i++) {
                 rc = medusa_tcpsocket_init_options_default(&tcpsocket_init_options);
                 if (rc < 0) {
@@ -194,15 +218,8 @@ static int test_poll (unsigned int poll)
                         fprintf(stderr, "can not connect tcpsocket\n");
                         goto bail;
                 }
+                g_clients_connection += 1;
         }
-
-        g_clients_connected     = 0;
-        g_clients_read_finished = 0;
-        g_clients_disconnected  = 0;
-
-        g_server_connected      = 0;
-        g_server_write_finished = 0;
-        g_server_disconnected   = 0;
 
         while (1) {
                 rc = medusa_monitor_run_once(monitor);
@@ -211,8 +228,8 @@ static int test_poll (unsigned int poll)
                         goto bail;
                 }
                 fprintf(stderr, "monitor run:\n");
-                fprintf(stderr, "  client connected: %8d, read-finished : %8d, disconnected: %8d\n", g_clients_connected, g_clients_read_finished, g_clients_disconnected);
-                fprintf(stderr, "  server connected: %8d, write-finished: %8d, disconnected: %8d\n", g_server_connected, g_server_write_finished, g_server_disconnected);
+                fprintf(stderr, "  client connected: %8d / %8d, read-finished : %8d, disconnected: %8d\n", g_clients_connection, g_clients_connected, g_clients_read_finished, g_clients_disconnected);
+                fprintf(stderr, "  server connected: %8d / %8d, write-finished: %8d, disconnected: %8d\n", g_server_connection, g_server_connected, g_server_write_finished, g_server_disconnected);
 
                 if (g_clients_connected == g_nclients &&
                     g_clients_read_finished == g_nclients &&
@@ -250,6 +267,10 @@ int main (int argc, char *argv[])
         int rc;
         unsigned int i;
 
+        struct timespec timespec_start;
+        struct timespec timespec_finish;
+        struct timespec timespec_total;
+
         srand(time(NULL));
         signal(SIGALRM, sigalarm_handler);
         signal(SIGINT, sigint_handler);
@@ -283,6 +304,7 @@ int main (int argc, char *argv[])
                 alarm(30);
                 fprintf(stderr, "testing poll: %d ... \n", g_backend);
 
+                medusa_clock_monotonic(&timespec_start);
                 rc = test_poll(g_backend);
                 if (rc != 0) {
                         fprintf(stderr, "fail\n");
@@ -290,11 +312,15 @@ int main (int argc, char *argv[])
                 } else {
                         fprintf(stderr, "success\n");
                 }
+                medusa_clock_monotonic(&timespec_finish);
+                medusa_timespec_sub(&timespec_finish, &timespec_start, &timespec_total);
+                fprintf(stderr, "timespec: %.6f\n", timespec_total.tv_sec + timespec_total.tv_nsec * 1e-9);
         } else {
                 for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
                         alarm(30);
                         fprintf(stderr, "testing poll: %d ... \n", g_polls[i]);
 
+                        medusa_clock_monotonic(&timespec_start);
                         rc = test_poll(g_polls[i]);
                         if (rc != 0) {
                                 fprintf(stderr, "fail\n");
@@ -302,6 +328,9 @@ int main (int argc, char *argv[])
                         } else {
                                 fprintf(stderr, "success\n");
                         }
+                        medusa_clock_monotonic(&timespec_finish);
+                        medusa_timespec_sub(&timespec_finish, &timespec_start, &timespec_total);
+                        fprintf(stderr, "timespec: %.6f\n", timespec_total.tv_sec + timespec_total.tv_nsec * 1e-9);
                 }
         }
 

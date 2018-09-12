@@ -30,10 +30,9 @@ struct medusa_pool {
         struct blocks half;
         struct blocks full;
         unsigned int size;
-        unsigned int count;
         unsigned int flags;
         unsigned int page_size;
-        unsigned int block_count;
+        unsigned int count;
         unsigned int entry_capacity;
         unsigned int entry_used;
         unsigned int entry_used_average;
@@ -66,7 +65,7 @@ static void block_destroy (struct block *block)
                         block->pool->destructor(entry->data, block->pool->context);
                 }
         }
-        block->pool->entry_capacity -= block->pool->block_count;
+        block->pool->entry_capacity -= block->pool->count;
         free(block);
 }
 
@@ -75,21 +74,21 @@ static struct block * block_create (struct medusa_pool *pool)
         unsigned int i;
         struct entry *entry;
         struct block *block;
-        block = malloc(sizeof(struct block) + pool->size * pool->block_count);
+        block = malloc(sizeof(struct block) + pool->size * pool->count);
         if (block == NULL) {
                 goto bail;
         }
         memset(block, 0, sizeof(struct block));
         block->pool = pool;
         SLIST_INIT(&block->free);
-        for (i = 0; i < pool->block_count; i++) {
+        for (i = 0; i < pool->count; i++) {
                 entry = (struct entry *) (block->data + pool->size * i);
                 SLIST_INSERT_HEAD(&block->free, entry, list);
                 if (pool->constructor != NULL) {
                         pool->constructor(entry->data, pool->context);
                 }
         }
-        pool->entry_capacity += pool->block_count;
+        pool->entry_capacity += pool->count;
         return block;
 bail:   if (block != NULL) {
                 block_destroy(block);
@@ -133,13 +132,13 @@ __attribute__ ((visibility ("default"))) struct medusa_pool * medusa_pool_create
         }
         pool->size = sizeof(struct entry) + size;
         pool->size = (pool->size + align - 1) & ~(align - 1);
-        pool->count = count;
         pool->flags = flags;
         pool->constructor = constructor;
         pool->destructor = destructor;
         pool->context = context;
         pool->page_size = getpagesize();
-        pool->block_count = aligncount(pool->size, pool->count, sizeof(struct block), pool->page_size);
+        pool->count = aligncount(pool->size, count, sizeof(struct block), pool->page_size);
+        fprintf(stderr, "pool name: %s, size: %d, count: %d, bcount: %d\n", pool->name, pool->size, count, pool->count);
         return pool;
 bail:   if (pool != NULL) {
                 medusa_pool_destroy(pool);
