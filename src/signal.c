@@ -430,6 +430,18 @@ __attribute__ ((visibility ("default"))) int medusa_signal_onevent_unlocked (str
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_signal_onevent (struct medusa_signal *signal, unsigned int events)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(signal)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(signal->subject.monitor);
+        rc = medusa_signal_onevent_unlocked(signal, events);
+        medusa_monitor_unlock(signal->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_signal_is_valid_unlocked (const struct medusa_signal *signal)
 {
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {

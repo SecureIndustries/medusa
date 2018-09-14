@@ -21,6 +21,8 @@ int medusa_signal_get_enabled_unlocked (const struct medusa_signal *signal);
 struct medusa_monitor * medusa_signal_get_monitor_unlocked (const struct medusa_signal *signal);
 
 int medusa_signal_onevent_unlocked (struct medusa_signal *signal, unsigned int events);
+int medusa_signal_onevent (struct medusa_signal *signal, unsigned int events);
+
 int medusa_signal_is_valid_unlocked (const struct medusa_signal *signal);
 
 #endif

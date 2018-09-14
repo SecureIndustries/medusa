@@ -12,16 +12,25 @@
 #include "error.h"
 #include "clock.h"
 #include "queue.h"
+#include "signal.h"
 #include "signal-backend.h"
 #include "subject-struct.h"
 #include "signal-struct.h"
+#include "signal-private.h"
 
 #include "signal-signalfd.h"
+
+TAILQ_HEAD(entries, entry);
+struct entry {
+        TAILQ_ENTRY(entry) list;
+        struct medusa_signal *signal;
+};
 
 struct internal {
         struct medusa_signal_backend backend;
         int sfd;
         sigset_t sigset;
+        struct entries entries;
 };
 
 static int internal_fd (struct medusa_signal_backend *backend)
@@ -36,6 +45,7 @@ static int internal_fd (struct medusa_signal_backend *backend)
 static int internal_add (struct medusa_signal_backend *backend, struct medusa_signal *signal)
 {
         int rc;
+        struct entry *entry;
         struct internal *internal = (struct internal *) backend;
         if (MEDUSA_IS_ERR_OR_NULL(internal)) {
                 return -EINVAL;
@@ -64,7 +74,12 @@ static int internal_add (struct medusa_signal_backend *backend, struct medusa_si
         if (rc < 0) {
                 return -errno;
         }
-        fprintf(stderr, "add: %d\n", signal->number);
+        entry = malloc(sizeof(struct entry));
+        if (entry == NULL) {
+                return -ENOMEM;
+        }
+        entry->signal = signal;
+        TAILQ_INSERT_TAIL(&internal->entries, entry, list);
         return 0;
 }
 
@@ -72,6 +87,8 @@ static int internal_del (struct medusa_signal_backend *backend, struct medusa_si
 {
         int rc;
         sigset_t sigset;
+        struct entry *entry;
+        struct entry *nentry;
         struct internal *internal = (struct internal *) backend;
         if (MEDUSA_IS_ERR_OR_NULL(internal)) {
                 return -EINVAL;
@@ -105,13 +122,20 @@ static int internal_del (struct medusa_signal_backend *backend, struct medusa_si
         if (rc < 0) {
                 return -errno;
         }
-        fprintf(stderr, "del: %d\n", signal->number);
+        TAILQ_FOREACH_SAFE(entry, &internal->entries, list, nentry) {
+                if (entry->signal->number == signal->number) {
+                        TAILQ_REMOVE(&internal->entries, entry, list);
+                        free(entry);
+                }
+        }
         return 0;
 }
 
 static int internal_run (struct medusa_signal_backend *backend)
 {
         int rc;
+        struct entry *entry;
+        struct entry *nentry;
         struct signalfd_siginfo signalfd_siginfo;
         struct internal *internal = (struct internal *) backend;
         if (MEDUSA_IS_ERR_OR_NULL(internal)) {
@@ -131,18 +155,31 @@ static int internal_run (struct medusa_signal_backend *backend)
         if (rc != sizeof(struct signalfd_siginfo)) {
                 return -EIO;
         }
-        fprintf(stderr, "signal: %d\n", signalfd_siginfo.ssi_signo);
+        TAILQ_FOREACH_SAFE(entry, &internal->entries, list, nentry) {
+                if (entry->signal->number == (int) signalfd_siginfo.ssi_signo) {
+                        rc = medusa_signal_onevent(entry->signal, MEDUSA_SIGNAL_EVENT_FIRED);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                }
+        }
         return 0;
 }
 
 static void internal_destroy (struct medusa_signal_backend *backend)
 {
+        struct entry *entry;
+        struct entry *nentry;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 return;
         }
         if (internal->sfd >= 0) {
                 close(internal->sfd);
+        }
+        TAILQ_FOREACH_SAFE(entry, &internal->entries, list, nentry) {
+                TAILQ_REMOVE(&internal->entries, entry, list);
+                free(entry);
         }
         free(internal);
 }
@@ -157,6 +194,7 @@ struct medusa_signal_backend * medusa_signal_signalfd_create (const struct medus
                 goto bail;
         }
         memset(internal, 0, sizeof(struct internal));
+        TAILQ_INIT(&internal->entries);
         sigemptyset(&internal->sigset);
         rc = sigprocmask(SIG_BLOCK, &internal->sigset, NULL);
         if (rc < 0) {
