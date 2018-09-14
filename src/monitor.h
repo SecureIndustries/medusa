@@ -25,6 +25,13 @@ enum {
 };
 
 enum {
+        MEDUSA_MONITOR_SIGNAL_DEFAULT,
+        MEDUSA_MONITOR_SIGNAL_SIGNALFD,
+#define MEDUSA_MONITOR_SIGNAL_DEFAULT   MEDUSA_MONITOR_SIGNAL_DEFAULT
+#define MEDUSA_MONITOR_SIGNAL_SIGNALFD  MEDUSA_MONITOR_SIGNAL_SIGNALFD
+};
+
+enum {
         MEDUSA_MONITOR_FLAG_NONE        = 0x00000000,
         MEDUSA_MONITOR_FLAG_THREAD_SAFE = 0x00000001,
         MEDUSA_MONITOR_FLAG_DEFAULT     = MEDUSA_MONITOR_FLAG_THREAD_SAFE
@@ -60,6 +67,14 @@ struct medusa_monitor_init_options {
                         } timerfd;
                 } u;
         } timer;
+        struct {
+                unsigned int type;
+                union {
+                        struct {
+
+                        } signalfd;
+                } u;
+        } signal;
 };
 
 int medusa_monitor_init_options_default (struct medusa_monitor_init_options *options);

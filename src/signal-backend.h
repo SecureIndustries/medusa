@@ -10,6 +10,7 @@ struct medusa_signal_backend {
         int (*fd) (struct medusa_signal_backend *backend);
         int (*add) (struct medusa_signal_backend *backend, struct medusa_signal *signal);
         int (*del) (struct medusa_signal_backend *backend, struct medusa_signal *signal);
+        int (*run) (struct medusa_signal_backend *backend);
         void (*destroy) (struct medusa_signal_backend *backend);
         struct medusa_monitor *monitor;
 };

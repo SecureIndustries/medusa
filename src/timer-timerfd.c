@@ -114,7 +114,7 @@ struct medusa_timer_backend * medusa_timer_timerfd_create (const struct medusa_t
         if (rc != 0) {
                 goto bail;
         }
-        internal->backend.name    = "select";
+        internal->backend.name    = "timerfd";
         internal->backend.fd      = internal_fd;
         internal->backend.set     = internal_set;
         internal->backend.get     = internal_get;
