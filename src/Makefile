@@ -12,6 +12,10 @@ ifeq ($(__LINUX__), y)
 TIMER_TIMERFD_ENABLE  ?= y
 endif
 
+ifeq ($(__LINUX__), y)
+SIGNAL_SIGNALFD_ENABLE  ?= y
+endif
+
 target.a-y = \
 	libmedusa-monitor.a \
 	libmedusa-socket.a
@@ -31,6 +35,7 @@ libmedusa-monitor.a_files-y = \
 	buffer-chunked.c \
 	pqueue.c \
 	io.c \
+	signal.c \
 	timer.c \
 	monitor.c
 
@@ -58,6 +63,11 @@ libmedusa-monitor.a_cflags-${TIMER_TIMERFD_ENABLE} += \
 	-DTIMER_TIMERFD_ENABLE=1
 libmedusa-monitor.a_files-${TIMER_TIMERFD_ENABLE} += \
 	timer-timerfd.c
+
+libmedusa-monitor.a_cflags-${SIGNAL_SIGNALFD_ENABLE} += \
+	-DSIGNAL_SIGNALFD_ENABLE=1
+libmedusa-monitor.a_files-${SIGNAL_SIGNALFD_ENABLE} += \
+	signal-signalfd.c
 
 libmedusa-monitor.so_cflags-y = \
 	${libmedusa-monitor.a_cflags-y}
@@ -98,6 +108,7 @@ dist.include-y = \
 	pool.h \
 	buffer.h \
 	io.h \
+	signal.h \
 	timer.h \
 	tcpsocket.h
 
