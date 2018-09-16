@@ -13,7 +13,7 @@ TIMER_TIMERFD_ENABLE  ?= y
 endif
 
 ifeq ($(__LINUX__), y)
-SIGNAL_SIGNALFD_ENABLE  ?= y
+SIGNAL_SIGACTION_ENABLE  ?= y
 endif
 
 target.a-y = \
@@ -64,10 +64,10 @@ libmedusa-monitor.a_cflags-${TIMER_TIMERFD_ENABLE} += \
 libmedusa-monitor.a_files-${TIMER_TIMERFD_ENABLE} += \
 	timer-timerfd.c
 
-libmedusa-monitor.a_cflags-${SIGNAL_SIGNALFD_ENABLE} += \
-	-DSIGNAL_SIGNALFD_ENABLE=1
-libmedusa-monitor.a_files-${SIGNAL_SIGNALFD_ENABLE} += \
-	signal-signalfd.c
+libmedusa-monitor.a_cflags-${SIGNAL_SIGACTION_ENABLE} += \
+	-DSIGNAL_SIGACTION_ENABLE=1
+libmedusa-monitor.a_files-${SIGNAL_SIGACTION_ENABLE} += \
+	signal-sigaction.c
 
 libmedusa-monitor.so_cflags-y = \
 	${libmedusa-monitor.a_cflags-y}
