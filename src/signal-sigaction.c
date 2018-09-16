@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include "error.h"
 #include "clock.h"
@@ -32,12 +33,15 @@ struct internal {
 };
 
 static int g_signal_handler_wakeup_write;
-static int g_signal_handler_wakeup_fired;
-static pthread_mutex_t g_signal_handler_wakeup_mutex;
+static pthread_mutex_t g_signal_handler_wakeup_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void internal_signal_handler (int number)
 {
-        (void) number;
+        int rc;
+        pthread_mutex_lock(&g_signal_handler_wakeup_mutex);
+        rc = write(g_signal_handler_wakeup_write, &number, sizeof(int));
+        (void) rc;
+        pthread_mutex_unlock(&g_signal_handler_wakeup_mutex);
 }
 
 static int internal_fd (struct medusa_signal_backend *backend)
@@ -119,9 +123,9 @@ static int internal_del (struct medusa_signal_backend *backend, struct medusa_si
 static int internal_run (struct medusa_signal_backend *backend)
 {
         int rc;
+        int number;
         struct entry *entry;
         struct entry *nentry;
-        struct sigaction_siginfo sigaction_siginfo;
         struct internal *internal = (struct internal *) backend;
         if (MEDUSA_IS_ERR_OR_NULL(internal)) {
                 return -EINVAL;
@@ -129,7 +133,7 @@ static int internal_run (struct medusa_signal_backend *backend)
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {
                 return -EINVAL;
         }
-        rc = read(internal->sfd[0], &sigaction_siginfo, sizeof(struct sigaction_siginfo));
+        rc = read(internal->sfd[0], &number, sizeof(int));
         if (rc < 0) {
                 if (errno == EINTR) {
                         return 0;
@@ -137,11 +141,11 @@ static int internal_run (struct medusa_signal_backend *backend)
                         return -errno;
                 }
         }
-        if (rc != sizeof(struct sigaction_siginfo)) {
+        if (rc != sizeof(int)) {
                 return -EIO;
         }
         TAILQ_FOREACH_SAFE(entry, &internal->entries, list, nentry) {
-                if (entry->signal->number == (int) sigaction_siginfo.ssi_signo) {
+                if (entry->signal->number == (int) number) {
                         rc = medusa_signal_onevent(entry->signal, MEDUSA_SIGNAL_EVENT_FIRED);
                         if (rc < 0) {
                                 return rc;
@@ -159,6 +163,7 @@ static void internal_destroy (struct medusa_signal_backend *backend)
         if (internal == NULL) {
                 return;
         }
+        g_signal_handler_wakeup_write = -1;
         if (internal->sfd[0] >= 0) {
                 close(internal->sfd[0]);
         }
@@ -183,11 +188,12 @@ struct medusa_signal_backend * medusa_signal_sigaction_create (const struct medu
         }
         memset(internal, 0, sizeof(struct internal));
         TAILQ_INIT(&internal->entries);
-        rc = pipe2(internal->sfd, O_NONBLOCK);
+        rc = pipe(internal->sfd);
         if (rc < 0) {
                 internal_destroy(&internal->backend);
                 return MEDUSA_ERR_PTR(-errno);
         }
+        g_signal_handler_wakeup_write = internal->sfd[1];
         internal->backend.name    = "sigaction";
         internal->backend.fd      = internal_fd;
         internal->backend.add     = internal_add;
