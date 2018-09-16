@@ -33,7 +33,7 @@
 #include "poll-select.h"
 #include "poll-backend.h"
 
-#include "signal-signalfd.h"
+#include "signal-sigaction.h"
 #include "signal-backend.h"
 
 #include "timer-timerfd.h"
@@ -810,7 +810,7 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         if (options->signal.type == MEDUSA_MONITOR_SIGNAL_DEFAULT) {
                 do {
 #if defined(__LINUX__) && (__LINUX__ == 1)
-                        monitor->signal.backend = medusa_signal_signalfd_create(NULL);
+                        monitor->signal.backend = medusa_signal_sigaction_create(NULL);
                         if (monitor->signal.backend != NULL) {
                                 break;
                         }
@@ -818,7 +818,7 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
                 } while (0);
 #if defined(__LINUX__) && (__LINUX__ == 1)
         } else if (options->signal.type == MEDUSA_MONITOR_SIGNAL_SIGNALFD) {
-                monitor->signal.backend = medusa_signal_signalfd_create(NULL);
+                monitor->signal.backend = medusa_signal_sigaction_create(NULL);
 #endif
         } else {
                 goto bail;
