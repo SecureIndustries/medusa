@@ -170,7 +170,6 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                         if (niovecs <= 0) {
                                 goto bail;
                         }
-                        fprintf(stderr, "write niovecs: %d\n", niovecs);
                         rc = writev(tcpsocket->io.fd, tcpsocket->iovecs, niovecs);
                         if (rc < 0) {
                                 if (errno == EINTR) {
@@ -269,7 +268,6 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                         if (niovecs < 0) {
                                 goto bail;
                         }
-                        fprintf(stderr, "read niovecs: %d\n", niovecs);
                         rc = readv(tcpsocket->io.fd, tcpsocket->iovecs, niovecs);
                         if (rc < 0) {
                                 if (errno == EINTR) {
