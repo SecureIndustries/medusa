@@ -150,6 +150,9 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
                 goto out;
         }
         if (count < 0) {
+                if (errno == EINTR) {
+                        return 0;
+                }
                 return -errno;
         }
         for (i = 0; i < count; i++) {
