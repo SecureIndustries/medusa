@@ -32,15 +32,17 @@ struct internal {
         struct entries entries;
 };
 
-static int g_signal_handler_wakeup_write;
+static int g_signal_handler_wakeup_write_fd = -1;
 static pthread_mutex_t g_signal_handler_wakeup_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void internal_signal_handler (int number)
 {
         int rc;
         pthread_mutex_lock(&g_signal_handler_wakeup_mutex);
-        rc = write(g_signal_handler_wakeup_write, &number, sizeof(int));
-        (void) rc;
+        if (g_signal_handler_wakeup_write_fd >= 0) {
+                rc = write(g_signal_handler_wakeup_write_fd, &number, sizeof(int));
+                (void) rc;
+        }
         pthread_mutex_unlock(&g_signal_handler_wakeup_mutex);
 }
 
@@ -73,6 +75,14 @@ static int internal_add (struct medusa_signal_backend *backend, struct medusa_si
                         return -EEXIST;
                 }
         }
+        pthread_mutex_lock(&g_signal_handler_wakeup_mutex);
+        if (g_signal_handler_wakeup_write_fd == -1) {
+                g_signal_handler_wakeup_write_fd = internal->sfd[1];
+        } else if (g_signal_handler_wakeup_write_fd != internal->sfd[1]) {
+                pthread_mutex_unlock(&g_signal_handler_wakeup_mutex);
+                return -EBUSY;
+        }
+        pthread_mutex_unlock(&g_signal_handler_wakeup_mutex);
         entry = malloc(sizeof(struct entry));
         if (entry == NULL) {
                 return -ENOMEM;
@@ -160,7 +170,12 @@ static void internal_destroy (struct medusa_signal_backend *backend)
         if (internal == NULL) {
                 return;
         }
-        g_signal_handler_wakeup_write = -1;
+        pthread_mutex_lock(&g_signal_handler_wakeup_mutex);
+        if (g_signal_handler_wakeup_write_fd == internal->sfd[1]) {
+                g_signal_handler_wakeup_write_fd = -1;
+        }
+        pthread_mutex_unlock(&g_signal_handler_wakeup_mutex);
+        g_signal_handler_wakeup_write_fd = -1;
         if (internal->sfd[0] >= 0) {
                 close(internal->sfd[0]);
         }
@@ -168,6 +183,7 @@ static void internal_destroy (struct medusa_signal_backend *backend)
                 close(internal->sfd[1]);
         }
         TAILQ_FOREACH_SAFE(entry, &internal->entries, list, nentry) {
+                sigaction(entry->signal->number, &entry->sa, NULL);
                 TAILQ_REMOVE(&internal->entries, entry, list);
                 free(entry);
         }
@@ -190,7 +206,6 @@ struct medusa_signal_backend * medusa_signal_sigaction_create (const struct medu
                 internal_destroy(&internal->backend);
                 return MEDUSA_ERR_PTR(-errno);
         }
-        g_signal_handler_wakeup_write = internal->sfd[1];
         internal->backend.name    = "sigaction";
         internal->backend.fd      = internal_fd;
         internal->backend.add     = internal_add;
