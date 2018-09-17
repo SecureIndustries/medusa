@@ -76,7 +76,9 @@ libmedusa-monitor.so_files-y = \
 	${libmedusa-monitor.a_files-y}
 
 libmedusa-monitor.so_ldflags-y = \
-	-lpthread \
+	-lpthread
+
+libmedusa-monitor.so_ldflags-$(__LINUX__) += \
 	-lrt
 
 libmedusa-socket.a_cflags-y = \

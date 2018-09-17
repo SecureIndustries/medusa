@@ -170,7 +170,7 @@ __attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create (st
         return medusa_io_create_with_options(&options);
 }
 
-struct medusa_io * medusa_io_create_with_options (const struct medusa_io_init_options *options)
+__attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create_with_options (const struct medusa_io_init_options *options)
 {
         int rc;
         struct medusa_io *io;

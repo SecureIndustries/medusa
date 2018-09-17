@@ -22,11 +22,11 @@ define test-defaults
 		../dist/lib
 
 	$1_ldflags-y = \
-		-Wl,-Bstatic \
-		-lmedusa-socket \
-		-lmedusa-monitor \
-		-Wl,-Bdynamic \
-		-lpthread \
+		../dist/lib/libmedusa-socket.a \
+		../dist/lib/libmedusa-monitor.a \
+		-lpthread
+
+	$1_ldflags-$(__LINUX__) += \
 		-lrt
 
 	$1_depends-y = \
@@ -39,12 +39,13 @@ define test_event-defaults
 		$1.c
 
 	$1_ldflags-y = \
-		-Wl,-Bstatic \
 		-levent \
 		-levent_pthreads \
-		-Wl,-Bdynamic \
-		-lpthread \
+		-lpthread
+
+	$1_ldflags-$(__LINUX__) += \
 		-lrt
+
 endef
 
 $(eval $(foreach T,${tests},$(eval $(call test-defaults,$T))))

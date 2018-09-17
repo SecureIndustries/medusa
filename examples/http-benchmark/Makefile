@@ -14,9 +14,9 @@ medusa-http-benchmark_files-y = \
 	http-benchmark.c
 
 medusa-http-benchmark_ldflags-y = \
-	-Wl,-Bstatic \
-	-lmedusa-monitor \
-	-Wl,-Bdynamic \
+	../../dist/lib/libmedusa-monitor.a
+
+medusa-http-benchmark_ldflags-$(__LINUX__) += \
 	-lrt
 
 medusa-http-benchmark_depends-y = \
