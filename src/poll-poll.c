@@ -185,6 +185,9 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
                 goto out;
         }
         if (count < 0) {
+                if (errno == EINTR) {
+                        goto out;
+                }
                 goto bail;
         }
         for (i = 0; i < internal->npfds; i++) {
