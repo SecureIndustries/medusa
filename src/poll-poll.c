@@ -182,11 +182,11 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
         }
         count = poll(internal->pfds, internal->npfds, timeout);
         if (count == 0) {
-                goto out;
+                return 0;
         }
         if (count < 0) {
                 if (errno == EINTR) {
-                        goto out;
+                        return 0;
                 }
                 goto bail;
         }
@@ -219,7 +219,7 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
                         goto bail;
                 }
         }
-out:    return count;
+        return count;
 bail:   return -1;
 }
 
