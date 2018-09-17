@@ -130,9 +130,6 @@ static int internal_run (struct medusa_signal_backend *backend)
         if (MEDUSA_IS_ERR_OR_NULL(internal)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(signal)) {
-                return -EINVAL;
-        }
         rc = read(internal->sfd[0], &number, sizeof(int));
         if (rc < 0) {
                 if (errno == EINTR) {

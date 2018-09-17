@@ -16,9 +16,9 @@
 #include "poll-backend.h"
 #include "poll-epoll.h"
 
-#define EVENTS_SIZE     32
-#define EVENTS_STEP     32
-#define EVENTS_MAX      8192
+#define EVENTS_SIZE     (32)
+#define EVENTS_STEP     (32)
+#define EVENTS_MAX      (8 * 1024)
 
 struct internal {
         struct medusa_poll_backend backend;
