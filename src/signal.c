@@ -447,6 +447,9 @@ __attribute__ ((visibility ("default"))) int medusa_signal_is_valid_unlocked (co
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {
                 return 0;
         }
+        if (signal->number < 0) {
+                return 0;
+        }
         if ((signal->flags & MEDUSA_SIGNAL_FLAG_ENABLED) == 0) {
                 return 0;
         }
