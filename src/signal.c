@@ -188,7 +188,9 @@ __attribute__ ((visibility ("default"))) int medusa_signal_create_singleshot (st
                 medusa_signal_destroy(signal);
                 return rc;
         }
+        medusa_monitor_lock(signal->subject.monitor);
         signal->flags |= MEDUSA_SIGNAL_FLAG_AUTO_DESTROY;
+        medusa_monitor_unlock(signal->subject.monitor);
         return 0;
 }
 

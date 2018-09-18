@@ -310,7 +310,9 @@ __attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_time
                 medusa_timer_destroy(timer);
                 return rc;
         }
+        medusa_monitor_lock(timer->subject.monitor);
         timer->flags |= MEDUSA_TIMER_FLAG_AUTO_DESTROY;
+        medusa_monitor_unlock(timer->subject.monitor);
         return 0;
 }
 

@@ -358,7 +358,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_options_defau
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_init (struct medusa_tcpsocket *tcpsocket, struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_unlocked (struct medusa_tcpsocket *tcpsocket, struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context)
 {
         int rc;
         struct medusa_tcpsocket_init_options options;
@@ -372,7 +372,22 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init (struct medus
         return medusa_tcpsocket_init_with_options(tcpsocket, &options);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_init_options *options)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_init (struct medusa_tcpsocket *tcpsocket, struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(monitor);
+        rc = medusa_tcpsocket_init_unlocked(tcpsocket, monitor, onevent, context);
+        medusa_monitor_unlock(monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_with_options_unlocked (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_init_options *options)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
@@ -411,31 +426,49 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_with_options 
         if (tcpsocket->iovecs == NULL) {
                 return -ENOMEM;
         }
-        rc = medusa_monitor_add(options->monitor, &tcpsocket->io.subject);
+        rc = medusa_monitor_add_unlocked(options->monitor, &tcpsocket->io.subject);
         if (rc < 0) {
                 return rc;
         }
-        rc = medusa_tcpsocket_set_nonblocking(tcpsocket, options->nonblocking);
+        rc = medusa_tcpsocket_set_nonblocking_unlocked(tcpsocket, options->nonblocking);
         if (rc < 0) {
                 return rc;
         }
-        rc = medusa_tcpsocket_set_reuseaddr(tcpsocket, options->reuseaddr);
+        rc = medusa_tcpsocket_set_reuseaddr_unlocked(tcpsocket, options->reuseaddr);
         if (rc < 0) {
                 return rc;
         }
-        rc = medusa_tcpsocket_set_reuseport(tcpsocket, options->reuseport);
+        rc = medusa_tcpsocket_set_reuseport_unlocked(tcpsocket, options->reuseport);
         if (rc < 0) {
                 return rc;
         }
-        rc = medusa_tcpsocket_set_backlog(tcpsocket, options->backlog);
+        rc = medusa_tcpsocket_set_backlog_unlocked(tcpsocket, options->backlog);
         if (rc < 0) {
                 return rc;
         }
-        rc = medusa_tcpsocket_set_enabled(tcpsocket, options->enabled);
+        rc = medusa_tcpsocket_set_enabled_unlocked(tcpsocket, options->enabled);
         if (rc < 0) {
                 return rc;
         }
         return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_init_options *options)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(options->monitor)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(options->monitor);
+        rc = medusa_tcpsocket_init_with_options_unlocked(tcpsocket, options);
+        medusa_monitor_unlock(options->monitor);
+        return rc;
 }
 
 __attribute__ ((visibility ("default"))) void medusa_tcpsocket_uninit_unlocked (struct medusa_tcpsocket *tcpsocket)
@@ -463,7 +496,7 @@ __attribute__ ((visibility ("default"))) void medusa_tcpsocket_uninit (struct me
         medusa_monitor_unlock(tcpsocket->io.subject.monitor);
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context)
 {
         int rc;
         struct medusa_tcpsocket_init_options options;
@@ -474,10 +507,22 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
         options.monitor = monitor;
         options.onevent = onevent;
         options.context = context;
-        return medusa_tcpsocket_create_with_options(&options);
+        return medusa_tcpsocket_create_with_options_unlocked(&options);
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_create_with_options (const struct medusa_tcpsocket_init_options *options)
+__attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context)
+{
+        struct medusa_tcpsocket *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(monitor);
+        rc = medusa_tcpsocket_create_unlocked(monitor, onevent, context);
+        medusa_monitor_unlock(monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_create_with_options_unlocked (const struct medusa_tcpsocket_init_options *options)
 {
         int rc;
         struct medusa_tcpsocket *tcpsocket;
@@ -499,13 +544,28 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
         memset(tcpsocket, 0, sizeof(struct medusa_tcpsocket));
-        rc = medusa_tcpsocket_init_with_options(tcpsocket, options);
+        rc = medusa_tcpsocket_init_with_options_unlocked(tcpsocket, options);
         if (rc < 0) {
-                medusa_tcpsocket_destroy(tcpsocket);
+                medusa_tcpsocket_destroy_unlocked(tcpsocket);
                 return MEDUSA_ERR_PTR(rc);
         }
         tcpsocket->io.subject.flags |= MEDUSA_SUBJECT_FLAG_ALLOC;
         return tcpsocket;
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_create_with_options (const struct medusa_tcpsocket_init_options *options)
+{
+        struct medusa_tcpsocket *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(options->monitor)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(options->monitor);
+        rc = medusa_tcpsocket_create_with_options_unlocked(options);
+        medusa_monitor_unlock(options->monitor);
+        return rc;
 }
 
 __attribute__ ((visibility ("default"))) void medusa_tcpsocket_destroy_unlocked (struct medusa_tcpsocket *tcpsocket)
