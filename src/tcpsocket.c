@@ -104,11 +104,13 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
         int niovecs;
         int64_t length;
         unsigned int tevents;
+        struct medusa_monitor *monitor;
         struct medusa_tcpsocket *tcpsocket = (struct medusa_tcpsocket *) io;
 
         (void) context;
 
-        medusa_monitor_lock(tcpsocket->io.subject.monitor);
+        monitor = tcpsocket->io.subject.monitor;
+        medusa_monitor_lock(monitor);
 
         tevents = 0;
 
@@ -343,9 +345,9 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
         if (rc < 0) {
                 goto bail;
         }
-        medusa_monitor_unlock(tcpsocket->io.subject.monitor);
+        medusa_monitor_unlock(monitor);
         return 0;
-bail:   medusa_monitor_unlock(tcpsocket->io.subject.monitor);
+bail:   medusa_monitor_unlock(monitor);
         return -EIO;
 }
 
