@@ -1280,7 +1280,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_accept_init (struc
                 return -EINVAL;
         }
         medusa_monitor_lock(monitor);
-        rc = medusa_tcpsocket_accept_init_unlocked(tcpsocket, accepted, onevent, context);
+        rc = medusa_tcpsocket_accept_init_unlocked(accepted, tcpsocket, onevent, context);
         medusa_monitor_unlock(monitor);
         return rc;
 }
