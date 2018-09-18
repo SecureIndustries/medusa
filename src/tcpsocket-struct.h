@@ -17,6 +17,6 @@ int medusa_tcpsocket_init (struct medusa_tcpsocket *tcpsocket, struct medusa_mon
 int medusa_tcpsocket_init_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_init_options *options);
 void medusa_tcpsocket_uninit (struct medusa_tcpsocket *tcpsocket);
 
-int medusa_tcpsocket_accept_init (struct medusa_tcpsocket *tcpsocket, struct medusa_tcpsocket *accepted, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
+int medusa_tcpsocket_accept_init (struct medusa_tcpsocket *accepted, struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
 
 #endif
