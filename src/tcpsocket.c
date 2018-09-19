@@ -484,7 +484,7 @@ __attribute__ ((visibility ("default"))) void medusa_tcpsocket_uninit_unlocked (
         if (tcpsocket->io.subject.monitor != NULL) {
                 medusa_monitor_del_unlocked(&tcpsocket->io.subject);
         } else {
-                medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
+                medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
         }
 }
 
