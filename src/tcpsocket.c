@@ -1431,7 +1431,6 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_read_unlocked (str
         int64_t length;
         int i;
         int niovecs;
-        struct iovec *iovecs;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
@@ -1458,29 +1457,36 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_read_unlocked (str
         if (niovecs == 0) {
                 return 0;
         }
-        iovecs = malloc(sizeof(struct iovec) * niovecs);
-        if (iovecs == NULL) {
-                return -ENOMEM;
+        if (niovecs > tcpsocket->niovecs) {
+                struct iovec *tmp;
+                tmp = realloc(tcpsocket->iovecs, sizeof(struct iovec) * niovecs);
+                if (tmp == NULL) {
+                        tmp = malloc(sizeof(struct iovec) * niovecs);
+                        if (tmp == NULL) {
+                                return -ENOMEM;
+                        }
+                        if (tcpsocket->iovecs != NULL) {
+                                free(tcpsocket->iovecs);
+                        }
+                }
+                tcpsocket->iovecs = tmp;
+                tcpsocket->niovecs = niovecs;
         }
-        niovecs = medusa_buffer_peek(tcpsocket->rbuffer, 0, size, iovecs, niovecs);
+        niovecs = medusa_buffer_peek(tcpsocket->rbuffer, 0, size, tcpsocket->iovecs, niovecs);
         if (niovecs < 0) {
-                free(iovecs);
                 return niovecs;
         }
         if (niovecs == 0) {
-                free(iovecs);
                 return -EIO;
         }
         for (length = 0, i = 0; i < niovecs; i++) {
-                memcpy(data + length, iovecs[i].iov_base, iovecs[i].iov_len);
-                length += iovecs[i].iov_len;
+                memcpy(data + length, tcpsocket->iovecs[i].iov_base, tcpsocket->iovecs[i].iov_len);
+                length += tcpsocket->iovecs[i].iov_len;
         }
         rc = medusa_buffer_choke(tcpsocket->rbuffer, length);
         if (rc < 0) {
-                free(iovecs);
                 return rc;
         }
-        free(iovecs);
         return length;
 }
 
