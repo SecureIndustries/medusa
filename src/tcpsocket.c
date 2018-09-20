@@ -1594,9 +1594,11 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_write_unlocked (st
         if (size < 0) {
                 return size;
         }
-        rc = medusa_io_add_events_unlocked(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
-        if (rc < 0) {
-                return rc;
+        if (size > 0) {
+                rc = medusa_io_add_events_unlocked(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
+                if (rc < 0) {
+                        return rc;
+                }
         }
         return size;
 }
@@ -1633,9 +1635,11 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_writev_unlocked (s
         if (size < 0) {
                 return size;
         }
-        rc = medusa_io_add_events_unlocked(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
-        if (rc < 0) {
-                return rc;
+        if (size > 0) {
+                rc = medusa_io_add_events_unlocked(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
+                if (rc < 0) {
+                        return rc;
+                }
         }
         return size;
 }
@@ -1700,7 +1704,8 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_vprintf_unlocked (
         size = medusa_buffer_vprintf(tcpsocket->wbuffer, format, va);
         if (size < 0) {
                 return size;
-        } else if (size > 0) {
+        }
+        if (size > 0) {
                 rc = medusa_io_add_events_unlocked(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
                 if (rc < 0) {
                         return rc;
