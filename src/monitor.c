@@ -926,7 +926,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                         medusa_monitor_unlock(monitor);
                         medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_DESTROY);
                         medusa_monitor_lock(monitor);
-                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
+                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_SIGNAL) {
                         signal = (struct medusa_signal *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 monitor->signal.backend->del(monitor->signal.backend, signal);
