@@ -173,6 +173,9 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                         if (niovecs <= 0) {
                                 goto bail;
                         }
+                        if (niovecs > tcpsocket->niovecs) {
+                                goto bail;
+                        }
                         rc = writev(tcpsocket->io.fd, tcpsocket->iovecs, niovecs);
                         if (rc < 0) {
                                 if (errno == EINTR) {
@@ -269,6 +272,9 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                         }
                         niovecs = medusa_buffer_reserve(tcpsocket->rbuffer, n, tcpsocket->iovecs, tcpsocket->niovecs);
                         if (niovecs < 0) {
+                                goto bail;
+                        }
+                        if (niovecs > tcpsocket->niovecs) {
                                 goto bail;
                         }
                         rc = readv(tcpsocket->io.fd, tcpsocket->iovecs, niovecs);
@@ -422,11 +428,6 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_with_options_
         tcpsocket->wbuffer = medusa_buffer_create(MEDUSA_BUFFER_TYPE_CHUNKED);
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->wbuffer)) {
                 return MEDUSA_PTR_ERR(tcpsocket->wbuffer);
-        }
-        tcpsocket->niovecs = MEDUSA_TCPSOCKET_DEFAULT_IOVECS;
-        tcpsocket->iovecs  = malloc(sizeof(struct iovec) * tcpsocket->niovecs);
-        if (tcpsocket->iovecs == NULL) {
-                return -ENOMEM;
         }
         rc = medusa_monitor_add_unlocked(options->monitor, &tcpsocket->io.subject);
         if (rc < 0) {
