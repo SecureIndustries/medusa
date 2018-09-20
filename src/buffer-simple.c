@@ -178,7 +178,7 @@ static int simple_buffer_vprintf (struct medusa_buffer *buffer, const char *form
         va_end(vs);
         va_copy(vs, va);
         rc = vsnprintf(simple->data + simple->length, size + 1, format, vs);
-        if (rc <= 0) {
+        if (rc < 0) {
                 va_end(vs);
                 return -EIO;
         }
@@ -285,7 +285,7 @@ static int simple_buffer_choke (struct medusa_buffer *buffer, int64_t length)
         } else {
                 simple->length = 0;
         }
-        return 0;
+        return length;
 }
 
 static int simple_buffer_reset (struct medusa_buffer *buffer)

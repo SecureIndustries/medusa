@@ -236,20 +236,26 @@ static int chunked_buffer_vprintf (struct medusa_buffer *buffer, const char *for
         }
         va_copy(vs, va);
         size = vsnprintf(NULL, 0, format, vs);
+        va_end(vs);
         if (size < 0) {
-                va_end(vs);
                 return -EIO;
         }
-        rc = chunked_buffer_resize(buffer, chunked->total_length + size + 1);
-        if (rc < 0) {
-                va_end(vs);
-                return rc;
-        }
-        va_end(vs);
         if (chunked->active == NULL) {
                 chunked->active = TAILQ_FIRST(&chunked->entries);
         }
-        if (chunked->active->size - chunked->active->length < size + 1) {
+        if (chunked->active != NULL &&
+            chunked->active->size - chunked->active->length >= size + 1) {
+        } else if (chunked->chunk_size >= size + 1) {
+                rc = chunked_buffer_resize(buffer, chunked->total_length + size + 1);
+                if (rc < 0) {
+                        return rc;
+                }
+                if (chunked->active == NULL) {
+                        chunked->active = TAILQ_FIRST(&chunked->entries);
+                } else {
+                        chunked->active = TAILQ_NEXT(chunked->active, list);
+                }
+        } else {
                 entry = malloc(sizeof(struct medusa_buffer_chunked_entry) + size + 1);
                 if (entry == NULL) {
                         return -ENOMEM;
@@ -259,19 +265,22 @@ static int chunked_buffer_vprintf (struct medusa_buffer *buffer, const char *for
                 entry->offset = 0;
                 entry->length = 0;
                 entry->size = size + 1;
-                TAILQ_INSERT_HEAD(&chunked->entries, entry, list);
+                if (chunked->active == NULL) {
+                        TAILQ_INSERT_HEAD(&chunked->entries, entry, list);
+                } else {
+                        TAILQ_INSERT_AFTER(&chunked->entries, chunked->active, entry, list);
+                }
                 chunked->total_size += entry->size;
                 chunked->active = entry;
         }
         va_copy(vs, va);
         rc = vsnprintf((char *) chunked->active->data + chunked->active->length, size + 1, format, vs);
-        if (rc <= 0) {
-                va_end(vs);
+        va_end(vs);
+        if (rc < 0) {
                 return -EIO;
         }
         chunked->active->length += rc;
         chunked->total_length += rc;
-        va_end(vs);
         return rc;
 }
 
@@ -481,7 +490,7 @@ static int chunked_buffer_choke (struct medusa_buffer *buffer, int64_t length)
                 chunked->total_size = 0;
                 chunked->active = NULL;
         }
-        return 0;
+        return length;
 }
 
 static int chunked_buffer_reset (struct medusa_buffer *buffer)
