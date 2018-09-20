@@ -431,7 +431,7 @@ static int chunked_buffer_peek (struct medusa_buffer *buffer, int64_t offset, in
                 return -EINVAL;
         }
         if (offset > chunked->total_length) {
-                return -EINVAL;
+                offset = chunked->total_length;
         }
         if (length < 0) {
                 length = chunked->total_length - offset;
@@ -440,7 +440,7 @@ static int chunked_buffer_peek (struct medusa_buffer *buffer, int64_t offset, in
                 return -EINVAL;
         }
         if (length > chunked->total_length - offset) {
-                return -EINVAL;
+                length = chunked->total_length - offset;
         }
         if (length == 0) {
                 return 0;

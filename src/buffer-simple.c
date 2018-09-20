@@ -283,7 +283,7 @@ static int simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int
                 return -EINVAL;
         }
         if (offset > simple->length) {
-                return -EINVAL;
+                offset = simple->length;
         }
         if (length < 0) {
                 length = simple->length - offset;
@@ -292,7 +292,7 @@ static int simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int
                 return -EINVAL;
         }
         if (length > simple->length - offset) {
-                return -EINVAL;
+                length = simple->length - offset;
         }
         if (length == 0) {
                 return 0;
