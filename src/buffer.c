@@ -58,22 +58,47 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_get_length (const
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_prepend (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
+        int niovecs;
+        struct iovec iovecs[1];
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
         if (MEDUSA_IS_ERR_OR_NULL(data)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->prepend)) {
-                return -EINVAL;
-        }
         if (length < 0) {
                 return -EINVAL;
         }
-        return buffer->backend->prepend(buffer, data, length);
+        if (length == 0) {
+                return 0;
+        }
+        niovecs = 1;
+        iovecs[0].iov_base = (void *) data;
+        iovecs[0].iov_len  = length;
+        return medusa_buffer_prependv(buffer, iovecs, niovecs);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_prependv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->prependv)) {
+                return -EINVAL;
+        }
+        if (niovecs < 0) {
+                return -EINVAL;
+        }
+        if (niovecs == 0) {
+                return 0;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
+                return -EINVAL;
+        }
+        return buffer->backend->prependv(buffer, iovecs, niovecs);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length)
@@ -205,9 +230,6 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_peek (struct medusa_b
                 return -EINVAL;
         }
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->peek)) {
-                return -EINVAL;
-        }
-        if (offset < 0) {
                 return -EINVAL;
         }
         return buffer->backend->peek(buffer, offset, length, iovecs, niovecs);

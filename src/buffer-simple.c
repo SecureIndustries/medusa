@@ -102,6 +102,34 @@ static int simple_buffer_prepend (struct medusa_buffer *buffer, const void *data
         return length;
 }
 
+static int simple_buffer_prependv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
+{
+        int rc;
+        int i;
+        int64_t wlen;
+        struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
+        if (MEDUSA_IS_ERR_OR_NULL(simple)) {
+                return -EINVAL;
+        }
+        if (niovecs < 0) {
+                return -EINVAL;
+        }
+        if (niovecs == 0) {
+                return 0;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
+                return -EINVAL;
+        }
+        for (wlen = 0, i = 0; i < niovecs; i++) {
+                rc = simple_buffer_prepend(buffer, iovecs[niovecs - i - 1].iov_base, iovecs[niovecs - i - 1].iov_len);
+                if (rc < 0) {
+                        return rc;
+                }
+                wlen += rc;
+        }
+        return wlen;
+}
+
 static int simple_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
         int rc;
@@ -245,16 +273,26 @@ static int simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
                 return -EINVAL;
         }
-        if (offset < 0) {
-                return -EINVAL;
-        }
         if (niovecs < 0) {
                 return -EINVAL;
         }
+        if (offset < 0) {
+                offset = simple->length + offset;
+        }
+        if (offset < 0) {
+                return -EINVAL;
+        }
+        if (offset > simple->length) {
+                return -EINVAL;
+        }
         if (length < 0) {
-                length = simple->length;
-        } else {
-                length = MIN(length, simple->length);
+                length = simple->length - offset;
+        }
+        if (length < 0) {
+                return -EINVAL;
+        }
+        if (length > simple->length - offset) {
+                return -EINVAL;
         }
         if (length == 0) {
                 return 0;
@@ -262,7 +300,7 @@ static int simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int
         if (niovecs == 0) {
                 return 1;
         }
-        iovecs[0].iov_base = simple->data;
+        iovecs[0].iov_base = simple->data + offset;
         iovecs[0].iov_len  = length;
         return 1;
 }
@@ -318,7 +356,7 @@ const struct medusa_buffer_backend simple_buffer_backend = {
         .get_size       = simple_buffer_get_size,
         .get_length     = simple_buffer_get_length,
 
-        .prepend        = simple_buffer_prepend,
+        .prependv       = simple_buffer_prependv,
         .appendv        = simple_buffer_appendv,
         .vprintf        = simple_buffer_vprintf,
 

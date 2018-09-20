@@ -155,6 +155,34 @@ static int chunked_buffer_prepend (struct medusa_buffer *buffer, const void *dat
         return length;
 }
 
+static int chunked_buffer_prependv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
+{
+        int rc;
+        int i;
+        int64_t wlen;
+        struct medusa_buffer_chunked *chunked = (struct medusa_buffer_chunked *) buffer;
+        if (MEDUSA_IS_ERR_OR_NULL(chunked)) {
+                return -EINVAL;
+        }
+        if (niovecs < 0) {
+                return -EINVAL;
+        }
+        if (niovecs == 0) {
+                return 0;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
+                return -EINVAL;
+        }
+        for (wlen = 0, i = 0; i < niovecs; i++) {
+                rc = chunked_buffer_prepend(buffer, iovecs[niovecs - i - 1].iov_base, iovecs[niovecs - i - 1].iov_len);
+                if (rc < 0) {
+                        return rc;
+                }
+                wlen += rc;
+        }
+        return wlen;
+}
+
 static int chunked_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
         int rc;
@@ -393,16 +421,26 @@ static int chunked_buffer_peek (struct medusa_buffer *buffer, int64_t offset, in
         if (MEDUSA_IS_ERR_OR_NULL(chunked)) {
                 return -EINVAL;
         }
-        if (offset < 0) {
-                return -EINVAL;
-        }
         if (niovecs < 0) {
                 return -EINVAL;
         }
+        if (offset < 0) {
+                offset = chunked->total_length + offset;
+        }
+        if (offset < 0) {
+                return -EINVAL;
+        }
+        if (offset > chunked->total_length) {
+                return -EINVAL;
+        }
         if (length < 0) {
-                length = chunked->total_length;
-        } else {
-                length = MIN(length, chunked->total_length);
+                length = chunked->total_length - offset;
+        }
+        if (length < 0) {
+                return -EINVAL;
+        }
+        if (length > chunked->total_length - offset) {
+                return -EINVAL;
         }
         if (length == 0) {
                 return 0;
@@ -426,13 +464,21 @@ static int chunked_buffer_peek (struct medusa_buffer *buffer, int64_t offset, in
                         continue;
                 }
                 l = MIN(length - w, entry->length - entry->offset);
-                w += l;
-                if (niovecs != 0) {
-                        iovecs[n].iov_base = entry->data + entry->offset;
-                        iovecs[n].iov_len  = l;
+                if (offset >= l) {
+                        offset -= l;
+                } else {
+                        if (offset != 0) {
+                                offset -= l;
+                        }
+                        if (niovecs != 0) {
+                                iovecs[n].iov_base = entry->data + entry->offset - offset;
+                                iovecs[n].iov_len  = l + offset;
+                        }
+                        w += l + offset;
+                        n += 1;
+                        offset = 0;
                 }
                 entry = TAILQ_NEXT(entry, list);
-                n += 1;
         }
         return n;
 }
@@ -542,7 +588,7 @@ const struct medusa_buffer_backend chunked_buffer_backend = {
         .get_size       = chunked_buffer_get_size,
         .get_length     = chunked_buffer_get_length,
 
-        .prepend        = chunked_buffer_prepend,
+        .prependv       = chunked_buffer_prependv,
         .appendv        = chunked_buffer_appendv,
         .vprintf        = chunked_buffer_vprintf,
 

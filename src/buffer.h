@@ -51,6 +51,7 @@ int64_t medusa_buffer_get_size (const struct medusa_buffer *buffer);
 int64_t medusa_buffer_get_length (const struct medusa_buffer *buffer);
 
 int medusa_buffer_prepend (struct medusa_buffer *buffer, const void *data, int64_t length);
+int medusa_buffer_prependv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs);
 int medusa_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length);
 int medusa_buffer_appendv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs);
 int medusa_buffer_printf (struct medusa_buffer *buffer, const char *format, ...)  __attribute__((format(printf, 2, 3)));
