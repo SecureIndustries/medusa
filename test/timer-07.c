@@ -80,12 +80,13 @@ static int test_poll (unsigned int poll)
         if (rc < 0) {
                 goto bail;
         }
+        fprintf(stderr, "timer: %p, initial: %.3f, interval: %.3f\n", timer, medusa_timer_get_initial(timer), medusa_timer_get_interval(timer));
 
         timer = medusa_timer_create(monitor, timer_check_callback, &count);
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 goto bail;
         }
-        rc = medusa_timer_set_interval(timer, 0.8);
+        rc = medusa_timer_set_interval(timer, 0.5);
         if (rc < 0) {
                 goto bail;
         }

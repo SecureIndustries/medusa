@@ -29,21 +29,22 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         char c;
         (void) tcpsocket;
         (void) context;
-        fprintf(stderr, "connect events: 0x%08x\n", events);
+        fprintf(stderr, "client events: 0x%08x\n", events);
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 unsigned int *connected = context;
                 *connected = *connected | 1;
-                fprintf(stderr, "write\n");
+                fprintf(stderr, "  write\n");
                 rc = medusa_tcpsocket_write(tcpsocket, "e", 1);
                 if (rc != 1) {
-                        fprintf(stderr, "medusa_tcpsocket_write failed\n");
+                        fprintf(stderr, "medusa_tcpsocket_write failed: %d, %s\n", rc, medusa_strerror(rc));
                         return -1;
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
+                fprintf(stderr, "  read\n");
                 rc = medusa_tcpsocket_read(tcpsocket, &c, 1);
                 if (rc != 1) {
-                        fprintf(stderr, "medusa_tcpsocket_read failed\n");
+                        fprintf(stderr, "medusa_tcpsocket_read failed: %d, %s\n", rc, medusa_strerror(rc));
                         return -1;
                 }
                 if (c != 'e') {
@@ -60,18 +61,23 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         char c;
         (void) tcpsocket;
         (void) context;
-        fprintf(stderr, "server  events: 0x%08x\n", events);
+        fprintf(stderr, "server events: 0x%08x\n", events);
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 unsigned int *connected = context;
                 *connected = *connected | 2;
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
-                fprintf(stderr, "read\n");
+                fprintf(stderr, "  read\n");
                 rc = medusa_tcpsocket_read(tcpsocket, &c, 1);
                 if (rc != 1) {
-                        fprintf(stderr, "medusa_tcpsocket_read failed\n");
+                        fprintf(stderr, "medusa_tcpsocket_read failed: %d, %s\n", rc, medusa_strerror(rc));
                         return -1;
                 }
+                if (c != 'e') {
+                        fprintf(stderr, "medusa_tcpsocket_read failed: c != 'e'\n");
+                        return -1;
+                }
+                fprintf(stderr, "  write\n");
                 rc = medusa_tcpsocket_write(tcpsocket, &c, 1);
                 if (rc != 1) {
                         fprintf(stderr, "medusa_tcpsocket_write failed\n");
@@ -89,7 +95,7 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
         (void) tcpsocket;
         (void) events;
         (void) context;
-        fprintf(stderr, "bind    events: 0x%08x\n", events);
+        fprintf(stderr, "bind   events: 0x%08x\n", events);
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
                 accepted = medusa_tcpsocket_accept(tcpsocket, tcpsocket_server_onevent, context);
                 if (MEDUSA_IS_ERR_OR_NULL(accepted)) {
@@ -233,6 +239,8 @@ int main (int argc, char *argv[])
                         fprintf(stderr, "failed\n");
                         return -1;
                 }
+
+                break;
         }
         return 0;
 }

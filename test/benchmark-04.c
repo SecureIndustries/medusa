@@ -30,8 +30,9 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int *g_pipes;
-static unsigned int g_samples;
+static int g_backend;
+static unsigned int g_nloops;
+static unsigned int g_nsamples;
 static unsigned int g_ntimers;
 static unsigned int g_npipes;
 static unsigned int g_nactives;
@@ -41,6 +42,7 @@ static unsigned int g_count;
 static unsigned int g_writes;
 static unsigned int g_failures;
 
+static int *g_pipes;
 static struct medusa_io **g_ios;
 static struct medusa_timer **g_timers;
 
@@ -105,17 +107,38 @@ static int test_poll (unsigned int poll)
 
         struct timeval create_start;
         struct timeval create_finish;
+        struct timeval create_total;
+        struct timeval destroy_start;
+        struct timeval destroy_finish;
+        struct timeval destroy_total;
         struct timeval apply_start;
         struct timeval apply_finish;
+        struct timeval apply_total;
         struct timeval run_start;
         struct timeval run_finish;
+        struct timeval run_total;
+
+        timerclear(&create_total);
+        timerclear(&destroy_total);
+        timerclear(&apply_total);
+        timerclear(&run_total);
+
+        timerclear(&create_start);
+        timerclear(&destroy_start);
+        timerclear(&apply_start);
+        timerclear(&run_start);
+
+        timerclear(&create_finish);
+        timerclear(&destroy_finish);
+        timerclear(&apply_finish);
+        timerclear(&run_finish);
 
         monitor = NULL;
 
         medusa_monitor_init_options_default(&options);
         options.poll.type = poll;
 
-        for (j = 0; j < g_samples; j++) {
+        for (j = 0; j < g_nloops; j++) {
                 gettimeofday(&create_start, NULL);
                 monitor = medusa_monitor_create(&options);
                 if (monitor == NULL) {
@@ -140,8 +163,9 @@ static int test_poll (unsigned int poll)
                 }
                 gettimeofday(&create_finish, NULL);
                 timersub(&create_finish, &create_start, &create_finish);
+                timeradd(&create_finish, &create_total, &create_total);
 
-                for (k = 0; k < g_samples; k++) {
+                for (k = 0; k < g_nsamples; k++) {
                         gettimeofday(&apply_start, NULL);
                         for (i = 0; i < g_npipes; i++) {
                                 rc = 0;
@@ -171,6 +195,7 @@ static int test_poll (unsigned int poll)
                         }
                         gettimeofday(&apply_finish, NULL);
                         timersub(&apply_finish, &apply_start, &apply_finish);
+                        timeradd(&apply_finish, &apply_total, &apply_total);
 
                         g_fired = 0;
                         space = g_npipes / g_nactives;
@@ -190,15 +215,41 @@ static int test_poll (unsigned int poll)
                                 }
                         } while (g_count != g_fired);
                         gettimeofday(&run_finish, NULL);
-
                         timersub(&run_finish, &run_start, &run_finish);
-                        fprintf(stderr, "%8ld %8ld %8ld\n",
+                        timeradd(&run_finish, &run_total, &run_total);
+
+                        fprintf(stderr, "%8ld %8ld %8ld %8ld\n",
                                         create_finish.tv_sec * 1000000 + create_finish.tv_usec,
                                         apply_finish.tv_sec * 1000000 + apply_finish.tv_usec,
-                                        run_finish.tv_sec * 1000000 + run_finish.tv_usec);
+                                        run_finish.tv_sec * 1000000 + run_finish.tv_usec,
+                                        destroy_finish.tv_sec * 1000000 + destroy_finish.tv_usec);
                 }
+                gettimeofday(&destroy_start, NULL);
                 medusa_monitor_destroy(monitor);
+                gettimeofday(&destroy_finish, NULL);
+                timersub(&destroy_finish, &destroy_start, &destroy_finish);
+                timeradd(&destroy_finish, &destroy_total, &destroy_total);
         }
+
+        fprintf(stderr, "%8ld %8ld %8ld %8ld %8ld\n",
+                        create_total.tv_sec * 1000000 + create_total.tv_usec,
+                        apply_total.tv_sec * 1000000 + apply_total.tv_usec,
+                        run_total.tv_sec * 1000000 + run_total.tv_usec,
+                        destroy_total.tv_sec * 1000000 + destroy_total.tv_usec,
+                        (create_total.tv_sec * 1000000 + create_total.tv_usec) +
+                        (apply_total.tv_sec * 1000000 + apply_total.tv_usec) +
+                        (run_total.tv_sec * 1000000 + run_total.tv_usec) +
+                        (destroy_total.tv_sec * 1000000 + destroy_total.tv_usec));
+
+        fprintf(stderr, "%8ld %8ld %8ld %8ld %8ld\n",
+                        (create_total.tv_sec * 1000000 + create_total.tv_usec) / g_nloops,
+                        (apply_total.tv_sec * 1000000 + apply_total.tv_usec) / (g_nloops * g_nsamples),
+                        (run_total.tv_sec * 1000000 + run_total.tv_usec) / (g_nloops * g_nsamples),
+                        (destroy_total.tv_sec * 1000000 + destroy_total.tv_usec) / g_nloops,
+                        ((create_total.tv_sec * 1000000 + create_total.tv_usec) / g_nloops) +
+                        ((apply_total.tv_sec * 1000000 + apply_total.tv_usec) / (g_nloops * g_nsamples)) +
+                        ((run_total.tv_sec * 1000000 + run_total.tv_usec) / (g_nloops * g_nsamples)) +
+                        ((destroy_total.tv_sec * 1000000 + destroy_total.tv_usec) / g_nloops));
 
         return 0;
 bail:   if (monitor != NULL) {
@@ -222,15 +273,26 @@ int main (int argc, char *argv[])
         srand(time(NULL));
         signal(SIGALRM, alarm_handler);
 
-        g_samples  = 25;
+        g_backend  = -1;
+        g_nloops   = 10;
+        g_nsamples = 10;
         g_pipes    = NULL;
-        g_npipes   = 100;
-        g_nactives = 1;
+        g_npipes   = 10;
+        g_nactives = 2;
         g_nwrites  = g_npipes;
         g_ntimers  = 0;
 
-        while ((c = getopt(argc, argv, "n:a:w:s:t:")) != -1) {
+        while ((c = getopt(argc, argv, "hb:l:s:n:a:w:t:")) != -1) {
                 switch (c) {
+                        case 'b':
+                                g_backend = atoi(optarg);
+                                break;
+                        case 'l':
+                                g_nloops = atoi(optarg);
+                                break;
+                        case 's':
+                                g_nsamples = atoi(optarg);
+                                break;
                         case 'n':
                                 g_npipes = atoi(optarg);
                                 break;
@@ -240,17 +302,32 @@ int main (int argc, char *argv[])
                         case 'w':
                                 g_nwrites = atoi(optarg);
                                 break;
-                        case 's':
-                                g_samples = atoi(optarg);
-                                break;
                         case 't':
                                 g_ntimers = !!atoi(optarg);
                                 break;
+                        case 'h':
+                                fprintf(stderr, "%s [-b backend] [-l loops] [-s samples] [-n pipes] [-a actives] [-w writes] [-t timers]\n", argv[0]);
+                                fprintf(stderr, "  -b: poll backend (default: %d)\n", g_backend);
+                                fprintf(stderr, "  -l: loop count (default: %d)\n", g_nloops);
+                                fprintf(stderr, "  -s: sample count (default: %d)\n", g_nsamples);
+                                fprintf(stderr, "  -n: number of pipes (default: %d)\n", g_npipes);
+                                fprintf(stderr, "  -a: number of actives (default: %d)\n", g_nactives);
+                                fprintf(stderr, "  -w: number of writes (default: %d)\n", g_nwrites);
+                                fprintf(stderr, "  -t: enable timers (default: %d)\n", g_ntimers);
+                                return 0;
                         default:
-                                fprintf(stderr, "unknown param: %c", c);
+                                fprintf(stderr, "unknown param: %c\n", c);
                                 return -1;
                 }
         }
+
+        fprintf(stderr, "backend : %d\n", g_backend);
+        fprintf(stderr, "loops   : %d\n", g_nloops);
+        fprintf(stderr, "samples : %d\n", g_nsamples);
+        fprintf(stderr, "pipes   : %d\n", g_npipes);
+        fprintf(stderr, "actives : %d\n", g_nactives);
+        fprintf(stderr, "writes  : %d\n", g_nwrites);
+        fprintf(stderr, "timers  : %d\n", g_ntimers);
 
         g_ios = malloc(sizeof(struct medusa_io *) * g_npipes);
         if (g_ios == NULL) {
@@ -271,16 +348,32 @@ int main (int argc, char *argv[])
                 rc = socketpair(AF_UNIX, SOCK_STREAM, 0, &g_pipes[i * 2]);
 #endif
                 if (rc != 0) {
+                        fprintf(stderr, "can not create pair: %d\n", i);
                         return -1;
                 }
         }
 
-        for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
-                fprintf(stderr, "testing poll: %d\n", g_polls[i]);
+        if (g_backend >= 0) {
+                fprintf(stderr, "testing poll: %d ...\n", g_backend);
 
-                rc = test_poll(g_polls[i]);
+                rc = test_poll(g_backend);
                 if (rc != 0) {
+                        fprintf(stderr, "fail\n");
                         return -1;
+                } else {
+                        fprintf(stderr, "success\n");
+                }
+        } else {
+                for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
+                        fprintf(stderr, "testing poll: %d ...\n", g_polls[i]);
+
+                        rc = test_poll(g_polls[i]);
+                        if (rc != 0) {
+                                fprintf(stderr, "fail\n");
+                                return -1;
+                        } else {
+                                fprintf(stderr, "success\n");
+                        }
                 }
         }
 

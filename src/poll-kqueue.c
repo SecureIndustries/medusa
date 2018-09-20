@@ -17,6 +17,7 @@ struct internal {
 
 static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *io)
 {
+        unsigned int events;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
@@ -27,7 +28,8 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->fd < 0) {
                 goto bail;
         }
-        if (medusa_io_get_events(io) == 0) {
+        events = medusa_io_get_events_unlocked(io);
+        if (events == 0) {
                 goto bail;
         }
         return 0;
@@ -36,6 +38,7 @@ bail:   return -1;
 
 static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *io)
 {
+        unsigned int events;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
@@ -46,7 +49,8 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
         if (io->fd < 0) {
                 goto bail;
         }
-        if (medusa_io_get_events(io) == 0) {
+        events = medusa_io_get_events_unlocked(io);
+        if (events == 0) {
                 goto bail;
         }
         return 0;

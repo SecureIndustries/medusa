@@ -18,7 +18,8 @@ int pqueue_mod (struct pqueue_head *head, void *entry, int compare);
 int pqueue_del (struct pqueue_head *head, void *entry);
 int pqueue_verify (struct pqueue_head *head);
 
-void * pqueue_pop (struct pqueue_head *head);
 void * pqueue_peek (struct pqueue_head *head);
+void * pqueue_pop (struct pqueue_head *head);
+int pqueue_search (struct pqueue_head *head, void *key, int (*callback) (void *context, void *entry), void *context);
 
 #endif

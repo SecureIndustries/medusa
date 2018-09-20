@@ -4,7 +4,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <ctype.h>
+#include <signal.h>
 #include <errno.h>
+
+#include <sys/uio.h>
 
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -13,6 +17,7 @@
 #include "medusa/buffer.h"
 #include "medusa/io.h"
 #include "medusa/tcpsocket.h"
+#include "medusa/signal.h"
 #include "medusa/monitor.h"
 
 static int g_running;
@@ -227,39 +232,35 @@ static int readline_medusa_io_onevent (struct medusa_io *io, unsigned int events
 static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
 {
         int rc;
-        void *rbase;
         int64_t rlen;
         int64_t wlen;
         struct medusa_buffer *rbuffer;
+        int i;
+        int niovecs;
+        struct iovec iovecs[16];
         (void) context;
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
                 rbuffer = medusa_tcpsocket_get_read_buffer(tcpsocket);
                 if (rbuffer == NULL) {
                         return MEDUSA_PTR_ERR(rbuffer);
                 }
-                while (1) {
-                        rlen = medusa_buffer_get_length(rbuffer);
-                        if (rlen < 0) {
-                                return rlen;
-                        }
-                        if (rlen == 0) {
-                                break;
-                        }
-                        rbase = medusa_buffer_get_base(rbuffer);
-                        if (MEDUSA_IS_ERR_OR_NULL(rbase)) {
-                                return MEDUSA_PTR_ERR(rbase);
-                        }
-                        wlen = medusa_tcpsocket_write(tcpsocket, rbase, rlen);
-                        if (wlen < 0) {
-                                return wlen;
-                        }
-                        if (wlen == 0) {
-                                return -EIO;
-                        }
-                        rc = medusa_buffer_eat(rbuffer, wlen);
-                        if (rc < 0) {
-                                return rc;
-                        }
+                niovecs = medusa_buffer_peek(rbuffer, 0, -1, iovecs, 16);
+                if (niovecs < 0) {
+                        return niovecs;
+                }
+                for (rlen = 0, i = 0; i < niovecs; i++) {
+                        rlen += iovecs[i].iov_len;
+                }
+                wlen = medusa_tcpsocket_writev(tcpsocket, iovecs, niovecs);
+                if (wlen < 0) {
+                        return wlen;
+                }
+                if (wlen != rlen) {
+                        return -EIO;
+                }
+                rc = medusa_buffer_choke(rbuffer, wlen);
+                if (rc < 0) {
+                        return rc;
                 }
         }
         return 0;
@@ -292,6 +293,15 @@ static int listener_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket
         return 0;
 }
 
+static int sigint_medusa_signal_onevent (struct medusa_signal *signal, unsigned int events, void *context, ...)
+{
+        (void) signal;
+        (void) events;
+        (void) context;
+        g_running = 0;
+        return medusa_monitor_break(medusa_signal_get_monitor(signal));
+}
+
 int main (int argc, char *argv[])
 {
         int rc;
@@ -307,6 +317,9 @@ int main (int argc, char *argv[])
 
         struct medusa_tcpsocket *medusa_tcpsocket;
         struct medusa_tcpsocket_init_options medusa_tcpsocket_init_options;
+
+        struct medusa_signal *medusa_signal;
+        struct medusa_signal_init_options medusa_signal_init_options;
 
         struct medusa_monitor *medusa_monitor;
         struct medusa_monitor_init_options medusa_monitor_init_options;
@@ -352,6 +365,23 @@ int main (int argc, char *argv[])
         medusa_monitor = medusa_monitor_create(&medusa_monitor_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(medusa_monitor)) {
                 err = MEDUSA_PTR_ERR(medusa_monitor);
+                goto out;
+        }
+
+        rc = medusa_signal_init_options_default(&medusa_signal_init_options);
+        if (rc < 0) {
+                err = rc;
+                goto out;
+        }
+        medusa_signal_init_options.number     = SIGINT;
+        medusa_signal_init_options.onevent    = sigint_medusa_signal_onevent;
+        medusa_signal_init_options.context    = NULL;
+        medusa_signal_init_options.singleshot = 0;
+        medusa_signal_init_options.enabled    = 1;
+        medusa_signal_init_options.monitor    = medusa_monitor;
+        medusa_signal = medusa_signal_create_with_options(&medusa_signal_init_options);
+        if (MEDUSA_IS_ERR_OR_NULL(medusa_signal)) {
+                err = MEDUSA_PTR_ERR(medusa_signal);
                 goto out;
         }
 

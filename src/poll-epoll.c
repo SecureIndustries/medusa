@@ -16,9 +16,9 @@
 #include "poll-backend.h"
 #include "poll-epoll.h"
 
-#define EVENTS_SIZE     32
-#define EVENTS_STEP     32
-#define EVENTS_MAX      8192
+#define EVENTS_SIZE     (32)
+#define EVENTS_STEP     (32)
+#define EVENTS_MAX      (8 * 1024)
 
 struct internal {
         struct medusa_poll_backend backend;
@@ -30,6 +30,7 @@ struct internal {
 static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *io)
 {
         int rc;
+        unsigned int events;
         struct epoll_event ev;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
@@ -39,25 +40,26 @@ static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *
                 goto bail;
         }
         if (io->fd < 0) {
-                goto bail;
+                return -EBADF;
         }
-        if (medusa_io_get_events(io) == 0) {
+        events = medusa_io_get_events_unlocked(io);
+        if (events == 0) {
                 goto bail;
         }
         ev.events = 0;
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_IN) {
+        if (events & MEDUSA_IO_EVENT_IN) {
                 ev.events |= EPOLLIN;
         }
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_OUT) {
+        if (events & MEDUSA_IO_EVENT_OUT) {
                 ev.events |= EPOLLOUT;
         }
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_PRI) {
+        if (events & MEDUSA_IO_EVENT_PRI) {
                 ev.events |= EPOLLPRI;
         }
         ev.data.ptr = io;
         rc = epoll_ctl(internal->fd, EPOLL_CTL_ADD, io->fd, &ev);
-        if (rc != 0) {
-                goto bail;
+        if (rc < 0) {
+                return -errno;
         }
         return 0;
 bail:   return -1;
@@ -66,6 +68,7 @@ bail:   return -1;
 static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *io)
 {
         int rc;
+        unsigned int events;
         struct epoll_event ev;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
@@ -75,25 +78,26 @@ static int internal_mod (struct medusa_poll_backend *backend, struct medusa_io *
                 goto bail;
         }
         if (io->fd < 0) {
-                goto bail;
+                return -EBADF;
         }
-        if (medusa_io_get_events(io) == 0) {
+        events = medusa_io_get_events_unlocked(io);
+        if (events == 0) {
                 goto bail;
         }
         ev.events = 0;
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_IN) {
+        if (events & MEDUSA_IO_EVENT_IN) {
                 ev.events |= EPOLLIN;
         }
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_OUT) {
+        if (events & MEDUSA_IO_EVENT_OUT) {
                 ev.events |= EPOLLOUT;
         }
-        if (medusa_io_get_events(io) & MEDUSA_IO_EVENT_PRI) {
+        if (events & MEDUSA_IO_EVENT_PRI) {
                 ev.events |= EPOLLPRI;
         }
         ev.data.ptr = io;
         rc = epoll_ctl(internal->fd, EPOLL_CTL_MOD, io->fd, &ev);
-        if (rc != 0) {
-                goto bail;
+        if (rc < 0) {
+                return -errno;
         }
         return 0;
 bail:   return -1;
@@ -111,13 +115,13 @@ static int internal_del (struct medusa_poll_backend *backend, struct medusa_io *
                 goto bail;
         }
         if (io->fd < 0) {
-                goto bail;
+                return -EBADF;
         }
         ev.events = 0;
         ev.data.ptr = io;
         rc = epoll_ctl(internal->fd, EPOLL_CTL_DEL, io->fd, &ev);
-        if (rc != 0) {
-                goto bail;
+        if (rc < 0) {
+                return -errno;
         }
         return 0;
 bail:   return -1;
@@ -146,7 +150,10 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
                 goto out;
         }
         if (count < 0) {
-                goto bail;
+                if (errno == EINTR) {
+                        return 0;
+                }
+                return -errno;
         }
         for (i = 0; i < count; i++) {
                 ev = &internal->events[i];
@@ -169,7 +176,7 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
                 }
                 rc = medusa_io_onevent(io, events);
                 if (rc < 0) {
-                        goto bail;
+                        return rc;
                 }
         }
         if (count == internal->maxevents && internal->maxevents < EVENTS_MAX) {
@@ -179,7 +186,7 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
                 if (tmp == NULL) {
                         tmp = (struct epoll_event *) malloc(sizeof(struct epoll_event) * internal->maxevents);
                         if (tmp == NULL) {
-                                goto bail;
+                                return -errno;
                         }
                         free(internal->events);
                 }

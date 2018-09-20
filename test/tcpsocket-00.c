@@ -1,5 +1,7 @@
 
+#include <stdio.h>
 #include <stdlib.h>
+
 #include <medusa/error.h>
 #include <medusa/tcpsocket.h>
 
