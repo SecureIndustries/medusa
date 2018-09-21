@@ -62,7 +62,16 @@ struct timespec;
                 }                                                       \
         } while (0)
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 int medusa_clock_monotonic (struct timespec *timespec);
 int medusa_clock_monotonic_raw (struct timespec *timespec);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

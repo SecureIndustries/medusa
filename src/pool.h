@@ -23,6 +23,11 @@ enum {
 #define MEDUSA_POOL_FLAG_DEFAULT                MEDUSA_POOL_FLAG_DEFAULT
 };
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 struct medusa_pool * medusa_pool_create (
                 const char *name,
                 unsigned int size,
@@ -36,5 +41,9 @@ void medusa_pool_destroy (struct medusa_pool *pool);
 
 void * medusa_pool_malloc (struct medusa_pool *pool);
 void medusa_pool_free (void *ptr);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

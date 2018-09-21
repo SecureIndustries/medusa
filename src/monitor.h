@@ -77,6 +77,11 @@ struct medusa_monitor_init_options {
         } signal;
 };
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 int medusa_monitor_init_options_default (struct medusa_monitor_init_options *options);
 
 struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_options *options);
@@ -90,5 +95,9 @@ int medusa_monitor_get_running (struct medusa_monitor *monitor);
 
 int medusa_monitor_break (struct medusa_monitor *monitor);
 int medusa_monitor_continue (struct medusa_monitor *monitor);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -21,6 +21,11 @@ struct medusa_signal_init_options {
         int enabled;
 };
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 int medusa_signal_init_options_default (struct medusa_signal_init_options *options);
 
 int medusa_signal_create_singleshot (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context);
@@ -38,5 +43,9 @@ int medusa_signal_set_enabled (struct medusa_signal *signal, int enabled);
 int medusa_signal_get_enabled (const struct medusa_signal *signal);
 
 struct medusa_monitor * medusa_signal_get_monitor (const struct medusa_signal *signal);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

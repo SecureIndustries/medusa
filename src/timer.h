@@ -38,6 +38,11 @@ struct medusa_timer_init_options {
         int enabled;
 };
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 int medusa_timer_init_options_default (struct medusa_timer_init_options *options);
 
 int medusa_timer_create_singleshot (struct medusa_monitor *monitor, double interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context);
@@ -72,5 +77,9 @@ int medusa_timer_set_enabled (struct medusa_timer *timer, int enabled);
 int medusa_timer_get_enabled (const struct medusa_timer *timer);
 
 struct medusa_monitor * medusa_timer_get_monitor (const struct medusa_timer *timer);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

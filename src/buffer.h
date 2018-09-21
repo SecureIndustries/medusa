@@ -39,6 +39,11 @@ struct medusa_buffer_init_options {
         } u;
 };
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 int medusa_buffer_init_options_default (struct medusa_buffer_init_options *options);
 
 struct medusa_buffer * medusa_buffer_create (unsigned int type);
@@ -63,5 +68,9 @@ int medusa_buffer_commit (struct medusa_buffer *buffer, const struct iovec *iove
 int medusa_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int niovecs);
 
 int medusa_buffer_choke (struct medusa_buffer *buffer, int64_t length);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

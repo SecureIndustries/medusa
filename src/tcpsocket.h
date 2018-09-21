@@ -94,6 +94,11 @@ struct medusa_tcpsocket_accept_options {
         int enabled;
 };
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 int medusa_tcpsocket_init_options_default (struct medusa_tcpsocket_init_options *options);
 
 struct medusa_tcpsocket * medusa_tcpsocket_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
@@ -144,5 +149,9 @@ struct medusa_buffer * medusa_tcpsocket_get_write_buffer (struct medusa_tcpsocke
 
 int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 struct medusa_monitor * medusa_tcpsocket_get_monitor (struct medusa_tcpsocket *tcpsocket);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

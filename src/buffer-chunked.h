@@ -18,9 +18,18 @@ struct medusa_buffer_chunked_init_options {
         unsigned int chunk_count;
 };
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 int medusa_buffer_chunked_init_options_default (struct medusa_buffer_chunked_init_options *options);
 
 struct medusa_buffer * medusa_buffer_chunked_create (unsigned int flags, unsigned int chunk_size, unsigned int chunk_count);
 struct medusa_buffer * medusa_buffer_chunked_create_with_options (const struct medusa_buffer_chunked_init_options *options);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

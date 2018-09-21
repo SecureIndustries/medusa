@@ -34,6 +34,11 @@ struct medusa_io_init_options {
         int enabled;
 };
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 int medusa_io_init_options_default (struct medusa_io_init_options *options);
 
 struct medusa_io * medusa_io_create (struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...), void *context);
@@ -51,5 +56,9 @@ int medusa_io_set_enabled (struct medusa_io *io, int enabled);
 int medusa_io_get_enabled (const struct medusa_io *io);
 
 struct medusa_monitor * medusa_io_get_monitor (const struct medusa_io *io);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
