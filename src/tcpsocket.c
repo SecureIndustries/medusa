@@ -22,6 +22,8 @@
 #include "io.h"
 #include "io-private.h"
 #include "io-struct.h"
+#include "timer.h"
+#include "timer-private.h"
 #include "tcpsocket.h"
 #include "tcpsocket-private.h"
 #include "tcpsocket-struct.h"
@@ -41,7 +43,7 @@ enum {
         MEDUSA_TCPSOCKET_FLAG_NONBLOCKING       = 0x00000001,
         MEDUSA_TCPSOCKET_FLAG_REUSEADDR         = 0x00000002,
         MEDUSA_TCPSOCKET_FLAG_REUSEPORT         = 0x00000004,
-        MEDUSA_TCPSOCKET_FLAG_BACKLOG           = 0x00000008,
+        MEDUSA_TCPSOCKET_FLAG_BACKLOG           = 0x00000008
 #define MEDUSA_TCPSOCKET_FLAG_NONE              MEDUSA_TCPSOCKET_FLAG_NONE
 #define MEDUSA_TCPSOCKET_FLAG_NONBLOCKING       MEDUSA_TCPSOCKET_FLAG_NONBLOCKING
 #define MEDUSA_TCPSOCKET_FLAG_REUSEADDR         MEDUSA_TCPSOCKET_FLAG_REUSEADDR
@@ -85,20 +87,92 @@ static inline unsigned int tcpsocket_get_state (const struct medusa_tcpsocket *t
         return (tcpsocket->flags >> MEDUSA_TCPSOCKET_STATE_SHIFT) & MEDUSA_TCPSOCKET_STATE_MASK;
 }
 
-static inline void tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsigned int state)
+static inline int tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsigned int state)
 {
-        if (state == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
-                medusa_io_set_enabled_unlocked(&tcpsocket->io, 0);
+        int rc;
+        if (state == MEDUSA_TCPSOCKET_STATE_CONNECTING) {
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ctimer)) {
+                        rc = medusa_timer_set_enabled_unlocked(tcpsocket->ctimer, 1);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                }
+        } else if (state == MEDUSA_TCPSOCKET_STATE_CONNECTED) {
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ctimer)) {
+                        rc = medusa_timer_set_enabled_unlocked(tcpsocket->ctimer, 0);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                }
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->rtimer)) {
+                        rc = medusa_timer_set_enabled_unlocked(tcpsocket->rtimer, 1);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                }
+        } else if (state == MEDUSA_TCPSOCKET_STATE_LISTENING) {
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->rtimer)) {
+                        rc = medusa_timer_set_enabled_unlocked(tcpsocket->rtimer, 1);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                }
+        } else if (state == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ctimer)) {
+                        rc = medusa_timer_set_enabled_unlocked(tcpsocket->ctimer, 0);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                }
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->rtimer)) {
+                        rc = medusa_timer_set_enabled_unlocked(tcpsocket->rtimer, 0);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                }
                 if (tcpsocket->io.fd >= 0) {
+                        rc = medusa_io_set_enabled_unlocked(&tcpsocket->io, 0);
+                        if (rc < 0) {
+                                return rc;
+                        }
                         close(tcpsocket->io.fd);
                         tcpsocket->io.fd = -1;
                 }
         }
         tcpsocket->flags = (tcpsocket->flags & ~(MEDUSA_TCPSOCKET_STATE_MASK << MEDUSA_TCPSOCKET_STATE_SHIFT)) |
                            ((state & MEDUSA_TCPSOCKET_STATE_MASK) << MEDUSA_TCPSOCKET_STATE_SHIFT);
+        return 0;
 }
 
-static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
+static int tcpsocket_ctimer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+{
+        struct medusa_tcpsocket *tcpsocket = (struct medusa_tcpsocket *) context;
+
+        (void) timer;
+        (void) tcpsocket;
+
+        if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
+                return medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT);
+        }
+
+        return 0;
+}
+
+static int tcpsocket_rtimer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+{
+        struct medusa_tcpsocket *tcpsocket = (struct medusa_tcpsocket *) context;
+
+        (void) timer;
+        (void) tcpsocket;
+
+        if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
+                return medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_READ_TIMEOUT);
+        }
+
+        return 0;
+}
+
+static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
 {
         int rc;
         int64_t niovecs;
@@ -327,6 +401,17 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                 if (clength != niovecs) {
                                         goto bail;
                                 }
+                                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->rtimer)) {
+                                        double interval;
+                                        interval = medusa_timer_get_interval_unlocked(tcpsocket->rtimer);
+                                        if (interval < 0) {
+                                                goto bail;
+                                        }
+                                        rc = medusa_timer_set_interval_unlocked(tcpsocket->rtimer, interval);
+                                        if (rc < 0) {
+                                                goto bail;
+                                        }
+                                }
                                 rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_READ);
                                 if (rc < 0) {
                                         goto bail;
@@ -446,7 +531,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_with_options_
         }
         memset(tcpsocket, 0, sizeof(struct medusa_tcpsocket));
         tcpsocket->io.fd = -1;
-        tcpsocket->io.onevent = medusa_tcpsocket_io_onevent;
+        tcpsocket->io.onevent = tcpsocket_io_onevent;
         tcpsocket->io.context = options->context;
         medusa_io_set_events(&tcpsocket->io, MEDUSA_IO_EVENT_IN);
         medusa_io_set_enabled(&tcpsocket->io, 0);
@@ -901,6 +986,148 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_backlog (const
         }
         medusa_monitor_lock(tcpsocket->io.subject.monitor);
         rc = medusa_tcpsocket_get_backlog_unlocked(tcpsocket);
+        medusa_monitor_unlock(tcpsocket->io.subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_connect_timeout_unlocked (struct medusa_tcpsocket *tcpsocket, double timeout)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (timeout < 0) {
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ctimer)) {
+                        medusa_timer_destroy(tcpsocket->ctimer);
+                        tcpsocket->ctimer = NULL;
+                }
+        } else {
+                if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ctimer)) {
+                        tcpsocket->ctimer = medusa_timer_create_unlocked(tcpsocket->io.subject.monitor, tcpsocket_ctimer_onevent, tcpsocket);
+                        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ctimer)) {
+                                return MEDUSA_PTR_ERR(tcpsocket->ctimer);
+                        }
+                }
+                rc = medusa_timer_set_interval_unlocked(tcpsocket->ctimer, timeout);
+                if (rc < 0) {
+                        return rc;
+                }
+                rc = medusa_timer_set_singleshot_unlocked(tcpsocket->ctimer, 1);
+                if (rc < 0) {
+                        return rc;
+                }
+                if (tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_CONNECTING) {
+                        rc = medusa_timer_set_enabled_unlocked(tcpsocket->ctimer, 1);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                }
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_connect_timeout (struct medusa_tcpsocket *tcpsocket, double timeout)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->io.subject.monitor);
+        rc = medusa_tcpsocket_set_connect_timeout_unlocked(tcpsocket, timeout);
+        medusa_monitor_unlock(tcpsocket->io.subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) double medusa_tcpsocket_get_connect_timeout_unlocked (const struct medusa_tcpsocket *tcpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ctimer)) {
+                return -EINVAL;
+        }
+        return medusa_timer_get_interval_unlocked(tcpsocket->ctimer);
+}
+
+__attribute__ ((visibility ("default"))) double medusa_tcpsocket_get_connect_timeout (const struct medusa_tcpsocket *tcpsocket)
+{
+        double rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->io.subject.monitor);
+        rc = medusa_tcpsocket_get_connect_timeout(tcpsocket);
+        medusa_monitor_unlock(tcpsocket->io.subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_read_timeout_unlocked (struct medusa_tcpsocket *tcpsocket, double timeout)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (timeout < 0) {
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->rtimer)) {
+                        medusa_timer_destroy(tcpsocket->rtimer);
+                        tcpsocket->rtimer = NULL;
+                }
+        } else {
+                if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->rtimer)) {
+                        tcpsocket->rtimer = medusa_timer_create_unlocked(tcpsocket->io.subject.monitor, tcpsocket_rtimer_onevent, tcpsocket);
+                        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->rtimer)) {
+                                return MEDUSA_PTR_ERR(tcpsocket->rtimer);
+                        }
+                }
+                rc = medusa_timer_set_interval_unlocked(tcpsocket->rtimer, timeout);
+                if (rc < 0) {
+                        return rc;
+                }
+                rc = medusa_timer_set_singleshot_unlocked(tcpsocket->rtimer, 1);
+                if (rc < 0) {
+                        return rc;
+                }
+                if (tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_CONNECTED) {
+                        rc = medusa_timer_set_enabled_unlocked(tcpsocket->rtimer, 1);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                }
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_read_timeout (struct medusa_tcpsocket *tcpsocket, double timeout)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->io.subject.monitor);
+        rc = medusa_tcpsocket_set_read_timeout_unlocked(tcpsocket, timeout);
+        medusa_monitor_unlock(tcpsocket->io.subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) double medusa_tcpsocket_get_read_timeout_unlocked (const struct medusa_tcpsocket *tcpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->rtimer)) {
+                return -EINVAL;
+        }
+        return medusa_timer_get_interval_unlocked(tcpsocket->rtimer);
+}
+
+__attribute__ ((visibility ("default"))) double medusa_tcpsocket_get_read_timeout (const struct medusa_tcpsocket *tcpsocket)
+{
+        double rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->io.subject.monitor);
+        rc = medusa_tcpsocket_get_read_timeout(tcpsocket);
         medusa_monitor_unlock(tcpsocket->io.subject.monitor);
         return rc;
 }
@@ -1847,11 +2074,19 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent_unlocked (
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_DESTROY) {
                 if (type == (MEDUSA_SUBJECT_TYPE_IO | MEDUSA_SUBJECT_TYPE_TCPSOCKET)) {
-                        if (tcpsocket->rbuffer != NULL) {
+                        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ctimer)) {
+                                medusa_timer_destroy_unlocked(tcpsocket->ctimer);
+                                tcpsocket->ctimer = NULL;
+                        }
+                        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->rtimer)) {
+                                medusa_timer_destroy_unlocked(tcpsocket->rtimer);
+                                tcpsocket->rtimer = NULL;
+                        }
+                        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->rbuffer)) {
                                 medusa_buffer_destroy(tcpsocket->rbuffer);
                                 tcpsocket->rbuffer = NULL;
                         }
-                        if (tcpsocket->wbuffer != NULL) {
+                        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->rbuffer)) {
                                 medusa_buffer_destroy(tcpsocket->wbuffer);
                                 tcpsocket->wbuffer = NULL;
                         }

@@ -52,18 +52,22 @@ static int test_poll (unsigned int poll)
 
         tcpsocket = medusa_tcpsocket_create(monitor, tcpsocket_onevent, NULL);
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                fprintf(stderr, "medusa_tcpsocket_create failed\n");
                 goto bail;
         }
         rc = medusa_tcpsocket_set_nonblocking(tcpsocket, 1);
         if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_nonblocking failed\n");
                 goto bail;
         }
         rc = medusa_tcpsocket_set_reuseaddr(tcpsocket, 0);
         if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_reuseaddr failed\n");
                 goto bail;
         }
         rc = medusa_tcpsocket_set_reuseport(tcpsocket, 1);
         if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_reuseport failed\n");
                 goto bail;
         }
         for (port = 12345; port < 65535; port++) {
@@ -79,6 +83,7 @@ static int test_poll (unsigned int poll)
         fprintf(stderr, "port: %d\n", port);
         rc = medusa_tcpsocket_set_enabled(tcpsocket, 1);
         if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_enabled failed\n");
                 goto bail;
         }
 

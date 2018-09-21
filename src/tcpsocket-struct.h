@@ -7,6 +7,8 @@ struct medusa_tcpsocket {
         unsigned int flags;
         int backlog;
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...);
+        struct medusa_timer *ctimer;
+        struct medusa_timer *rtimer;
         struct medusa_buffer *rbuffer;
         struct medusa_buffer *wbuffer;
         struct iovec *iovecs;

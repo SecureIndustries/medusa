@@ -122,6 +122,18 @@ int medusa_tcpsocket_get_reuseport (const struct medusa_tcpsocket *tcpsocket);
 int medusa_tcpsocket_set_backlog (struct medusa_tcpsocket *tcpsocket, int backlog);
 int medusa_tcpsocket_get_backlog (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_set_connect_timeout (struct medusa_tcpsocket *tcpsocket, double timeout);
+double medusa_tcpsocket_get_connect_timeout (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_read_timeout (struct medusa_tcpsocket *tcpsocket, double timeout);
+double medusa_tcpsocket_get_read_timeout (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_write_timeout (struct medusa_tcpsocket *tcpsocket, double timeout);
+double medusa_tcpsocket_get_write_timeout (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_write_finished_timeout (struct medusa_tcpsocket *tcpsocket, double timeout);
+double medusa_tcpsocket_get_write_finished_timeout (const struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_get_fd (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_bind (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
