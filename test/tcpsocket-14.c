@@ -37,7 +37,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 }
                 *cevents |= MEDUSA_TCPSOCKET_EVENT_RESOLVING;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_RESOLVING) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -48,7 +48,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 }
                 *cevents |= MEDUSA_TCPSOCKET_EVENT_RESOLVED;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_RESOLVED) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -59,7 +59,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 }
                 *cevents |= MEDUSA_TCPSOCKET_EVENT_CONNECTING;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTING) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -70,7 +70,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 }
                 *cevents |= MEDUSA_TCPSOCKET_EVENT_CONNECTED;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTED) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -81,7 +81,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 }
                 *cevents |= MEDUSA_TCPSOCKET_EVENT_READ;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTED) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -92,7 +92,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 }
                 *cevents |= MEDUSA_TCPSOCKET_EVENT_WRITTEN;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTED) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -103,7 +103,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 }
                 *cevents |= MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTED) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -160,7 +160,7 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 }
                 *levents |= MEDUSA_TCPSOCKET_EVENT_CONNECTED;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTED) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -171,7 +171,7 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 }
                 *levents |= MEDUSA_TCPSOCKET_EVENT_READ;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTED) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -181,8 +181,8 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                         return -1;
                 }
                 *levents |= MEDUSA_TCPSOCKET_EVENT_WRITTEN;
-                if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
-                        fprintf(stderr, "  invalid state\n");
+                if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTED) {
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -192,8 +192,8 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                         return -1;
                 }
                 *levents |= MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED;
-                if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
-                        fprintf(stderr, "  invalid state\n");
+                if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTED) {
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -204,7 +204,7 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 }
                 *levents |= MEDUSA_TCPSOCKET_EVENT_DISCONNECTED;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -241,7 +241,7 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
                 }
                 *levents = 0;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -252,7 +252,7 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
                 }
                 *levents |= MEDUSA_TCPSOCKET_EVENT_BINDING;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_BINDING) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -263,7 +263,7 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
                 }
                 *levents |= MEDUSA_TCPSOCKET_EVENT_BOUND;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_BOUND) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -274,7 +274,7 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
                 }
                 *levents |= MEDUSA_TCPSOCKET_EVENT_LISTENING;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_LISTENING) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -285,7 +285,7 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
                 }
                 *levents |= MEDUSA_TCPSOCKET_EVENT_CONNECTION;
                 if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_LISTENING) {
-                        fprintf(stderr, "  invalid state\n");
+                        fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
         }
@@ -337,7 +337,7 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
         if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
-                fprintf(stderr, "  invalid state\n");
+                fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                 return -1;
         }
         rc = medusa_tcpsocket_set_enabled(tcpsocket, 1);
@@ -378,7 +378,7 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
         if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
-                fprintf(stderr, "  invalid state\n");
+                fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                 return -1;
         }
         rc = medusa_tcpsocket_set_enabled(tcpsocket, 1);
