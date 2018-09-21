@@ -9,16 +9,15 @@ struct medusa_buffer_backend {
         int64_t (*get_size) (const struct medusa_buffer *buffer);
         int64_t (*get_length) (const struct medusa_buffer *buffer);
 
-        int (*prependv) (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs);
-        int (*appendv) (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs);
-        int (*vprintf) (struct medusa_buffer *buffer, const char *format, va_list va);
+        int64_t (*prependv) (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs);
+        int64_t (*appendv) (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs);
+        int64_t (*vprintf) (struct medusa_buffer *buffer, const char *format, va_list va);
 
-        int (*reserve) (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int niovecs);
-        int (*commit) (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs);
+        int64_t (*reserve) (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs);
+        int64_t (*commit) (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs);
 
-        int (*peek) (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int niovecs);
-
-        int (*choke) (struct medusa_buffer *buffer, int64_t length);
+        int64_t (*peek) (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs);
+        int64_t (*choke) (struct medusa_buffer *buffer, int64_t length);
 
         int (*reset) (struct medusa_buffer *buffer);
 

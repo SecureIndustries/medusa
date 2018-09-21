@@ -235,8 +235,8 @@ static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
         int64_t rlen;
         int64_t wlen;
         struct medusa_buffer *rbuffer;
-        int i;
-        int niovecs;
+        int64_t i;
+        int64_t niovecs;
         struct iovec iovecs[16];
         (void) context;
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {

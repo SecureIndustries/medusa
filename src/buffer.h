@@ -50,18 +50,20 @@ int medusa_buffer_reset (struct medusa_buffer *buffer);
 int64_t medusa_buffer_get_size (const struct medusa_buffer *buffer);
 int64_t medusa_buffer_get_length (const struct medusa_buffer *buffer);
 
-int medusa_buffer_prepend (struct medusa_buffer *buffer, const void *data, int64_t length);
-int medusa_buffer_prependv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs);
-int medusa_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length);
-int medusa_buffer_appendv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs);
-int medusa_buffer_printf (struct medusa_buffer *buffer, const char *format, ...)  __attribute__((format(printf, 2, 3)));
-int medusa_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va);
+int64_t medusa_buffer_prepend (struct medusa_buffer *buffer, const void *data, int64_t length);
+int64_t medusa_buffer_prependv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs);
+int64_t medusa_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length);
+int64_t medusa_buffer_appendv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs);
+int64_t medusa_buffer_printf (struct medusa_buffer *buffer, const char *format, ...)  __attribute__((format(printf, 2, 3)));
+int64_t medusa_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va);
 
-int medusa_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int niovecs);
-int medusa_buffer_commit (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs);
+int64_t medusa_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs);
+int64_t medusa_buffer_commit (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs);
 
-int medusa_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int niovecs);
+int64_t medusa_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs);
+int64_t medusa_buffer_choke (struct medusa_buffer *buffer, int64_t length);
 
-int medusa_buffer_choke (struct medusa_buffer *buffer, int64_t length);
+int medusa_buffer_memcmp (struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length);
+int64_t medusa_buffer_memmem (struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length);
 
 #endif
