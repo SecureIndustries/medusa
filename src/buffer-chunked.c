@@ -98,7 +98,7 @@ static int64_t chunked_buffer_get_length (const struct medusa_buffer *buffer)
         return chunked->total_length;
 }
 
-static int chunked_buffer_prepend (struct medusa_buffer *buffer, const void *data, int64_t length)
+static int64_t chunked_buffer_prepend (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
         int64_t w;
         int64_t l;
@@ -155,10 +155,10 @@ static int chunked_buffer_prepend (struct medusa_buffer *buffer, const void *dat
         return length;
 }
 
-static int chunked_buffer_prependv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
+static int64_t chunked_buffer_prependv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
 {
-        int rc;
         int i;
+        int64_t plen;
         int64_t wlen;
         struct medusa_buffer_chunked *chunked = (struct medusa_buffer_chunked *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(chunked)) {
@@ -174,16 +174,16 @@ static int chunked_buffer_prependv (struct medusa_buffer *buffer, const struct i
                 return -EINVAL;
         }
         for (wlen = 0, i = 0; i < niovecs; i++) {
-                rc = chunked_buffer_prepend(buffer, iovecs[niovecs - i - 1].iov_base, iovecs[niovecs - i - 1].iov_len);
-                if (rc < 0) {
-                        return rc;
+                plen = chunked_buffer_prepend(buffer, iovecs[niovecs - i - 1].iov_base, iovecs[niovecs - i - 1].iov_len);
+                if (plen < 0) {
+                        return plen;
                 }
-                wlen += rc;
+                wlen += plen;
         }
         return wlen;
 }
 
-static int chunked_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length)
+static int64_t chunked_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
         int rc;
         int64_t w;
@@ -224,10 +224,10 @@ static int chunked_buffer_append (struct medusa_buffer *buffer, const void *data
         return length;
 }
 
-static int chunked_buffer_appendv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
+static int64_t chunked_buffer_appendv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
 {
-        int rc;
         int i;
+        int64_t alen;
         int64_t wlen;
         struct medusa_buffer_chunked *chunked = (struct medusa_buffer_chunked *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(chunked)) {
@@ -243,16 +243,16 @@ static int chunked_buffer_appendv (struct medusa_buffer *buffer, const struct io
                 return -EINVAL;
         }
         for (wlen = 0, i = 0; i < niovecs; i++) {
-                rc = chunked_buffer_append(buffer, iovecs[i].iov_base, iovecs[i].iov_len);
-                if (rc < 0) {
-                        return rc;
+                alen = chunked_buffer_append(buffer, iovecs[i].iov_base, iovecs[i].iov_len);
+                if (alen < 0) {
+                        return alen;
                 }
-                wlen += rc;
+                wlen += alen;
         }
         return wlen;
 }
 
-static int chunked_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va)
+static int64_t chunked_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va)
 {
         int rc;
         int size;
@@ -312,10 +312,10 @@ static int chunked_buffer_vprintf (struct medusa_buffer *buffer, const char *for
         return rc;
 }
 
-static int chunked_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int niovecs)
+static int64_t chunked_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs)
 {
         int rc;
-        int n;
+        int64_t n;
         int64_t w;
         int64_t l;
         struct medusa_buffer_chunked_entry *entry;
@@ -372,7 +372,7 @@ static int chunked_buffer_reserve (struct medusa_buffer *buffer, int64_t length,
         return n;
 }
 
-static int chunked_buffer_commit (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
+static int64_t chunked_buffer_commit (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
 {
         int i;
         struct medusa_buffer_chunked *chunked = (struct medusa_buffer_chunked *) buffer;
@@ -411,9 +411,9 @@ static int chunked_buffer_commit (struct medusa_buffer *buffer, const struct iov
         return i;
 }
 
-static int chunked_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int niovecs)
+static int64_t chunked_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
 {
-        int n;
+        int64_t n;
         int64_t w;
         int64_t l;
         struct medusa_buffer_chunked_entry *entry;
@@ -483,7 +483,7 @@ static int chunked_buffer_peek (struct medusa_buffer *buffer, int64_t offset, in
         return n;
 }
 
-static int chunked_buffer_choke (struct medusa_buffer *buffer, int64_t length)
+static int64_t chunked_buffer_choke (struct medusa_buffer *buffer, int64_t length)
 {
         int64_t w;
         int64_t l;
@@ -596,7 +596,6 @@ const struct medusa_buffer_backend chunked_buffer_backend = {
         .commit         = chunked_buffer_commit,
 
         .peek           = chunked_buffer_peek,
-
         .choke          = chunked_buffer_choke,
 
         .reset          = chunked_buffer_reset,
