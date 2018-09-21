@@ -101,8 +101,10 @@ static inline void tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsi
 static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
 {
         int rc;
-        int niovecs;
-        int64_t length;
+        int64_t niovecs;
+        int64_t blength;
+        int64_t clength;
+        ssize_t wlength;
         unsigned int tevents;
         struct medusa_monitor *monitor;
         struct medusa_tcpsocket *tcpsocket = (struct medusa_tcpsocket *) io;
@@ -129,13 +131,13 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                         } else {
                                 tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_CONNECTED);
                                 tevents |= MEDUSA_TCPSOCKET_EVENT_CONNECTED;
-                                length = medusa_buffer_get_length(tcpsocket->wbuffer);
-                                if (length > 0) {
+                                blength = medusa_buffer_get_length(tcpsocket->wbuffer);
+                                if (blength > 0) {
                                         rc = medusa_io_add_events_unlocked(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
                                         if (rc < 0) {
                                                 goto bail;
                                         }
-                                } else if (length == 0) {
+                                } else if (blength == 0) {
                                         rc = medusa_io_del_events_unlocked(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
                                         if (rc < 0) {
                                                 goto bail;
@@ -145,8 +147,8 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                 }
                         }
                 } else if (tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_CONNECTED) {
-                        length = medusa_buffer_get_length(tcpsocket->wbuffer);
-                        if (length <= 0) {
+                        blength = medusa_buffer_get_length(tcpsocket->wbuffer);
+                        if (blength <= 0) {
                                 goto bail;
                         }
 #if defined(MEDUSA_TCPSOCKET_USE_WRITEV) && (MEDUSA_TCPSOCKET_USE_WRITEV == 1)
@@ -176,19 +178,19 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                         if (niovecs > tcpsocket->niovecs) {
                                 goto bail;
                         }
-                        rc = writev(tcpsocket->io.fd, tcpsocket->iovecs, niovecs);
-                        if (rc < 0) {
+                        wlength = writev(tcpsocket->io.fd, tcpsocket->iovecs, niovecs);
+                        if (wlength < 0) {
                                 if (errno == EINTR) {
                                 } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
                                 } else {
                                         goto bail;
                                 }
-                        } else if (rc == 0) {
+                        } else if (wlength == 0) {
                                 tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
                                 tevents |= MEDUSA_TCPSOCKET_EVENT_DISCONNECTED;
                         } else {
-                                rc = medusa_buffer_choke(tcpsocket->wbuffer, rc);
-                                if (rc < 0) {
+                                clength = medusa_buffer_choke(tcpsocket->wbuffer, wlength);
+                                if (clength < 0) {
                                         goto bail;
                                 }
                                 tevents |= MEDUSA_TCPSOCKET_EVENT_WRITTEN;
@@ -203,21 +205,21 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                 if (niovecs == 0) {
                                         break;
                                 }
-                                rc = send(tcpsocket->io.fd, iovec.iov_base, iovec.iov_len, 0);
-                                if (rc < 0) {
+                                wlength = send(tcpsocket->io.fd, iovec.iov_base, iovec.iov_len, 0);
+                                if (wlength < 0) {
                                         if (errno == EINTR) {
                                                 break;
                                         } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
                                                 break;
                                         }
                                         goto bail;
-                                } else if (rc == 0) {
+                                } else if (wlength == 0) {
                                         tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
                                         tevents |= MEDUSA_TCPSOCKET_EVENT_DISCONNECTED;
                                         break;
                                 } else {
-                                        rc = medusa_buffer_choke(tcpsocket->wbuffer, rc);
-                                        if (rc < 0) {
+                                        clength = medusa_buffer_choke(tcpsocket->wbuffer, wlength);
+                                        if (clength < 0) {
                                                 goto bail;
                                         }
                                         tevents |= MEDUSA_TCPSOCKET_EVENT_WRITTEN;
@@ -225,8 +227,8 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                 break;
                         }
 #endif
-                        length = medusa_buffer_get_length(tcpsocket->wbuffer);
-                        if (length <= 0) {
+                        blength = medusa_buffer_get_length(tcpsocket->wbuffer);
+                        if (blength <= 0) {
                                 tevents |= MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED;
                                 rc = medusa_io_del_events_unlocked(&tcpsocket->io, MEDUSA_IO_EVENT_OUT);
                                 if (rc < 0) {
@@ -291,11 +293,11 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                 tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
                                 tevents |= MEDUSA_TCPSOCKET_EVENT_DISCONNECTED;
                         } else {
-                                rc = medusa_buffer_commit(tcpsocket->rbuffer, tcpsocket->iovecs, niovecs);
-                                if (rc < 0) {
+                                clength = medusa_buffer_commit(tcpsocket->rbuffer, tcpsocket->iovecs, niovecs);
+                                if (clength < 0) {
                                         goto bail;
                                 }
-                                if (rc != niovecs) {
+                                if (clength != niovecs) {
                                         goto bail;
                                 }
                                 tevents |= MEDUSA_TCPSOCKET_EVENT_READ;
@@ -331,8 +333,11 @@ static int medusa_tcpsocket_io_onevent (struct medusa_io *io, unsigned int event
                                         break;
                                 } else {
                                         iovec.iov_len = rc;
-                                        rc = medusa_buffer_commit(tcpsocket->rbuffer, &iovec, 1);
-                                        if (rc < 0) {
+                                        clength = medusa_buffer_commit(tcpsocket->rbuffer, &iovec, 1);
+                                        if (clength < 0) {
+                                                goto bail;
+                                        }
+                                        if (clength != 1) {
                                                 goto bail;
                                         }
                                         tevents |= MEDUSA_TCPSOCKET_EVENT_READ;
@@ -1426,12 +1431,13 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_read_unlocked (struct medusa_tcpsocket *tcpsocket, void *data, int64_t size)
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_read_unlocked (struct medusa_tcpsocket *tcpsocket, void *data, int64_t size)
 {
         int rc;
-        int64_t length;
-        int i;
-        int niovecs;
+        int64_t i;
+        int64_t blength;
+        int64_t clength;
+        int64_t niovecs;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
@@ -1444,11 +1450,11 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_read_unlocked (str
         if (data == NULL) {
                 return -EINVAL;
         }
-        length = medusa_buffer_get_length(tcpsocket->rbuffer);
-        if (length < 0) {
-                return length;
+        blength = medusa_buffer_get_length(tcpsocket->rbuffer);
+        if (blength < 0) {
+                return blength;
         }
-        if (length == 0) {
+        if (blength == 0) {
                 return 0;
         }
         niovecs = medusa_buffer_peek(tcpsocket->rbuffer, 0, size, NULL, 0);
@@ -1480,20 +1486,20 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_read_unlocked (str
         if (niovecs == 0) {
                 return -EIO;
         }
-        for (length = 0, i = 0; i < niovecs; i++) {
-                memcpy(data + length, tcpsocket->iovecs[i].iov_base, tcpsocket->iovecs[i].iov_len);
-                length += tcpsocket->iovecs[i].iov_len;
+        for (clength = 0, i = 0; i < niovecs; i++) {
+                memcpy(data + clength, tcpsocket->iovecs[i].iov_base, tcpsocket->iovecs[i].iov_len);
+                clength += tcpsocket->iovecs[i].iov_len;
         }
-        rc = medusa_buffer_choke(tcpsocket->rbuffer, length);
+        rc = medusa_buffer_choke(tcpsocket->rbuffer, clength);
         if (rc < 0) {
                 return rc;
         }
-        return length;
+        return clength;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_read (struct medusa_tcpsocket *tcpsocket, void *data, int64_t size)
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_read (struct medusa_tcpsocket *tcpsocket, void *data, int64_t size)
 {
-        int rc;
+        int64_t rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
@@ -1576,7 +1582,7 @@ __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_tcpsocket
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_write_unlocked (struct medusa_tcpsocket *tcpsocket, const void *data, int64_t size)
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_write_unlocked (struct medusa_tcpsocket *tcpsocket, const void *data, int64_t size)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
@@ -1604,9 +1610,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_write_unlocked (st
         return size;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_write (struct medusa_tcpsocket *tcpsocket, const void *data, int64_t size)
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_write (struct medusa_tcpsocket *tcpsocket, const void *data, int64_t size)
 {
-        int rc;
+        int64_t rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
@@ -1616,7 +1622,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_write (struct medu
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_writev_unlocked (struct medusa_tcpsocket *tcpsocket, const struct iovec *iovecs, int niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_writev_unlocked (struct medusa_tcpsocket *tcpsocket, const struct iovec *iovecs, int niovecs)
 {
         int rc;
         int64_t size;
@@ -1645,9 +1651,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_writev_unlocked (s
         return size;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_writev (struct medusa_tcpsocket *tcpsocket, const struct iovec *iovecs, int niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_writev (struct medusa_tcpsocket *tcpsocket, const struct iovec *iovecs, int niovecs)
 {
-        int rc;
+        int64_t rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
@@ -1657,9 +1663,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_writev (struct med
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_printf_unlocked (struct medusa_tcpsocket *tcpsocket, const char *format, ...)
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_printf_unlocked (struct medusa_tcpsocket *tcpsocket, const char *format, ...)
 {
-        int rc;
+        int64_t rc;
         va_list va;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
@@ -1673,9 +1679,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_printf_unlocked (s
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_printf (struct medusa_tcpsocket *tcpsocket, const char *format, ...)
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_printf (struct medusa_tcpsocket *tcpsocket, const char *format, ...)
 {
-        int rc;
+        int64_t rc;
         va_list va;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
@@ -1689,10 +1695,10 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_printf (struct med
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_vprintf_unlocked (struct medusa_tcpsocket *tcpsocket, const char *format, va_list va)
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_vprintf_unlocked (struct medusa_tcpsocket *tcpsocket, const char *format, va_list va)
 {
         int rc;
-        int size;
+        int64_t size;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
@@ -1715,9 +1721,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_vprintf_unlocked (
         return size;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_vprintf (struct medusa_tcpsocket *tcpsocket, const char *format, va_list va)
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_vprintf (struct medusa_tcpsocket *tcpsocket, const char *format, va_list va)
 {
-        int rc;
+        int64_t rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }

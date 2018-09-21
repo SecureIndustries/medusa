@@ -76,7 +76,7 @@ static int64_t simple_buffer_get_length (const struct medusa_buffer *buffer)
         return simple->length;
 }
 
-static int simple_buffer_prepend (struct medusa_buffer *buffer, const void *data, int64_t length)
+static int64_t simple_buffer_prepend (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
         int rc;
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
@@ -102,10 +102,10 @@ static int simple_buffer_prepend (struct medusa_buffer *buffer, const void *data
         return length;
 }
 
-static int simple_buffer_prependv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
+static int64_t simple_buffer_prependv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
 {
-        int rc;
         int i;
+        int64_t plen;
         int64_t wlen;
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
@@ -121,16 +121,16 @@ static int simple_buffer_prependv (struct medusa_buffer *buffer, const struct io
                 return -EINVAL;
         }
         for (wlen = 0, i = 0; i < niovecs; i++) {
-                rc = simple_buffer_prepend(buffer, iovecs[niovecs - i - 1].iov_base, iovecs[niovecs - i - 1].iov_len);
-                if (rc < 0) {
-                        return rc;
+                plen = simple_buffer_prepend(buffer, iovecs[niovecs - i - 1].iov_base, iovecs[niovecs - i - 1].iov_len);
+                if (plen < 0) {
+                        return plen;
                 }
-                wlen += rc;
+                wlen += plen;
         }
         return wlen;
 }
 
-static int simple_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length)
+static int64_t simple_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
         int rc;
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
@@ -155,10 +155,10 @@ static int simple_buffer_append (struct medusa_buffer *buffer, const void *data,
         return length;
 }
 
-static int simple_buffer_appendv (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
+static int64_t simple_buffer_appendv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
 {
-        int rc;
         int i;
+        int64_t alen;
         int64_t wlen;
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
@@ -174,16 +174,16 @@ static int simple_buffer_appendv (struct medusa_buffer *buffer, const struct iov
                 return -EINVAL;
         }
         for (wlen = 0, i = 0; i < niovecs; i++) {
-                rc = simple_buffer_append(buffer, iovecs[i].iov_base, iovecs[i].iov_len);
-                if (rc < 0) {
-                        return rc;
+                alen = simple_buffer_append(buffer, iovecs[i].iov_base, iovecs[i].iov_len);
+                if (alen < 0) {
+                        return alen;
                 }
-                wlen += rc;
+                wlen += alen;
         }
         return wlen;
 }
 
-static int simple_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va)
+static int64_t simple_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va)
 {
         int rc;
         int size;
@@ -215,7 +215,7 @@ static int simple_buffer_vprintf (struct medusa_buffer *buffer, const char *form
         return rc;
 }
 
-static int simple_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int niovecs)
+static int64_t simple_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs)
 {
         int rc;
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
@@ -243,7 +243,7 @@ static int simple_buffer_reserve (struct medusa_buffer *buffer, int64_t length, 
         return 1;
 }
 
-static int simple_buffer_commit (struct medusa_buffer *buffer, const struct iovec *iovecs, int niovecs)
+static int64_t simple_buffer_commit (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
 {
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
@@ -267,7 +267,7 @@ static int simple_buffer_commit (struct medusa_buffer *buffer, const struct iove
         return niovecs;
 }
 
-static int simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int niovecs)
+static int64_t simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
 {
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
@@ -305,7 +305,7 @@ static int simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int
         return 1;
 }
 
-static int simple_buffer_choke (struct medusa_buffer *buffer, int64_t length)
+static int64_t simple_buffer_choke (struct medusa_buffer *buffer, int64_t length)
 {
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
@@ -364,7 +364,6 @@ const struct medusa_buffer_backend simple_buffer_backend = {
         .commit         = simple_buffer_commit,
 
         .peek           = simple_buffer_peek,
-
         .choke          = simple_buffer_choke,
 
         .reset          = simple_buffer_reset,

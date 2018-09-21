@@ -64,8 +64,8 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
                         int64_t rlength;
                         struct medusa_buffer *rbuffer;
 
-                        int i;
-                        int niovecs;
+                        int64_t i;
+                        int64_t niovecs;
                         struct iovec *iovecs;
 
                         rbuffer = medusa_tcpsocket_get_read_buffer(tcpsocket);
