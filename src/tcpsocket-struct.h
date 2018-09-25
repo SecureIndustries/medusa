@@ -3,10 +3,12 @@
 #define MEDUSA_TCPSOCKET_STRUCT_H
 
 struct medusa_tcpsocket {
-        struct medusa_io io;
         unsigned int flags;
         int backlog;
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...);
+        void *context;
+        struct medusa_monitor *monitor;
+        struct medusa_io *io;
         struct medusa_timer *ctimer;
         struct medusa_timer *rtimer;
         struct medusa_buffer *rbuffer;
