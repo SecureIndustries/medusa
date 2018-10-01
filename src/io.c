@@ -170,7 +170,7 @@ __attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create (st
         return medusa_io_create_with_options(&options);
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create_with_options (const struct medusa_io_init_options *options)
+__attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create_with_options_unlocked (const struct medusa_io_init_options *options)
 {
         int rc;
         struct medusa_io *io;
@@ -195,12 +195,27 @@ __attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create_wit
                 return MEDUSA_ERR_PTR(rc);
         }
         io->subject.flags |= MEDUSA_SUBJECT_FLAG_ALLOC;
-        rc = medusa_monitor_add(options->monitor, &io->subject);
+        rc = medusa_monitor_add_unlocked(options->monitor, &io->subject);
         if (rc < 0) {
-                medusa_io_destroy(io);
+                medusa_io_destroy_unlocked(io);
                 return MEDUSA_ERR_PTR(rc);
         }
         return io;
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_io * medusa_io_create_with_options (const struct medusa_io_init_options *options)
+{
+        struct medusa_io *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(options->monitor)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(options->monitor);
+        rc = medusa_io_create_with_options_unlocked(options);
+        medusa_monitor_unlock(options->monitor);
+        return rc;
 }
 
 __attribute__ ((visibility ("default"))) void medusa_io_destroy_unlocked (struct medusa_io *io)
