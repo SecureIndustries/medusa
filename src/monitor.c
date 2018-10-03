@@ -216,7 +216,6 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
         while (!TAILQ_EMPTY(&monitor->deletes)) {
                 subject = TAILQ_FIRST(&monitor->deletes);
                 TAILQ_REMOVE(&monitor->deletes, subject, list);
-                subject->monitor = NULL;
                 if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
                         io = (struct medusa_io *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
