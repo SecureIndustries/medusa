@@ -1,8 +1,9 @@
 
 #include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <time.h>
 #include <signal.h>
 #include <errno.h>
 
@@ -95,19 +96,33 @@ bail:   if (monitor != NULL) {
         return -1;
 }
 
+static void alarm_handler (int sig)
+{
+        (void) sig;
+        abort();
+}
+
 int main (int argc, char *argv[])
 {
         int rc;
         unsigned int i;
+
         (void) argc;
         (void) argv;
+
+        srand(time(NULL));
+        signal(SIGALRM, alarm_handler);
+
         for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
+                alarm(5);
+
                 fprintf(stderr, "testing poll: %d\n", g_polls[i]);
                 rc = test_poll(g_polls[i]);
                 if (rc != 0) {
                         fprintf(stderr, "  failed\n");
                         return -1;
                 }
+                fprintf(stderr, "success\n");
         }
         return 0;
 }

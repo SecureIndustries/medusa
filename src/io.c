@@ -19,13 +19,13 @@
 
 #include "io.h"
 
-#define MEDUSA_IO_EVENT_MASK              0xff
-#define MEDUSA_IO_EVENT_SHIFT             0x00
+#define MEDUSA_IO_EVENT_MASK            0xff
+#define MEDUSA_IO_EVENT_SHIFT           0x00
 
-#define MEDUSA_IO_ENABLE_MASK             0xff
-#define MEDUSA_IO_ENABLE_SHIFT            0x18
+#define MEDUSA_IO_ENABLE_MASK           0xff
+#define MEDUSA_IO_ENABLE_SHIFT          0x18
 
-#define MEDUSA_IO_USE_POOL      1
+#define MEDUSA_IO_USE_POOL              1
 #if defined(MEDUSA_IO_USE_POOL) && (MEDUSA_IO_USE_POOL == 1)
 static struct medusa_pool *g_pool;
 #endif

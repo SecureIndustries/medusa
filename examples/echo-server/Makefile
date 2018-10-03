@@ -12,16 +12,14 @@ medusa-echo-server_files-y = \
 	echo-server.c
 
 medusa-echo-server_ldflags-y = \
-	../../dist/lib/libmedusa-socket.a \
-	../../dist/lib/libmedusa-monitor.a \
+	../../dist/lib/libmedusa.a \
 	-lreadline
 
 medusa-echo-server_ldflags-$(__LINUX__) += \
 	-lrt
 
 medusa-echo-server_depends-y = \
-	../../dist/lib/libmedusa-socket.a \
-	../../dist/lib/libmedusa-monitor.a
+	../../dist/lib/libmedusa.a
 
 dist.dir = ../../dist
 
