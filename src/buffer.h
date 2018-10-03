@@ -61,6 +61,9 @@ int64_t medusa_buffer_appendfv (struct medusa_buffer *buffer, const char *format
 int64_t medusa_buffer_insertf (struct medusa_buffer *buffer, int64_t offset, const char *format, ...)  __attribute__((format(printf, 3, 4)));
 int64_t medusa_buffer_insertfv (struct medusa_buffer *buffer, int64_t offset, const char *format, va_list va);
 
+int64_t medusa_buffer_printf (struct medusa_buffer *buffer, const char *format, ...)  __attribute__((format(printf, 2, 3)));
+int64_t medusa_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va);
+
 int64_t medusa_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs);
 int64_t medusa_buffer_commit (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs);
 

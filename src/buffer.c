@@ -79,25 +79,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend (struct m
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_prependv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
 {
-        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->insertv)) {
-                return -EINVAL;
-        }
-        if (niovecs < 0) {
-                return -EINVAL;
-        }
-        if (niovecs == 0) {
-                return 0;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
-                return -EINVAL;
-        }
-        return buffer->backend->insertv(buffer, 0, iovecs, niovecs);
+        return medusa_buffer_insertv(buffer, 0, iovecs, niovecs);
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length)
@@ -124,25 +106,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_append (struct me
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_appendv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
 {
-        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->insertv)) {
-                return -EINVAL;
-        }
-        if (niovecs < 0) {
-                return -EINVAL;
-        }
-        if (niovecs == 0) {
-                return 0;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
-                return -EINVAL;
-        }
-        return buffer->backend->insertv(buffer, medusa_buffer_get_length(buffer), iovecs, niovecs);
+        return medusa_buffer_insertv(buffer, medusa_buffer_get_length(buffer), iovecs, niovecs);
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert (struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length)
@@ -188,6 +152,96 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertv (struct m
                 return -EINVAL;
         }
         return buffer->backend->insertv(buffer, offset, iovecs, niovecs);
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prependf (struct medusa_buffer *buffer, const char *format, ...)
+{
+        int rc;
+        va_list ap;
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(format)) {
+                return -EINVAL;
+        }
+        va_start(ap, format);
+        rc = medusa_buffer_prependfv(buffer, format, ap);
+        va_end(ap);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prependfv (struct medusa_buffer *buffer, const char *format, va_list va)
+{
+        return medusa_buffer_insertfv(buffer, 0, format, va);
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_appendf (struct medusa_buffer *buffer, const char *format, ...)
+{
+        int rc;
+        va_list ap;
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(format)) {
+                return -EINVAL;
+        }
+        va_start(ap, format);
+        rc = medusa_buffer_appendfv(buffer, format, ap);
+        va_end(ap);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_appendfv (struct medusa_buffer *buffer, const char *format, va_list va)
+{
+        return medusa_buffer_insertfv(buffer, medusa_buffer_get_length(buffer), format, va);
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertf (struct medusa_buffer *buffer, int64_t offset, const char *format, ...)
+{
+        int rc;
+        va_list ap;
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(format)) {
+                return -EINVAL;
+        }
+        va_start(ap, format);
+        rc = medusa_buffer_insertfv(buffer, offset, format, ap);
+        va_end(ap);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertfv (struct medusa_buffer *buffer, int64_t offset, const char *format, va_list va)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->insertfv)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(format)) {
+                return -EINVAL;
+        }
+        return buffer->backend->insertfv(buffer, offset, format, va);
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_printf (struct medusa_buffer *buffer, const char *format, ...)
+{
+        int rc;
+        va_list ap;
+        va_start(ap, format);
+        rc = medusa_buffer_vprintf(buffer, format, ap);
+        va_end(ap);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va)
+{
+        return medusa_buffer_appendfv(buffer, format, va);
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs)

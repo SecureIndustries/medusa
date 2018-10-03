@@ -119,38 +119,48 @@ static int64_t simple_buffer_insertv (struct medusa_buffer *buffer, int64_t offs
                 memcpy(simple->data + offset + length, iovecs[i].iov_base, iovecs[i].iov_len);
                 length += iovecs[i].iov_len;
         }
-        return 0;
+        simple->length += length;
+        return length;
 }
 
-static int64_t simple_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va)
+static int64_t simple_buffer_insertfv (struct medusa_buffer *buffer, int64_t offset, const char *format, va_list va)
 {
         int rc;
-        int size;
+        int length;
         va_list vs;
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
                 return -EINVAL;
         }
+        if (offset < 0) {
+                offset = simple->length + offset;
+        }
+        if (offset < 0) {
+                return -EINVAL;
+        }
+        if (offset > simple->length) {
+                return -EINVAL;
+        }
         va_copy(vs, va);
-        size = vsnprintf(NULL, 0, format, vs);
-        if (size < 0) {
-                va_end(vs);
+        length = vsnprintf(NULL, 0, format, vs);
+        va_end(vs);
+        if (length < 0) {
                 return -EIO;
         }
-        rc = simple_buffer_resize(buffer, simple->length + size + 1);
+        rc = simple_buffer_resize(buffer, simple->length + length + 1);
         if (rc < 0) {
-                va_end(vs);
                 return rc;
         }
-        va_end(vs);
+        if (offset != simple->length) {
+                memmove(simple->data + offset + length, simple->data + offset, simple->length - offset);
+        }
         va_copy(vs, va);
-        rc = vsnprintf(simple->data + simple->length, size + 1, format, vs);
+        rc = vsnprintf(simple->data + simple->length, length + 1, format, vs);
+        va_end(vs);
         if (rc < 0) {
-                va_end(vs);
                 return -EIO;
         }
         simple->length += rc;
-        va_end(vs);
         return rc;
 }
 
@@ -307,6 +317,8 @@ const struct medusa_buffer_backend simple_buffer_backend = {
         .get_length     = simple_buffer_get_length,
 
         .insertv        = simple_buffer_insertv,
+        .insertfv       = simple_buffer_insertfv,
+
         .reserve        = simple_buffer_reserve,
         .commit         = simple_buffer_commit,
 
