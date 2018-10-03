@@ -4,6 +4,8 @@
 
 struct medusa_io;
 
+struct medusa_io * medusa_io_create_with_options_unlocked (const struct medusa_io_init_options *options);
+
 void medusa_io_uninit_unlocked (struct medusa_io *io);
 void medusa_io_destroy_unlocked (struct medusa_io *io);
 

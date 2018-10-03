@@ -91,7 +91,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                         return -1;
                 }
                 *cevents |= MEDUSA_TCPSOCKET_EVENT_WRITTEN;
-                if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+                if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTED) {
                         fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
@@ -102,7 +102,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                         return -1;
                 }
                 *cevents |= MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED;
-                if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+                if (medusa_tcpsocket_get_state(tcpsocket) != MEDUSA_TCPSOCKET_STATE_CONNECTED) {
                         fprintf(stderr, "invalid state: %d @ %s %s:%d\n", medusa_tcpsocket_get_state(tcpsocket), __FUNCTION__, __FILE__, __LINE__);
                         return -1;
                 }
@@ -390,7 +390,13 @@ static int test_poll (unsigned int poll)
                         MEDUSA_TCPSOCKET_EVENT_LISTENING |
                         MEDUSA_TCPSOCKET_EVENT_CONNECTION |
                         MEDUSA_TCPSOCKET_EVENT_CONNECTED)) {
-                fprintf(stderr, "listener events: 0x%08x is invalid\n", levents);
+                fprintf(stderr, "listener events: 0x%08x != 0x%08x is invalid\n",
+                                levents,
+                                MEDUSA_TCPSOCKET_EVENT_BINDING |
+                                MEDUSA_TCPSOCKET_EVENT_BOUND |
+                                MEDUSA_TCPSOCKET_EVENT_LISTENING |
+                                MEDUSA_TCPSOCKET_EVENT_CONNECTION |
+                                MEDUSA_TCPSOCKET_EVENT_CONNECTED);
                 goto bail;
         }
         if (cevents != (MEDUSA_TCPSOCKET_EVENT_RESOLVING |
@@ -438,13 +444,14 @@ int main (int argc, char *argv[])
 
         for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
                 alarm(5);
-                fprintf(stderr, "testing poll: %d\n", g_polls[i]);
 
+                fprintf(stderr, "testing poll: %d\n", g_polls[i]);
                 rc = test_poll(g_polls[i]);
                 if (rc != 0) {
                         fprintf(stderr, "failed\n");
                         return -1;
                 }
+                fprintf(stderr, "success\n");
         }
         return 0;
 }

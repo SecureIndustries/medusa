@@ -14,13 +14,13 @@ medusa-http-benchmark_files-y = \
 	http-benchmark.c
 
 medusa-http-benchmark_ldflags-y = \
-	../../dist/lib/libmedusa-monitor.a
+	../../dist/lib/libmedusa.a
 
 medusa-http-benchmark_ldflags-$(__LINUX__) += \
 	-lrt
 
 medusa-http-benchmark_depends-y = \
-	../../dist/lib/libmedusa-monitor.a
+	../../dist/lib/libmedusa.a
 
 dist.dir = ../../dist
 

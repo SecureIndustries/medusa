@@ -52,6 +52,9 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 }
                 return medusa_monitor_break(medusa_tcpsocket_get_monitor(tcpsocket));
         }
+        if (events & MEDUSA_TCPSOCKET_EVENT_READ_TIMEOUT) {
+                return medusa_monitor_break(medusa_tcpsocket_get_monitor(tcpsocket));
+        }
         return 0;
 }
 
@@ -77,12 +80,7 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                         fprintf(stderr, "medusa_tcpsocket_read failed: c != 'e'\n");
                         return -1;
                 }
-                fprintf(stderr, "  write\n");
-                rc = medusa_tcpsocket_write(tcpsocket, &c, 1);
-                if (rc != 1) {
-                        fprintf(stderr, "medusa_tcpsocket_write failed\n");
-                        return -1;
-                }
+                fprintf(stderr, "  do not write back\n");
         }
         return 0;
 }
@@ -189,6 +187,11 @@ static int test_poll (unsigned int poll)
         rc = medusa_tcpsocket_connect(tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, "127.0.0.1", port);
         if (rc < 0) {
                 fprintf(stderr, "medusa_tcpsocket_connect failed\n");
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_read_timeout(tcpsocket, 0.1);
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_read_timeout failed\n");
                 goto bail;
         }
 
