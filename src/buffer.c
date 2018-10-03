@@ -13,6 +13,8 @@
 #include "buffer-struct.h"
 #include "buffer-simple.h"
 
+#define MIN(a, b)       (((a) < (b)) ? (a) : (b))
+
 __attribute__ ((visibility ("default"))) int medusa_buffer_reset (struct medusa_buffer *buffer)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
@@ -312,34 +314,96 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_choke (struct med
         return buffer->backend->choke(buffer, offset, length);
 }
 
-int medusa_buffer_memcmp (struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length)
+__attribute__ ((visibility ("default"))) int medusa_buffer_memcmp (struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length)
 {
+        int ret;
+        int64_t i;
+        int64_t l;
+        int64_t niovecs;
+        struct iovec *iovecs;
+        struct iovec _iovecs[16];
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
         if (MEDUSA_IS_ERR_OR_NULL(data)) {
                 return -EINVAL;
         }
-        if (length <= 0) {
+        if (length < 0) {
                 return -EINVAL;
         }
-        (void) offset;
-        return -EIO;
+        l = medusa_buffer_get_length(buffer);
+        if (length == 0 &&
+            l == 0) {
+                return 0;
+        }
+        if (l < length) {
+                return -1;
+        }
+        niovecs = medusa_buffer_peek(buffer, offset, length, NULL, 0);
+        if (niovecs < 0) {
+                return niovecs;
+        }
+        if (niovecs > (int64_t) (sizeof(_iovecs) / sizeof(_iovecs[0]))) {
+                iovecs = malloc(sizeof(struct iovec) * niovecs);
+                if (iovecs == NULL) {
+                        return -ENOMEM;
+                }
+        } else {
+                iovecs = _iovecs;
+        }
+        ret = -EIO;
+        niovecs = medusa_buffer_peek(buffer, offset, length, iovecs, niovecs);
+        if (niovecs < 0) {
+                ret = niovecs;
+                goto out;
+        }
+        for (i = 0; i < niovecs; i++) {
+                ret = memcmp(data, iovecs[i].iov_base, MIN(length, (int64_t) iovecs[i].iov_len));
+                if (ret != 0) {
+                        break;
+                }
+                length -= iovecs[i].iov_len;
+                data   += iovecs[i].iov_len;
+        }
+        if (length > 0) {
+                ret = -1;
+        }
+out:    if (iovecs != NULL &&
+            iovecs != _iovecs) {
+                free(iovecs);
+        }
+        return ret;
 }
 
-int64_t medusa_buffer_memmem (struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_memmem (struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length)
 {
+        int rc;
+        int64_t i;
+        int64_t l;
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
         if (MEDUSA_IS_ERR_OR_NULL(data)) {
                 return -EINVAL;
         }
-        if (length <= 0) {
+        if (length < 0) {
                 return -EINVAL;
         }
-        (void) offset;
-        return -EIO;
+        l = medusa_buffer_get_length(buffer);
+        if (length == 0 &&
+            l == 0) {
+                return 0;
+        }
+        if (l < length) {
+                return -1;
+        }
+        for (i = offset; i <= l - length; i++) {
+                rc = medusa_buffer_memcmp(buffer, i, data, length);
+                if (rc == 0) {
+                        return i;
+                }
+        }
+        return -1;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_init_options_default (struct medusa_buffer_init_options *options)

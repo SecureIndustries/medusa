@@ -15,9 +15,9 @@
 #include "buffer-simple.h"
 #include "buffer-simple-struct.h"
 
-#define MIN(a, b)                               (((a) < (b)) ? (a) : (b))
+#define MIN(a, b)                       (((a) < (b)) ? (a) : (b))
 
-#define MEDUSA_BUFFER_SIMPLE_USE_POOL      1
+#define MEDUSA_BUFFER_SIMPLE_USE_POOL   1
 #if defined(MEDUSA_BUFFER_SIMPLE_USE_POOL) && (MEDUSA_BUFFER_SIMPLE_USE_POOL == 1)
 static struct medusa_pool *g_pool_buffer_simple;
 #endif
