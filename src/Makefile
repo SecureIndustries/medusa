@@ -30,7 +30,6 @@ libmedusa.a_files-y = \
 	pool.c \
 	buffer.c \
 	buffer-simple.c \
-	buffer-chunked.c \
 	pqueue.c \
 	io.c \
 	signal.c \

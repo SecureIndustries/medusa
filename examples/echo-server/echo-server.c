@@ -258,7 +258,7 @@ static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
                 if (wlen != rlen) {
                         return -EIO;
                 }
-                rc = medusa_buffer_choke(rbuffer, wlen);
+                rc = medusa_buffer_choke(rbuffer, 0, wlen);
                 if (rc < 0) {
                         return rc;
                 }

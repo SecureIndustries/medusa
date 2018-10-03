@@ -264,7 +264,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                         goto bail;
                                 }
                         } else {
-                                clength = medusa_buffer_choke(tcpsocket->wbuffer, wlength);
+                                clength = medusa_buffer_choke(tcpsocket->wbuffer, 0, wlength);
                                 if (clength < 0) {
                                         goto bail;
                                 }
@@ -1815,7 +1815,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_read_unlocked 
                 memcpy(data + clength, tcpsocket->iovecs[i].iov_base, tcpsocket->iovecs[i].iov_len);
                 clength += tcpsocket->iovecs[i].iov_len;
         }
-        rc = medusa_buffer_choke(tcpsocket->rbuffer, clength);
+        rc = medusa_buffer_choke(tcpsocket->rbuffer, 0, clength);
         if (rc < 0) {
                 return rc;
         }

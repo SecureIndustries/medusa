@@ -17,15 +17,12 @@ static int test_buffer (unsigned int type, unsigned int count)
 {
         char *pdata;
         char *adata;
-
         unsigned int i;
-        unsigned int j;
 
         int rc;
         struct medusa_buffer *buffer;
 
-        int niovecs;
-        struct iovec *iovecs;
+        int64_t offset;
 
         pdata = malloc(count + 1);
         if (pdata == NULL) {
@@ -75,53 +72,18 @@ static int test_buffer (unsigned int type, unsigned int count)
                 return -1;
         }
 
-        rc = medusa_buffer_choke(buffer, 0, strlen(pdata));
-        if (rc < 0) {
-                fprintf(stderr, "medusa_buffer_choke failed: %d\n", rc);
-                return -1;
-        }
-        if (rc != (int) strlen(pdata)) {
-                fprintf(stderr, "medusa_buffer_choke failed: %d != %d\n", rc, (int) strlen(pdata));
+        offset = medusa_buffer_memmem(buffer, 0, adata, strlen(adata));
+        if (offset != (int64_t) strlen(pdata)) {
+                fprintf(stderr, "medusa_buffer_memmem failed: %ld != %ld\n", offset, strlen(pdata));
                 return -1;
         }
 
-        niovecs = medusa_buffer_peek(buffer, 0, -1, NULL, 0);
-        if (niovecs < 0) {
-                fprintf(stderr, "medusa_buffer_peek failed\n");
+        offset = medusa_buffer_memmem(buffer, 0, pdata, strlen(pdata));
+        if (offset != 0) {
+                fprintf(stderr, "medusa_buffer_memmem failed: %ld != %d.\n", offset, 0);
                 return -1;
         }
 
-        iovecs = malloc(sizeof(struct iovec) * niovecs);
-        if (iovecs == NULL) {
-                fprintf(stderr, "malloc failed\n");
-                return -1;
-        }
-
-        niovecs = medusa_buffer_peek(buffer, 0, -1, iovecs, niovecs);
-        if (niovecs < 0) {
-                fprintf(stderr, "medusa_buffer_peek failed, count: %d\n", count);
-                return -1;
-        }
-
-        j = 0;
-        for (i = 0; i < (unsigned int) niovecs; i++) {
-                if (iovecs[i].iov_len > count - j) {
-                        fprintf(stderr, "iovecs[i].iov_len: %d > count - j : %d\n", (int) iovecs[i].iov_len, (int) (count - j));
-                        return -1;
-                }
-                rc = memcmp(adata + j, iovecs[i].iov_base, iovecs[i].iov_len);
-                if (rc != 0) {
-                        fprintf(stderr, "data mismatch @ i: %d / %d, j: %d / %d, iov: %ld\n", i, niovecs, j, count, iovecs[i].iov_len);
-                        return -1;
-                }
-                j += iovecs[i].iov_len;
-        }
-        if (count != j) {
-                fprintf(stderr, "count: %d != j: %d, i: %d / %d\n", count, j, i, niovecs);
-                return -1;
-        }
-
-        free(iovecs);
         medusa_buffer_destroy(buffer);
         free(pdata);
         free(adata);
