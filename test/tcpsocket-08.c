@@ -199,7 +199,7 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 medusa_tcpsocket_destroy(tcpsocket);
                 rc = medusa_tcpsocket_read(tcpsocket, &c, 1);
                 if (rc != 1) {
-                        fprintf(stderr, "medusa_tcpsocket_read failed\n");
+                        fprintf(stderr, "medusa_tcpsocket_read failed, rc: %d\n", rc);
                         return -1;
                 }
                 rc = medusa_tcpsocket_write(tcpsocket, &c, 1);
@@ -439,13 +439,14 @@ int main (int argc, char *argv[])
 
         for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
                 alarm(5);
-                fprintf(stderr, "testing poll: %d\n", g_polls[i]);
 
+                fprintf(stderr, "testing poll: %d\n", g_polls[i]);
                 rc = test_poll(g_polls[i]);
                 if (rc != 0) {
                         fprintf(stderr, "failed\n");
                         return -1;
                 }
+                fprintf(stderr, "success\n");
         }
         return 0;
 }

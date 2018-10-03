@@ -22,16 +22,14 @@ define test-defaults
 		../dist/lib
 
 	$1_ldflags-y = \
-		../dist/lib/libmedusa-socket.a \
-		../dist/lib/libmedusa-monitor.a \
+		../dist/lib/libmedusa.a \
 		-lpthread
 
 	$1_ldflags-$(__LINUX__) += \
 		-lrt
 
 	$1_depends-y = \
-		../dist/lib/libmedusa-socket.a \
-		../dist/lib/libmedusa-monitor.a
+		../dist/lib/libmedusa.a
 endef
 
 define test_event-defaults
