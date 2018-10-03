@@ -35,6 +35,7 @@ static int timer_onevent (struct medusa_timer *timer, unsigned int events, void 
                 *count += 1;
         }
         if (events & MEDUSA_TIMER_EVENT_DESTROY) {
+                fprintf(stderr, "break\n");
                 return medusa_monitor_break(g_monitor);
         }
         return 0;

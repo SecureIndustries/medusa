@@ -11,7 +11,6 @@
 
 static const unsigned int g_types[] = {
         MEDUSA_BUFFER_TYPE_SIMPLE,
-        MEDUSA_BUFFER_TYPE_CHUNKED,
 };
 
 static int test_buffer (unsigned int type, unsigned int count)
@@ -70,7 +69,7 @@ static int test_buffer (unsigned int type, unsigned int count)
                 return -1;
         }
 
-        rc = medusa_buffer_choke(buffer, strlen(data));
+        rc = medusa_buffer_choke(buffer, 0, strlen(data));
         if (rc < 0) {
                 fprintf(stderr, "medusa_buffer_choke failed: %d\n", rc);
                 return -1;

@@ -12,7 +12,6 @@
 #include "buffer.h"
 #include "buffer-struct.h"
 #include "buffer-simple.h"
-#include "buffer-chunked.h"
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_reset (struct medusa_buffer *buffer)
 {
@@ -86,7 +85,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_prependv (struct 
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->prependv)) {
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->insertv)) {
                 return -EINVAL;
         }
         if (niovecs < 0) {
@@ -98,7 +97,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_prependv (struct 
         if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
                 return -EINVAL;
         }
-        return buffer->backend->prependv(buffer, iovecs, niovecs);
+        return buffer->backend->insertv(buffer, 0, iovecs, niovecs);
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length)
@@ -131,7 +130,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_appendv (struct m
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->appendv)) {
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->insertv)) {
                 return -EINVAL;
         }
         if (niovecs < 0) {
@@ -143,26 +142,32 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_appendv (struct m
         if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
                 return -EINVAL;
         }
-        return buffer->backend->appendv(buffer, iovecs, niovecs);
+        return buffer->backend->insertv(buffer, medusa_buffer_get_length(buffer), iovecs, niovecs);
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_printf (struct medusa_buffer *buffer, const char *format, ...)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert (struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length)
 {
-        int64_t rc;
-        va_list va;
+        int64_t niovecs;
+        struct iovec iovecs[1];
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(format)) {
+        if (MEDUSA_IS_ERR_OR_NULL(data)) {
                 return -EINVAL;
         }
-        va_start(va, format);
-        rc = medusa_buffer_vprintf(buffer, format, va);
-        va_end(va);
-        return rc;
+        if (length < 0) {
+                return -EINVAL;
+        }
+        if (length == 0) {
+                return 0;
+        }
+        niovecs = 1;
+        iovecs[0].iov_base = (void *) data;
+        iovecs[0].iov_len  = length;
+        return medusa_buffer_insertv(buffer, offset, iovecs, niovecs);
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertv (struct medusa_buffer *buffer, int64_t offset, const struct iovec *iovecs, int64_t niovecs)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
@@ -170,13 +175,19 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_vprintf (struct m
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->vprintf)) {
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->insertv)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(format)) {
+        if (niovecs < 0) {
                 return -EINVAL;
         }
-        return buffer->backend->vprintf(buffer, format, va);
+        if (niovecs == 0) {
+                return 0;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
+                return -EINVAL;
+        }
+        return buffer->backend->insertv(buffer, offset, iovecs, niovecs);
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs)
@@ -233,7 +244,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_peek (struct medu
         return buffer->backend->peek(buffer, offset, length, iovecs, niovecs);
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_choke (struct medusa_buffer *buffer, int64_t length)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_choke (struct medusa_buffer *buffer, int64_t offset, int64_t length)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
@@ -244,7 +255,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_choke (struct med
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->choke)) {
                 return -EINVAL;
         }
-        return buffer->backend->choke(buffer, length);
+        return buffer->backend->choke(buffer, offset, length);
 }
 
 int medusa_buffer_memcmp (struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length)
@@ -283,10 +294,9 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_init_options_default 
                 return -EINVAL;
         }
         memset(options, 0, sizeof(struct medusa_buffer_init_options));
-        options->type = MEDUSA_BUFFER_TYPE_CHUNKED;
+        options->type = MEDUSA_BUFFER_TYPE_SIMPLE;
         options->flags = MEDUSA_BUFFER_FLAG_DEFAULT;
-        options->u.chunked.chunk_size = MEDUSA_BUFFER_DEFAULT_CHUNK_SIZE;
-        options->u.chunked.chunk_count = MEDUSA_BUFFER_DEFAULT_CHUNK_COUNT;
+        options->u.simple.grow_size = MEDUSA_BUFFER_DEFAULT_GROW_SIZE;
         return 0;
 }
 
@@ -317,17 +327,6 @@ __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_cr
                 simple_options.flags = MEDUSA_BUFFER_SIMPLE_FLAG_DEFAULT;
                 simple_options.grow = options->u.simple.grow_size;
                 return medusa_buffer_simple_create_with_options(&simple_options);
-        } else if (options->type == MEDUSA_BUFFER_TYPE_CHUNKED) {
-                int rc;
-                struct medusa_buffer_chunked_init_options chunked_options;
-                rc = medusa_buffer_chunked_init_options_default(&chunked_options);
-                if (rc < 0) {
-                        return MEDUSA_ERR_PTR(rc);
-                }
-                chunked_options.flags = MEDUSA_BUFFER_CHUNKED_FLAG_DEFAULT;
-                chunked_options.chunk_size = options->u.chunked.chunk_size;
-                chunked_options.chunk_count = options->u.chunked.chunk_count;
-                return medusa_buffer_chunked_create_with_options(&chunked_options);
         } else {
                 return MEDUSA_ERR_PTR(-ENOENT);
         }
