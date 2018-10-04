@@ -17,7 +17,7 @@
 
 #include "signal.h"
 
-#define MEDUSA_SIGNAL_USE_POOL   1
+#define MEDUSA_SIGNAL_USE_POOL   0
 #if defined(MEDUSA_SIGNAL_USE_POOL) && (MEDUSA_SIGNAL_USE_POOL == 1)
 static struct medusa_pool *g_pool;
 #endif
@@ -69,7 +69,46 @@ static int signal_set_enabled (struct medusa_signal *signal, int enabled)
         return 0;
 }
 
-static int signal_init_with_options (struct medusa_signal *signal, const struct medusa_signal_init_options *options)
+__attribute__ ((visibility ("default"))) int medusa_signal_init_options_default (struct medusa_signal_init_options *options)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return -EINVAL;
+        }
+        memset(options, 0, sizeof(struct medusa_signal_init_options));
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_signal_init_unlocked (struct medusa_signal *signal, struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
+{
+        int rc;
+        struct medusa_signal_init_options options;
+        rc = medusa_signal_init_options_default(&options);
+        if (rc < 0) {
+                return rc;
+        }
+        options.monitor = monitor;
+        options.number  = number;
+        options.onevent = onevent;
+        options.context = context;
+        return medusa_signal_init_with_options_unlocked(signal, &options);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_signal_init (struct medusa_signal *signal, struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(signal)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(monitor);
+        rc = medusa_signal_init_unlocked(signal, monitor, number, onevent, context);
+        medusa_monitor_unlock(monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_signal_init_with_options_unlocked (struct medusa_signal *signal, const struct medusa_signal_init_options *options)
 {
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {
                 return -EINVAL;
@@ -94,30 +133,7 @@ static int signal_init_with_options (struct medusa_signal *signal, const struct 
         signal_set_enabled(signal, options->enabled);
         signal->subject.flags = MEDUSA_SUBJECT_TYPE_SIGNAL;
         signal->subject.monitor = NULL;
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_signal_init_options_default (struct medusa_signal_init_options *options)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(options)) {
-                return -EINVAL;
-        }
-        memset(options, 0, sizeof(struct medusa_signal_init_options));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_signal_init (struct medusa_signal *signal, struct medusa_monitor *monitor, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
-{
-        int rc;
-        struct medusa_signal_init_options options;
-        rc = medusa_signal_init_options_default(&options);
-        if (rc < 0) {
-                return rc;
-        }
-        options.monitor = monitor;
-        options.onevent = onevent;
-        options.context = context;
-        return medusa_signal_init_with_options(signal, &options);
+        return medusa_monitor_add_unlocked(options->monitor, &signal->subject);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_signal_init_with_options (struct medusa_signal *signal, const struct medusa_signal_init_options *options)
@@ -129,11 +145,13 @@ __attribute__ ((visibility ("default"))) int medusa_signal_init_with_options (st
         if (MEDUSA_IS_ERR_OR_NULL(options)) {
                 return -EINVAL;
         }
-        rc = signal_init_with_options(signal, options);
-        if (rc < 0) {
-                return rc;
+        if (MEDUSA_IS_ERR_OR_NULL(options->monitor)) {
+                return -EINVAL;
         }
-        return medusa_monitor_add(options->monitor, &signal->subject);
+        medusa_monitor_lock(options->monitor);
+        rc = medusa_signal_init_with_options_unlocked(signal, options);
+        medusa_monitor_unlock(options->monitor);
+        return rc;
 }
 
 __attribute__ ((visibility ("default"))) void medusa_signal_uninit_unlocked (struct medusa_signal *signal)
@@ -161,10 +179,11 @@ __attribute__ ((visibility ("default"))) void medusa_signal_uninit (struct medus
         medusa_monitor_unlock(signal->subject.monitor);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_signal_create_singleshot (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_signal_create_singleshot_unlocked (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
 {
         int rc;
         struct medusa_signal *signal;
+        struct medusa_signal_init_options options;
         if (monitor == NULL) {
                 return -EINVAL;
         }
@@ -174,27 +193,37 @@ __attribute__ ((visibility ("default"))) int medusa_signal_create_singleshot (st
         if (onevent == NULL) {
                 return -EINVAL;
         }
-        signal = medusa_signal_create(monitor, number, onevent, context);
+        rc = medusa_signal_init_options_default(&options);
+        if (rc < 0) {
+                return rc;
+        }
+        options.monitor         = monitor;
+        options.onevent         = onevent;
+        options.context         = context;
+        options.number          = number;
+        options.singleshot      = 1;
+        options.enabled         = 1;
+        signal = medusa_signal_create_with_options_unlocked(&options);
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {
-                return -EIO;
+                return MEDUSA_PTR_ERR(signal);
         }
-        rc = medusa_signal_set_singleshot(signal, 1);
-        if (rc < 0) {
-                medusa_signal_destroy(signal);
-                return rc;
-        }
-        rc = medusa_signal_set_enabled(signal, 1);
-        if (rc < 0) {
-                medusa_signal_destroy(signal);
-                return rc;
-        }
-        medusa_monitor_lock(signal->subject.monitor);
         signal->flags |= MEDUSA_SIGNAL_FLAG_AUTO_DESTROY;
-        medusa_monitor_unlock(signal->subject.monitor);
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_signal * medusa_signal_create (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_signal_create_singleshot (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(monitor);
+        rc = medusa_signal_create_singleshot_unlocked(monitor, number, onevent, context);
+        medusa_monitor_unlock(monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_signal * medusa_signal_create_unlocked (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
 {
         int rc;
         struct medusa_signal_init_options options;
@@ -206,14 +235,32 @@ __attribute__ ((visibility ("default"))) struct medusa_signal * medusa_signal_cr
         options.number = number;
         options.onevent = onevent;
         options.context = context;
-        return medusa_signal_create_with_options(&options);
+        return medusa_signal_create_with_options_unlocked(&options);
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_signal * medusa_signal_create_with_options (const struct medusa_signal_init_options *options)
+__attribute__ ((visibility ("default"))) struct medusa_signal * medusa_signal_create (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
+{
+        struct medusa_signal *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(monitor);
+        rc = medusa_signal_create_unlocked(monitor, number, onevent, context);
+        medusa_monitor_unlock(monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_signal * medusa_signal_create_with_options_unlocked (const struct medusa_signal_init_options *options)
 {
         int rc;
         struct medusa_signal *signal;
         if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(options->monitor)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(options->onevent)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
 #if defined(MEDUSA_SIGNAL_USE_POOL) && (MEDUSA_SIGNAL_USE_POOL == 1)
@@ -224,22 +271,29 @@ __attribute__ ((visibility ("default"))) struct medusa_signal * medusa_signal_cr
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
-        rc = signal_init_with_options(signal, options);
+        memset(signal, 0, sizeof(struct medusa_signal));
+        rc = medusa_signal_init_with_options_unlocked(signal, options);
         if (rc < 0) {
-#if defined(MEDUSA_SIGNAL_USE_POOL) && (MEDUSA_SIGNAL_USE_POOL == 1)
-                medusa_pool_free(signal);
-#else
-                free(signal);
-#endif
+                medusa_signal_destroy_unlocked(signal);
                 return MEDUSA_ERR_PTR(rc);
         }
         signal->subject.flags |= MEDUSA_SUBJECT_FLAG_ALLOC;
-        rc = medusa_monitor_add(options->monitor, &signal->subject);
-        if (rc < 0) {
-                medusa_signal_destroy(signal);
-                return MEDUSA_ERR_PTR(rc);
-        }
         return signal;
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_signal * medusa_signal_create_with_options (const struct medusa_signal_init_options *options)
+{
+        struct medusa_signal *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(options->monitor)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(options->monitor);
+        rc = medusa_signal_create_with_options_unlocked(options);
+        medusa_monitor_unlock(options->monitor);
+        return rc;
 }
 
 __attribute__ ((visibility ("default"))) void medusa_signal_destroy_unlocked (struct medusa_signal *signal)

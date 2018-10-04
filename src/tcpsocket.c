@@ -492,7 +492,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_unlocked (str
         options.monitor = monitor;
         options.onevent = onevent;
         options.context = context;
-        return medusa_tcpsocket_init_with_options(tcpsocket, &options);
+        return medusa_tcpsocket_init_with_options_unlocked(tcpsocket, &options);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init (struct medusa_tcpsocket *tcpsocket, struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context)

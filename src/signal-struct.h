@@ -15,7 +15,7 @@ struct medusa_signal {
         void *context;
 };
 
-int medusa_signal_init (struct medusa_signal *signal, struct medusa_monitor *monitor, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context);
+int medusa_signal_init (struct medusa_signal *signal, struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context);
 int medusa_signal_init_with_options (struct medusa_signal *signal, const struct medusa_signal_init_options *options);
 void medusa_signal_uninit (struct medusa_signal *signal);
 
