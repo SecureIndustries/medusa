@@ -380,6 +380,16 @@ __attribute__ ((visibility ("default"))) int medusa_io_get_enabled (const struct
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_io_enable (struct medusa_io *io)
+{
+        return medusa_io_set_enabled(io, 1);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_disable (struct medusa_io *io)
+{
+        return medusa_io_set_enabled(io, 0);
+}
+
 __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_io_get_monitor_unlocked (const struct medusa_io *io)
 {
         if (MEDUSA_IS_ERR_OR_NULL(io)) {

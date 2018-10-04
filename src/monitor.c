@@ -816,17 +816,13 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         }
         if (options->signal.type == MEDUSA_MONITOR_SIGNAL_DEFAULT) {
                 do {
-#if defined(__LINUX__) && (__LINUX__ == 1)
                         monitor->signal.backend = medusa_signal_sigaction_create(NULL);
                         if (monitor->signal.backend != NULL) {
                                 break;
                         }
-#endif
                 } while (0);
-#if defined(__LINUX__) && (__LINUX__ == 1)
-        } else if (options->signal.type == MEDUSA_MONITOR_SIGNAL_SIGNALFD) {
+        } else if (options->signal.type == MEDUSA_MONITOR_SIGNAL_SIGACTION) {
                 monitor->signal.backend = medusa_signal_sigaction_create(NULL);
-#endif
         } else {
                 goto bail;
         }

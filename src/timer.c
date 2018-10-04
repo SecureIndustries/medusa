@@ -859,6 +859,26 @@ __attribute__ ((visibility ("default"))) int medusa_timer_get_enabled (const str
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_timer_enable (struct medusa_timer *timer)
+{
+        return medusa_timer_set_enabled(timer, 1);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_disable (struct medusa_timer *timer)
+{
+        return medusa_timer_set_enabled(timer, 0);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_start (struct medusa_timer *timer)
+{
+        return medusa_timer_set_enabled(timer, 1);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_stop (struct medusa_timer *timer)
+{
+        return medusa_timer_set_enabled(timer, 0);
+}
+
 __attribute__ ((visibility ("default"))) int medusa_timer_update_timespec_unlocked (struct medusa_timer *timer, struct timespec *now)
 {
         unsigned int resolution;

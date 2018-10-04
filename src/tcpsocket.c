@@ -769,6 +769,16 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_enabled (const
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_enable (struct medusa_tcpsocket *tcpsocket)
+{
+        return medusa_tcpsocket_set_enabled(tcpsocket, 1);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_disable (struct medusa_tcpsocket *tcpsocket)
+{
+        return medusa_tcpsocket_set_enabled(tcpsocket, 0);
+}
+
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_nonblocking_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled)
 {
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {

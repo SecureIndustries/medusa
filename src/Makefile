@@ -1,19 +1,20 @@
 
 ifeq ($(__LINUX__), y)
-POLL_EPOLL_ENABLE     ?= y
+POLL_EPOLL_ENABLE     	?= y
 endif
 ifeq ($(__DARWIN__), y)
-POLL_KQUEUE_ENABLE    ?= y
+POLL_KQUEUE_ENABLE    	?= y
 endif
-POLL_POLL_ENABLE      ?= y
-POLL_SELECT_ENABLE    ?= y
+POLL_POLL_ENABLE      	?= y
+POLL_SELECT_ENABLE    	?= y
 
 ifeq ($(__LINUX__), y)
-TIMER_TIMERFD_ENABLE  ?= y
+TIMER_TIMERFD_ENABLE  	?= y
 endif
 
+SIGNAL_SIGACTION_ENABLE	?= y
 ifeq ($(__LINUX__), y)
-SIGNAL_SIGACTION_ENABLE  ?= y
+SIGNAL_SIGNALFD_ENABLE	?= y
 endif
 
 target.a-y = \
@@ -65,6 +66,11 @@ libmedusa.a_cflags-${SIGNAL_SIGACTION_ENABLE} += \
 	-DSIGNAL_SIGACTION_ENABLE=1
 libmedusa.a_files-${SIGNAL_SIGACTION_ENABLE} += \
 	signal-sigaction.c
+
+libmedusa.a_cflags-${SIGNAL_SIGNALFD_ENABLE} += \
+	-DSIGNAL_SIGNALFD_ENABLE=1
+libmedusa.a_files-${SIGNAL_SIGNALFD_ENABLE} += \
+	signal-signalfd.c
 
 libmedusa.so_cflags-y = \
 	${libmedusa.a_cflags-y}

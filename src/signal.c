@@ -370,6 +370,16 @@ __attribute__ ((visibility ("default"))) int medusa_signal_get_enabled (const st
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_signal_enable (struct medusa_signal *signal)
+{
+        return medusa_signal_set_enabled(signal, 1);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_signal_disable (struct medusa_signal *signal)
+{
+        return medusa_signal_set_enabled(signal, 0);
+}
+
 __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_signal_get_monitor_unlocked (const struct medusa_signal *signal)
 {
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {

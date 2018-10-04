@@ -110,6 +110,9 @@ unsigned int medusa_tcpsocket_get_state (const struct medusa_tcpsocket *tcpsocke
 int medusa_tcpsocket_set_enabled (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_enabled (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_enable (struct medusa_tcpsocket *tcpsocket);
+int medusa_tcpsocket_disable (struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_set_nonblocking (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_nonblocking (const struct medusa_tcpsocket *tcpsocket);
 

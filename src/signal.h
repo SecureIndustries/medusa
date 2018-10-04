@@ -42,6 +42,9 @@ int medusa_signal_get_singleshot (const struct medusa_signal *signal);
 int medusa_signal_set_enabled (struct medusa_signal *signal, int enabled);
 int medusa_signal_get_enabled (const struct medusa_signal *signal);
 
+int medusa_signal_enable (struct medusa_signal *signal);
+int medusa_signal_disable (struct medusa_signal *signal);
+
 struct medusa_monitor * medusa_signal_get_monitor (const struct medusa_signal *signal);
 
 #ifdef __cplusplus
