@@ -17,7 +17,7 @@
 
 #include "signal.h"
 
-#define MEDUSA_SIGNAL_USE_POOL   0
+#define MEDUSA_SIGNAL_USE_POOL   1
 #if defined(MEDUSA_SIGNAL_USE_POOL) && (MEDUSA_SIGNAL_USE_POOL == 1)
 static struct medusa_pool *g_pool;
 #endif
