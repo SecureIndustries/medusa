@@ -6,7 +6,7 @@ target-y = \
 
 $(eval tests_event = $(sort $(subst .c,,$(wildcard *-??-event.c))))
 
-target-y += \
+target-n += \
 	${tests_event}
 
 all:

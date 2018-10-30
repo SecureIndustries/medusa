@@ -12,8 +12,7 @@ medusa-echo-client_files-y = \
 	echo-client.c
 
 medusa-echo-client_ldflags-y = \
-	../../dist/lib/libmedusa.a \
-	-lreadline
+	../../dist/lib/libmedusa.a
 
 medusa-echo-client_ldflags-$(__LINUX__) += \
 	-lrt
