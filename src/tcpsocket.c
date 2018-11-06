@@ -1176,9 +1176,6 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind_unlocked (str
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
-        if (address == NULL) {
-                return -EINVAL;
-        }
         if (port == 0) {
                 return -EINVAL;
         }
