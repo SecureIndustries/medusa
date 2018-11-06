@@ -138,7 +138,6 @@ __attribute__ ((visibility ("default"))) struct medusa_pool * medusa_pool_create
         pool->context = context;
         pool->page_size = getpagesize();
         pool->count = aligncount(pool->size, count, sizeof(struct block), pool->page_size);
-        fprintf(stderr, "pool name: %s, size: %d, count: %d, bcount: %d\n", pool->name, pool->size, count, pool->count);
         return pool;
 bail:   if (pool != NULL) {
                 medusa_pool_destroy(pool);
