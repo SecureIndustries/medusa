@@ -162,6 +162,9 @@ int64_t medusa_tcpsocket_get_write_length (const struct medusa_tcpsocket *tcpsoc
 int medusa_tcpsocket_set_write_buffer (struct medusa_tcpsocket *tcpsocket, struct medusa_buffer *buffer);
 struct medusa_buffer * medusa_tcpsocket_get_write_buffer (struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_set_userdata (struct medusa_tcpsocket *tcpsocket, void *userdata);
+void * medusa_tcpsocket_get_userdata (struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 struct medusa_monitor * medusa_tcpsocket_get_monitor (struct medusa_tcpsocket *tcpsocket);
 

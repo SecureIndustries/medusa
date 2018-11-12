@@ -15,6 +15,7 @@ struct medusa_tcpsocket {
         struct medusa_buffer *wbuffer;
         struct iovec *iovecs;
         int niovecs;
+        void *userdata;
 };
 
 int medusa_tcpsocket_init (struct medusa_tcpsocket *tcpsocket, struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);

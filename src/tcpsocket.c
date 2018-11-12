@@ -2183,6 +2183,23 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent_unlocked (
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_userdata (struct medusa_tcpsocket *tcpsocket, void *userdata)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        tcpsocket->userdata = userdata;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_tcpsocket_get_userdata (struct medusa_tcpsocket *tcpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return tcpsocket->userdata;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events)
 {
         int rc;
