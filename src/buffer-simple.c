@@ -216,7 +216,7 @@ static int64_t simple_buffer_commit (struct medusa_buffer *buffer, const struct 
         return niovecs;
 }
 
-static int64_t simple_buffer_peek (struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
+static int64_t simple_buffer_peek (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
 {
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
