@@ -357,6 +357,30 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_read_uint8 (const str
         return 0;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_buffer_read_uint8_le (const struct medusa_buffer *buffer, int64_t offset, uint8_t *value)
+{
+        int rc;
+        uint8_t v;
+        rc = medusa_buffer_read_data(buffer, offset, &v, sizeof(uint8_t));
+        if (rc < 0) {
+                return rc;
+        }
+        memcpy(value, &v, sizeof(uint8_t));
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_read_uint8_be (const struct medusa_buffer *buffer, int64_t offset, uint8_t *value)
+{
+        int rc;
+        uint8_t v;
+        rc = medusa_buffer_read_data(buffer, offset, &v, sizeof(uint8_t));
+        if (rc < 0) {
+                return rc;
+        }
+        memcpy(value, &v, sizeof(uint8_t));
+        return 0;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_buffer_read_uint16 (const struct medusa_buffer *buffer, int64_t offset, uint16_t *value)
 {
         int rc;

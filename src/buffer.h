@@ -69,6 +69,8 @@ int64_t medusa_buffer_commit (struct medusa_buffer *buffer, const struct iovec *
 
 int medusa_buffer_read_data (const struct medusa_buffer *buffer, int64_t offset, void *data, int64_t length);
 int medusa_buffer_read_uint8 (const struct medusa_buffer *buffer, int64_t offset, uint8_t *value);
+int medusa_buffer_read_uint8_le (const struct medusa_buffer *buffer, int64_t offset, uint8_t *value);
+int medusa_buffer_read_uint8_be (const struct medusa_buffer *buffer, int64_t offset, uint8_t *value);
 int medusa_buffer_read_uint16 (const struct medusa_buffer *buffer, int64_t offset, uint16_t *value);
 int medusa_buffer_read_uint16_le (const struct medusa_buffer *buffer, int64_t offset, uint16_t *value);
 int medusa_buffer_read_uint16_be (const struct medusa_buffer *buffer, int64_t offset, uint16_t *value);
