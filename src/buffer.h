@@ -84,8 +84,8 @@ int medusa_buffer_read_uint64_be (const struct medusa_buffer *buffer, int64_t of
 int64_t medusa_buffer_peek (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs);
 int64_t medusa_buffer_choke (struct medusa_buffer *buffer, int64_t offset, int64_t length);
 
-int medusa_buffer_memcmp (struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length);
-int64_t medusa_buffer_memmem (struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length);
+int medusa_buffer_memcmp (const struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length);
+int64_t medusa_buffer_memmem (const struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length);
 
 #ifdef __cplusplus
 }

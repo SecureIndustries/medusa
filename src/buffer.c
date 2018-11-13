@@ -523,7 +523,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_choke (struct med
         return buffer->backend->choke(buffer, offset, length);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_buffer_memcmp (struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length)
+__attribute__ ((visibility ("default"))) int medusa_buffer_memcmp (const struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length)
 {
         int ret;
         int64_t i;
@@ -560,19 +560,19 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_memcmp (struct medusa
         } else {
                 iovecs = _iovecs;
         }
-        ret = -EIO;
         niovecs = medusa_buffer_peek(buffer, offset, length, iovecs, niovecs);
         if (niovecs < 0) {
                 ret = niovecs;
                 goto out;
         }
-        for (i = 0; i < niovecs; i++) {
-                ret = memcmp(data, iovecs[i].iov_base, MIN(length, (int64_t) iovecs[i].iov_len));
+        for (i = 0; l > 0 && i < niovecs; i++) {
+                l = MIN(length, (int64_t) iovecs[i].iov_len);
+                ret = memcmp(data, iovecs[i].iov_base, l);
                 if (ret != 0) {
                         break;
                 }
-                length -= iovecs[i].iov_len;
-                data   += iovecs[i].iov_len;
+                length -= l;
+                data   += l;
         }
         if (length > 0) {
                 ret = -1;
@@ -584,7 +584,7 @@ out:    if (iovecs != NULL &&
         return ret;
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_memmem (struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_memmem (const struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length)
 {
         int rc;
         int64_t i;
