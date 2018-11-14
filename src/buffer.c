@@ -232,6 +232,72 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertfv (struct 
         return buffer->backend->insertfv(buffer, offset, format, va);
 }
 
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_append_uint8 (struct medusa_buffer *buffer, uint8_t value)
+{
+        return medusa_buffer_append(buffer, &value, sizeof(uint8_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_append_uint8_le (struct medusa_buffer *buffer, uint8_t value)
+{
+        return medusa_buffer_append(buffer, &value, sizeof(uint8_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_append_uint8_be (struct medusa_buffer *buffer, uint8_t value)
+{
+        return medusa_buffer_append(buffer, &value, sizeof(uint8_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_append_uint16 (struct medusa_buffer *buffer, uint16_t value)
+{
+        return medusa_buffer_append(buffer, &value, sizeof(uint16_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_append_uint16_le (struct medusa_buffer *buffer, uint16_t value)
+{
+        value = htole16(value);
+        return medusa_buffer_append(buffer, &value, sizeof(uint16_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_append_uint16_be (struct medusa_buffer *buffer, uint16_t value)
+{
+        value = htobe16(value);
+        return medusa_buffer_append(buffer, &value, sizeof(uint16_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_append_uint32 (struct medusa_buffer *buffer, uint32_t value)
+{
+        return medusa_buffer_append(buffer, &value, sizeof(uint32_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_append_uint32_le (struct medusa_buffer *buffer, uint32_t value)
+{
+        value = htole32(value);
+        return medusa_buffer_append(buffer, &value, sizeof(uint32_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_append_uint32_be (struct medusa_buffer *buffer, uint32_t value)
+{
+        value = htobe32(value);
+        return medusa_buffer_append(buffer, &value, sizeof(uint32_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_append_uint64 (struct medusa_buffer *buffer, uint64_t value)
+{
+        return medusa_buffer_append(buffer, &value, sizeof(uint64_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_append_uint64_le (struct medusa_buffer *buffer, uint64_t value)
+{
+        value = htole64(value);
+        return medusa_buffer_append(buffer, &value, sizeof(uint64_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_append_uint64_be (struct medusa_buffer *buffer, uint64_t value)
+{
+        value = htobe64(value);
+        return medusa_buffer_append(buffer, &value, sizeof(uint64_t));
+}
+
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_printf (struct medusa_buffer *buffer, const char *format, ...)
 {
         int rc;
@@ -285,214 +351,6 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_commit (struct me
                 return -EINVAL;
         }
         return buffer->backend->commit(buffer, iovecs, niovecs);
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_read_data (const struct medusa_buffer *buffer, int64_t offset, void *data, int64_t length)
-{
-        int ret;
-        int64_t i;
-        int64_t l;
-        int64_t niovecs;
-        struct iovec *iovecs;
-        struct iovec _iovecs[16];
-        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(data)) {
-                return -EINVAL;
-        }
-        if (length < 0) {
-                return -EINVAL;
-        }
-        l = medusa_buffer_get_length(buffer);
-        if (length == 0 &&
-            l == 0) {
-                return 0;
-        }
-        if (l < length) {
-                return -1;
-        }
-        niovecs = medusa_buffer_peek(buffer, offset, length, NULL, 0);
-        if (niovecs < 0) {
-                return niovecs;
-        }
-        if (niovecs > (int64_t) (sizeof(_iovecs) / sizeof(_iovecs[0]))) {
-                iovecs = malloc(sizeof(struct iovec) * niovecs);
-                if (iovecs == NULL) {
-                        return -ENOMEM;
-                }
-        } else {
-                iovecs = _iovecs;
-        }
-        ret = 0;
-        niovecs = medusa_buffer_peek(buffer, offset, length, iovecs, niovecs);
-        if (niovecs < 0) {
-                ret = niovecs;
-                goto out;
-        }
-        for (i = 0; i < niovecs; i++) {
-                memcpy(data, iovecs[i].iov_base, MIN(length, (int64_t) iovecs[i].iov_len));
-                length -= iovecs[i].iov_len;
-                data   += iovecs[i].iov_len;
-        }
-        if (length > 0) {
-                ret = -EIO;
-        }
-out:    if (iovecs != NULL &&
-            iovecs != _iovecs) {
-                free(iovecs);
-        }
-        return ret;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_read_uint8 (const struct medusa_buffer *buffer, int64_t offset, uint8_t *value)
-{
-        int rc;
-        uint8_t v;
-        rc = medusa_buffer_read_data(buffer, offset, &v, sizeof(uint8_t));
-        if (rc < 0) {
-                return rc;
-        }
-        memcpy(value, &v, sizeof(uint8_t));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_read_uint8_le (const struct medusa_buffer *buffer, int64_t offset, uint8_t *value)
-{
-        int rc;
-        uint8_t v;
-        rc = medusa_buffer_read_data(buffer, offset, &v, sizeof(uint8_t));
-        if (rc < 0) {
-                return rc;
-        }
-        memcpy(value, &v, sizeof(uint8_t));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_read_uint8_be (const struct medusa_buffer *buffer, int64_t offset, uint8_t *value)
-{
-        int rc;
-        uint8_t v;
-        rc = medusa_buffer_read_data(buffer, offset, &v, sizeof(uint8_t));
-        if (rc < 0) {
-                return rc;
-        }
-        memcpy(value, &v, sizeof(uint8_t));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_read_uint16 (const struct medusa_buffer *buffer, int64_t offset, uint16_t *value)
-{
-        int rc;
-        uint16_t v;
-        rc = medusa_buffer_read_data(buffer, offset, &v, sizeof(uint16_t));
-        if (rc < 0) {
-                return rc;
-        }
-        memcpy(value, &v, sizeof(uint16_t));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_read_uint16_le (const struct medusa_buffer *buffer, int64_t offset, uint16_t *value)
-{
-        int rc;
-        uint16_t v;
-        rc = medusa_buffer_read_data(buffer, offset, &v, sizeof(uint16_t));
-        if (rc < 0) {
-                return rc;
-        }
-        v = le16toh(v);
-        memcpy(value, &v, sizeof(uint16_t));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_read_uint16_be (const struct medusa_buffer *buffer, int64_t offset, uint16_t *value)
-{
-        int rc;
-        uint16_t v;
-        rc = medusa_buffer_read_data(buffer, offset, &v, sizeof(uint16_t));
-        if (rc < 0) {
-                return rc;
-        }
-        v = be16toh(v);
-        memcpy(value, &v, sizeof(uint16_t));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_read_uint32 (const struct medusa_buffer *buffer, int64_t offset, uint32_t *value)
-{
-        int rc;
-        uint32_t v;
-        rc = medusa_buffer_read_data(buffer, offset, &v, sizeof(uint32_t));
-        if (rc < 0) {
-                return rc;
-        }
-        memcpy(value, &v, sizeof(uint32_t));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_read_uint32_le (const struct medusa_buffer *buffer, int64_t offset, uint32_t *value)
-{
-        int rc;
-        uint32_t v;
-        rc = medusa_buffer_read_data(buffer, offset, &v, sizeof(uint32_t));
-        if (rc < 0) {
-                return rc;
-        }
-        v = le32toh(v);
-        memcpy(value, &v, sizeof(uint32_t));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_read_uint32_be (const struct medusa_buffer *buffer, int64_t offset, uint32_t *value)
-{
-        int rc;
-        uint32_t v;
-        rc = medusa_buffer_read_data(buffer, offset, &v, sizeof(uint32_t));
-        if (rc < 0) {
-                return rc;
-        }
-        v = be32toh(v);
-        memcpy(value, &v, sizeof(uint32_t));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_read_uint64 (const struct medusa_buffer *buffer, int64_t offset, uint64_t *value)
-{
-        int rc;
-        uint64_t v;
-        rc = medusa_buffer_read_data(buffer, offset, &v, sizeof(uint64_t));
-        if (rc < 0) {
-                return rc;
-        }
-        memcpy(value, &v, sizeof(uint64_t));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_read_uint64_le (const struct medusa_buffer *buffer, int64_t offset, uint64_t *value)
-{
-        int rc;
-        uint64_t v;
-        rc = medusa_buffer_read_data(buffer, offset, &v, sizeof(uint64_t));
-        if (rc < 0) {
-                return rc;
-        }
-        v = le64toh(v);
-        memcpy(value, &v, sizeof(uint64_t));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_buffer_read_uint64_be (const struct medusa_buffer *buffer, int64_t offset, uint64_t *value)
-{
-        int rc;
-        uint64_t v;
-        rc = medusa_buffer_read_data(buffer, offset, &v, sizeof(uint64_t));
-        if (rc < 0) {
-                return rc;
-        }
-        v = be64toh(v);
-        memcpy(value, &v, sizeof(uint64_t));
-        return 0;
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_peek (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
@@ -613,6 +471,214 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_memmem (const str
                 }
         }
         return -1;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek_data (const struct medusa_buffer *buffer, int64_t offset, void *data, int64_t length)
+{
+        int ret;
+        int64_t i;
+        int64_t l;
+        int64_t niovecs;
+        struct iovec *iovecs;
+        struct iovec _iovecs[16];
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(data)) {
+                return -EINVAL;
+        }
+        if (length < 0) {
+                return -EINVAL;
+        }
+        l = medusa_buffer_get_length(buffer);
+        if (length == 0 &&
+            l == 0) {
+                return 0;
+        }
+        if (l < length) {
+                return -1;
+        }
+        niovecs = medusa_buffer_peek(buffer, offset, length, NULL, 0);
+        if (niovecs < 0) {
+                return niovecs;
+        }
+        if (niovecs > (int64_t) (sizeof(_iovecs) / sizeof(_iovecs[0]))) {
+                iovecs = malloc(sizeof(struct iovec) * niovecs);
+                if (iovecs == NULL) {
+                        return -ENOMEM;
+                }
+        } else {
+                iovecs = _iovecs;
+        }
+        ret = 0;
+        niovecs = medusa_buffer_peek(buffer, offset, length, iovecs, niovecs);
+        if (niovecs < 0) {
+                ret = niovecs;
+                goto out;
+        }
+        for (i = 0; i < niovecs; i++) {
+                memcpy(data, iovecs[i].iov_base, MIN(length, (int64_t) iovecs[i].iov_len));
+                length -= iovecs[i].iov_len;
+                data   += iovecs[i].iov_len;
+        }
+        if (length > 0) {
+                ret = -EIO;
+        }
+out:    if (iovecs != NULL &&
+            iovecs != _iovecs) {
+                free(iovecs);
+        }
+        return ret;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek_uint8 (const struct medusa_buffer *buffer, int64_t offset, uint8_t *value)
+{
+        int rc;
+        uint8_t v;
+        rc = medusa_buffer_peek_data(buffer, offset, &v, sizeof(uint8_t));
+        if (rc < 0) {
+                return rc;
+        }
+        memcpy(value, &v, sizeof(uint8_t));
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek_uint8_le (const struct medusa_buffer *buffer, int64_t offset, uint8_t *value)
+{
+        int rc;
+        uint8_t v;
+        rc = medusa_buffer_peek_data(buffer, offset, &v, sizeof(uint8_t));
+        if (rc < 0) {
+                return rc;
+        }
+        memcpy(value, &v, sizeof(uint8_t));
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek_uint8_be (const struct medusa_buffer *buffer, int64_t offset, uint8_t *value)
+{
+        int rc;
+        uint8_t v;
+        rc = medusa_buffer_peek_data(buffer, offset, &v, sizeof(uint8_t));
+        if (rc < 0) {
+                return rc;
+        }
+        memcpy(value, &v, sizeof(uint8_t));
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek_uint16 (const struct medusa_buffer *buffer, int64_t offset, uint16_t *value)
+{
+        int rc;
+        uint16_t v;
+        rc = medusa_buffer_peek_data(buffer, offset, &v, sizeof(uint16_t));
+        if (rc < 0) {
+                return rc;
+        }
+        memcpy(value, &v, sizeof(uint16_t));
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek_uint16_le (const struct medusa_buffer *buffer, int64_t offset, uint16_t *value)
+{
+        int rc;
+        uint16_t v;
+        rc = medusa_buffer_peek_data(buffer, offset, &v, sizeof(uint16_t));
+        if (rc < 0) {
+                return rc;
+        }
+        v = le16toh(v);
+        memcpy(value, &v, sizeof(uint16_t));
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek_uint16_be (const struct medusa_buffer *buffer, int64_t offset, uint16_t *value)
+{
+        int rc;
+        uint16_t v;
+        rc = medusa_buffer_peek_data(buffer, offset, &v, sizeof(uint16_t));
+        if (rc < 0) {
+                return rc;
+        }
+        v = be16toh(v);
+        memcpy(value, &v, sizeof(uint16_t));
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek_uint32 (const struct medusa_buffer *buffer, int64_t offset, uint32_t *value)
+{
+        int rc;
+        uint32_t v;
+        rc = medusa_buffer_peek_data(buffer, offset, &v, sizeof(uint32_t));
+        if (rc < 0) {
+                return rc;
+        }
+        memcpy(value, &v, sizeof(uint32_t));
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek_uint32_le (const struct medusa_buffer *buffer, int64_t offset, uint32_t *value)
+{
+        int rc;
+        uint32_t v;
+        rc = medusa_buffer_peek_data(buffer, offset, &v, sizeof(uint32_t));
+        if (rc < 0) {
+                return rc;
+        }
+        v = le32toh(v);
+        memcpy(value, &v, sizeof(uint32_t));
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek_uint32_be (const struct medusa_buffer *buffer, int64_t offset, uint32_t *value)
+{
+        int rc;
+        uint32_t v;
+        rc = medusa_buffer_peek_data(buffer, offset, &v, sizeof(uint32_t));
+        if (rc < 0) {
+                return rc;
+        }
+        v = be32toh(v);
+        memcpy(value, &v, sizeof(uint32_t));
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek_uint64 (const struct medusa_buffer *buffer, int64_t offset, uint64_t *value)
+{
+        int rc;
+        uint64_t v;
+        rc = medusa_buffer_peek_data(buffer, offset, &v, sizeof(uint64_t));
+        if (rc < 0) {
+                return rc;
+        }
+        memcpy(value, &v, sizeof(uint64_t));
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek_uint64_le (const struct medusa_buffer *buffer, int64_t offset, uint64_t *value)
+{
+        int rc;
+        uint64_t v;
+        rc = medusa_buffer_peek_data(buffer, offset, &v, sizeof(uint64_t));
+        if (rc < 0) {
+                return rc;
+        }
+        v = le64toh(v);
+        memcpy(value, &v, sizeof(uint64_t));
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_buffer_peek_uint64_be (const struct medusa_buffer *buffer, int64_t offset, uint64_t *value)
+{
+        int rc;
+        uint64_t v;
+        rc = medusa_buffer_peek_data(buffer, offset, &v, sizeof(uint64_t));
+        if (rc < 0) {
+                return rc;
+        }
+        v = be64toh(v);
+        memcpy(value, &v, sizeof(uint64_t));
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_init_options_default (struct medusa_buffer_init_options *options)
