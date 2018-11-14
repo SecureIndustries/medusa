@@ -2138,12 +2138,13 @@ __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_tcpsocket
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events)
 {
         int rc;
+        int ret;
         struct medusa_monitor *monitor;
-        rc = 0;
+        ret = 0;
         monitor = tcpsocket->subject.monitor;
         if (tcpsocket->onevent != NULL) {
                 medusa_monitor_unlock(monitor);
-                rc = tcpsocket->onevent(tcpsocket, events, tcpsocket->context);
+                ret = tcpsocket->onevent(tcpsocket, events, tcpsocket->context);
                 medusa_monitor_lock(monitor);
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_DESTROY) {
@@ -2187,7 +2188,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent_unlocked (
                         }
                 }
         }
-        return rc;
+        return ret;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_userdata (struct medusa_tcpsocket *tcpsocket, void *userdata)
