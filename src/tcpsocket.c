@@ -2179,6 +2179,13 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent_unlocked (
                 } else {
                         memset(tcpsocket, 0, sizeof(struct medusa_tcpsocket));
                 }
+        } else {
+                if (medusa_buffer_get_length(tcpsocket->wbuffer) > 0) {
+                        rc = medusa_io_add_events_unlocked(tcpsocket->io, MEDUSA_IO_EVENT_OUT);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                }
         }
         return rc;
 }
