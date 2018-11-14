@@ -309,7 +309,11 @@ __attribute__ ((visibility ("default"))) int medusa_io_add_events_unlocked (stru
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 return -EINVAL;
         }
-        io_add_events(io, events & (MEDUSA_IO_EVENT_IN | MEDUSA_IO_EVENT_OUT | MEDUSA_IO_EVENT_PRI));
+        events &= MEDUSA_IO_EVENT_IN | MEDUSA_IO_EVENT_OUT | MEDUSA_IO_EVENT_PRI;
+        if ((io_get_events(io) & events) == events) {
+                return 0;
+        }
+        io_add_events(io, events);
         return medusa_monitor_mod_unlocked(&io->subject);
 }
 
