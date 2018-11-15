@@ -286,6 +286,21 @@ static int64_t simple_buffer_choke (struct medusa_buffer *buffer, int64_t offset
         return length;
 }
 
+static void * simple_buffer_linearize (struct medusa_buffer *buffer, int64_t length)
+{
+        struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
+        if (MEDUSA_IS_ERR_OR_NULL(simple)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (length < 0) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (length > simple->length) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return simple->data;
+}
+
 static int simple_buffer_reset (struct medusa_buffer *buffer)
 {
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
@@ -324,6 +339,8 @@ const struct medusa_buffer_backend simple_buffer_backend = {
 
         .peek           = simple_buffer_peek,
         .choke          = simple_buffer_choke,
+
+        .linearize      = simple_buffer_linearize,
 
         .reset          = simple_buffer_reset,
         .destroy        = simple_buffer_destroy
