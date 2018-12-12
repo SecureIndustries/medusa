@@ -131,7 +131,7 @@ __attribute__ ((visibility ("default"))) int medusa_signal_init_with_options_unl
         signal_set_number(signal, options->number);
         signal_set_singleshot(signal, options->singleshot);
         signal_set_enabled(signal, options->enabled);
-        signal->subject.flags = MEDUSA_SUBJECT_TYPE_SIGNAL;
+        medusa_subject_set_type(&signal->subject, MEDUSA_SUBJECT_TYPE_SIGNAL);
         signal->subject.monitor = NULL;
         return medusa_monitor_add_unlocked(options->monitor, &signal->subject);
 }
@@ -157,9 +157,6 @@ __attribute__ ((visibility ("default"))) int medusa_signal_init_with_options (st
 __attribute__ ((visibility ("default"))) void medusa_signal_uninit_unlocked (struct medusa_signal *signal)
 {
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {
-                return;
-        }
-        if ((signal->subject.flags & MEDUSA_SUBJECT_TYPE_SIGNAL) == 0) {
                 return;
         }
         if (signal->subject.monitor != NULL) {
@@ -457,10 +454,8 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_signal_g
 __attribute__ ((visibility ("default"))) int medusa_signal_onevent_unlocked (struct medusa_signal *signal, unsigned int events)
 {
         int rc;
-        unsigned int type;
         struct medusa_monitor *monitor;
         rc = 0;
-        type = signal->subject.flags & MEDUSA_SUBJECT_TYPE_MASK;
         monitor = signal->subject.monitor;
         if (events & MEDUSA_SIGNAL_EVENT_FIRED) {
                 if (medusa_signal_get_singleshot_unlocked(signal)) {
@@ -481,16 +476,14 @@ __attribute__ ((visibility ("default"))) int medusa_signal_onevent_unlocked (str
                 }
         }
         if (events & MEDUSA_SIGNAL_EVENT_DESTROY) {
-                if (type == MEDUSA_SUBJECT_TYPE_SIGNAL) {
-                        if (signal->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
+                if (signal->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
 #if defined(MEDUSA_SIGNAL_USE_POOL) && (MEDUSA_SIGNAL_USE_POOL == 1)
-                                medusa_pool_free(signal);
+                        medusa_pool_free(signal);
 #else
-                                free(signal);
+                        free(signal);
 #endif
-                        } else {
-                                memset(signal, 0, sizeof(struct medusa_signal));
-                        }
+                } else {
+                        memset(signal, 0, sizeof(struct medusa_signal));
                 }
         }
         return rc;

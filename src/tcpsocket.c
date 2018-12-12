@@ -560,7 +560,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_with_options_
                 return -EINVAL;
         }
         memset(tcpsocket, 0, sizeof(struct medusa_tcpsocket));
-        tcpsocket->subject.flags = MEDUSA_SUBJECT_TYPE_TCPSOCKET;
+        medusa_subject_set_type(&tcpsocket->subject, MEDUSA_SUBJECT_TYPE_TCPSOCKET);
         tcpsocket->subject.monitor = NULL;
         tcpsocket_set_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NONE);
         tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);

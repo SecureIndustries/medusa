@@ -85,7 +85,8 @@ libmedusa.so_ldflags-$(__LINUX__) += \
 	-lrt
 
 libmedusa.a_files-y += \
-	tcpsocket.c
+	tcpsocket.c \
+	http-request.c
 
 dist.dir = ../dist
 dist.base = medusa

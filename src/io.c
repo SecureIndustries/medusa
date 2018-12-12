@@ -124,7 +124,7 @@ __attribute__ ((visibility ("default"))) int medusa_io_init_with_options_unlocke
         io->context = options->context;
         io_set_events(io, options->events);
         io_set_enabled(io, options->enabled);
-        io->subject.flags = MEDUSA_SUBJECT_TYPE_IO;
+        medusa_subject_set_type(&io->subject, MEDUSA_SUBJECT_TYPE_IO);
         io->subject.monitor = NULL;
         return medusa_monitor_add_unlocked(options->monitor, &io->subject);
 }
@@ -150,9 +150,6 @@ __attribute__ ((visibility ("default"))) int medusa_io_init_with_options (struct
 __attribute__ ((visibility ("default"))) void medusa_io_uninit_unlocked (struct medusa_io *io)
 {
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
-                return;
-        }
-        if ((io->subject.flags & MEDUSA_SUBJECT_TYPE_IO) == 0) {
                 return;
         }
         if (io->subject.monitor != NULL) {
@@ -444,10 +441,8 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_io_get_m
 __attribute__ ((visibility ("default"))) int medusa_io_onevent_unlocked (struct medusa_io *io, unsigned int events)
 {
         int rc;
-        unsigned int type;
         struct medusa_monitor *monitor;
         rc = 0;
-        type = io->subject.flags & MEDUSA_SUBJECT_TYPE_MASK;
         monitor = io->subject.monitor;
         if (io->onevent != NULL) {
                 medusa_monitor_unlock(monitor);
@@ -455,16 +450,14 @@ __attribute__ ((visibility ("default"))) int medusa_io_onevent_unlocked (struct 
                 medusa_monitor_lock(monitor);
         }
         if (events & MEDUSA_IO_EVENT_DESTROY) {
-                if (type == MEDUSA_SUBJECT_TYPE_IO) {
-                        if (io->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
+                if (io->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
 #if defined(MEDUSA_IO_USE_POOL) && (MEDUSA_IO_USE_POOL == 1)
-                                medusa_pool_free(io);
+                        medusa_pool_free(io);
 #else
-                                free(io);
+                        free(io);
 #endif
-                        } else {
-                                memset(io, 0, sizeof(struct medusa_io));
-                        }
+                } else {
+                        memset(io, 0, sizeof(struct medusa_io));
                 }
         }
         return rc;

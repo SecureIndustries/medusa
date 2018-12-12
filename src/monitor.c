@@ -216,7 +216,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
         while (!TAILQ_EMPTY(&monitor->deletes)) {
                 subject = TAILQ_FIRST(&monitor->deletes);
                 TAILQ_REMOVE(&monitor->deletes, subject, list);
-                if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_IO) {
                         io = (struct medusa_io *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 rc = monitor->poll.backend->del(monitor->poll.backend, io);
@@ -229,7 +229,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                         if (rc < 0) {
                                 goto bail;
                         }
-                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TIMER) {
                         timer = (struct medusa_timer *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 rc = pqueue_del(monitor->timer.pqueue, timer);
@@ -243,7 +243,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                         if (rc < 0) {
                                 goto bail;
                         }
-                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_SIGNAL) {
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_SIGNAL) {
                         signal = (struct medusa_signal *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 rc = monitor->signal.backend->del(monitor->signal.backend, signal);
@@ -256,7 +256,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                         if (rc < 0) {
                                 goto bail;
                         }
-                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
                         tcpsocket = (struct medusa_tcpsocket *) subject;
                         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
                         if (rc < 0) {
@@ -282,7 +282,7 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                 goto bail;
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->changes, list, nsubject) {
-                if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_IO) {
                         io = (struct medusa_io *) subject;
                         if (!medusa_io_is_valid_unlocked(io)) {
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
@@ -314,7 +314,7 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
                                 subject->flags |= MEDUSA_SUBJECT_FLAG_HEAP;
                         }
-                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TIMER) {
                         timer = (struct medusa_timer *) subject;
                         if (!medusa_timer_is_valid_unlocked(timer)) {
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
@@ -355,7 +355,7 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                                 subject->flags |= MEDUSA_SUBJECT_FLAG_HEAP;
                                 monitor->timer.dirty = 1;
                         }
-                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_SIGNAL) {
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_SIGNAL) {
                         signal = (struct medusa_signal *) subject;
                         if (!medusa_signal_is_valid_unlocked(signal)) {
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
@@ -382,7 +382,7 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
                                 subject->flags |= MEDUSA_SUBJECT_FLAG_HEAP;
                         }
-                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
                         TAILQ_REMOVE(&monitor->changes, subject, list);
                         TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
@@ -578,7 +578,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod_unlocked (struct
         }
         subject->flags |= MEDUSA_SUBJECT_FLAG_MOD;
         rc = 0;
-        if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
+        if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_IO) {
                 struct medusa_io *io;
                 io = (struct medusa_io *) subject;
                 if (!medusa_io_is_valid_unlocked(io) &&
@@ -590,7 +590,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod_unlocked (struct
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                 }
 #if 1
-        } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
+        } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TIMER) {
                 struct medusa_timer *timer;
                 timer = (struct medusa_timer *) subject;
                 if (!medusa_timer_is_valid_unlocked(timer) &&
@@ -603,7 +603,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod_unlocked (struct
                         subject->monitor->timer.dirty = 1;
                 }
 #endif
-        } else if (subject->flags & MEDUSA_SUBJECT_TYPE_SIGNAL) {
+        } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_SIGNAL) {
                 struct medusa_signal *signal;
                 signal = (struct medusa_signal *) subject;
                 if (!medusa_signal_is_valid_unlocked(signal) &&
@@ -660,7 +660,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_del_unlocked (struct
         }
         subject->flags |= MEDUSA_SUBJECT_FLAG_DEL;
         rc = 0;
-        if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
+        if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_IO) {
                 struct medusa_io *io;
                 io = (struct medusa_io *) subject;
                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
@@ -670,7 +670,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_del_unlocked (struct
                         }
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                 }
-        } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
+        } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TIMER) {
                 struct medusa_timer *timer;
                 timer = (struct medusa_timer *) subject;
                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
@@ -681,7 +681,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_del_unlocked (struct
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         subject->monitor->timer.dirty = 1;
                 }
-        } else if (subject->flags & MEDUSA_SUBJECT_TYPE_SIGNAL) {
+        } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_SIGNAL) {
                 struct medusa_signal *signal;
                 signal = (struct medusa_signal *) subject;
                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
@@ -910,14 +910,14 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                 medusa_monitor_del_unlocked(subject);
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
-                if (subject->flags & MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         tcpsocket = (struct medusa_tcpsocket *) subject;
                         medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
                 }
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
-                if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_IO) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         io = (struct medusa_io *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
@@ -925,7 +925,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         }
                         medusa_io_onevent_unlocked(io, MEDUSA_IO_EVENT_DESTROY);
-                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TIMER) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         timer = (struct medusa_timer *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
@@ -933,7 +933,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         }
                         medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_DESTROY);
-                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_SIGNAL) {
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_SIGNAL) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         signal = (struct medusa_signal *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
@@ -944,10 +944,10 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                 }
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
-                if (subject->flags & MEDUSA_SUBJECT_TYPE_IO) {
-                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TIMER) {
-                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_SIGNAL) {
-                } else if (subject->flags & MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_IO) {
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TIMER) {
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_SIGNAL) {
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
                 }
         }
         if (monitor->poll.backend != NULL) {
