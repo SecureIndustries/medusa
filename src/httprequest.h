@@ -21,12 +21,10 @@ enum {
         MEDUSA_HTTPREQUEST_EVENT_CONNECTING             = 0x00000008,
         MEDUSA_HTTPREQUEST_EVENT_CONNECT_TIMEOUT        = 0x00000010,
         MEDUSA_HTTPREQUEST_EVENT_CONNECTED              = 0x00000020,
-        MEDUSA_HTTPREQUEST_EVENT_WRITE_TIMEOUT          = 0x00000040,
-        MEDUSA_HTTPREQUEST_EVENT_WRITTEN                = 0x00000080,
-        MEDUSA_HTTPREQUEST_EVENT_WRITE_FINISHED         = 0x00000100,
-        MEDUSA_HTTPREQUEST_EVENT_READ_TIMEOUT           = 0x00000200,
-        MEDUSA_HTTPREQUEST_EVENT_READ                   = 0x00000400,
-        MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED           = 0x00000800,
+        MEDUSA_HTTPREQUEST_EVENT_REQUESTING             = 0x00000040,
+        MEDUSA_HTTPREQUEST_EVENT_REQUEST_TIMEOUT        = 0x00000080,
+        MEDUSA_HTTPREQUEST_EVENT_REQUESTED              = 0x00000100,
+        MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED           = 0x00000200,
         MEDUSA_HTTPREQUEST_EVENT_DESTROY                = 0x00001000
 #define MEDUSA_HTTPREQUEST_EVENT_RESOLVING              MEDUSA_HTTPREQUEST_EVENT_RESOLVING
 #define MEDUSA_HTTPREQUEST_EVENT_RESOLVE_TIMEOUT        MEDUSA_HTTPREQUEST_EVENT_RESOLVE_TIMEOUT
@@ -97,6 +95,7 @@ int medusa_httprequest_add_header (struct medusa_httprequest *httprequest, const
 int medusa_httprequest_add_vheader (struct medusa_httprequest *httprequest, const char *key, const char *value, va_list va);
 
 int medusa_httprequest_make_post (struct medusa_httprequest *httprequest, const char *url, const void *data, int64_t length);
+int medusa_httprequest_make_post_string (struct medusa_httprequest *httprequest, const char *url, const char *data);
 
 int medusa_httprequest_onevent (struct medusa_httprequest *httprequest, unsigned int events);
 struct medusa_monitor * medusa_httprequest_get_monitor (struct medusa_httprequest *httprequest);

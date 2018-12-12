@@ -7,8 +7,10 @@ struct medusa_httprequest {
         unsigned int state;
         int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, ...);
         void *context;
-        struct medusa_buffer *hbuffer;
+        struct medusa_buffer *headers;
         struct medusa_tcpsocket *tcpsocket;
+        double connect_timeout;
+        double read_timeout;
 };
 
 int medusa_httprequest_init (struct medusa_httprequest *httprequest, struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, ...), void *context);
