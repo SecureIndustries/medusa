@@ -21,6 +21,8 @@
 #include "signal-private.h"
 #include "tcpsocket.h"
 #include "tcpsocket-private.h"
+#include "httprequest.h"
+#include "httprequest-private.h"
 #include "monitor.h"
 #include "monitor-private.h"
 
@@ -208,15 +210,12 @@ static unsigned int monitor_timer_subject_get_position (void *entry)
 static int monitor_process_deletes (struct medusa_monitor *monitor)
 {
         int rc;
-        struct medusa_io *io;
-        struct medusa_timer *timer;
-        struct medusa_signal *signal;
-        struct medusa_tcpsocket *tcpsocket;
-        struct medusa_subject *subject;
         while (!TAILQ_EMPTY(&monitor->deletes)) {
+                struct medusa_subject *subject;
                 subject = TAILQ_FIRST(&monitor->deletes);
                 TAILQ_REMOVE(&monitor->deletes, subject, list);
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_IO) {
+                        struct medusa_io *io;
                         io = (struct medusa_io *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 rc = monitor->poll.backend->del(monitor->poll.backend, io);
@@ -230,6 +229,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                                 goto bail;
                         }
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TIMER) {
+                        struct medusa_timer *timer;
                         timer = (struct medusa_timer *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 rc = pqueue_del(monitor->timer.pqueue, timer);
@@ -244,6 +244,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                                 goto bail;
                         }
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_SIGNAL) {
+                        struct medusa_signal *signal;
                         signal = (struct medusa_signal *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 rc = monitor->signal.backend->del(monitor->signal.backend, signal);
@@ -257,8 +258,16 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                                 goto bail;
                         }
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
+                        struct medusa_tcpsocket *tcpsocket;
                         tcpsocket = (struct medusa_tcpsocket *) subject;
                         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPREQUEST) {
+                        struct medusa_httprequest *httprequest;
+                        httprequest = (struct medusa_httprequest *) subject;
+                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DESTROY);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -383,6 +392,11 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                                 subject->flags |= MEDUSA_SUBJECT_FLAG_HEAP;
                         }
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
+                        TAILQ_REMOVE(&monitor->changes, subject, list);
+                        TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPREQUEST) {
                         TAILQ_REMOVE(&monitor->changes, subject, list);
                         TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
@@ -887,10 +901,6 @@ bail:   if (monitor != NULL) {
 
 __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct medusa_monitor *monitor)
 {
-        struct medusa_io *io;
-        struct medusa_timer *timer;
-        struct medusa_signal *signal;
-        struct medusa_tcpsocket *tcpsocket;
         struct medusa_subject *subject;
         struct medusa_subject *nsubject;
         if (monitor == NULL) {
@@ -910,14 +920,8 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                 medusa_monitor_del_unlocked(subject);
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
-                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
-                        TAILQ_REMOVE(&monitor->deletes, subject, list);
-                        tcpsocket = (struct medusa_tcpsocket *) subject;
-                        medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
-                }
-        }
-        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_IO) {
+                        struct medusa_io *io;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         io = (struct medusa_io *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
@@ -926,6 +930,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                         }
                         medusa_io_onevent_unlocked(io, MEDUSA_IO_EVENT_DESTROY);
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TIMER) {
+                        struct medusa_timer *timer;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         timer = (struct medusa_timer *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
@@ -934,6 +939,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                         }
                         medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_DESTROY);
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_SIGNAL) {
+                        struct medusa_signal *signal;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         signal = (struct medusa_signal *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
@@ -941,13 +947,16 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         }
                         medusa_signal_onevent_unlocked(signal, MEDUSA_SIGNAL_EVENT_DESTROY);
-                }
-        }
-        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
-                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_IO) {
-                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TIMER) {
-                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_SIGNAL) {
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
+                        struct medusa_tcpsocket *tcpsocket;
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        tcpsocket = (struct medusa_tcpsocket *) subject;
+                        medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPREQUEST) {
+                        struct medusa_httprequest *httprequest;
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        httprequest = (struct medusa_httprequest *) subject;
+                        medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DESTROY);
                 }
         }
         if (monitor->poll.backend != NULL) {

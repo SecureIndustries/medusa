@@ -86,7 +86,7 @@ libmedusa.so_ldflags-$(__LINUX__) += \
 
 libmedusa.a_files-y += \
 	tcpsocket.c \
-	http-request.c
+	httprequest.c
 
 dist.dir = ../dist
 dist.base = medusa
@@ -100,7 +100,8 @@ dist.include-y = \
 	io.h \
 	signal.h \
 	timer.h \
-	tcpsocket.h
+	tcpsocket.h \
+	httprequest.h
 
 dist.lib-y = \
 	libmedusa.a \

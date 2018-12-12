@@ -701,7 +701,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_init_options_default 
                 return -EINVAL;
         }
         memset(options, 0, sizeof(struct medusa_buffer_init_options));
-        options->type = MEDUSA_BUFFER_TYPE_SIMPLE;
+        options->type = MEDUSA_BUFFER_TYPE_DEFAULT;
         options->flags = MEDUSA_BUFFER_FLAG_DEFAULT;
         options->u.simple.grow_size = MEDUSA_BUFFER_DEFAULT_GROW_SIZE;
         return 0;

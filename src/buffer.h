@@ -6,8 +6,10 @@ struct iovec;
 struct medusa_buffer;
 
 enum {
-        MEDUSA_BUFFER_TYPE_SIMPLE       = 0
+        MEDUSA_BUFFER_TYPE_SIMPLE       = 0,
+        MEDUSA_BUFFER_TYPE_DEFAULT      = MEDUSA_BUFFER_TYPE_SIMPLE
 #define MEDUSA_BUFFER_TYPE_SIMPLE       MEDUSA_BUFFER_TYPE_SIMPLE
+#define MEDUSA_BUFFER_TYPE_DEFAULT      MEDUSA_BUFFER_TYPE_DEFAULT
 };
 
 enum {
