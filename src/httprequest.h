@@ -4,6 +4,10 @@
 
 struct medusa_monitor;
 struct medusa_httprequest;
+struct medusa_httprequest_reply;
+struct medusa_httprequest_reply_header;
+struct medusa_httprequest_reply_headers;
+struct medusa_httprequest_reply_body;
 
 enum {
         MEDUSA_HTTPREQUEST_PROTOCOL_ANY                = 0,
@@ -24,19 +28,23 @@ enum {
         MEDUSA_HTTPREQUEST_EVENT_REQUESTING             = 0x00000040,
         MEDUSA_HTTPREQUEST_EVENT_REQUEST_TIMEOUT        = 0x00000080,
         MEDUSA_HTTPREQUEST_EVENT_REQUESTED              = 0x00000100,
-        MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED           = 0x00000200,
-        MEDUSA_HTTPREQUEST_EVENT_DESTROY                = 0x00001000
+        MEDUSA_HTTPREQUEST_EVENT_RECEIVING              = 0x00000200,
+        MEDUSA_HTTPREQUEST_EVENT_RECEIVE_TIMEOUT        = 0x00000400,
+        MEDUSA_HTTPREQUEST_EVENT_RECEIVED               = 0x00000800,
+        MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED           = 0x00001000,
+        MEDUSA_HTTPREQUEST_EVENT_DESTROY                = 0x00002000
 #define MEDUSA_HTTPREQUEST_EVENT_RESOLVING              MEDUSA_HTTPREQUEST_EVENT_RESOLVING
 #define MEDUSA_HTTPREQUEST_EVENT_RESOLVE_TIMEOUT        MEDUSA_HTTPREQUEST_EVENT_RESOLVE_TIMEOUT
 #define MEDUSA_HTTPREQUEST_EVENT_RESOLVED               MEDUSA_HTTPREQUEST_EVENT_RESOLVED
 #define MEDUSA_HTTPREQUEST_EVENT_CONNECTING             MEDUSA_HTTPREQUEST_EVENT_CONNECTING
 #define MEDUSA_HTTPREQUEST_EVENT_CONNECT_TIMEOUT        MEDUSA_HTTPREQUEST_EVENT_CONNECT_TIMEOUT
 #define MEDUSA_HTTPREQUEST_EVENT_CONNECTED              MEDUSA_HTTPREQUEST_EVENT_CONNECTED
-#define MEDUSA_HTTPREQUEST_EVENT_WRITE_TIMEOUT          MEDUSA_HTTPREQUEST_EVENT_WRITE_TIMEOUT
-#define MEDUSA_HTTPREQUEST_EVENT_WRITTEN                MEDUSA_HTTPREQUEST_EVENT_WRITTEN
-#define MEDUSA_HTTPREQUEST_EVENT_WRITE_FINISHED         MEDUSA_HTTPREQUEST_EVENT_WRITE_FINISHED
-#define MEDUSA_HTTPREQUEST_EVENT_READ_TIMEOUT           MEDUSA_HTTPREQUEST_EVENT_READ_TIMEOUT
-#define MEDUSA_HTTPREQUEST_EVENT_READ                   MEDUSA_HTTPREQUEST_EVENT_READ
+#define MEDUSA_HTTPREQUEST_EVENT_REQUESTING             MEDUSA_HTTPREQUEST_EVENT_REQUESTING
+#define MEDUSA_HTTPREQUEST_EVENT_REQUEST_TIMEOUT        MEDUSA_HTTPREQUEST_EVENT_REQUEST_TIMEOUT
+#define MEDUSA_HTTPREQUEST_EVENT_REQUESTED              MEDUSA_HTTPREQUEST_EVENT_REQUESTED
+#define MEDUSA_HTTPREQUEST_EVENT_RECEIVING              MEDUSA_HTTPREQUEST_EVENT_RECEIVING
+#define MEDUSA_HTTPREQUEST_EVENT_RECEIVE_TIMEOUT        MEDUSA_HTTPREQUEST_EVENT_RECEIVE_TIMEOUT
+#define MEDUSA_HTTPREQUEST_EVENT_RECEIVED               MEDUSA_HTTPREQUEST_EVENT_RECEIVED
 #define MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED           MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED
 #define MEDUSA_HTTPREQUEST_EVENT_DESTROY                MEDUSA_HTTPREQUEST_EVENT_DESTROY
 };
@@ -49,7 +57,9 @@ enum {
         MEDUSA_HTTPREQUEST_STATE_CONNECTING             = 4,
         MEDUSA_HTTPREQUEST_STATE_CONNECTED              = 5,
         MEDUSA_HTTPREQUEST_STATE_REQUESTING             = 6,
-        MEDUSA_HTTPREQUEST_STATE_REQUESTED              = 7
+        MEDUSA_HTTPREQUEST_STATE_REQUESTED              = 7,
+        MEDUSA_HTTPREQUEST_STATE_RECEIVING              = 8,
+        MEDUSA_HTTPREQUEST_STATE_RECEIVED               = 0,
 #define MEDUSA_HTTPREQUEST_STATE_UNKNWON                MEDUSA_HTTPREQUEST_STATE_UNKNWON
 #define MEDUSA_HTTPREQUEST_STATE_DISCONNECTED           MEDUSA_HTTPREQUEST_STATE_DISCONNECTED
 #define MEDUSA_HTTPREQUEST_STATE_RESOLVING              MEDUSA_HTTPREQUEST_STATE_RESOLVING
@@ -58,6 +68,8 @@ enum {
 #define MEDUSA_HTTPREQUEST_STATE_CONNECTED              MEDUSA_HTTPREQUEST_STATE_CONNECTED
 #define MEDUSA_HTTPREQUEST_STATE_REQUESTING             MEDUSA_HTTPREQUEST_STATE_REQUESTING
 #define MEDUSA_HTTPREQUEST_STATE_REQUESTED              MEDUSA_HTTPREQUEST_STATE_REQUESTED
+#define MEDUSA_HTTPREQUEST_STATE_RECEIVING              MEDUSA_HTTPREQUEST_STATE_RECEIVING
+#define MEDUSA_HTTPREQUEST_STATE_RECEIVED               MEDUSA_HTTPREQUEST_STATE_RECEIVED
 };
 
 struct medusa_httprequest_init_options {
@@ -99,6 +111,24 @@ int medusa_httprequest_make_post_string (struct medusa_httprequest *httprequest,
 
 int medusa_httprequest_onevent (struct medusa_httprequest *httprequest, unsigned int events);
 struct medusa_monitor * medusa_httprequest_get_monitor (struct medusa_httprequest *httprequest);
+
+const struct medusa_httprequest_reply * medusa_httprequest_get_reply (const struct medusa_httprequest *httprequest);
+
+const struct medusa_httprequest_reply_status * medusa_httprequest_reply_get_status (const struct medusa_httprequest_reply *reply);
+int64_t medusa_httprequest_reply_status_get_code (const struct medusa_httprequest_reply_status *status);
+const char * medusa_httprequest_reply_status_get_value (const struct medusa_httprequest_reply_status *status);
+
+const struct medusa_httprequest_reply_headers * medusa_httprequest_reply_get_headers (const struct medusa_httprequest_reply *reply);
+int64_t medusa_httprequest_reply_headers_get_count (const struct medusa_httprequest_reply_headers *headers);
+const struct medusa_httprequest_reply_header * medusa_httprequest_reply_headers_get_first (const struct medusa_httprequest_reply_headers *headers);
+
+const char * medusa_httprequest_reply_header_get_key (const struct medusa_httprequest_reply_header *header);
+const char * medusa_httprequest_reply_header_get_value (const struct medusa_httprequest_reply_header *header);
+const struct medusa_httprequest_reply_header * medusa_httprequest_reply_header_get_next (const struct medusa_httprequest_reply_header *header);
+
+const struct medusa_httprequest_reply_body * medusa_httprequest_reply_get_body (const struct medusa_httprequest_reply *reply);
+int64_t medusa_httprequest_reply_body_get_length (const struct medusa_httprequest_reply_body *body);
+const void * medusa_httprequest_reply_body_get_value (const struct medusa_httprequest_reply_body *body);
 
 #ifdef __cplusplus
 }

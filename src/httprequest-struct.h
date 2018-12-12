@@ -13,6 +13,7 @@ struct medusa_httprequest {
         double read_timeout;
         http_parser http_parser;
         http_parser_settings http_parser_settings;
+        struct medusa_httprequest_reply *reply;
 };
 
 int medusa_httprequest_init (struct medusa_httprequest *httprequest, struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, ...), void *context);
