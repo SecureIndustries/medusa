@@ -11,6 +11,8 @@ struct medusa_httprequest {
         struct medusa_tcpsocket *tcpsocket;
         double connect_timeout;
         double read_timeout;
+        http_parser http_parser;
+        http_parser_settings http_parser_settings;
 };
 
 int medusa_httprequest_init (struct medusa_httprequest *httprequest, struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, ...), void *context);

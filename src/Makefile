@@ -20,6 +20,9 @@ endif
 target.a-y = \
 	libmedusa.a \
 
+target.o-y = \
+	libmedusa.o \
+
 target.so-y = \
 	libmedusa.so \
 
@@ -72,6 +75,19 @@ libmedusa.a_cflags-${SIGNAL_SIGNALFD_ENABLE} += \
 libmedusa.a_files-${SIGNAL_SIGNALFD_ENABLE} += \
 	signal-signalfd.c
 
+libmedusa.a_files-y += \
+	tcpsocket.c
+
+libmedusa.a_files-y += \
+	httprequest.c \
+	../3rdparty/http-parser/http_parser.c
+
+libmedusa.o_cflags-y = \
+	${libmedusa.a_cflags-y}
+
+libmedusa.o_files-y = \
+	${libmedusa.a_files-y}
+
 libmedusa.so_cflags-y = \
 	${libmedusa.a_cflags-y}
 
@@ -83,10 +99,6 @@ libmedusa.so_ldflags-y = \
 
 libmedusa.so_ldflags-$(__LINUX__) += \
 	-lrt
-
-libmedusa.a_files-y += \
-	tcpsocket.c \
-	httprequest.c
 
 dist.dir = ../dist
 dist.base = medusa

@@ -10,6 +10,8 @@
 #include <inttypes.h>
 #include <sys/uio.h>
 
+#include "../3rdparty/http-parser/http_parser.h"
+
 #include "error.h"
 #include "pool.h"
 #include "queue.h"
@@ -22,12 +24,11 @@
 #include "httprequest-struct.h"
 #include "monitor-private.h"
 
+#if !defined(MIN)
 #define MIN(a, b)                               (((a) < (b)) ? (a) : (b))
+#endif
 
-#define MEDUSA_HTTPREQUEST_USE_POOL               1
-
-#define MEDUSA_HTTPREQUEST_STATE_MASK             0xff
-#define MEDUSA_HTTPREQUEST_STATE_SHIFT            0x18
+#define MEDUSA_HTTPREQUEST_USE_POOL             1
 
 #if defined(MEDUSA_HTTPREQUEST_USE_POOL) && (MEDUSA_HTTPREQUEST_USE_POOL == 1)
 static struct medusa_pool *g_pool;
@@ -121,6 +122,102 @@ static inline int httprequest_set_state (struct medusa_httprequest *httprequest,
         return 0;
 }
 
+static int httprequest_httpparser_on_message_begin (http_parser *http_parser)
+{
+        struct medusa_httprequest *httprequest = http_parser->data;
+        (void) httprequest;
+        fprintf(stderr, "httprequest_httpparser_on_message_begin\n");
+        return 0;
+}
+
+static int httprequest_httpparser_on_url (http_parser *http_parser, const char *at, size_t length)
+{
+        struct medusa_httprequest *httprequest = http_parser->data;
+        (void) httprequest;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "httprequest_httpparser_on_url\n");
+        fprintf(stderr, "%.*s\n", (int) length, at);
+        return 0;
+}
+
+static int httprequest_httpparser_on_status (http_parser *http_parser, const char *at, size_t length)
+{
+        struct medusa_httprequest *httprequest = http_parser->data;
+        (void) httprequest;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "httprequest_httpparser_on_status\n");
+        fprintf(stderr, "%.*s\n", (int) length, at);
+        return 0;
+}
+
+static int httprequest_httpparser_on_header_field (http_parser *http_parser, const char *at, size_t length)
+{
+        struct medusa_httprequest *httprequest = http_parser->data;
+        (void) httprequest;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "httprequest_httpparser_on_header_field\n");
+        fprintf(stderr, "%.*s\n", (int) length, at);
+        return 0;
+}
+
+static int httprequest_httpparser_on_header_value (http_parser *http_parser, const char *at, size_t length)
+{
+        struct medusa_httprequest *httprequest = http_parser->data;
+        (void) httprequest;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "httprequest_httpparser_on_header_value\n");
+        fprintf(stderr, "%.*s\n", (int) length, at);
+        return 0;
+}
+
+static int httprequest_httpparser_on_headers_complete (http_parser *http_parser)
+{
+        struct medusa_httprequest *httprequest = http_parser->data;
+        (void) httprequest;
+        fprintf(stderr, "httprequest_httpparser_on_headers_complete\n");
+        return 0;
+}
+
+static int httprequest_httpparser_on_body (http_parser *http_parser, const char *at, size_t length)
+{
+        struct medusa_httprequest *httprequest = http_parser->data;
+        (void) httprequest;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "httprequest_httpparser_on_body\n");
+        fprintf(stderr, "%.*s\n", (int) length, at);
+        return 0;
+}
+
+static int httprequest_httpparser_on_message_complete (http_parser *http_parser)
+{
+        struct medusa_httprequest *httprequest = http_parser->data;
+        (void) httprequest;
+        fprintf(stderr, "httprequest_httpparser_on_message_complete\n");
+        return 0;
+}
+
+static int httprequest_httpparser_on_chunk_header (http_parser *http_parser)
+{
+        struct medusa_httprequest *httprequest = http_parser->data;
+        (void) httprequest;
+        fprintf(stderr, "httprequest_httpparser_on_chunk_header\n");
+        fprintf(stderr, "  Content-Length: %d\n", (int) http_parser->content_length);
+        return 0;
+}
+
+static int httprequest_httpparser_on_chunk_complete (http_parser *http_parser)
+{
+        struct medusa_httprequest *httprequest = http_parser->data;
+        (void) httprequest;
+        fprintf(stderr, "httprequest_httpparser_on_chunk_complete\n");
+        return 0;
+}
+
 static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
 {
         int rc;
@@ -129,8 +226,6 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
 
         monitor = medusa_tcpsocket_get_monitor(tcpsocket);
         medusa_monitor_lock(monitor);
-
-        fprintf(stderr, "events: 0x%08x\n", events);
 
         if (events & MEDUSA_TCPSOCKET_EVENT_RESOLVING) {
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_RESOLVING);
@@ -159,6 +254,19 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                 if (rc < 0) {
                         goto bail;
                 }
+                http_parser_settings_init(&httprequest->http_parser_settings);
+                httprequest->http_parser_settings.on_message_begin      = httprequest_httpparser_on_message_begin;
+                httprequest->http_parser_settings.on_url                = httprequest_httpparser_on_url;
+                httprequest->http_parser_settings.on_status             = httprequest_httpparser_on_status;
+                httprequest->http_parser_settings.on_header_field       = httprequest_httpparser_on_header_field;
+                httprequest->http_parser_settings.on_header_value       = httprequest_httpparser_on_header_value;
+                httprequest->http_parser_settings.on_headers_complete   = httprequest_httpparser_on_headers_complete;
+                httprequest->http_parser_settings.on_body               = httprequest_httpparser_on_body;
+                httprequest->http_parser_settings.on_message_complete   = httprequest_httpparser_on_message_complete;
+                httprequest->http_parser_settings.on_chunk_header       = httprequest_httpparser_on_chunk_header;
+                httprequest->http_parser_settings.on_chunk_complete     = httprequest_httpparser_on_chunk_complete;
+                http_parser_init(&httprequest->http_parser, HTTP_RESPONSE);
+                httprequest->http_parser.data = httprequest;
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_WRITTEN) {
                 if (httprequest_get_state(httprequest) == MEDUSA_HTTPREQUEST_STATE_CONNECTED) {
@@ -177,6 +285,37 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
+                int64_t i;
+                int64_t rlen;
+                int64_t niovecs;
+                size_t nparsed;
+                struct iovec iovecs[16];
+                struct medusa_buffer *rbuffer;
+                rbuffer = medusa_tcpsocket_get_read_buffer_unlocked(httprequest->tcpsocket);
+                while (1) {
+                        niovecs = medusa_buffer_peek(rbuffer, 0, -1, iovecs, sizeof(iovecs) / sizeof(iovecs[0]));
+                        if (niovecs < 0) {
+                                goto bail;
+                        }
+                        if (niovecs == 0) {
+                                break;
+                        }
+                        for (rlen = 0, i = 0; i < niovecs; i++) {
+                                nparsed = http_parser_execute(&httprequest->http_parser, &httprequest->http_parser_settings, iovecs[i].iov_base, iovecs[i].iov_len);
+                                if (nparsed != iovecs[i].iov_len) {
+                                        httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
+                                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+                                        if (rc < 0) {
+                                                goto bail;
+                                        }
+                                }
+                                rlen += iovecs[i].iov_len;
+                        }
+                        rc = medusa_buffer_choke(rbuffer, 0, rlen);
+                        if (rc != rlen) {
+                                goto bail;
+                        }
+                }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
@@ -586,7 +725,6 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
         int64_t wlen;
         int64_t niovecs;
         struct iovec iovecs[16];
-
 
         if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
                 return -EINVAL;
