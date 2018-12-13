@@ -487,9 +487,9 @@ static int httprequest_httpparser_on_body (http_parser *http_parser, const char 
         (void) length;
         fprintf(stderr, "httprequest_httpparser_on_body\n");
         fprintf(stderr, "  length: %d\n", (int) length);
-        tmp = realloc(httprequest->reply->body.value, httprequest->reply->body.length + length);
+        tmp = realloc(httprequest->reply->body.value, httprequest->reply->body.length + length + 1);
         if (tmp == NULL) {
-                tmp = malloc(httprequest->reply->body.length + length);
+                tmp = malloc(httprequest->reply->body.length + length + 1);
                 if (tmp == NULL) {
                         return -ENOMEM;
                 }
@@ -499,7 +499,9 @@ static int httprequest_httpparser_on_body (http_parser *http_parser, const char 
         } else {
                 httprequest->reply->body.value = tmp;
         }
+        memcpy(httprequest->reply->body.value +  httprequest->reply->body.length, at, length);
         httprequest->reply->body.length += length;
+        ((char *) httprequest->reply->body.value)[httprequest->reply->body.length] = '\0';
         return 0;
 }
 
