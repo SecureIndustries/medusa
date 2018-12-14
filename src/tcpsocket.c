@@ -184,7 +184,8 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
         medusa_monitor_lock(monitor);
 
         if (events & MEDUSA_IO_EVENT_OUT) {
-                if (tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_CONNECTING) {
+                if (tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+                } else if (tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_CONNECTING) {
                         int valopt;
                         socklen_t vallen;
                         vallen = sizeof(valopt);
@@ -297,7 +298,10 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                         goto bail;
                                 } else if (wlength == 0) {
                                         tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
-                                        tevents |= MEDUSA_TCPSOCKET_EVENT_DISCONNECTED;
+                                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DISCONNECTED);
+                                        if (rc < 0) {
+                                                goto bail;
+                                        }
                                         break;
                                 } else {
                                         clength = medusa_buffer_choke(tcpsocket->wbuffer, wlength);
@@ -328,7 +332,8 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                 }
         }
         if (events & MEDUSA_IO_EVENT_IN) {
-                if (tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_LISTENING) {
+                if (tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+                } else if (tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_LISTENING) {
                         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTION);
                         if (rc < 0) {
                                 goto bail;
@@ -560,17 +565,17 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_with_options_
                 return -EINVAL;
         }
         memset(tcpsocket, 0, sizeof(struct medusa_tcpsocket));
-        tcpsocket->subject.flags = MEDUSA_SUBJECT_TYPE_TCPSOCKET;
+        medusa_subject_set_type(&tcpsocket->subject, MEDUSA_SUBJECT_TYPE_TCPSOCKET);
         tcpsocket->subject.monitor = NULL;
         tcpsocket_set_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NONE);
         tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
         tcpsocket->onevent = options->onevent;
         tcpsocket->context = options->context;
-        tcpsocket->rbuffer = medusa_buffer_create(MEDUSA_BUFFER_TYPE_SIMPLE);
+        tcpsocket->rbuffer = medusa_buffer_create(MEDUSA_BUFFER_TYPE_DEFAULT);
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->rbuffer)) {
                 return MEDUSA_PTR_ERR(tcpsocket->rbuffer);
         }
-        tcpsocket->wbuffer = medusa_buffer_create(MEDUSA_BUFFER_TYPE_SIMPLE);
+        tcpsocket->wbuffer = medusa_buffer_create(MEDUSA_BUFFER_TYPE_DEFAULT);
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->wbuffer)) {
                 return MEDUSA_PTR_ERR(tcpsocket->wbuffer);
         }
@@ -2091,6 +2096,9 @@ __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_vprintf (struc
 {
         int64_t rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(format)) {
                 return -EINVAL;
         }
         medusa_monitor_lock(tcpsocket->subject.monitor);

@@ -213,7 +213,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_init_with_options_unlo
         timer_set_resolution(timer, options->resolution);
         timer_set_singleshot(timer, options->singleshot);
         timer_set_enabled(timer, options->enabled);
-        timer->subject.flags = MEDUSA_SUBJECT_TYPE_TIMER;
+        medusa_subject_set_type(&timer->subject, MEDUSA_SUBJECT_TYPE_TIMER);
         timer->subject.monitor = NULL;
         return medusa_monitor_add_unlocked(options->monitor, &timer->subject);
 }
@@ -221,9 +221,6 @@ __attribute__ ((visibility ("default"))) int medusa_timer_init_with_options_unlo
 __attribute__ ((visibility ("default"))) void medusa_timer_uninit_unlocked (struct medusa_timer *timer)
 {
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
-                return;
-        }
-        if ((timer->subject.flags & MEDUSA_SUBJECT_TYPE_TIMER) == 0) {
                 return;
         }
         if (timer->subject.monitor != NULL) {
@@ -976,10 +973,8 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_timer_ge
 __attribute__ ((visibility ("default"))) int medusa_timer_onevent_unlocked (struct medusa_timer *timer, unsigned int events)
 {
         int rc;
-        unsigned int type;
         struct medusa_monitor *monitor;
         rc = 0;
-        type = timer->subject.flags & MEDUSA_SUBJECT_TYPE_MASK;
         monitor = timer->subject.monitor;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 timer->flags |= MEDUSA_TIMER_FLAG_FIRED;
@@ -1002,16 +997,14 @@ __attribute__ ((visibility ("default"))) int medusa_timer_onevent_unlocked (stru
                 }
         }
         if (events & MEDUSA_TIMER_EVENT_DESTROY) {
-                if (type == MEDUSA_SUBJECT_TYPE_TIMER) {
-                        if (timer->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
+                if (timer->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
 #if defined(MEDUSA_TIMER_USE_POOL) && (MEDUSA_TIMER_USE_POOL == 1)
-                                medusa_pool_free(timer);
+                        medusa_pool_free(timer);
 #else
-                                free(timer);
+                        free(timer);
 #endif
-                        } else {
-                                memset(timer, 0, sizeof(struct medusa_timer));
-                        }
+                } else {
+                        memset(timer, 0, sizeof(struct medusa_timer));
                 }
         }
         return rc;

@@ -40,8 +40,12 @@ static int simple_buffer_resize (struct medusa_buffer *buffer, int64_t size)
         while (s < size) {
                 s += simple->grow;
         }
+#if 1
         data = realloc(simple->data, size);
         if (data == NULL) {
+#else
+        if (1) {
+#endif
                 data = malloc(size);
                 if (data == NULL) {
                         return -ENOMEM;
