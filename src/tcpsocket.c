@@ -1242,16 +1242,19 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind_unlocked (str
 ipv4:
                 sockaddr_in.sin_family = AF_INET;
                 if (address == NULL) {
-                        sockaddr_in.sin_addr.s_addr = INADDR_ANY;
-                } else {
-                        rc = inet_pton(AF_INET, address, &sockaddr_in.sin_addr);
-                        if (rc == 0) {
-                                ret = -EINVAL;
-                                goto bail;
-                        } else if (rc < 0) {
-                                ret = -errno;
-                                goto bail;
-                        }
+                        address = "0.0.0.0";
+                } else if (strcmp(address, "localhost") == 0) {
+                        address = "127.0.0.1";
+                } else if (strcmp(address, "loopback") == 0) {
+                        address = "127.0.0.1";
+                }
+                rc = inet_pton(AF_INET, address, &sockaddr_in.sin_addr);
+                if (rc == 0) {
+                        ret = -EINVAL;
+                        goto bail;
+                } else if (rc < 0) {
+                        ret = -errno;
+                        goto bail;
                 }
                 sockaddr_in.sin_port = htons(port);
                 sockaddr = (struct sockaddr *) &sockaddr_in;
@@ -1260,37 +1263,32 @@ ipv4:
 ipv6:
                 sockaddr_in6.sin6_family = AF_INET;
                 if (address == NULL) {
-                        sockaddr_in6.sin6_addr = in6addr_any;
-                } else {
-                        rc = inet_pton(AF_INET6, address, &sockaddr_in6.sin6_addr);
-                        if (rc == 0) {
-                                ret = -EINVAL;
-                                goto bail;
-                        } else if (rc < 0) {
-                                ret = -errno;
-                                goto bail;
-                        }
+                        address = "0.0.0.0";
+                } else if (strcmp(address, "localhost") == 0) {
+                        address = "127.0.0.1";
+                } else if (strcmp(address, "loopback") == 0) {
+                        address = "127.0.0.1";
+                }
+                rc = inet_pton(AF_INET6, address, &sockaddr_in6.sin6_addr);
+                if (rc == 0) {
+                        ret = -EINVAL;
+                        goto bail;
+                } else if (rc < 0) {
+                        ret = -errno;
+                        goto bail;
                 }
                 sockaddr_in6.sin6_port = htons(port);
                 sockaddr = (struct sockaddr *) &sockaddr_in6;
                 length = sizeof(struct sockaddr_in6);
         } else if (address == NULL) {
-                sockaddr_in.sin_family = AF_INET;
-                if (address == NULL) {
-                        sockaddr_in.sin_addr.s_addr = INADDR_ANY;
-                } else {
-                        rc = inet_pton(AF_INET, address, &sockaddr_in.sin_addr);
-                        if (rc == 0) {
-                                ret = -EINVAL;
-                                goto bail;
-                        } else if (rc < 0) {
-                                ret = -errno;
-                                goto bail;
-                        }
-                }
-                sockaddr_in.sin_port = htons(port);
-                sockaddr = (struct sockaddr *) &sockaddr_in;
-                length = sizeof(struct sockaddr_in);
+                address = "0.0.0.0";
+                goto ipv4;
+        } else if (strcmp(address, "localhost") == 0) {
+                address = "127.0.0.1";
+                goto ipv4;
+        } else if (strcmp(address, "loopback") == 0) {
+                address = "127.0.0.1";
+                goto ipv4;
         } else {
                 rc = inet_pton(AF_INET, address, &sockaddr_in.sin_addr);
                 if (rc > 0) {
