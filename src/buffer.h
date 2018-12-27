@@ -104,6 +104,20 @@ int medusa_buffer_peek_uint64 (const struct medusa_buffer *buffer, int64_t offse
 int medusa_buffer_peek_uint64_le (const struct medusa_buffer *buffer, int64_t offset, uint64_t *value);
 int medusa_buffer_peek_uint64_be (const struct medusa_buffer *buffer, int64_t offset, uint64_t *value);
 
+int medusa_buffer_read_data (struct medusa_buffer *buffer, int64_t offset, void *data, int64_t length);
+int medusa_buffer_read_uint8 (struct medusa_buffer *buffer, int64_t offset, uint8_t *value);
+int medusa_buffer_read_uint8_le (struct medusa_buffer *buffer, int64_t offset, uint8_t *value);
+int medusa_buffer_read_uint8_be (struct medusa_buffer *buffer, int64_t offset, uint8_t *value);
+int medusa_buffer_read_uint16 (struct medusa_buffer *buffer, int64_t offset, uint16_t *value);
+int medusa_buffer_read_uint16_le (struct medusa_buffer *buffer, int64_t offset, uint16_t *value);
+int medusa_buffer_read_uint16_be (struct medusa_buffer *buffer, int64_t offset, uint16_t *value);
+int medusa_buffer_read_uint32 (struct medusa_buffer *buffer, int64_t offset, uint32_t *value);
+int medusa_buffer_read_uint32_le (struct medusa_buffer *buffer, int64_t offset, uint32_t *value);
+int medusa_buffer_read_uint32_be (struct medusa_buffer *buffer, int64_t offset, uint32_t *value);
+int medusa_buffer_read_uint64 (struct medusa_buffer *buffer, int64_t offset, uint64_t *value);
+int medusa_buffer_read_uint64_le (struct medusa_buffer *buffer, int64_t offset, uint64_t *value);
+int medusa_buffer_read_uint64_be (struct medusa_buffer *buffer, int64_t offset, uint64_t *value);
+
 #ifdef __cplusplus
 }
 #endif
