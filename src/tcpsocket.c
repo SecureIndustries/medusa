@@ -256,6 +256,12 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                         if (wlength < 0) {
                                 if (errno == EINTR) {
                                 } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                                } else if (errno == ECONNRESET || errno == ETIMEDOUT) {
+                                        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DISCONNECTED);
+                                        if (rc < 0) {
+                                                goto bail;
+                                        }
                                 } else {
                                         goto bail;
                                 }
@@ -294,8 +300,16 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                 break;
                                         } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
                                                 break;
+                                        } else if (errno == ECONNRESET || errno == ETIMEDOUT) {
+                                                tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DISCONNECTED);
+                                                if (rc < 0) {
+                                                        goto bail;
+                                                }
+                                                break;
+                                        } else {
+                                                goto bail;
                                         }
-                                        goto bail;
                                 } else if (wlength == 0) {
                                         tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
                                         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DISCONNECTED);
