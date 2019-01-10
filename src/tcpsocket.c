@@ -2270,7 +2270,8 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent_unlocked (
                         memset(tcpsocket, 0, sizeof(struct medusa_tcpsocket));
                 }
         } else {
-                if (medusa_buffer_get_length(tcpsocket->wbuffer) > 0) {
+                if ((tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_CONNECTED) &&
+                    (medusa_buffer_get_length(tcpsocket->wbuffer) > 0)) {
                         rc = medusa_io_add_events_unlocked(tcpsocket->io, MEDUSA_IO_EVENT_OUT);
                         if (rc < 0) {
                                 return rc;
