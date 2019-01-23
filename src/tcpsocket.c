@@ -2182,9 +2182,6 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_write_buffer_u
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
-                return -EINVAL;
-        }
         if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->wbuffer)) {
                 medusa_buffer_destroy(tcpsocket->wbuffer);
         }
