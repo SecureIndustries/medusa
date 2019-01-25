@@ -920,6 +920,22 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                 medusa_monitor_del_unlocked(subject);
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPREQUEST) {
+                        struct medusa_httprequest *httprequest;
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        httprequest = (struct medusa_httprequest *) subject;
+                        medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DESTROY);
+                }
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
+                        struct medusa_tcpsocket *tcpsocket;
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        tcpsocket = (struct medusa_tcpsocket *) subject;
+                        medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
+                }
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_IO) {
                         struct medusa_io *io;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
