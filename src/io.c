@@ -331,6 +331,9 @@ __attribute__ ((visibility ("default"))) int medusa_io_del_events_unlocked (stru
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 return -EINVAL;
         }
+        if ((io_get_events(io) & events) == 0) {
+                return 0;
+        }
         io_del_events(io, events & (MEDUSA_IO_EVENT_IN | MEDUSA_IO_EVENT_OUT | MEDUSA_IO_EVENT_PRI));
         return medusa_monitor_mod_unlocked(&io->subject);
 }

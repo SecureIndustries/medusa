@@ -28,9 +28,10 @@ enum {
         MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT  = 0x00000100,
         MEDUSA_TCPSOCKET_EVENT_CONNECTED        = 0x00000200,
         MEDUSA_TCPSOCKET_EVENT_IN               = 0x00000400,
-        MEDUSA_TCPSOCKET_EVENT_OUT              = 0x00000800,
-        MEDUSA_TCPSOCKET_EVENT_DISCONNECTED     = 0x00001000,
-        MEDUSA_TCPSOCKET_EVENT_DESTROY          = 0x00002000
+        MEDUSA_TCPSOCKET_EVENT_PRI              = 0x00000800,
+        MEDUSA_TCPSOCKET_EVENT_OUT              = 0x00001000,
+        MEDUSA_TCPSOCKET_EVENT_DISCONNECTED     = 0x00002000,
+        MEDUSA_TCPSOCKET_EVENT_DESTROY          = 0x00004000
 #define MEDUSA_TCPSOCKET_EVENT_BINDING          MEDUSA_TCPSOCKET_EVENT_BINDING
 #define MEDUSA_TCPSOCKET_EVENT_BOUND            MEDUSA_TCPSOCKET_EVENT_BOUND
 #define MEDUSA_TCPSOCKET_EVENT_LISTENING        MEDUSA_TCPSOCKET_EVENT_LISTENING
@@ -42,6 +43,7 @@ enum {
 #define MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT  MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT
 #define MEDUSA_TCPSOCKET_EVENT_CONNECTED        MEDUSA_TCPSOCKET_EVENT_CONNECTED
 #define MEDUSA_TCPSOCKET_EVENT_IN               MEDUSA_TCPSOCKET_EVENT_IN
+#define MEDUSA_TCPSOCKET_EVENT_PRI              MEDUSA_TCPSOCKET_EVENT_PRI
 #define MEDUSA_TCPSOCKET_EVENT_OUT              MEDUSA_TCPSOCKET_EVENT_OUT
 #define MEDUSA_TCPSOCKET_EVENT_DISCONNECTED     MEDUSA_TCPSOCKET_EVENT_DISCONNECTED
 #define MEDUSA_TCPSOCKET_EVENT_DESTROY          MEDUSA_TCPSOCKET_EVENT_DESTROY
@@ -123,6 +125,11 @@ int medusa_tcpsocket_set_connect_timeout (struct medusa_tcpsocket *tcpsocket, do
 double medusa_tcpsocket_get_connect_timeout (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_get_fd (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_events (struct medusa_tcpsocket *tcpsocket, unsigned int events);
+int medusa_tcpsocket_add_events (struct medusa_tcpsocket *tcpsocket, unsigned int events);
+int medusa_tcpsocket_del_events (struct medusa_tcpsocket *tcpsocket, unsigned int events);
+unsigned int medusa_tcpsocket_get_events (const struct medusa_tcpsocket *io);
 
 int medusa_tcpsocket_bind (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
 int medusa_tcpsocket_connect (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
