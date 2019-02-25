@@ -10,6 +10,11 @@
 #include <inttypes.h>
 #include <sys/uio.h>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include <sys/ioctl.h>
+
 #include "../3rdparty/http-parser/http_parser.h"
 
 #include "error.h"
@@ -590,7 +595,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                 http_parser_init(&httprequest->http_parser, HTTP_RESPONSE);
                 httprequest->http_parser.data = httprequest;
         }
-        if (events & MEDUSA_TCPSOCKET_EVENT_WRITTEN) {
+        if (events & MEDUSA_TCPSOCKET_EVENT_OUT) {
                 if (httprequest_get_state(httprequest) == MEDUSA_HTTPREQUEST_STATE_CONNECTED) {
                         httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_REQUESTING);
                         rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_REQUESTING);
@@ -598,22 +603,69 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                                 goto bail;
                         }
                 }
-        }
-        if (events & MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED) {
-                httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_REQUESTED);
-                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_REQUESTED);
-                if (rc < 0) {
-                        goto bail;
+
+                do {
+                        int fd;
+                        ssize_t wlength;
+                        int64_t clength;
+                        int64_t niovecs;
+                        struct iovec iovec;
+
+                        fd = medusa_tcpsocket_get_fd_unlocked(tcpsocket);
+                        if (fd < 0) {
+                                goto bail;
+                        }
+                        niovecs = medusa_buffer_peek(httprequest->wbuffer, 0, -1, &iovec, 1);
+                        if (niovecs < 0) {
+                                goto bail;
+                        }
+                        if (niovecs == 0) {
+                                break;
+                        }
+                        wlength = send(fd, iovec.iov_base, iovec.iov_len, 0);
+                        if (wlength < 0) {
+                                if (errno == EINTR) {
+                                        break;
+                                } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                                        break;
+                                } else if (errno == ECONNRESET || errno == ETIMEDOUT) {
+                                        httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
+                                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+                                        if (rc < 0) {
+                                                goto bail;
+                                        }
+                                        break;
+                                } else {
+                                        goto bail;
+                                }
+                        } else if (wlength == 0) {
+                                httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
+                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+                                if (rc < 0) {
+                                        goto bail;
+                                }
+                                break;
+                        } else {
+                                clength = medusa_buffer_choke(httprequest->wbuffer, 0, wlength);
+                                if (clength < 0) {
+                                        goto bail;
+                                }
+                                if (clength != wlength) {
+                                        goto bail;
+                                }
+                        }
+                } while (0);
+
+                if ((httprequest_get_state(httprequest) == MEDUSA_HTTPREQUEST_STATE_REQUESTING) &&
+                    (medusa_buffer_get_length(httprequest->wbuffer) == 0)) {
+                        httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_REQUESTED);
+                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_REQUESTED);
+                        if (rc < 0) {
+                                goto bail;
+                        }
                 }
         }
-        if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
-                int64_t i;
-                int64_t rlen;
-                int64_t niovecs;
-                size_t nparsed;
-                struct iovec iovecs[16];
-                struct medusa_buffer *rbuffer;
-
+        if (events & MEDUSA_TCPSOCKET_EVENT_IN) {
                 if (httprequest_get_state(httprequest) == MEDUSA_HTTPREQUEST_STATE_REQUESTED) {
                         httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_RECEIVING);
                         rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RECEIVING);
@@ -622,31 +674,100 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                         }
                 }
 
-                rbuffer = medusa_tcpsocket_get_read_buffer_unlocked(httprequest->tcpsocket);
-                if (MEDUSA_IS_ERR_OR_NULL(rbuffer)) {
-                        goto bail;
-                }
+                do {
+                        int n;
+                        int fd;
+                        ssize_t rlength;
+                        int64_t clength;
+                        int64_t niovecs;
+                        struct iovec iovec;
+
+                        fd = medusa_tcpsocket_get_fd_unlocked(tcpsocket);
+                        if (fd < 0) {
+                                goto bail;
+                        }
+
+                        n = 4096;
+                        rc = ioctl(fd, FIONREAD, &n);
+                        if (rc < 0) {
+                                n = 4096;
+                        }
+                        if (n < 0) {
+                                goto bail;
+                        }
+
+                        niovecs = medusa_buffer_reserve(httprequest->rbuffer, n, &iovec, 1);
+                        if (niovecs < 0) {
+                                goto bail;
+                        }
+                        if (niovecs == 0) {
+                                httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
+                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+                                if (rc < 0) {
+                                        goto bail;
+                                }
+                                break;
+                        }
+                        rlength = recv(fd, iovec.iov_base, iovec.iov_len, 0);
+                        if (rlength < 0) {
+                                if (errno == EINTR) {
+                                        break;
+                                } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                                        break;
+                                } else if (errno == ECONNRESET || errno == ECONNREFUSED || errno == ETIMEDOUT) {
+                                        httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
+                                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+                                        if (rc < 0) {
+                                                goto bail;
+                                        }
+                                        break;
+                                } else {
+                                        goto bail;
+                                }
+                        } else if (rlength == 0) {
+                                httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
+                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+                                if (rc < 0) {
+                                        goto bail;
+                                }
+                                break;
+                        } else {
+                                iovec.iov_len = rlength;
+                                clength = medusa_buffer_commit(httprequest->rbuffer, &iovec, 1);
+                                if (clength < 0) {
+                                        goto bail;
+                                }
+                                if (clength != 1) {
+                                        goto bail;
+                                }
+                        }
+                } while (0);
+
                 while (1) {
-                        niovecs = medusa_buffer_peek(rbuffer, 0, -1, iovecs, sizeof(iovecs) / sizeof(iovecs[0]));
+                        size_t nparsed;
+                        int64_t clength;
+                        int64_t niovecs;
+                        struct iovec iovec;
+
+                        niovecs = medusa_buffer_peek(httprequest->rbuffer, 0, -1, &iovec, 1);
                         if (niovecs < 0) {
                                 goto bail;
                         }
                         if (niovecs == 0) {
                                 break;
                         }
-                        for (rlen = 0, i = 0; i < niovecs; i++) {
-                                nparsed = http_parser_execute(&httprequest->http_parser, &httprequest->http_parser_settings, iovecs[i].iov_base, iovecs[i].iov_len);
-                                if (nparsed != iovecs[i].iov_len) {
-                                        httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
-                                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
-                                        if (rc < 0) {
-                                                goto bail;
-                                        }
+
+                        nparsed = http_parser_execute(&httprequest->http_parser, &httprequest->http_parser_settings, iovec.iov_base, iovec.iov_len);
+                        if (nparsed != iovec.iov_len) {
+                                httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
+                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+                                if (rc < 0) {
+                                        goto bail;
                                 }
-                                rlen += iovecs[i].iov_len;
                         }
-                        rc = medusa_buffer_choke(rbuffer, 0, rlen);
-                        if (rc != rlen) {
+
+                        clength = medusa_buffer_choke(httprequest->rbuffer, 0, iovec.iov_len);
+                        if (clength != (int64_t) iovec.iov_len) {
                                 goto bail;
                         }
                 }
@@ -725,7 +846,6 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_init_with_option
         httprequest->onevent = options->onevent;
         httprequest->context = options->context;
         httprequest->connect_timeout = -1;
-        httprequest->read_timeout = -1;
         httprequest->headers = medusa_buffer_create(MEDUSA_BUFFER_TYPE_DEFAULT);
         if (MEDUSA_IS_ERR_OR_NULL(httprequest->headers)) {
                 return MEDUSA_PTR_ERR(httprequest->headers);
@@ -928,47 +1048,6 @@ __attribute__ ((visibility ("default"))) double medusa_httprequest_get_connect_t
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_set_read_timeout_unlocked (struct medusa_httprequest *httprequest, double timeout)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
-                return -EINVAL;
-        }
-        httprequest->read_timeout = timeout;
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_httprequest_set_read_timeout (struct medusa_httprequest *httprequest, double timeout)
-{
-        int rc;
-        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
-                return -EINVAL;
-        }
-        medusa_monitor_lock(httprequest->subject.monitor);
-        rc = medusa_httprequest_set_read_timeout_unlocked(httprequest, timeout);
-        medusa_monitor_unlock(httprequest->subject.monitor);
-        return rc;
-}
-
-__attribute__ ((visibility ("default"))) double medusa_httprequest_get_read_timeout_unlocked (const struct medusa_httprequest *httprequest)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
-                return -EINVAL;
-        }
-        return httprequest->read_timeout;
-}
-
-__attribute__ ((visibility ("default"))) double medusa_httprequest_get_read_timeout (const struct medusa_httprequest *httprequest)
-{
-        double rc;
-        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
-                return -EINVAL;
-        }
-        medusa_monitor_lock(httprequest->subject.monitor);
-        rc = medusa_httprequest_get_read_timeout(httprequest);
-        medusa_monitor_unlock(httprequest->subject.monitor);
-        return rc;
-}
-
 __attribute__ ((visibility ("default"))) int medusa_httprequest_add_header_unlocked (struct medusa_httprequest *httprequest, const char *key, const char *value, ...)
 {
         int64_t rc;
@@ -1106,23 +1185,18 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 ret = rc;
                 goto bail;
         }
-        rc = medusa_tcpsocket_set_read_timeout_unlocked(httprequest->tcpsocket, httprequest->read_timeout);
-        if (rc < 0) {
-                ret = rc;
-                goto bail;
-        }
         rc = medusa_tcpsocket_connect_unlocked(httprequest->tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, medusa_url.host, medusa_url.port);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
         }
 
-        rc = medusa_tcpsocket_printf(httprequest->tcpsocket, "POST /%s HTTP/1.1\r\n", medusa_url.path);
+        rc = medusa_buffer_printf(httprequest->wbuffer, "POST /%s HTTP/1.1\r\n", medusa_url.path);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
         }
-        rc = medusa_tcpsocket_printf(httprequest->tcpsocket, "Host: %s\r\n", medusa_url.host);
+        rc = medusa_buffer_printf(httprequest->wbuffer, "Host: %s\r\n", medusa_url.host);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
@@ -1139,7 +1213,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 for (rlen = 0, i = 0; i < niovecs; i++) {
                         rlen += iovecs[i].iov_len;
                 }
-                wlen = medusa_tcpsocket_writev(httprequest->tcpsocket, iovecs, niovecs);
+                wlen = medusa_buffer_appendv(httprequest->wbuffer, iovecs, niovecs);
                 if (wlen < 0) {
                         goto bail;
                 }
@@ -1148,16 +1222,16 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 }
                 olen += rlen;
         }
-        rc = medusa_tcpsocket_printf(httprequest->tcpsocket, "Content-Length: %" PRIi64 "\r\n", length);
+        rc = medusa_buffer_printf(httprequest->wbuffer, "Content-Length: %" PRIi64 "\r\n", length);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
         }
-        rc = medusa_tcpsocket_printf(httprequest->tcpsocket, "\r\n");
+        rc = medusa_buffer_printf(httprequest->wbuffer, "\r\n");
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_tcpsocket_write(httprequest->tcpsocket, data, length);
+        rc = medusa_buffer_append(httprequest->wbuffer, data, length);
         if (rc != length) {
                 goto bail;
         }

@@ -27,13 +27,10 @@ enum {
         MEDUSA_TCPSOCKET_EVENT_CONNECTING       = 0x00000080,
         MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT  = 0x00000100,
         MEDUSA_TCPSOCKET_EVENT_CONNECTED        = 0x00000200,
-        MEDUSA_TCPSOCKET_EVENT_WRITE_TIMEOUT    = 0x00000400,
-        MEDUSA_TCPSOCKET_EVENT_WRITTEN          = 0x00000800,
-        MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED   = 0x00001000,
-        MEDUSA_TCPSOCKET_EVENT_READ_TIMEOUT     = 0x00002000,
-        MEDUSA_TCPSOCKET_EVENT_READ             = 0x00004000,
-        MEDUSA_TCPSOCKET_EVENT_DISCONNECTED     = 0x00008000,
-        MEDUSA_TCPSOCKET_EVENT_DESTROY          = 0x00010000
+        MEDUSA_TCPSOCKET_EVENT_IN               = 0x00000400,
+        MEDUSA_TCPSOCKET_EVENT_OUT              = 0x00000800,
+        MEDUSA_TCPSOCKET_EVENT_DISCONNECTED     = 0x00001000,
+        MEDUSA_TCPSOCKET_EVENT_DESTROY          = 0x00002000
 #define MEDUSA_TCPSOCKET_EVENT_BINDING          MEDUSA_TCPSOCKET_EVENT_BINDING
 #define MEDUSA_TCPSOCKET_EVENT_BOUND            MEDUSA_TCPSOCKET_EVENT_BOUND
 #define MEDUSA_TCPSOCKET_EVENT_LISTENING        MEDUSA_TCPSOCKET_EVENT_LISTENING
@@ -44,11 +41,8 @@ enum {
 #define MEDUSA_TCPSOCKET_EVENT_CONNECTING       MEDUSA_TCPSOCKET_EVENT_CONNECTING
 #define MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT  MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT
 #define MEDUSA_TCPSOCKET_EVENT_CONNECTED        MEDUSA_TCPSOCKET_EVENT_CONNECTED
-#define MEDUSA_TCPSOCKET_EVENT_WRITE_TIMEOUT    MEDUSA_TCPSOCKET_EVENT_WRITE_TIMEOUT
-#define MEDUSA_TCPSOCKET_EVENT_WRITTEN          MEDUSA_TCPSOCKET_EVENT_WRITTEN
-#define MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED   MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED
-#define MEDUSA_TCPSOCKET_EVENT_READ_TIMEOUT     MEDUSA_TCPSOCKET_EVENT_READ_TIMEOUT
-#define MEDUSA_TCPSOCKET_EVENT_READ             MEDUSA_TCPSOCKET_EVENT_READ
+#define MEDUSA_TCPSOCKET_EVENT_IN               MEDUSA_TCPSOCKET_EVENT_IN
+#define MEDUSA_TCPSOCKET_EVENT_OUT              MEDUSA_TCPSOCKET_EVENT_OUT
 #define MEDUSA_TCPSOCKET_EVENT_DISCONNECTED     MEDUSA_TCPSOCKET_EVENT_DISCONNECTED
 #define MEDUSA_TCPSOCKET_EVENT_DESTROY          MEDUSA_TCPSOCKET_EVENT_DESTROY
 };
@@ -128,15 +122,6 @@ int medusa_tcpsocket_get_backlog (const struct medusa_tcpsocket *tcpsocket);
 int medusa_tcpsocket_set_connect_timeout (struct medusa_tcpsocket *tcpsocket, double timeout);
 double medusa_tcpsocket_get_connect_timeout (const struct medusa_tcpsocket *tcpsocket);
 
-int medusa_tcpsocket_set_read_timeout (struct medusa_tcpsocket *tcpsocket, double timeout);
-double medusa_tcpsocket_get_read_timeout (const struct medusa_tcpsocket *tcpsocket);
-
-int medusa_tcpsocket_set_write_timeout (struct medusa_tcpsocket *tcpsocket, double timeout);
-double medusa_tcpsocket_get_write_timeout (const struct medusa_tcpsocket *tcpsocket);
-
-int medusa_tcpsocket_set_write_finished_timeout (struct medusa_tcpsocket *tcpsocket, double timeout);
-double medusa_tcpsocket_get_write_finished_timeout (const struct medusa_tcpsocket *tcpsocket);
-
 int medusa_tcpsocket_get_fd (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_bind (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
@@ -146,21 +131,6 @@ int medusa_tcpsocket_accept_options_default (struct medusa_tcpsocket_accept_opti
 
 struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
 struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options (const struct medusa_tcpsocket_accept_options *options);
-
-int64_t medusa_tcpsocket_read (struct medusa_tcpsocket *tcpsocket, void *data, int64_t size);
-int64_t medusa_tcpsocket_get_read_length (const struct medusa_tcpsocket *tcpsocket);
-
-int medusa_tcpsocket_set_read_buffer (struct medusa_tcpsocket *tcpsocket, struct medusa_buffer *buffer);
-struct medusa_buffer * medusa_tcpsocket_get_read_buffer (struct medusa_tcpsocket *tcpsocket);
-
-int64_t medusa_tcpsocket_write (struct medusa_tcpsocket *tcpsocket, const void *data, int64_t size);
-int64_t medusa_tcpsocket_writev (struct medusa_tcpsocket *tcpsocket, const struct iovec *iovecs, int niovecs);
-int64_t medusa_tcpsocket_printf (struct medusa_tcpsocket *tcpsocket, const char *format, ...) __attribute__((format(printf, 2, 3)));
-int64_t medusa_tcpsocket_vprintf (struct medusa_tcpsocket *tcpsocket, const char *format, va_list va);
-int64_t medusa_tcpsocket_get_write_length (const struct medusa_tcpsocket *tcpsocket);
-
-int medusa_tcpsocket_set_write_buffer (struct medusa_tcpsocket *tcpsocket, struct medusa_buffer *buffer);
-struct medusa_buffer * medusa_tcpsocket_get_write_buffer (struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_userdata (struct medusa_tcpsocket *tcpsocket, void *userdata);
 void * medusa_tcpsocket_get_userdata (struct medusa_tcpsocket *tcpsocket);

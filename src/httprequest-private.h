@@ -18,9 +18,6 @@ unsigned int medusa_httprequest_get_state_unlocked (const struct medusa_httprequ
 int medusa_httprequest_set_connect_timeout_unlocked (struct medusa_httprequest *httprequest, double timeout);
 double medusa_httprequest_get_connect_timeout_unlocked (const struct medusa_httprequest *httprequest);
 
-int medusa_httprequest_set_read_timeout_unlocked (struct medusa_httprequest *httprequest, double timeout);
-double medusa_httprequest_get_read_timeout_unlocked (const struct medusa_httprequest *httprequest);
-
 int medusa_httprequest_add_header_unlocked (struct medusa_httprequest *httprequest, const char *key, const char *value, ...);
 int medusa_httprequest_add_vheader_unlocked (struct medusa_httprequest *httprequest, const char *key, const char *value, va_list va);
 
