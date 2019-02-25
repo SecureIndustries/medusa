@@ -11,6 +11,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 #include <errno.h>
 
@@ -41,12 +43,14 @@ enum {
         MEDUSA_TCPSOCKET_FLAG_NONE              = 0x00000000,
         MEDUSA_TCPSOCKET_FLAG_ENABLED           = 0x00000001,
         MEDUSA_TCPSOCKET_FLAG_NONBLOCKING       = 0x00000002,
-        MEDUSA_TCPSOCKET_FLAG_REUSEADDR         = 0x00000004,
-        MEDUSA_TCPSOCKET_FLAG_REUSEPORT         = 0x00000008,
-        MEDUSA_TCPSOCKET_FLAG_BACKLOG           = 0x00000010
+        MEDUSA_TCPSOCKET_FLAG_NODELAY           = 0x00000004,
+        MEDUSA_TCPSOCKET_FLAG_REUSEADDR         = 0x00000008,
+        MEDUSA_TCPSOCKET_FLAG_REUSEPORT         = 0x00000010,
+        MEDUSA_TCPSOCKET_FLAG_BACKLOG           = 0x00000020
 #define MEDUSA_TCPSOCKET_FLAG_NONE              MEDUSA_TCPSOCKET_FLAG_NONE
 #define MEDUSA_TCPSOCKET_FLAG_ENABLED           MEDUSA_TCPSOCKET_FLAG_ENABLED
 #define MEDUSA_TCPSOCKET_FLAG_NONBLOCKING       MEDUSA_TCPSOCKET_FLAG_NONBLOCKING
+#define MEDUSA_TCPSOCKET_FLAG_NODELAY           MEDUSA_TCPSOCKET_FLAG_NODELAY
 #define MEDUSA_TCPSOCKET_FLAG_REUSEADDR         MEDUSA_TCPSOCKET_FLAG_REUSEADDR
 #define MEDUSA_TCPSOCKET_FLAG_REUSEPORT         MEDUSA_TCPSOCKET_FLAG_REUSEPORT
 #define MEDUSA_TCPSOCKET_FLAG_BACKLOG           MEDUSA_TCPSOCKET_FLAG_BACKLOG
@@ -295,6 +299,10 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_with_options_
         tcpsocket->onevent = options->onevent;
         tcpsocket->context = options->context;
         rc = medusa_tcpsocket_set_nonblocking_unlocked(tcpsocket, options->nonblocking);
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_tcpsocket_set_nodelay_unlocked(tcpsocket, options->nodelay);
         if (rc < 0) {
                 return rc;
         }
@@ -587,6 +595,60 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_nonblocking (c
         }
         medusa_monitor_lock(tcpsocket->subject.monitor);
         rc = medusa_tcpsocket_get_nonblocking_unlocked(tcpsocket);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_nodelay_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (enabled) {
+                tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NODELAY);
+        } else {
+                tcpsocket_del_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NODELAY);
+        }
+        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
+                int rc;
+                int one;
+                one = !!tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NODELAY);
+                rc = setsockopt(medusa_io_get_fd_unlocked(tcpsocket->io), SOL_TCP, TCP_NODELAY, &one, sizeof(one));
+                if (rc != 0) {
+                        return -errno;
+                }
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_nodelay (struct medusa_tcpsocket *tcpsocket, int enabled)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return MEDUSA_TCPSOCKET_STATE_UNKNWON;
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_set_nodelay_unlocked(tcpsocket, enabled);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_nodelay_unlocked (const struct medusa_tcpsocket *tcpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        return tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NODELAY);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_nodelay (const struct medusa_tcpsocket *tcpsocket)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return MEDUSA_TCPSOCKET_STATE_UNKNWON;
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_get_nodelay_unlocked(tcpsocket);
         medusa_monitor_unlock(tcpsocket->subject.monitor);
         return rc;
 }
@@ -1130,6 +1192,16 @@ ipv6:
         }
         {
                 int rc;
+                int one;
+                one = !!tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NODELAY);
+                rc = setsockopt(fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
+                if (rc != 0) {
+                        ret = -errno;
+                        goto bail;
+                }
+        }
+        {
+                int rc;
                 int on;
                 on = tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_REUSEADDR);
                 rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
@@ -1318,6 +1390,16 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_unlocked (
                 }
                 {
                         int rc;
+                        int one;
+                        one = !!tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NODELAY);
+                        rc = setsockopt(fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
+                        if (rc != 0) {
+                                ret = -errno;
+                                goto bail;
+                        }
+                }
+                {
+                        int rc;
                         int on;
                         on = tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_REUSEADDR);
                         rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
@@ -1464,6 +1546,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_accept_init_with_o
         accepted_options.onevent     = options->onevent;
         accepted_options.context     = options->context;
         accepted_options.nonblocking = options->nonblocking;
+        accepted_options.nodelay     = options->nodelay;
         accepted_options.enabled     = options->enabled;
         rc = medusa_tcpsocket_init_with_options_unlocked(accepted, &accepted_options);
         if (rc < 0) {
@@ -1492,6 +1575,16 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_accept_init_with_o
                 }
                 flags = (tcpsocket_has_flag(accepted, MEDUSA_TCPSOCKET_FLAG_NONBLOCKING)) ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
                 rc = fcntl(fd, F_SETFL, flags);
+                if (rc != 0) {
+                        medusa_tcpsocket_destroy_unlocked(accepted);
+                        return -errno;
+                }
+        }
+        {
+                int rc;
+                int one;
+                one = !!tcpsocket_has_flag(accepted, MEDUSA_TCPSOCKET_FLAG_NODELAY);
+                rc = setsockopt(fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
                 if (rc != 0) {
                         medusa_tcpsocket_destroy_unlocked(accepted);
                         return -errno;
@@ -1566,6 +1659,7 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
         accepted_options.onevent     = options->onevent;
         accepted_options.context     = options->context;
         accepted_options.nonblocking = options->nonblocking;
+        accepted_options.nodelay     = options->nodelay;
         accepted_options.enabled     = options->enabled;
         accepted = medusa_tcpsocket_create_with_options_unlocked(&accepted_options);
         if (MEDUSA_IS_ERR_OR_NULL(accepted)) {
@@ -1594,6 +1688,16 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 }
                 flags = (tcpsocket_has_flag(accepted, MEDUSA_TCPSOCKET_FLAG_NONBLOCKING)) ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
                 rc = fcntl(fd, F_SETFL, flags);
+                if (rc != 0) {
+                        medusa_tcpsocket_destroy_unlocked(accepted);
+                        return MEDUSA_ERR_PTR(-errno);
+                }
+        }
+        {
+                int rc;
+                int one;
+                one = !!tcpsocket_has_flag(accepted, MEDUSA_TCPSOCKET_FLAG_NODELAY);
+                rc = setsockopt(fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
                 if (rc != 0) {
                         medusa_tcpsocket_destroy_unlocked(accepted);
                         return MEDUSA_ERR_PTR(-errno);

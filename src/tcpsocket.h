@@ -78,6 +78,7 @@ struct medusa_tcpsocket_init_options {
         int reuseaddr;
         int reuseport;
         int backlog;
+        int nodelay;
         int enabled;
 };
 
@@ -87,6 +88,7 @@ struct medusa_tcpsocket_accept_options {
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...);
         void *context;
         int nonblocking;
+        int nodelay;
         int enabled;
 };
 
@@ -111,6 +113,9 @@ int medusa_tcpsocket_disable (struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_nonblocking (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_nonblocking (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_nodelay (struct medusa_tcpsocket *tcpsocket, int enabled);
+int medusa_tcpsocket_get_nodelay (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_reuseaddr (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_reuseaddr (const struct medusa_tcpsocket *tcpsocket);
