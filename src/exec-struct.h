@@ -10,6 +10,7 @@ struct medusa_exec {
         struct medusa_subject subject;
         unsigned int flags;
         char **argv;
+        char **envv;
         double interval;
         int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...);
         void *context;

@@ -213,7 +213,7 @@ __attribute__ ((visibility ("default"))) int medusa_exec_init_unlocked (struct m
                 return rc;
         }
         options.monitor = monitor;
-        options.argv = argv;
+        options.argv    = argv;
         options.onevent = onevent;
         options.context = context;
         return medusa_exec_init_with_options_unlocked(exec, &options);
@@ -236,8 +236,10 @@ __attribute__ ((visibility ("default"))) int medusa_exec_init (struct medusa_exe
 
 __attribute__ ((visibility ("default"))) int medusa_exec_init_with_options_unlocked (struct medusa_exec *exec, const struct medusa_exec_init_options *options)
 {
+        int rc;
         int ret;
         int argc;
+        int envc;
         if (MEDUSA_IS_ERR_OR_NULL(exec)) {
                 return -EINVAL;
         }
@@ -250,11 +252,14 @@ __attribute__ ((visibility ("default"))) int medusa_exec_init_with_options_unloc
         if (options->argv == NULL) {
                 return -EINVAL;
         }
-        for (argc = 0; options->argv[argc] != NULL; argc++) {
+        for (argc = 0; options->argv != NULL && options->argv[argc] != NULL; argc++) {
                 ;
         }
         if (argc < 1) {
                 return -EINVAL;
+        }
+        for (envc = 0; options->envv != NULL && options->envv[envc] != NULL; envc++) {
+                ;
         }
         if (MEDUSA_IS_ERR_OR_NULL(options->onevent)) {
                 return -EINVAL;
@@ -262,30 +267,67 @@ __attribute__ ((visibility ("default"))) int medusa_exec_init_with_options_unloc
         memset(exec, 0, sizeof(struct medusa_exec));
         exec->pid = -1;
         exec->interval = options->interval;
-        exec->argv = malloc(sizeof(char *) * (argc + 1));
-        if (exec->argv == NULL) {
-                ret = -ENOMEM;
-                goto bail;
-        }
-        memset(exec->argv, 0, sizeof(char *) * (argc + 1));
-        for (argc = 0; options->argv[argc] != NULL; argc++) {
-                exec->argv[argc] = strdup(options->argv[argc]);
-                if (exec->argv[argc] == NULL) {
+        if (argc > 0) {
+                exec->argv = malloc(sizeof(char *) * (argc + 1));
+                if (exec->argv == NULL) {
                         ret = -ENOMEM;
                         goto bail;
                 }
+                memset(exec->argv, 0, sizeof(char *) * (argc + 1));
+                for (argc = 0; options->argv[argc] != NULL; argc++) {
+                        exec->argv[argc] = strdup(options->argv[argc]);
+                        if (exec->argv[argc] == NULL) {
+                                ret = -ENOMEM;
+                                goto bail;
+                        }
+                }
+                exec->argv[argc++] = NULL;
         }
-        exec->argv[argc++] = NULL;
+        if (envc > 0) {
+                exec->envv = malloc(sizeof(char *) * (envc + 1));
+                if (exec->envv == NULL) {
+                        ret = -ENOMEM;
+                        goto bail;
+                }
+                memset(exec->envv, 0, sizeof(char *) * (envc + 1));
+                for (envc = 0; options->envv[envc] != NULL; envc++) {
+                        exec->envv[envc] = strdup(options->envv[envc]);
+                        if (exec->envv[envc] == NULL) {
+                                ret = -ENOMEM;
+                                goto bail;
+                        }
+                }
+                exec->envv[envc++] = NULL;
+        }
         exec->onevent = options->onevent;
         exec->context = options->context;
-        exec_set_enabled(exec, !!options->enabled);
+        exec_set_enabled(exec, 0);
         medusa_subject_set_type(&exec->subject, MEDUSA_SUBJECT_TYPE_EXEC);
         exec->subject.monitor = NULL;
-        return medusa_monitor_add_unlocked(options->monitor, &exec->subject);
-bail:   for (argc = 0; options->argv[argc] != NULL; argc++) {
+        rc = medusa_monitor_add_unlocked(options->monitor, &exec->subject);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
+        rc = medusa_exec_set_enabled_unlocked(exec, !!options->enabled);
+        if (rc < 0) {
+                fprintf(stderr, "rc: %d\n", rc);
+                if (rc != -EALREADY) {
+                        ret = rc;
+                        goto bail;
+                }
+        }
+        return 0;
+bail:   for (argc = 0; options->argv != NULL && options->argv[argc] != NULL; argc++) {
                 free(exec->argv[argc]);
         }
         free(exec->argv);
+        exec->argv = NULL;
+        for (envc = 0; options->envv != NULL && options->envv[envc] != NULL; envc++) {
+                free(exec->envv[envc]);
+        }
+        free(exec->envv);
+        exec->envv = NULL;
         return ret;
 }
 
@@ -338,7 +380,7 @@ __attribute__ ((visibility ("default"))) struct medusa_exec * medusa_exec_create
                 return MEDUSA_ERR_PTR(rc);
         }
         options.monitor = monitor;
-        options.argv = argv;
+        options.argv    = argv;
         options.onevent = onevent;
         options.context = context;
         return medusa_exec_create_with_options_unlocked(&options);
@@ -603,6 +645,13 @@ __attribute__ ((visibility ("default"))) int medusa_exec_onevent_unlocked (struc
                                 free(*ptr);
                         }
                         free(exec->argv);
+                }
+                if (exec->envv != NULL) {
+                        char **ptr;
+                        for (ptr = exec->envv; ptr && *ptr; ptr++) {
+                                free(*ptr);
+                        }
+                        free(exec->envv);
                 }
                 if (exec->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
 #if defined(MEDUSA_EXEC_USE_POOL) && (MEDUSA_EXEC_USE_POOL == 1)
