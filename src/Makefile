@@ -35,6 +35,7 @@ libmedusa.a_files-y = \
 	buffer.c \
 	buffer-simple.c \
 	pqueue.c \
+	exec.c \
 	io.c \
 	signal.c \
 	timer.c \
@@ -113,7 +114,8 @@ dist.include-y = \
 	signal.h \
 	timer.h \
 	tcpsocket.h \
-	httprequest.h
+	httprequest.h \
+	exec.h
 
 dist.lib-y = \
 	libmedusa.a \

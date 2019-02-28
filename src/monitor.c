@@ -23,6 +23,8 @@
 #include "tcpsocket-private.h"
 #include "httprequest.h"
 #include "httprequest-private.h"
+#include "exec.h"
+#include "exec-private.h"
 #include "monitor.h"
 #include "monitor-private.h"
 
@@ -188,6 +190,25 @@ static int monitor_signal_io_onevent (struct medusa_io *io, unsigned int events,
         return 0;
 }
 
+static int monitor_signal (struct medusa_monitor *monitor, unsigned int reason)
+{
+        int rc;
+        if (monitor->wakeup.fired == 0) {
+                rc = write(monitor->wakeup.fds[1], &reason, sizeof(reason));
+                if (rc != sizeof(reason)) {
+                        goto bail;
+                }
+                monitor->wakeup.fired = 1;
+        }
+        if (reason == WAKEUP_REASON_LOOP_BREAK) {
+                monitor->running = 0;
+        } else if (reason == WAKEUP_REASON_LOOP_CONTINUE) {
+                monitor->running = 1;
+        }
+        return 0;
+bail:   return -1;
+}
+
 static int monitor_timer_subject_compare (void *a, void *b)
 {
         struct medusa_timer *ta = a;
@@ -210,12 +231,45 @@ static unsigned int monitor_timer_subject_get_position (void *entry)
 static int monitor_process_deletes (struct medusa_monitor *monitor)
 {
         int rc;
-        while (!TAILQ_EMPTY(&monitor->deletes)) {
-                struct medusa_subject *subject;
-                subject = TAILQ_FIRST(&monitor->deletes);
-                TAILQ_REMOVE(&monitor->deletes, subject, list);
+        struct medusa_subject *subject;
+        struct medusa_subject *nsubject;
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_EXEC) {
+                        struct medusa_exec *exec;
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        exec = (struct medusa_exec *) subject;
+                        rc = medusa_exec_onevent_unlocked(exec, MEDUSA_EXEC_EVENT_DESTROY);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                }
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPREQUEST) {
+                        struct medusa_httprequest *httprequest;
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        httprequest = (struct medusa_httprequest *) subject;
+                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DESTROY);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                }
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
+                        struct medusa_tcpsocket *tcpsocket;
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        tcpsocket = (struct medusa_tcpsocket *) subject;
+                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                }
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_IO) {
                         struct medusa_io *io;
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
                         io = (struct medusa_io *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 rc = monitor->poll.backend->del(monitor->poll.backend, io);
@@ -230,6 +284,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                         }
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TIMER) {
                         struct medusa_timer *timer;
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
                         timer = (struct medusa_timer *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 rc = pqueue_del(monitor->timer.pqueue, timer);
@@ -245,6 +300,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                         }
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_SIGNAL) {
                         struct medusa_signal *signal;
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
                         signal = (struct medusa_signal *) subject;
                         if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                 rc = monitor->signal.backend->del(monitor->signal.backend, signal);
@@ -257,24 +313,18 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                         if (rc < 0) {
                                 goto bail;
                         }
-                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
-                        struct medusa_tcpsocket *tcpsocket;
-                        tcpsocket = (struct medusa_tcpsocket *) subject;
-                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
-                        if (rc < 0) {
-                                goto bail;
-                        }
-                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPREQUEST) {
-                        struct medusa_httprequest *httprequest;
-                        httprequest = (struct medusa_httprequest *) subject;
-                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DESTROY);
-                        if (rc < 0) {
-                                goto bail;
-                        }
+                } else {
+                        goto bail;
+                }
+        }
+        if (!TAILQ_EMPTY(&monitor->deletes)) {
+                rc = monitor_signal(monitor, WAKEUP_REASON_SUBJECT_DEL);
+                if (rc < 0) {
+                        goto bail;
                 }
         }
         return 0;
-bail:   return -1;
+bail:   return -EIO;
 }
 
 static int monitor_process_changes (struct medusa_monitor *monitor)
@@ -401,6 +451,11 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                         TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_EXEC) {
+                        TAILQ_REMOVE(&monitor->changes, subject, list);
+                        TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
                 }
         }
         return 0;
@@ -485,25 +540,6 @@ static int monitor_check_timer (struct medusa_monitor *monitor)
                 }
 #endif
                 monitor->timer.fired = 0;
-        }
-        return 0;
-bail:   return -1;
-}
-
-static int monitor_signal (struct medusa_monitor *monitor, unsigned int reason)
-{
-        int rc;
-        if (monitor->wakeup.fired == 0) {
-                rc = write(monitor->wakeup.fds[1], &reason, sizeof(reason));
-                if (rc != sizeof(reason)) {
-                        goto bail;
-                }
-                monitor->wakeup.fired = 1;
-        }
-        if (reason == WAKEUP_REASON_LOOP_BREAK) {
-                monitor->running = 0;
-        } else if (reason == WAKEUP_REASON_LOOP_CONTINUE) {
-                monitor->running = 1;
         }
         return 0;
 bail:   return -1;
@@ -920,6 +956,14 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                 medusa_monitor_del_unlocked(subject);
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_EXEC) {
+                        struct medusa_exec *exec;
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        exec = (struct medusa_exec *) subject;
+                        medusa_exec_onevent_unlocked(exec, MEDUSA_EXEC_EVENT_DESTROY);
+                }
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPREQUEST) {
                         struct medusa_httprequest *httprequest;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
@@ -963,16 +1007,6 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         }
                         medusa_signal_onevent_unlocked(signal, MEDUSA_SIGNAL_EVENT_DESTROY);
-                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
-                        struct medusa_tcpsocket *tcpsocket;
-                        TAILQ_REMOVE(&monitor->deletes, subject, list);
-                        tcpsocket = (struct medusa_tcpsocket *) subject;
-                        medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
-                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPREQUEST) {
-                        struct medusa_httprequest *httprequest;
-                        TAILQ_REMOVE(&monitor->deletes, subject, list);
-                        httprequest = (struct medusa_httprequest *) subject;
-                        medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DESTROY);
                 }
         }
         if (monitor->poll.backend != NULL) {
