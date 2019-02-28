@@ -10,9 +10,12 @@ struct medusa_exec {
         struct medusa_subject subject;
         unsigned int flags;
         char **argv;
+        double interval;
         int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...);
         void *context;
         pid_t pid;
+        int wstatus;
+        struct medusa_timer *timer;
 };
 
 int medusa_exec_init (struct medusa_exec *exec, struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...), void *context);

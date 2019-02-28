@@ -123,7 +123,7 @@ __attribute__ ((visibility ("default"))) int medusa_io_init_with_options_unlocke
         io->onevent = options->onevent;
         io->context = options->context;
         io_set_events(io, options->events);
-        io_set_enabled(io, options->enabled);
+        io_set_enabled(io, !!options->enabled);
         medusa_subject_set_type(&io->subject, MEDUSA_SUBJECT_TYPE_IO);
         io->subject.monitor = NULL;
         return medusa_monitor_add_unlocked(options->monitor, &io->subject);

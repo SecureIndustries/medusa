@@ -21,7 +21,7 @@ struct medusa_exec_init_options {
         const char **argv;
         int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...);
         void *context;
-        unsigned int events;
+        double interval;
         int enabled;
 };
 
@@ -37,6 +37,7 @@ struct medusa_exec * medusa_exec_create_with_options (const struct medusa_exec_i
 void medusa_exec_destroy (struct medusa_exec *exec);
 
 int medusa_exec_get_pid (const struct medusa_exec *exec);
+int medusa_exec_get_wstatus (const struct medusa_exec *exec);
 
 int medusa_exec_set_enabled (struct medusa_exec *exec, int enabled);
 int medusa_exec_get_enabled (const struct medusa_exec *exec);
