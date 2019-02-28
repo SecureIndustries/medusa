@@ -11,6 +11,7 @@ struct medusa_exec {
         unsigned int flags;
         char **argv;
         char **envv;
+        int iov[3];
         double interval;
         int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...);
         void *context;

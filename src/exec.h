@@ -20,6 +20,7 @@ struct medusa_exec_init_options {
         struct medusa_monitor *monitor;
         const char **argv;
         const char **envv;
+        int *iov;
         int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...);
         void *context;
         double interval;

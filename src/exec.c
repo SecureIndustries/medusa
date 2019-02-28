@@ -94,10 +94,15 @@ static pid_t exec_exec (char * const *args, char * const *environment, int *io)
                 env[n++] = NULL;
         }
 
-        if (io == NULL) {
-                n = open("/dev/null", O_RDWR);
-                if (n < 0) {
-                        goto bail;
+        n = -1;
+        for (i = 0; i < 3; i++) {
+                if (io == NULL ||
+                    io[i] < 0) {
+                        n = open("/dev/null", O_RDWR);
+                        if (n < 0) {
+                                goto bail;
+                        }
+                        break;
                 }
         }
 
@@ -105,8 +110,10 @@ static pid_t exec_exec (char * const *args, char * const *environment, int *io)
                 if (env != NULL) {
                         free(env);
                 }
+                close(n);
                 return pid;
         } else if (pid == 0) {
+                int i;
                 int rc;
                 setpgid(0, 0);
                 setvbuf(stdout, NULL, _IONBF, 0);
@@ -114,23 +121,16 @@ static pid_t exec_exec (char * const *args, char * const *environment, int *io)
                 fflush(stdin);
                 fflush(stdout);
                 fflush(stderr);
-                if (io == NULL) {
-#if 1
-                        dup2(n, STDIN_FILENO);
-                        dup2(n, STDOUT_FILENO);
-                        dup2(n, STDERR_FILENO);
-                        close(n);
-#endif
-                } else {
-#if 1
-                        dup2(io[0], STDIN_FILENO);
-                        dup2(io[1], STDOUT_FILENO);
-                        dup2(io[2], STDERR_FILENO);
-                        close(io[0]);
-                        close(io[1]);
-                        close(io[2]);
-#endif
+                for (i = 0; i < 3; i++) {
+                        if (io == NULL ||
+                            io[i] < 0) {
+                                dup2(n, i);
+                        } else {
+                                dup2(io[i], i);
+                                close(io[i]);
+                        }
                 }
+                close(n);
                 rc = prctl(PR_SET_PDEATHSIG, SIGKILL);
                 if (rc == -1) {
                         perror(0);
@@ -267,6 +267,9 @@ __attribute__ ((visibility ("default"))) int medusa_exec_init_with_options_unloc
         memset(exec, 0, sizeof(struct medusa_exec));
         exec->pid = -1;
         exec->interval = options->interval;
+        exec->iov[0] = options->iov[0];
+        exec->iov[1] = options->iov[1];
+        exec->iov[2] = options->iov[2];
         if (argc > 0) {
                 exec->argv = malloc(sizeof(char *) * (argc + 1));
                 if (exec->argv == NULL) {
@@ -531,7 +534,7 @@ __attribute__ ((visibility ("default"))) int medusa_exec_set_enabled_unlocked (s
                 if (MEDUSA_IS_ERR_OR_NULL(exec->timer)) {
                         return MEDUSA_PTR_ERR(exec->timer);
                 }
-                exec->pid = exec_exec(exec->argv, NULL, NULL);
+                exec->pid = exec_exec(exec->argv, exec->envv, exec->iov);
                 if (exec->pid < 0) {
                         return -EIO;
                 }
