@@ -3,4 +3,4 @@
 	url = https://github.com/alperakcan/libmakefile.git
 [submodule "3rdparty/http-parser"]
 	path = 3rdparty/http-parser
-	url = git@github.com:SecureIndustries/http-parser.git
+	url = https://github.com/SecureIndustries/http-parser.git
