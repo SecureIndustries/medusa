@@ -267,9 +267,14 @@ __attribute__ ((visibility ("default"))) int medusa_exec_init_with_options_unloc
         memset(exec, 0, sizeof(struct medusa_exec));
         exec->pid = -1;
         exec->interval = options->interval;
-        exec->iov[0] = options->iov[0];
-        exec->iov[1] = options->iov[1];
-        exec->iov[2] = options->iov[2];
+        exec->iov[0] = -1;
+        exec->iov[1] = -1;
+        exec->iov[2] = -1;
+        if (options->iov != NULL) {
+                exec->iov[0] = options->iov[0];
+                exec->iov[1] = options->iov[1];
+                exec->iov[2] = options->iov[2];
+        }
         if (argc > 0) {
                 exec->argv = malloc(sizeof(char *) * (argc + 1));
                 if (exec->argv == NULL) {

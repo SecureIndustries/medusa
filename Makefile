@@ -1,14 +1,21 @@
 
+MEDUSA_BUILD_TEST     ?= n
+MEDUSA_BUILD_EXAMPLES ?= n
+
 subdir-y = \
-	src \
-	test \
-	examples
+	src
 
 app_depends-y = \
 	src
 
+subdir-${MEDUSA_BUILD_TEST} += \
+	test
+
 test_depends-y = \
 	src
+
+subdir-${MEDUSA_BUILD_EXAMPLES} += \
+	examples
 
 examples_depends-y = \
 	src
