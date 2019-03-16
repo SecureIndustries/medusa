@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <getopt.h>
@@ -107,6 +108,9 @@ bail:   return -1;
 int main (int argc, char *argv[])
 {
         int c;
+        int _argc;
+        char **_argv;
+
         const char *option_url;
         const char *option_method;
         const char *option_header;
@@ -128,7 +132,13 @@ int main (int argc, char *argv[])
         option_header = NULL;
         option_data   = NULL;
 
-        while ((c = getopt_long(argc, argv, "hu:m:h:d:", longopts, NULL)) != -1) {
+        _argv = malloc(sizeof(char *) * (argc + 1));
+
+        optind = 0;
+        for (_argc = 0; _argc < argc; _argc++) {
+                _argv[_argc] = argv[_argc];
+        }
+        while ((c = getopt_long(_argc, _argv, "hu:m:e:d:", longopts, NULL)) != -1) {
                 switch (c) {
                         case OPTION_HELP:
                                 usage(argv[0]);
@@ -168,6 +178,19 @@ int main (int argc, char *argv[])
                 goto bail;
         }
 
+        optind = 0;
+        for (_argc = 0; _argc < argc; _argc++) {
+                _argv[_argc] = argv[_argc];
+        }
+        while ((c = getopt_long(_argc, _argv, ":e:", longopts, NULL)) != -1) {
+                switch (c) {
+                        case OPTION_HEADER:
+                                option_header = optarg;
+                                rc = medusa_httprequest_add_header(httprequest, optarg, NULL);
+                                break;
+                }
+        }
+
         rc = medusa_httprequest_make_post(httprequest, option_url, option_data, (option_data) ? (strlen(option_data) + 1) : 0);
         if (rc < 0) {
                 fprintf(stderr, "can not make post\n");
@@ -186,11 +209,12 @@ int main (int argc, char *argv[])
         }
 
         medusa_monitor_destroy(monitor);
-
-out:    return 0;
+out:    free(_argv);
+        return 0;
 
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);
         }
+        free(_argv);
         return -1;
 }

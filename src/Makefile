@@ -115,7 +115,8 @@ dist.include-y = \
 	timer.h \
 	tcpsocket.h \
 	httprequest.h \
-	exec.h
+	exec.h \
+	queue.h
 
 dist.lib-y = \
 	libmedusa.a \
