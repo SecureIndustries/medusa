@@ -394,7 +394,6 @@ static inline int httprequest_set_state (struct medusa_httprequest *httprequest,
 static int httprequest_httpparser_on_message_begin (http_parser *http_parser)
 {
         struct medusa_httprequest *httprequest = http_parser->data;
-        fprintf(stderr, "httprequest_httpparser_on_message_begin\n");
         if (!MEDUSA_IS_ERR_OR_NULL(httprequest->reply)) {
              medusa_httprequest_reply_destroy(httprequest->reply);
              httprequest->reply = NULL;
@@ -412,8 +411,6 @@ static int httprequest_httpparser_on_url (http_parser *http_parser, const char *
         (void) httprequest;
         (void) at;
         (void) length;
-        fprintf(stderr, "httprequest_httpparser_on_url\n");
-        fprintf(stderr, "%.*s\n", (int) length, at);
         return 0;
 }
 
@@ -423,8 +420,6 @@ static int httprequest_httpparser_on_status (http_parser *http_parser, const cha
         (void) httprequest;
         (void) at;
         (void) length;
-        fprintf(stderr, "httprequest_httpparser_on_status\n");
-        fprintf(stderr, "%d, %.*s\n", http_parser->status_code, (int) length, at);
         httprequest->reply->status.code = http_parser->status_code;
         httprequest->reply->status.value = strndup(at, length);
         if (httprequest->reply->status.value == NULL) {
@@ -438,8 +433,6 @@ static int httprequest_httpparser_on_header_field (http_parser *http_parser, con
         int rc;
         struct medusa_httprequest_reply_header *header;
         struct medusa_httprequest *httprequest = http_parser->data;
-        fprintf(stderr, "httprequest_httpparser_on_header_field\n");
-        fprintf(stderr, "%.*s\n", (int) length, at);
         header = medusa_httprequest_reply_header_create();
         if (MEDUSA_IS_ERR_OR_NULL(header)) {
                 return MEDUSA_PTR_ERR(header);
@@ -462,8 +455,6 @@ static int httprequest_httpparser_on_header_value (http_parser *http_parser, con
         (void) httprequest;
         (void) at;
         (void) length;
-        fprintf(stderr, "httprequest_httpparser_on_header_value\n");
-        fprintf(stderr, "%.*s\n", (int) length, at);
         header = TAILQ_LAST(&httprequest->reply->headers.list, medusa_httprequest_reply_headers_list);
         if (MEDUSA_IS_ERR_OR_NULL(header)) {
                 return MEDUSA_PTR_ERR(header);
@@ -479,7 +470,6 @@ static int httprequest_httpparser_on_headers_complete (http_parser *http_parser)
 {
         struct medusa_httprequest *httprequest = http_parser->data;
         (void) httprequest;
-        fprintf(stderr, "httprequest_httpparser_on_headers_complete\n");
         return 0;
 }
 
@@ -490,8 +480,6 @@ static int httprequest_httpparser_on_body (http_parser *http_parser, const char 
         (void) httprequest;
         (void) at;
         (void) length;
-        fprintf(stderr, "httprequest_httpparser_on_body\n");
-        fprintf(stderr, "  length: %d\n", (int) length);
         tmp = realloc(httprequest->reply->body.value, httprequest->reply->body.length + length + 1);
         if (tmp == NULL) {
                 tmp = malloc(httprequest->reply->body.length + length + 1);
@@ -515,7 +503,6 @@ static int httprequest_httpparser_on_message_complete (http_parser *http_parser)
         int rc;
         struct medusa_httprequest *httprequest = http_parser->data;
         (void) httprequest;
-        fprintf(stderr, "httprequest_httpparser_on_message_complete\n");
         httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_RECEIVED);
         rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RECEIVED);
         if (rc < 0) {
@@ -532,8 +519,6 @@ static int httprequest_httpparser_on_chunk_header (http_parser *http_parser)
 {
         struct medusa_httprequest *httprequest = http_parser->data;
         (void) httprequest;
-        fprintf(stderr, "httprequest_httpparser_on_chunk_header\n");
-        fprintf(stderr, "  Content-Length: %d\n", (int) http_parser->content_length);
         return 0;
 }
 
@@ -541,7 +526,6 @@ static int httprequest_httpparser_on_chunk_complete (http_parser *http_parser)
 {
         struct medusa_httprequest *httprequest = http_parser->data;
         (void) httprequest;
-        fprintf(stderr, "httprequest_httpparser_on_chunk_complete\n");
         return 0;
 }
 
@@ -578,6 +562,10 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_CONNECTED);
                 rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_CONNECTED);
+                if (rc < 0) {
+                        goto bail;
+                }
+                rc = medusa_tcpsocket_add_events_unlocked(httprequest->tcpsocket, MEDUSA_TCPSOCKET_EVENT_OUT);
                 if (rc < 0) {
                         goto bail;
                 }
@@ -850,6 +838,14 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_init_with_option
         if (MEDUSA_IS_ERR_OR_NULL(httprequest->headers)) {
                 return MEDUSA_PTR_ERR(httprequest->headers);
         }
+        httprequest->wbuffer = medusa_buffer_create(MEDUSA_BUFFER_TYPE_DEFAULT);
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest->wbuffer)) {
+                return MEDUSA_PTR_ERR(httprequest->wbuffer);
+        }
+        httprequest->rbuffer = medusa_buffer_create(MEDUSA_BUFFER_TYPE_DEFAULT);
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest->rbuffer)) {
+                return MEDUSA_PTR_ERR(httprequest->rbuffer);
+        }
         rc = medusa_monitor_add_unlocked(options->monitor, &httprequest->subject);
         if (rc < 0) {
                 return rc;
@@ -1077,9 +1073,6 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_add_header (stru
         if (MEDUSA_IS_ERR_OR_NULL(key)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(value)) {
-                return -EINVAL;
-        }
         va_start(va, value);
         rc = medusa_httprequest_add_vheader(httprequest, key, value, va);
         va_end(va);
@@ -1095,18 +1088,21 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_add_vheader_unlo
         if (MEDUSA_IS_ERR_OR_NULL(key)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(value)) {
-                return -EINVAL;
-        }
-        rc  = medusa_buffer_printf(httprequest->headers, "%s: ", key);
+        rc  = medusa_buffer_printf(httprequest->headers, "%s", key);
         if (rc < 0) {
                 return rc;
         }
-        rc |= medusa_buffer_vprintf(httprequest->headers, value, va);
-        if (rc < 0) {
-                return rc;
+        if (value != NULL) {
+                rc = medusa_buffer_printf(httprequest->headers, ": ");
+                if (rc < 0) {
+                        return rc;
+                }
+                rc = medusa_buffer_vprintf(httprequest->headers, value, va);
+                if (rc < 0) {
+                        return rc;
+                }
         }
-        rc |= medusa_buffer_printf(httprequest->headers, "\r\n");
+        rc = medusa_buffer_printf(httprequest->headers, "\r\n");
         if (rc < 0) {
                 return rc;
         }
@@ -1231,9 +1227,11 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_buffer_append(httprequest->wbuffer, data, length);
-        if (rc != length) {
-                goto bail;
+        if (length > 0) {
+                rc = medusa_buffer_append(httprequest->wbuffer, data, length);
+                if (rc != length) {
+                        goto bail;
+                }
         }
 
         medusa_url_uninit(&medusa_url);
@@ -1294,6 +1292,14 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_onevent_unlocked
                 medusa_monitor_lock(monitor);
         }
         if (events & MEDUSA_HTTPREQUEST_EVENT_DESTROY) {
+                if (!MEDUSA_IS_ERR_OR_NULL(httprequest->rbuffer)) {
+                        medusa_buffer_destroy(httprequest->rbuffer);
+                        httprequest->rbuffer = NULL;
+                }
+                if (!MEDUSA_IS_ERR_OR_NULL(httprequest->wbuffer)) {
+                        medusa_buffer_destroy(httprequest->wbuffer);
+                        httprequest->wbuffer = NULL;
+                }
                 if (!MEDUSA_IS_ERR_OR_NULL(httprequest->headers)) {
                         medusa_buffer_destroy(httprequest->headers);
                         httprequest->headers = NULL;

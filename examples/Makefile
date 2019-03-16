@@ -1,5 +1,6 @@
 
 subdir-y = \
-	http-benchmark
+	http-benchmark \
+	http-request
 
 include ../Makefile.lib
