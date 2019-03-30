@@ -800,40 +800,48 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         monitor->wakeup.fds[1] = -1;
         if (options->poll.type == MEDUSA_MONITOR_POLL_DEFAULT) {
                 do {
-#if defined(__LINUX__) && (__LINUX__ == 1)
+#if defined(MEDUSA_POLL_EPOLL_ENABLE) && (MEDUSA_POLL_EPOLL_ENABLE == 1)
                         monitor->poll.backend = medusa_monitor_epoll_create(NULL);
                         if (monitor->poll.backend != NULL) {
                                 break;
                         }
 #endif
-#if defined(__DARWIN__) && (__DARWIN__ == 1)
+#if defined(MEDUSA_POLL_KQUEUE_ENABLE) && (MEDUSA_POLL_KQUEUE_ENABLE == 1)
                         monitor->poll.backend = medusa_monitor_kqueue_create(NULL);
                         if (monitor->poll.backend != NULL) {
                                 break;
                         }
 #endif
+#if defined(MEDUSA_POLL_POLL_ENABLE) && (MEDUSA_POLL_POLL_ENABLE == 1)
                         monitor->poll.backend = medusa_monitor_poll_create(NULL);
                         if (monitor->poll.backend != NULL) {
                                 break;
                         }
+#endif
+#if defined(MEDUSA_POLL_SELECT_ENABLE) && (MEDUSA_POLL_SELECT_ENABLE == 1)
                         monitor->poll.backend = medusa_monitor_select_create(NULL);
                         if (monitor->poll.backend != NULL) {
                                 break;
                         }
+#endif
                 } while (0);
-#if defined(__LINUX__) && (__LINUX__ == 1)
+#if defined(MEDUSA_POLL_EPOLL_ENABLE) && (MEDUSA_POLL_EPOLL_ENABLE == 1)
         } else if (options->poll.type == MEDUSA_MONITOR_POLL_EPOLL) {
                 monitor->poll.backend = medusa_monitor_epoll_create(NULL);
 #endif
-#if defined(__DARWIN__) && (__DARWIN__ == 1)
+#if defined(MEDUSA_POLL_KQUEUE_ENABLE) && (MEDUSA_POLL_KQUEUE_ENABLE == 1)
         } else if (options->poll.type == MEDUSA_MONITOR_POLL_KQUEUE) {
                 monitor->poll.backend = medusa_monitor_kqueue_create(NULL);
 #endif
+#if defined(MEDUSA_POLL_POLL_ENABLE) && (MEDUSA_POLL_POLL_ENABLE == 1)
         } else if (options->poll.type == MEDUSA_MONITOR_POLL_POLL) {
                 monitor->poll.backend = medusa_monitor_poll_create(NULL);
+#endif
+#if defined(MEDUSA_POLL_SELECT_ENABLE) && (MEDUSA_POLL_SELECT_ENABLE == 1)
         } else if (options->poll.type == MEDUSA_MONITOR_POLL_SELECT) {
                 monitor->poll.backend = medusa_monitor_select_create(NULL);
         } else {
+#endif
                 goto bail;
         }
         if (monitor->poll.backend == NULL) {
@@ -842,14 +850,14 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         monitor->poll.backend->monitor = monitor;
         if (options->timer.type == MEDUSA_MONITOR_TIMER_DEFAULT) {
                 do {
-#if defined(__LINUX__) && (__LINUX__ == 1)
+#if defined(MEDUSA_TIMER_TIMERFD_ENABLE) && (MEDUSA_TIMER_TIMERFD_ENABLE == 1)
                         monitor->timer.backend = medusa_timer_timerfd_create(NULL);
                         if (monitor->timer.backend != NULL) {
                                 break;
                         }
 #endif
                 } while (0);
-#if defined(__LINUX__) && (__LINUX__ == 1)
+#if defined(MEDUSA_TIMER_TIMERFD_ENABLE) && (MEDUSA_TIMER_TIMERFD_ENABLE == 1)
         } else if (options->timer.type == MEDUSA_MONITOR_TIMER_TIMERFD) {
                 monitor->timer.backend = medusa_timer_timerfd_create(NULL);
 #endif
@@ -866,13 +874,17 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         }
         if (options->signal.type == MEDUSA_MONITOR_SIGNAL_DEFAULT) {
                 do {
+#if defined(MEDUSA_SIGNAL_SIGACTION_ENABLE) && (MEDUSA_SIGNAL_SIGACTION_ENABLE == 1)
                         monitor->signal.backend = medusa_signal_sigaction_create(NULL);
                         if (monitor->signal.backend != NULL) {
                                 break;
                         }
+#endif
                 } while (0);
+#if defined(MEDUSA_SIGNAL_SIGACTION_ENABLE) && (MEDUSA_SIGNAL_SIGACTION_ENABLE == 1)
         } else if (options->signal.type == MEDUSA_MONITOR_SIGNAL_SIGACTION) {
                 monitor->signal.backend = medusa_signal_sigaction_create(NULL);
+#endif
         } else {
                 goto bail;
         }
