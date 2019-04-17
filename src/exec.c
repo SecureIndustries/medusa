@@ -177,7 +177,19 @@ static int exec_timer_onevent (struct medusa_timer *timer, unsigned int events, 
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 pid = exec_waitpid(exec->pid, &status);
                 if (pid < 0) {
-                        return -EIO;
+                        if (errno == ECHILD) {
+                                medusa_timer_destroy(timer);
+                                exec->pid = -1;
+                                exec->timer = NULL;
+                                exec->wstatus = status;
+                                rc = medusa_exec_onevent(exec, MEDUSA_EXEC_EVENT_STOPPED);
+                                if (rc < 0) {
+                                        return rc;
+                                }
+                                return 0;
+                        } else {
+                                return -EIO;
+                        }
                 } else if (pid == 0) {
                         return 0;
                 } else {
@@ -189,6 +201,7 @@ static int exec_timer_onevent (struct medusa_timer *timer, unsigned int events, 
                         if (rc < 0) {
                                 return rc;
                         }
+                        return 0;
                 }
         }
         return 0;
