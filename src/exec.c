@@ -53,7 +53,7 @@ static inline void exec_set_enabled (struct medusa_exec *exec, unsigned int enab
                       ((enabled & MEDUSA_EXEC_ENABLE_MASK) << MEDUSA_EXEC_ENABLE_SHIFT);
 }
 
-static pid_t exec_exec (char * const *args, char * const *environment, int *io)
+static pid_t exec_exec (char * const *args, char * const *environment, int *io, int uid, int gid)
 {
         int i;
         int j;
@@ -115,6 +115,12 @@ static pid_t exec_exec (char * const *args, char * const *environment, int *io)
         } else if (pid == 0) {
                 int i;
                 int rc;
+                if (uid >= 0) {
+                        setuid(uid);
+                }
+                if (gid >= 0) {
+                        setgid(gid);
+                }
                 setpgid(0, 0);
                 setvbuf(stdout, NULL, _IONBF, 0);
                 setvbuf(stderr, NULL, _IONBF, 0);
@@ -213,6 +219,8 @@ __attribute__ ((visibility ("default"))) int medusa_exec_init_options_default (s
                 return -EINVAL;
         }
         memset(options, 0, sizeof(struct medusa_exec_init_options));
+        options->uid      = -1;
+        options->gid      = -1;
         options->interval = 0.1;
         return 0;
 }
@@ -279,6 +287,8 @@ __attribute__ ((visibility ("default"))) int medusa_exec_init_with_options_unloc
         }
         memset(exec, 0, sizeof(struct medusa_exec));
         exec->pid = -1;
+        exec->uid = options->uid;
+        exec->gid = options->gid;
         exec->interval = options->interval;
         exec->iov[0] = -1;
         exec->iov[1] = -1;
@@ -552,7 +562,7 @@ __attribute__ ((visibility ("default"))) int medusa_exec_set_enabled_unlocked (s
                 if (MEDUSA_IS_ERR_OR_NULL(exec->timer)) {
                         return MEDUSA_PTR_ERR(exec->timer);
                 }
-                exec->pid = exec_exec(exec->argv, exec->envv, exec->iov);
+                exec->pid = exec_exec(exec->argv, exec->envv, exec->iov, exec->uid, exec->gid);
                 if (exec->pid < 0) {
                         return -EIO;
                 }
