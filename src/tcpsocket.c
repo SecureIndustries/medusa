@@ -353,6 +353,10 @@ __attribute__ ((visibility ("default"))) void medusa_tcpsocket_uninit_unlocked (
                 return;
         }
         if (tcpsocket->subject.monitor != NULL) {
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
+                        medusa_io_destroy_unlocked(tcpsocket->io);
+                        tcpsocket->io = NULL;
+                }
                 medusa_monitor_del_unlocked(&tcpsocket->subject);
         } else {
                 medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
@@ -1739,9 +1743,11 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent_unlocked (
         ret = 0;
         monitor = tcpsocket->subject.monitor;
         if (tcpsocket->onevent != NULL) {
-                medusa_monitor_unlock(monitor);
-                ret = tcpsocket->onevent(tcpsocket, events, tcpsocket->context);
-                medusa_monitor_lock(monitor);
+                if (medusa_subject_is_active(&tcpsocket->subject)) {
+                        medusa_monitor_unlock(monitor);
+                        ret = tcpsocket->onevent(tcpsocket, events, tcpsocket->context);
+                        medusa_monitor_lock(monitor);
+                }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_DESTROY) {
                 if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ctimer)) {

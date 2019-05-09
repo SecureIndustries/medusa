@@ -1287,9 +1287,11 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_onevent_unlocked
         ret = 0;
         monitor = httprequest->subject.monitor;
         if (httprequest->onevent != NULL) {
-                medusa_monitor_unlock(monitor);
-                ret = httprequest->onevent(httprequest, events, httprequest->context);
-                medusa_monitor_lock(monitor);
+                if (medusa_subject_is_active(&httprequest->subject)) {
+                        medusa_monitor_unlock(monitor);
+                        ret = httprequest->onevent(httprequest, events, httprequest->context);
+                        medusa_monitor_lock(monitor);
+                }
         }
         if (events & MEDUSA_HTTPREQUEST_EVENT_DESTROY) {
                 if (!MEDUSA_IS_ERR_OR_NULL(httprequest->rbuffer)) {

@@ -987,9 +987,11 @@ __attribute__ ((visibility ("default"))) int medusa_timer_onevent_unlocked (stru
                 }
         }
         if (timer->onevent != NULL) {
-                medusa_monitor_unlock(monitor);
-                rc = timer->onevent(timer, events, timer->context);
-                medusa_monitor_lock(monitor);
+                if (medusa_subject_is_active(&timer->subject)) {
+                        medusa_monitor_unlock(monitor);
+                        rc = timer->onevent(timer, events, timer->context);
+                        medusa_monitor_lock(monitor);
+                }
         }
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 if (timer->flags & MEDUSA_TIMER_FLAG_AUTO_DESTROY) {
