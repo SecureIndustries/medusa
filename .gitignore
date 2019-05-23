@@ -2,3 +2,12 @@
 .project
 .settings
 .pydevproject
+dist
+src/.libmedusa.a
+src/.libmedusa.o
+src/.libmedusa.so
+src/libmedusa.a
+src/libmedusa.o
+src/libmedusa.so
+test/.*-??
+test/*-??
