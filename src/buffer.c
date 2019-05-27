@@ -232,6 +232,72 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertfv (struct 
         return buffer->backend->insertfv(buffer, offset, format, va);
 }
 
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend_uint8 (struct medusa_buffer *buffer, uint8_t value)
+{
+        return medusa_buffer_prepend(buffer, &value, sizeof(uint8_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend_uint8_le (struct medusa_buffer *buffer, uint8_t value)
+{
+        return medusa_buffer_prepend(buffer, &value, sizeof(uint8_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend_uint8_be (struct medusa_buffer *buffer, uint8_t value)
+{
+        return medusa_buffer_prepend(buffer, &value, sizeof(uint8_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend_uint16 (struct medusa_buffer *buffer, uint16_t value)
+{
+        return medusa_buffer_prepend(buffer, &value, sizeof(uint16_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend_uint16_le (struct medusa_buffer *buffer, uint16_t value)
+{
+        value = htole16(value);
+        return medusa_buffer_prepend(buffer, &value, sizeof(uint16_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend_uint16_be (struct medusa_buffer *buffer, uint16_t value)
+{
+        value = htobe16(value);
+        return medusa_buffer_prepend(buffer, &value, sizeof(uint16_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend_uint32 (struct medusa_buffer *buffer, uint32_t value)
+{
+        return medusa_buffer_prepend(buffer, &value, sizeof(uint32_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend_uint32_le (struct medusa_buffer *buffer, uint32_t value)
+{
+        value = htole32(value);
+        return medusa_buffer_prepend(buffer, &value, sizeof(uint32_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend_uint32_be (struct medusa_buffer *buffer, uint32_t value)
+{
+        value = htobe32(value);
+        return medusa_buffer_prepend(buffer, &value, sizeof(uint32_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend_uint64 (struct medusa_buffer *buffer, uint64_t value)
+{
+        return medusa_buffer_prepend(buffer, &value, sizeof(uint64_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend_uint64_le (struct medusa_buffer *buffer, uint64_t value)
+{
+        value = htole64(value);
+        return medusa_buffer_prepend(buffer, &value, sizeof(uint64_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend_uint64_be (struct medusa_buffer *buffer, uint64_t value)
+{
+        value = htobe64(value);
+        return medusa_buffer_prepend(buffer, &value, sizeof(uint64_t));
+}
+
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_append_uint8 (struct medusa_buffer *buffer, uint8_t value)
 {
         return medusa_buffer_append(buffer, &value, sizeof(uint8_t));
@@ -296,6 +362,72 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_append_uint64_be 
 {
         value = htobe64(value);
         return medusa_buffer_append(buffer, &value, sizeof(uint64_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert_uint8 (struct medusa_buffer *buffer, int64_t offset, uint8_t value)
+{
+        return medusa_buffer_insert(buffer, offset, &value, sizeof(uint8_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert_uint8_le (struct medusa_buffer *buffer, int64_t offset, uint8_t value)
+{
+        return medusa_buffer_insert(buffer, offset, &value, sizeof(uint8_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert_uint8_be (struct medusa_buffer *buffer, int64_t offset, uint8_t value)
+{
+        return medusa_buffer_insert(buffer, offset, &value, sizeof(uint8_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert_uint16 (struct medusa_buffer *buffer, int64_t offset, uint16_t value)
+{
+        return medusa_buffer_insert(buffer, offset, &value, sizeof(uint16_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert_uint16_le (struct medusa_buffer *buffer, int64_t offset, uint16_t value)
+{
+        value = htole16(value);
+        return medusa_buffer_insert(buffer, offset, &value, sizeof(uint16_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert_uint16_be (struct medusa_buffer *buffer, int64_t offset, uint16_t value)
+{
+        value = htobe16(value);
+        return medusa_buffer_insert(buffer, offset, &value, sizeof(uint16_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert_uint32 (struct medusa_buffer *buffer, int64_t offset, uint32_t value)
+{
+        return medusa_buffer_insert(buffer, offset, &value, sizeof(uint32_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert_uint32_le (struct medusa_buffer *buffer, int64_t offset, uint32_t value)
+{
+        value = htole32(value);
+        return medusa_buffer_insert(buffer, offset, &value, sizeof(uint32_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert_uint32_be (struct medusa_buffer *buffer, int64_t offset, uint32_t value)
+{
+        value = htobe32(value);
+        return medusa_buffer_insert(buffer, offset, &value, sizeof(uint32_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert_uint64 (struct medusa_buffer *buffer, int64_t offset, uint64_t value)
+{
+        return medusa_buffer_insert(buffer, offset, &value, sizeof(uint64_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert_uint64_le (struct medusa_buffer *buffer, int64_t offset, uint64_t value)
+{
+        value = htole64(value);
+        return medusa_buffer_insert(buffer, offset, &value, sizeof(uint64_t));
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert_uint64_be (struct medusa_buffer *buffer, int64_t offset, uint64_t value)
+{
+        value = htobe64(value);
+        return medusa_buffer_insert(buffer, offset, &value, sizeof(uint64_t));
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_printf (struct medusa_buffer *buffer, const char *format, ...)
