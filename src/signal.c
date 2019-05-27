@@ -466,7 +466,8 @@ __attribute__ ((visibility ("default"))) int medusa_signal_onevent_unlocked (str
                 }
         }
         if (signal->onevent != NULL) {
-                if (medusa_subject_is_active(&signal->subject)) {
+                if ((medusa_subject_is_active(&signal->subject)) ||
+                    (events & MEDUSA_SIGNAL_EVENT_DESTROY)) {
                         medusa_monitor_unlock(monitor);
                         rc = signal->onevent(signal, events, signal->context);
                         medusa_monitor_lock(monitor);

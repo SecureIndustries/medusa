@@ -659,7 +659,8 @@ __attribute__ ((visibility ("default"))) int medusa_exec_onevent_unlocked (struc
         rc = 0;
         monitor = exec->subject.monitor;
         if (exec->onevent != NULL) {
-                if (medusa_subject_is_active(&exec->subject)) {
+                if ((medusa_subject_is_active(&exec->subject)) ||
+                    (events & MEDUSA_EXEC_EVENT_DESTROY)) {
                         medusa_monitor_unlock(monitor);
                         rc = exec->onevent(exec, events, exec->context);
                         medusa_monitor_lock(monitor);

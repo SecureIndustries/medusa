@@ -76,7 +76,7 @@ static int test_poll (unsigned int poll)
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_tcpsocket_set_reuseport(tcpsocket, 1);
+        rc = medusa_tcpsocket_set_reuseport(tcpsocket, 0);
         if (rc < 0) {
                 goto bail;
         }

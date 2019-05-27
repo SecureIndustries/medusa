@@ -987,7 +987,8 @@ __attribute__ ((visibility ("default"))) int medusa_timer_onevent_unlocked (stru
                 }
         }
         if (timer->onevent != NULL) {
-                if (medusa_subject_is_active(&timer->subject)) {
+                if ((medusa_subject_is_active(&timer->subject)) ||
+                    (events & MEDUSA_TIMER_EVENT_DESTROY)) {
                         medusa_monitor_unlock(monitor);
                         rc = timer->onevent(timer, events, timer->context);
                         medusa_monitor_lock(monitor);

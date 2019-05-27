@@ -25,9 +25,9 @@ static const unsigned int g_polls[] = {
 
 static int tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
 {
+        unsigned int *tevents = (unsigned int *) context;
         (void) tcpsocket;
-        (void) events;
-        (void) context;
+        *tevents |= events;
         return 0;
 }
 
@@ -39,6 +39,7 @@ static int test_poll (unsigned int poll)
         struct medusa_monitor_init_options options;
 
         int port;
+        unsigned int tevents;
         struct medusa_tcpsocket *tcpsocket;
 
         monitor = NULL;
@@ -51,7 +52,8 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        tcpsocket = medusa_tcpsocket_create(monitor, tcpsocket_onevent, NULL);
+        tevents = 0;
+        tcpsocket = medusa_tcpsocket_create(monitor, tcpsocket_onevent, &tevents);
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 fprintf(stderr, "medusa_tcpsocket_create failed\n");
                 goto bail;
@@ -89,6 +91,15 @@ static int test_poll (unsigned int poll)
         }
 
         medusa_monitor_destroy(monitor);
+        monitor = NULL;
+
+        if (tevents != (MEDUSA_TCPSOCKET_EVENT_BINDING |
+                        MEDUSA_TCPSOCKET_EVENT_BOUND |
+                        MEDUSA_TCPSOCKET_EVENT_LISTENING |
+                        MEDUSA_TCPSOCKET_EVENT_DESTROY)) {
+                fprintf(stderr, "tevents: 0x%08x is invalid\n", tevents);
+                goto bail;
+        }
         return 0;
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);

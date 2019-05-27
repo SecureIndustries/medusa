@@ -1,7 +1,9 @@
 
 #include <stdio.h>
-#include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <time.h>
 #include <signal.h>
 #include <errno.h>
 
@@ -23,9 +25,9 @@ static const unsigned int g_polls[] = {
 
 static int io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
 {
+        unsigned int *ievents = (unsigned int *) context;
         (void) io;
-        (void) events;
-        (void) context;
+        *ievents |= events;
         return 0;
 }
 
@@ -36,6 +38,7 @@ static int test_poll (unsigned int poll)
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
+        unsigned int ievents;
         struct medusa_io *io;
 
         monitor = NULL;
@@ -48,7 +51,8 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        io = medusa_io_create(monitor, STDIN_FILENO, io_onevent, NULL);
+        ievents = 0;
+        io = medusa_io_create(monitor, STDIN_FILENO, io_onevent, &ievents);
         if (MEDUSA_IS_ERR_OR_NULL(io)) {
                 goto bail;
         }
@@ -62,6 +66,13 @@ static int test_poll (unsigned int poll)
         }
 
         medusa_monitor_destroy(monitor);
+        monitor = NULL;
+
+        if (ievents != (MEDUSA_IO_EVENT_DESTROY)) {
+                fprintf(stderr, "ievents: 0x%08x is invalid\n", ievents);
+                goto bail;
+        }
+        
         return 0;
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);
@@ -69,17 +80,33 @@ bail:   if (monitor != NULL) {
         return -1;
 }
 
+static void alarm_handler (int sig)
+{
+        (void) sig;
+        abort();
+}
+
 int main (int argc, char *argv[])
 {
         int rc;
         unsigned int i;
+
         (void) argc;
         (void) argv;
+
+        srand(time(NULL));
+        signal(SIGALRM, alarm_handler);
+
         for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
+                alarm(5);
+
+                fprintf(stderr, "testing poll: %d\n", g_polls[i]);
                 rc = test_poll(g_polls[i]);
                 if (rc != 0) {
+                        fprintf(stderr, "  failed\n");
                         return -1;
                 }
+                fprintf(stderr, "success\n");
         }
         return 0;
 }

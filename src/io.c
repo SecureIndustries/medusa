@@ -448,7 +448,8 @@ __attribute__ ((visibility ("default"))) int medusa_io_onevent_unlocked (struct 
         rc = 0;
         monitor = io->subject.monitor;
         if (io->onevent != NULL) {
-                if (medusa_subject_is_active(&io->subject)) {
+                if ((medusa_subject_is_active(&io->subject)) ||
+                    (events & MEDUSA_IO_EVENT_DESTROY)) {
                         medusa_monitor_unlock(monitor);
                         rc = io->onevent(io, events, io->context);
                         medusa_monitor_lock(monitor);

@@ -1743,7 +1743,8 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent_unlocked (
         ret = 0;
         monitor = tcpsocket->subject.monitor;
         if (tcpsocket->onevent != NULL) {
-                if (medusa_subject_is_active(&tcpsocket->subject)) {
+                if ((medusa_subject_is_active(&tcpsocket->subject)) ||
+                    (events & MEDUSA_TCPSOCKET_EVENT_DESTROY)) {
                         medusa_monitor_unlock(monitor);
                         ret = tcpsocket->onevent(tcpsocket, events, tcpsocket->context);
                         medusa_monitor_lock(monitor);

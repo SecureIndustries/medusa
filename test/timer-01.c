@@ -1,7 +1,9 @@
 
 #include <stdio.h>
-#include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <time.h>
 #include <signal.h>
 #include <errno.h>
 
@@ -23,9 +25,9 @@ static const unsigned int g_polls[] = {
 
 static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
 {
+        unsigned int *tevents = (unsigned int *) context;
         (void) timer;
-        (void) events;
-        (void) context;
+        *tevents |= events;
         return 0;
 }
 
@@ -36,6 +38,7 @@ static int test_poll (unsigned int poll)
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
+        unsigned int tevents;
         struct medusa_timer *timer;
 
         monitor = NULL;
@@ -48,7 +51,8 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        timer = medusa_timer_create(monitor, timer_onevent, NULL);
+        tevents = 0;
+        timer = medusa_timer_create(monitor, timer_onevent, &tevents);
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 goto bail;
         }
@@ -74,6 +78,12 @@ static int test_poll (unsigned int poll)
         }
 
         medusa_monitor_destroy(monitor);
+        monitor = NULL;
+
+        if (tevents != (MEDUSA_TIMER_EVENT_DESTROY)) {
+                fprintf(stderr, "tevents: 0x%08x is invalid\n", tevents);
+                goto bail;
+        }
         return 0;
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);
