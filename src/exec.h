@@ -23,6 +23,8 @@ struct medusa_exec_init_options {
         int *iov;
         int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...);
         void *context;
+        int uid;
+        int gid;
         double interval;
         int enabled;
 };

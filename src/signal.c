@@ -466,9 +466,11 @@ __attribute__ ((visibility ("default"))) int medusa_signal_onevent_unlocked (str
                 }
         }
         if (signal->onevent != NULL) {
-                medusa_monitor_unlock(monitor);
-                rc = signal->onevent(signal, events, signal->context);
-                medusa_monitor_lock(monitor);
+                if (medusa_subject_is_active(&signal->subject)) {
+                        medusa_monitor_unlock(monitor);
+                        rc = signal->onevent(signal, events, signal->context);
+                        medusa_monitor_lock(monitor);
+                }
         }
         if (events & MEDUSA_SIGNAL_EVENT_FIRED) {
                 if (signal->flags & MEDUSA_SIGNAL_FLAG_AUTO_DESTROY) {

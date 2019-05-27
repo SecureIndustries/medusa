@@ -53,4 +53,9 @@ static inline unsigned int medusa_subject_get_type (struct medusa_subject *subje
         return (subject->flags >> MEDUSA_SUBJECT_TYPE_SHIFT) & MEDUSA_SUBJECT_TYPE_MASK;
 }
 
+static inline int medusa_subject_is_active (struct medusa_subject *subject)
+{
+        return !(subject->flags & (MEDUSA_SUBJECT_FLAG_DEL |
+                                   MEDUSA_SUBJECT_FLAG_ROGUE));
+}
 #endif
