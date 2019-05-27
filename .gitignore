@@ -2,6 +2,7 @@
 .project
 .settings
 .pydevproject
+.vscode
 dist
 src/.libmedusa.a
 src/.libmedusa.o
