@@ -116,10 +116,16 @@ static pid_t exec_exec (char * const *args, char * const *environment, int *io, 
                 int i;
                 int rc;
                 if (uid >= 0) {
-                        setuid(uid);
+                        rc = setuid(uid);
+                        if (rc < 0) {
+                                exit(-1);
+                        }
                 }
                 if (gid >= 0) {
-                        setgid(gid);
+                        rc = setgid(gid);
+                        if (rc < 0) {
+                                exit(-1);
+                        }
                 }
                 setpgid(0, 0);
                 setvbuf(stdout, NULL, _IONBF, 0);
@@ -130,9 +136,15 @@ static pid_t exec_exec (char * const *args, char * const *environment, int *io, 
                 for (i = 0; i < 3; i++) {
                         if (io == NULL ||
                             io[i] < 0) {
-                                dup2(n, i);
+                                rc = dup2(n, i);
+                                if (rc < 0) {
+                                        exit(-1);
+                                }
                         } else {
-                                dup2(io[i], i);
+                                rc = dup2(io[i], i);
+                                if (rc < 0) {
+                                        exit(-1);
+                                }
                                 close(io[i]);
                         }
                 }
