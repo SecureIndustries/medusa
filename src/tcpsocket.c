@@ -1558,8 +1558,8 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach_unlocked (s
                 }
 
         }
-        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ATTACHED);
-        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ATTACHED);
+        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_CONNECTED);
+        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTED);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
