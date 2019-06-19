@@ -47,6 +47,7 @@ unsigned int medusa_tcpsocket_get_events_unlocked (const struct medusa_tcpsocket
 
 int medusa_tcpsocket_bind_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
 int medusa_tcpsocket_connect_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
+int medusa_tcpsocket_attach_unlocked (struct medusa_tcpsocket *tcpsocket, int fd);
 
 int medusa_tcpsocket_set_connect_timeout_unlocked (struct medusa_tcpsocket *tcpsocket, double timeout);
 double medusa_tcpsocket_get_connect_timeout_unlocked (const struct medusa_tcpsocket *tcpsocket);
