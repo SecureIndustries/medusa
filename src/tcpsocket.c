@@ -2283,30 +2283,35 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent_unlocked (
                 }
         } else {
                 if ((tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_CONNECTED) &&
-                    (tcpsocket_get_buffered(tcpsocket) > 0)) {
+                    (tcpsocket_get_buffered(tcpsocket) > 0) &&
+                    (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io))) {
                         int rc;
                         int64_t blength;
                         blength = medusa_buffer_get_length(tcpsocket->wbuffer);
                         if (blength < 0) {
                                 ret = blength;
+                                goto out;
                         } else if (blength == 0) {
                                 rc = medusa_io_del_events_unlocked(tcpsocket->io, MEDUSA_IO_EVENT_OUT);
                                 if (rc < 0) {
                                         ret = rc;
+                                        goto out;
                                 }
                         } else {
                                 rc = medusa_io_add_events_unlocked(tcpsocket->io, MEDUSA_IO_EVENT_OUT);
                                 if (rc < 0) {
                                         ret = rc;
+                                        goto out;
                                 }
                         }
                         rc = medusa_io_add_events_unlocked(tcpsocket->io, MEDUSA_IO_EVENT_IN);
                         if (rc < 0) {
                                 ret = rc;
+                                goto out;
                         }
                 }
         }
-        return ret;
+out:    return ret;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_userdata_unlocked (struct medusa_tcpsocket *tcpsocket, void *userdata)
