@@ -10,6 +10,9 @@ struct medusa_tcpsocket {
         void *context;
         struct medusa_io *io;
         struct medusa_timer *ctimer;
+        struct medusa_timer *rtimer;
+        struct medusa_buffer *wbuffer;
+        struct medusa_buffer *rbuffer;
         void *userdata;
 };
 

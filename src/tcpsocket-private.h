@@ -24,6 +24,9 @@ unsigned int medusa_tcpsocket_get_state_unlocked (const struct medusa_tcpsocket 
 int medusa_tcpsocket_set_enabled_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_enabled_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_set_buffered_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled);
+int medusa_tcpsocket_get_buffered_unlocked (const struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_set_nonblocking_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_nonblocking_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
@@ -39,7 +42,15 @@ int medusa_tcpsocket_get_reuseport_unlocked (const struct medusa_tcpsocket *tcps
 int medusa_tcpsocket_set_backlog_unlocked (struct medusa_tcpsocket *tcpsocket, int backlog);
 int medusa_tcpsocket_get_backlog_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_set_connect_timeout_unlocked (struct medusa_tcpsocket *tcpsocket, double timeout);
+double medusa_tcpsocket_get_connect_timeout_unlocked (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_read_timeout_unlocked (struct medusa_tcpsocket *tcpsocket, double timeout);
+double medusa_tcpsocket_get_read_timeout_unlocked (const struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_get_fd_unlocked (const struct medusa_tcpsocket *tcpsocket);
+struct medusa_buffer * medusa_tcpsocket_get_read_buffer_unlocked (const struct medusa_tcpsocket *tcpsocket);
+struct medusa_buffer * medusa_tcpsocket_get_write_buffer_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_events_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 int medusa_tcpsocket_add_events_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events);
