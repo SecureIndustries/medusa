@@ -1299,6 +1299,55 @@ __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_tcpsocket
         return buffer;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_commit_write_buffer_unlocked (const struct medusa_tcpsocket *tcpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->wbuffer)) {
+                return -EINVAL;
+        }
+        if (tcpsocket_get_buffered(tcpsocket) <= 0) {
+                return -EINVAL;
+        }
+        if ((tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_CONNECTED) &&
+            (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io))) {
+                int rc;
+                int64_t blength;
+                blength = medusa_buffer_get_length(tcpsocket->wbuffer);
+                if (blength < 0) {
+                        return blength;
+                } else if (blength == 0) {
+                        rc = medusa_io_del_events_unlocked(tcpsocket->io, MEDUSA_IO_EVENT_OUT);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                } else {
+                        rc = medusa_io_add_events_unlocked(tcpsocket->io, MEDUSA_IO_EVENT_OUT);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                }
+                rc = medusa_io_add_events_unlocked(tcpsocket->io, MEDUSA_IO_EVENT_IN);
+                if (rc < 0) {
+                        return rc;
+                }
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_commit_write_buffer (const struct medusa_tcpsocket *tcpsocket)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_commit_write_buffer_unlocked(tcpsocket);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_events_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events)
 {
         unsigned int io_events;
@@ -2387,7 +2436,7 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_tcpsocke
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) const char * medsa_tcpsocket_event_string (unsigned int events)
+__attribute__ ((visibility ("default"))) const char * medusa_tcpsocket_event_string (unsigned int events)
 {
         if (events == MEDUSA_TCPSOCKET_EVENT_BINDING)           return "MEDUSA_TCPSOCKET_EVENT_BINDING";
         if (events == MEDUSA_TCPSOCKET_EVENT_BOUND)             return "MEDUSA_TCPSOCKET_EVENT_BOUND";

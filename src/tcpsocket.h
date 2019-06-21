@@ -150,6 +150,7 @@ double medusa_tcpsocket_get_read_timeout (const struct medusa_tcpsocket *tcpsock
 int medusa_tcpsocket_get_fd (const struct medusa_tcpsocket *tcpsocket);
 struct medusa_buffer * medusa_tcpsocket_get_read_buffer (const struct medusa_tcpsocket *tcpsocket);
 struct medusa_buffer * medusa_tcpsocket_get_write_buffer (const struct medusa_tcpsocket *tcpsocket);
+int medusa_tcpsocket_commit_write_buffer (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_events (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 int medusa_tcpsocket_add_events (struct medusa_tcpsocket *tcpsocket, unsigned int events);
@@ -171,7 +172,7 @@ void * medusa_tcpsocket_get_userdata (struct medusa_tcpsocket *tcpsocket);
 int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 struct medusa_monitor * medusa_tcpsocket_get_monitor (struct medusa_tcpsocket *tcpsocket);
 
-const char * medsa_tcpsocket_event_string (unsigned int events);
+const char * medusa_tcpsocket_event_string (unsigned int events);
 
 #ifdef __cplusplus
 }
