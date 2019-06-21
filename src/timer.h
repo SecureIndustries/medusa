@@ -16,8 +16,8 @@ enum {
 };
 
 enum {
-        MEDUSA_TIMER_EVENT_TIMEOUT      = 0x00000001,
-        MEDUSA_TIMER_EVENT_DESTROY      = 0x00000002
+        MEDUSA_TIMER_EVENT_TIMEOUT      = (1 << 0), /* 0x00000001 */
+        MEDUSA_TIMER_EVENT_DESTROY      = (1 << 1), /* 0x00000002 */
 #define MEDUSA_TIMER_EVENT_TIMEOUT      MEDUSA_TIMER_EVENT_TIMEOUT
 #define MEDUSA_TIMER_EVENT_DESTROY      MEDUSA_TIMER_EVENT_DESTROY
 };
@@ -83,6 +83,8 @@ int medusa_timer_start (struct medusa_timer *timer);
 int medusa_timer_stop (struct medusa_timer *timer);
 
 struct medusa_monitor * medusa_timer_get_monitor (const struct medusa_timer *timer);
+
+const char * medusa_timer_event_string (unsigned int events);
 
 #ifdef __cplusplus
 }

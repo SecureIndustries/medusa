@@ -1029,6 +1029,13 @@ __attribute__ ((visibility ("default"))) int medusa_timer_is_valid_unlocked (con
         return 1;
 }
 
+__attribute__ ((visibility ("default"))) const char * medusa_timer_event_string (unsigned int events)
+{
+        if (events == MEDUSA_TIMER_EVENT_TIMEOUT)               return "MEDUSA_TIMER_EVENT_TIMEOUT";
+        if (events == MEDUSA_TIMER_EVENT_DESTROY)               return "MEDUSA_TIMER_EVENT_DESTROY";
+        return "MEDUSA_TIMER_EVENT_UNKNOWN";
+}
+
 __attribute__ ((constructor)) static void timer_constructor (void)
 {
 #if defined(MEDUSA_TIMER_USE_POOL) && (MEDUSA_TIMER_USE_POOL == 1)
