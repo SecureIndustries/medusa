@@ -1360,6 +1360,25 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_httprequ
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) const char * medusa_httprequest_event_string (unsigned int events)
+{
+        if (events == MEDUSA_HTTPREQUEST_EVENT_RESOLVING)       return "MEDUSA_HTTPREQUEST_EVENT_RESOLVING";
+        if (events == MEDUSA_HTTPREQUEST_EVENT_RESOLVE_TIMEOUT) return "MEDUSA_HTTPREQUEST_EVENT_RESOLVE_TIMEOUT";
+        if (events == MEDUSA_HTTPREQUEST_EVENT_RESOLVED)        return "MEDUSA_HTTPREQUEST_EVENT_RESOLVED";
+        if (events == MEDUSA_HTTPREQUEST_EVENT_CONNECTING)      return "MEDUSA_HTTPREQUEST_EVENT_CONNECTING";
+        if (events == MEDUSA_HTTPREQUEST_EVENT_CONNECT_TIMEOUT) return "MEDUSA_HTTPREQUEST_EVENT_CONNECT_TIMEOUT";
+        if (events == MEDUSA_HTTPREQUEST_EVENT_CONNECTED)       return "MEDUSA_HTTPREQUEST_EVENT_CONNECTED";
+        if (events == MEDUSA_HTTPREQUEST_EVENT_REQUESTING)      return "MEDUSA_HTTPREQUEST_EVENT_REQUESTING";
+        if (events == MEDUSA_HTTPREQUEST_EVENT_REQUEST_TIMEOUT) return "MEDUSA_HTTPREQUEST_EVENT_REQUEST_TIMEOUT";
+        if (events == MEDUSA_HTTPREQUEST_EVENT_REQUESTED)       return "MEDUSA_HTTPREQUEST_EVENT_REQUESTED";
+        if (events == MEDUSA_HTTPREQUEST_EVENT_RECEIVING)       return "MEDUSA_HTTPREQUEST_EVENT_RECEIVING";
+        if (events == MEDUSA_HTTPREQUEST_EVENT_RECEIVE_TIMEOUT) return "MEDUSA_HTTPREQUEST_EVENT_RECEIVE_TIMEOUT";
+        if (events == MEDUSA_HTTPREQUEST_EVENT_RECEIVED)        return "MEDUSA_HTTPREQUEST_EVENT_RECEIVED";
+        if (events == MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED)    return "MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED";
+        if (events == MEDUSA_HTTPREQUEST_EVENT_DESTROY)         return "MEDUSA_HTTPREQUEST_EVENT_DESTROY";
+        return "MEDUSA_HTTPREQUEST_EVENT_UNKNOWN";
+}
+
 __attribute__ ((constructor)) static void httprequest_constructor (void)
 {
 #if defined(MEDUSA_HTTPREQUEST_USE_POOL) && (MEDUSA_HTTPREQUEST_USE_POOL == 1)

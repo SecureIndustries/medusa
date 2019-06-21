@@ -121,6 +121,8 @@ const struct medusa_httprequest_reply_body * medusa_httprequest_reply_get_body (
 int64_t medusa_httprequest_reply_body_get_length (const struct medusa_httprequest_reply_body *body);
 const void * medusa_httprequest_reply_body_get_value (const struct medusa_httprequest_reply_body *body);
 
+const char * medusa_httprequest_event_string (unsigned int events);
+
 #ifdef __cplusplus
 }
 #endif
