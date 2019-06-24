@@ -178,7 +178,7 @@ static int tcpsocket_rtimer_onevent (struct medusa_timer *timer, unsigned int ev
         struct medusa_tcpsocket *tcpsocket = (struct medusa_tcpsocket *) context;
         (void) timer;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
-                return medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_READ_TIMEOUT);
+                return medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ_TIMEOUT);
         }
 
         return 0;
@@ -271,7 +271,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                 if (clength != wlength) {
                                                         goto bail;
                                                 }
-                                                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_WRITE);
+                                                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE);
                                                 if (rc < 0) {
                                                         goto bail;
                                                 }
@@ -283,7 +283,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                         goto bail;
                                 }
                                 if (blength == 0) {
-                                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED);
+                                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED);
                                         if (rc < 0) {
                                                 goto bail;
                                         }
@@ -386,7 +386,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                                 goto bail;
                                                         }
                                                 }
-                                                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_READ);
+                                                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ);
                                                 if (rc < 0) {
                                                         goto bail;
                                                 }
@@ -2438,26 +2438,26 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_tcpsocke
 
 __attribute__ ((visibility ("default"))) const char * medusa_tcpsocket_event_string (unsigned int events)
 {
-        if (events == MEDUSA_TCPSOCKET_EVENT_BINDING)           return "MEDUSA_TCPSOCKET_EVENT_BINDING";
-        if (events == MEDUSA_TCPSOCKET_EVENT_BOUND)             return "MEDUSA_TCPSOCKET_EVENT_BOUND";
-        if (events == MEDUSA_TCPSOCKET_EVENT_LISTENING)         return "MEDUSA_TCPSOCKET_EVENT_LISTENING";
-        if (events == MEDUSA_TCPSOCKET_EVENT_CONNECTION)        return "MEDUSA_TCPSOCKET_EVENT_CONNECTION";
-        if (events == MEDUSA_TCPSOCKET_EVENT_RESOLVING)         return "MEDUSA_TCPSOCKET_EVENT_RESOLVING";
-        if (events == MEDUSA_TCPSOCKET_EVENT_RESOLVE_TIMEOUT)   return "MEDUSA_TCPSOCKET_EVENT_RESOLVE_TIMEOUT";
-        if (events == MEDUSA_TCPSOCKET_EVENT_RESOLVED)          return "MEDUSA_TCPSOCKET_EVENT_RESOLVED";
-        if (events == MEDUSA_TCPSOCKET_EVENT_CONNECTING)        return "MEDUSA_TCPSOCKET_EVENT_CONNECTING";
-        if (events == MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT)   return "MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT";
-        if (events == MEDUSA_TCPSOCKET_EVENT_CONNECTED)         return "MEDUSA_TCPSOCKET_EVENT_CONNECTED";
-        if (events == MEDUSA_TCPSOCKET_EVENT_IN)                return "MEDUSA_TCPSOCKET_EVENT_IN";
-        if (events == MEDUSA_TCPSOCKET_EVENT_PRI)               return "MEDUSA_TCPSOCKET_EVENT_PRI";
-        if (events == MEDUSA_TCPSOCKET_EVENT_OUT)               return "MEDUSA_TCPSOCKET_EVENT_OUT";
-        if (events == MEDUSA_TCPSOCKET_EVENT_READ)              return "MEDUSA_TCPSOCKET_EVENT_READ";
-        if (events == MEDUSA_TCPSOCKET_EVENT_READ_TIMEOUT)      return "MEDUSA_TCPSOCKET_EVENT_READ_TIMEOUT";
-        if (events == MEDUSA_TCPSOCKET_EVENT_WRITE)             return "MEDUSA_TCPSOCKET_EVENT_WRITE";
-        if (events == MEDUSA_TCPSOCKET_EVENT_WRITE_TIMEOUT)     return "MEDUSA_TCPSOCKET_EVENT_WRITE_TIMEOUT";
-        if (events == MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED)    return "MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED";
-        if (events == MEDUSA_TCPSOCKET_EVENT_DISCONNECTED)      return "MEDUSA_TCPSOCKET_EVENT_DISCONNECTED";
-        if (events == MEDUSA_TCPSOCKET_EVENT_DESTROY)           return "MEDUSA_TCPSOCKET_EVENT_DESTROY";
+        if (events == MEDUSA_TCPSOCKET_EVENT_BINDING)                   return "MEDUSA_TCPSOCKET_EVENT_BINDING";
+        if (events == MEDUSA_TCPSOCKET_EVENT_BOUND)                     return "MEDUSA_TCPSOCKET_EVENT_BOUND";
+        if (events == MEDUSA_TCPSOCKET_EVENT_LISTENING)                 return "MEDUSA_TCPSOCKET_EVENT_LISTENING";
+        if (events == MEDUSA_TCPSOCKET_EVENT_CONNECTION)                return "MEDUSA_TCPSOCKET_EVENT_CONNECTION";
+        if (events == MEDUSA_TCPSOCKET_EVENT_RESOLVING)                 return "MEDUSA_TCPSOCKET_EVENT_RESOLVING";
+        if (events == MEDUSA_TCPSOCKET_EVENT_RESOLVE_TIMEOUT)           return "MEDUSA_TCPSOCKET_EVENT_RESOLVE_TIMEOUT";
+        if (events == MEDUSA_TCPSOCKET_EVENT_RESOLVED)                  return "MEDUSA_TCPSOCKET_EVENT_RESOLVED";
+        if (events == MEDUSA_TCPSOCKET_EVENT_CONNECTING)                return "MEDUSA_TCPSOCKET_EVENT_CONNECTING";
+        if (events == MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT)           return "MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT";
+        if (events == MEDUSA_TCPSOCKET_EVENT_CONNECTED)                 return "MEDUSA_TCPSOCKET_EVENT_CONNECTED";
+        if (events == MEDUSA_TCPSOCKET_EVENT_IN)                        return "MEDUSA_TCPSOCKET_EVENT_IN";
+        if (events == MEDUSA_TCPSOCKET_EVENT_PRI)                       return "MEDUSA_TCPSOCKET_EVENT_PRI";
+        if (events == MEDUSA_TCPSOCKET_EVENT_OUT)                       return "MEDUSA_TCPSOCKET_EVENT_OUT";
+        if (events == MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ)             return "MEDUSA_TCPSOCKET_EVENT_READ";
+        if (events == MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ_TIMEOUT)     return "MEDUSA_TCPSOCKET_EVENT_READ_TIMEOUT";
+        if (events == MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE)            return "MEDUSA_TCPSOCKET_EVENT_WRITE";
+        if (events == MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_TIMEOUT)    return "MEDUSA_TCPSOCKET_EVENT_WRITE_TIMEOUT";
+        if (events == MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED)   return "MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED";
+        if (events == MEDUSA_TCPSOCKET_EVENT_DISCONNECTED)              return "MEDUSA_TCPSOCKET_EVENT_DISCONNECTED";
+        if (events == MEDUSA_TCPSOCKET_EVENT_DESTROY)                   return "MEDUSA_TCPSOCKET_EVENT_DESTROY";
         return "MEDUSA_TCPSOCKET_EVENT_UNKNOWN";
 }
 

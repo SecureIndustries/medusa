@@ -53,7 +53,7 @@ static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
         int64_t niovecs;
         struct iovec iovecs[16];
         (void) context;
-        if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
+        if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ) {
                 rbuffer = medusa_tcpsocket_get_read_buffer(tcpsocket);
                 if (rbuffer == NULL) {
                         return MEDUSA_PTR_ERR(rbuffer);

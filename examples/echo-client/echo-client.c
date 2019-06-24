@@ -52,13 +52,13 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
         int rc;
         const char *option_string = context;
 
-        if (events & MEDUSA_TCPSOCKET_EVENT_WRITE) {
+        if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE) {
         }
 
-        if (events & MEDUSA_TCPSOCKET_EVENT_WRITE_FINISHED) {
+        if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED) {
         }
 
-        if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
+        if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ) {
                 if (g_use_iovec != 0) {
                         int64_t rlength;
                         struct medusa_buffer *rbuffer;

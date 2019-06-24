@@ -31,7 +31,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         char c;
         (void) tcpsocket;
         (void) context;
-        fprintf(stderr, "client events: 0x%08x, %s\n", events, medsa_tcpsocket_event_string(events));
+        fprintf(stderr, "client events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 unsigned int *connected = context;
                 *connected = *connected | 1;
@@ -42,7 +42,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                         return -1;
                 }
         }
-        if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
+        if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ) {
                 fprintf(stderr, "  read\n");
                 rc = medusa_buffer_read_data(medusa_tcpsocket_get_read_buffer(tcpsocket), 0, &c, 1);
                 if (rc != 0) {
@@ -63,12 +63,12 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         char c;
         (void) tcpsocket;
         (void) context;
-        fprintf(stderr, "server events: 0x%08x, %s\n", events, medsa_tcpsocket_event_string(events));
+        fprintf(stderr, "server events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 unsigned int *connected = context;
                 *connected = *connected | 2;
         }
-        if (events & MEDUSA_TCPSOCKET_EVENT_READ) {
+        if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ) {
                 fprintf(stderr, "  read\n");
                 rc = medusa_buffer_read_data(medusa_tcpsocket_get_read_buffer(tcpsocket), 0, &c, 1);
                 if (rc != 0) {
@@ -97,7 +97,7 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
         (void) tcpsocket;
         (void) events;
         (void) context;
-        fprintf(stderr, "bind   events: 0x%08x, %s\n", events, medsa_tcpsocket_event_string(events));
+        fprintf(stderr, "bind   events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
                 accepted = medusa_tcpsocket_accept(tcpsocket, tcpsocket_server_onevent, context);
                 if (MEDUSA_IS_ERR_OR_NULL(accepted)) {
