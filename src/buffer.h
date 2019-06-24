@@ -105,16 +105,20 @@ int64_t medusa_buffer_insert_uint64_be (struct medusa_buffer *buffer, int64_t of
 int64_t medusa_buffer_printf  (struct medusa_buffer *buffer, const char *format, ...)  __attribute__((format(printf, 2, 3)));
 int64_t medusa_buffer_vprintf (struct medusa_buffer *buffer, const char *format, va_list va);
 
-int64_t medusa_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs);
-int64_t medusa_buffer_commit  (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs);
+int64_t medusa_buffer_reservev (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs);
+int64_t medusa_buffer_commitv  (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs);
 
-int64_t medusa_buffer_peek  (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs);
-int64_t medusa_buffer_choke (struct medusa_buffer *buffer, int64_t offset, int64_t length);
+int64_t medusa_buffer_queryv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs);
+int64_t medusa_buffer_choke  (struct medusa_buffer *buffer, int64_t offset, int64_t length);
 
 void * medusa_buffer_linearize (struct medusa_buffer *buffer, int64_t length);
 
 int medusa_buffer_memcmp (const struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length);
 int64_t medusa_buffer_memmem (const struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length);
+
+int64_t medusa_buffer_peek  (const struct medusa_buffer *buffer, void *data, int64_t length);
+int64_t medusa_buffer_read  (struct medusa_buffer *buffer, void *data, int64_t length);
+int64_t medusa_buffer_write (struct medusa_buffer *buffer, void *data, int64_t length);
 
 int medusa_buffer_peek_data      (const struct medusa_buffer *buffer, int64_t offset, void *data, int64_t length);
 int medusa_buffer_peek_uint8     (const struct medusa_buffer *buffer, int64_t offset, uint8_t *value);

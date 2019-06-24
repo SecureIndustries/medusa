@@ -233,7 +233,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                 int64_t niovecs;
                                 struct iovec iovec;
                                 while (1) {
-                                        niovecs = medusa_buffer_peek(tcpsocket->wbuffer, 0, -1, &iovec, 1);
+                                        niovecs = medusa_buffer_queryv(tcpsocket->wbuffer, 0, -1, &iovec, 1);
                                         if (niovecs < 0) {
                                                 goto bail;
                                         }
@@ -331,7 +331,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                         goto bail;
                                 }
                                 while (1) {
-                                        niovecs = medusa_buffer_reserve(tcpsocket->rbuffer, n, &iovec, 1);
+                                        niovecs = medusa_buffer_reservev(tcpsocket->rbuffer, n, &iovec, 1);
                                         if (niovecs < 0) {
                                                 goto bail;
                                         }
@@ -368,7 +368,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                 break;
                                         } else {
                                                 iovec.iov_len = rc;
-                                                clength = medusa_buffer_commit(tcpsocket->rbuffer, &iovec, 1);
+                                                clength = medusa_buffer_commitv(tcpsocket->rbuffer, &iovec, 1);
                                                 if (clength < 0) {
                                                         goto bail;
                                                 }

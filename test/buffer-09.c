@@ -10,6 +10,7 @@
 #include "medusa/buffer.h"
 
 static const unsigned int g_types[] = {
+        MEDUSA_BUFFER_TYPE_DEFAULT,
         MEDUSA_BUFFER_TYPE_SIMPLE,
 };
 

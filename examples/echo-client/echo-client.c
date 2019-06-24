@@ -80,7 +80,7 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
                                 return -EIO;
                         }
 
-                        niovecs = medusa_buffer_peek(rbuffer, 0, -1, NULL, 0);
+                        niovecs = medusa_buffer_queryv(rbuffer, 0, -1, NULL, 0);
                         if (niovecs < 0) {
                                 return niovecs;
                         }
@@ -92,7 +92,7 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
                         if (iovecs == NULL) {
                                 return -ENOMEM;
                         }
-                        niovecs = medusa_buffer_peek(rbuffer, 0, -1, iovecs, niovecs);
+                        niovecs = medusa_buffer_queryv(rbuffer, 0, -1, iovecs, niovecs);
                         if (niovecs < 0) {
                                 free(iovecs);
                                 return niovecs;

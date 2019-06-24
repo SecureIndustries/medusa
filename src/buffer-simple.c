@@ -168,7 +168,7 @@ static int64_t simple_buffer_insertfv (struct medusa_buffer *buffer, int64_t off
         return rc;
 }
 
-static int64_t simple_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs)
+static int64_t simple_buffer_reservev (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs)
 {
         int rc;
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
@@ -196,7 +196,7 @@ static int64_t simple_buffer_reserve (struct medusa_buffer *buffer, int64_t leng
         return 1;
 }
 
-static int64_t simple_buffer_commit (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
+static int64_t simple_buffer_commitv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
 {
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
@@ -220,7 +220,7 @@ static int64_t simple_buffer_commit (struct medusa_buffer *buffer, const struct 
         return niovecs;
 }
 
-static int64_t simple_buffer_peek (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
+static int64_t simple_buffer_queryv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
 {
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
@@ -338,10 +338,10 @@ const struct medusa_buffer_backend simple_buffer_backend = {
         .insertv        = simple_buffer_insertv,
         .insertfv       = simple_buffer_insertfv,
 
-        .reserve        = simple_buffer_reserve,
-        .commit         = simple_buffer_commit,
+        .reservev       = simple_buffer_reservev,
+        .commitv        = simple_buffer_commitv,
 
-        .peek           = simple_buffer_peek,
+        .queryv         = simple_buffer_queryv,
         .choke          = simple_buffer_choke,
 
         .linearize      = simple_buffer_linearize,

@@ -445,7 +445,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_vprintf (struct m
         return medusa_buffer_appendfv(buffer, format, va);
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_reserve (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_reservev (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
@@ -453,7 +453,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_reserve (struct m
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->reserve)) {
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->reservev)) {
                 return -EINVAL;
         }
         if (length < 0) {
@@ -462,10 +462,10 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_reserve (struct m
         if (niovecs < 0) {
                 return -EINVAL;
         }
-        return buffer->backend->reserve(buffer, length, iovecs, niovecs);
+        return buffer->backend->reservev(buffer, length, iovecs, niovecs);
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_commit (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_commitv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
@@ -473,7 +473,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_commit (struct me
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->commit)) {
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->commitv)) {
                 return -EINVAL;
         }
         if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
@@ -482,10 +482,10 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_commit (struct me
         if (niovecs < 0) {
                 return -EINVAL;
         }
-        return buffer->backend->commit(buffer, iovecs, niovecs);
+        return buffer->backend->commitv(buffer, iovecs, niovecs);
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_peek (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_queryv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
@@ -493,10 +493,10 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_peek (const struc
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->peek)) {
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->queryv)) {
                 return -EINVAL;
         }
-        return buffer->backend->peek(buffer, offset, length, iovecs, niovecs);
+        return buffer->backend->queryv(buffer, offset, length, iovecs, niovecs);
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_choke (struct medusa_buffer *buffer, int64_t offset, int64_t length)
@@ -552,7 +552,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_memcmp (const struct 
         if (l < length) {
                 return -1;
         }
-        niovecs = medusa_buffer_peek(buffer, offset, length, NULL, 0);
+        niovecs = medusa_buffer_queryv(buffer, offset, length, NULL, 0);
         if (niovecs < 0) {
                 return niovecs;
         }
@@ -564,7 +564,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_memcmp (const struct 
         } else {
                 iovecs = _iovecs;
         }
-        niovecs = medusa_buffer_peek(buffer, offset, length, iovecs, niovecs);
+        niovecs = medusa_buffer_queryv(buffer, offset, length, iovecs, niovecs);
         if (niovecs < 0) {
                 ret = niovecs;
                 goto out;
@@ -619,6 +619,56 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_memmem (const str
         return -1;
 }
 
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_peek (const struct medusa_buffer *buffer, void *data, int64_t length)
+{
+        int rc;
+        int64_t l;
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(data)) {
+                return -EINVAL;
+        }
+        if (length < 0) {
+                return -EINVAL;
+        }
+        l = medusa_buffer_get_length(buffer);
+        if (l < 0) {
+                return l;
+        }
+        l = MIN(l, length);
+        rc = medusa_buffer_peek_data(buffer, 0, data, l);
+        if (rc < 0) {
+                return rc;
+        }
+        return l;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_read (struct medusa_buffer *buffer, void *data, int64_t length)
+{
+        int64_t l;
+        int64_t c;
+        l = medusa_buffer_peek(buffer, data, length);
+        if (l < 0) {
+                return l;
+        }
+        c = medusa_buffer_choke(buffer, 0, l);
+        if (c < 0) {
+                return c;
+        } else if (c > l) {
+                return -EIO;
+        } else if (c < l) {
+                return c;
+        } else {
+                return l;
+        }
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_write (struct medusa_buffer *buffer, void *data, int64_t length)
+{
+        return medusa_buffer_append(buffer, data, length);
+}
+
 __attribute__ ((visibility ("default"))) int medusa_buffer_peek_data (const struct medusa_buffer *buffer, int64_t offset, void *data, int64_t length)
 {
         int ret;
@@ -644,7 +694,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_peek_data (const stru
         if (l < length) {
                 return -1;
         }
-        niovecs = medusa_buffer_peek(buffer, offset, length, NULL, 0);
+        niovecs = medusa_buffer_queryv(buffer, offset, length, NULL, 0);
         if (niovecs < 0) {
                 return niovecs;
         }
@@ -657,7 +707,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_peek_data (const stru
                 iovecs = _iovecs;
         }
         ret = 0;
-        niovecs = medusa_buffer_peek(buffer, offset, length, iovecs, niovecs);
+        niovecs = medusa_buffer_queryv(buffer, offset, length, iovecs, niovecs);
         if (niovecs < 0) {
                 ret = niovecs;
                 goto out;

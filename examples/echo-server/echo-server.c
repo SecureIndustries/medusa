@@ -58,7 +58,7 @@ static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
                 if (rbuffer == NULL) {
                         return MEDUSA_PTR_ERR(rbuffer);
                 }
-                niovecs = medusa_buffer_peek(rbuffer, 0, -1, iovecs, 16);
+                niovecs = medusa_buffer_queryv(rbuffer, 0, -1, iovecs, 16);
                 if (niovecs < 0) {
                         return niovecs;
                 }
