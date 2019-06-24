@@ -93,7 +93,6 @@ struct medusa_tcpsocket_init_options {
 
 struct medusa_tcpsocket_accept_options {
         struct medusa_tcpsocket *tcpsocket;
-        struct medusa_monitor *monitor;
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...);
         void *context;
         int nonblocking;
