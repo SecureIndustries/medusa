@@ -87,14 +87,13 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
                         fprintf(stderr, "can not init accept options\n");
                         goto bail;
                 }
-                accepted_options.tcpsocket   = tcpsocket;
                 accepted_options.buffered    = 1;
                 accepted_options.nodelay     = 1;
                 accepted_options.nonblocking = 1;
                 accepted_options.enabled     = 1;
                 accepted_options.onevent     = tcpsocket_server_onevent;
                 accepted_options.context     = NULL;
-                accepted = medusa_tcpsocket_accept_with_options(&accepted_options);
+                accepted = medusa_tcpsocket_accept_with_options(tcpsocket, &accepted_options);
                 if (MEDUSA_IS_ERR_OR_NULL(accepted)) {
                         return MEDUSA_PTR_ERR(accepted);
                 }

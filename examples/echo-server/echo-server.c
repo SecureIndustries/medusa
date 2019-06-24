@@ -97,14 +97,12 @@ static int listener_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket
                 if (rc < 0) {
                         return rc;
                 }
-                medusa_tcpsocket_accept_options.tcpsocket   = tcpsocket;
-                medusa_tcpsocket_accept_options.monitor     = NULL;
                 medusa_tcpsocket_accept_options.onevent     = client_medusa_tcpsocket_onevent;
                 medusa_tcpsocket_accept_options.context     = NULL;
                 medusa_tcpsocket_accept_options.nonblocking = 1;
                 medusa_tcpsocket_accept_options.enabled     = 1;
                 medusa_tcpsocket_accept_options.buffered    = 1;
-                medusa_tcpsocket = medusa_tcpsocket_accept_with_options(&medusa_tcpsocket_accept_options);
+                medusa_tcpsocket = medusa_tcpsocket_accept_with_options(tcpsocket, &medusa_tcpsocket_accept_options);
                 if (MEDUSA_IS_ERR_OR_NULL(medusa_tcpsocket)) {
                         return MEDUSA_PTR_ERR(medusa_tcpsocket);
                 }

@@ -92,7 +92,6 @@ struct medusa_tcpsocket_init_options {
 };
 
 struct medusa_tcpsocket_accept_options {
-        struct medusa_tcpsocket *tcpsocket;
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...);
         void *context;
         int nonblocking;
@@ -161,7 +160,7 @@ int medusa_tcpsocket_attach (struct medusa_tcpsocket *tcpsocket, int fd);
 int medusa_tcpsocket_accept_options_default (struct medusa_tcpsocket_accept_options *options);
 
 struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
-struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options (const struct medusa_tcpsocket_accept_options *options);
+struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_accept_options *options);
 
 int medusa_tcpsocket_set_userdata (struct medusa_tcpsocket *tcpsocket, void *userdata);
 void * medusa_tcpsocket_get_userdata (struct medusa_tcpsocket *tcpsocket);
