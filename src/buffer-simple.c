@@ -290,19 +290,28 @@ static int64_t simple_buffer_choke (struct medusa_buffer *buffer, int64_t offset
         return length;
 }
 
-static void * simple_buffer_linearize (struct medusa_buffer *buffer, int64_t length)
+static void * simple_buffer_linearize (struct medusa_buffer *buffer, int64_t offset, int64_t length)
 {
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
+        if (offset < 0) {
+                offset = simple->length + offset;
+        }
+        if (offset < 0) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (offset > simple->length) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
         if (length < 0) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
-        if (length > simple->length) {
+        if (offset + length > simple->length) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
-        return simple->data;
+        return simple->data + offset;
 }
 
 static int simple_buffer_reset (struct medusa_buffer *buffer)

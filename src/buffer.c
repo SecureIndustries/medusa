@@ -513,7 +513,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_choke (struct med
         return buffer->backend->choke(buffer, offset, length);
 }
 
-__attribute__ ((visibility ("default"))) void * medusa_buffer_linearize (struct medusa_buffer *buffer, int64_t length)
+__attribute__ ((visibility ("default"))) void * medusa_buffer_linearize (struct medusa_buffer *buffer, int64_t offset, int64_t length)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
@@ -524,7 +524,7 @@ __attribute__ ((visibility ("default"))) void * medusa_buffer_linearize (struct 
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->linearize)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
-        return buffer->backend->linearize(buffer, length);
+        return buffer->backend->linearize(buffer, offset, length);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_memcmp (const struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length)

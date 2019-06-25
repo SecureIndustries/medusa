@@ -18,7 +18,7 @@ struct medusa_buffer_backend {
         int64_t (*queryv) (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs);
         int64_t (*choke) (struct medusa_buffer *buffer, int64_t offset, int64_t length);
 
-        void * (*linearize) (struct medusa_buffer *buffer, int64_t length);
+        void * (*linearize) (struct medusa_buffer *buffer, int64_t offset, int64_t length);
 
         int (*reset) (struct medusa_buffer *buffer);
         void (*destroy) (struct medusa_buffer *buffer);

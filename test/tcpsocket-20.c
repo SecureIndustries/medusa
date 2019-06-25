@@ -44,8 +44,8 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                         goto bail;
                 }
                 if (length == (strlen(GREETING_MESSAGE) + 1)) {
-                        fprintf(stderr, "         - read while greeting message\n");
-                        buffer = medusa_buffer_linearize(medusa_tcpsocket_get_read_buffer(tcpsocket), length);
+                        fprintf(stderr, "         - read whole greeting message\n");
+                        buffer = medusa_buffer_linearize(medusa_tcpsocket_get_read_buffer(tcpsocket), 0, length);
                         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                                 fprintf(stderr, "can not linearize tcpsocket read buffer\n");
                                 goto bail;
