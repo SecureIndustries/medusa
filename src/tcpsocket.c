@@ -184,6 +184,16 @@ static int tcpsocket_rtimer_onevent (struct medusa_timer *timer, unsigned int ev
         return 0;
 }
 
+static int tcpsocket_wbuffer_onevent (struct medusa_buffer *buffer, unsigned int events, void *context, ...)
+{
+        struct medusa_tcpsocket *tcpsocket = (struct medusa_tcpsocket *) context;
+        (void) buffer;
+        if (events & MEDUSA_BUFFER_EVENT_WRITE) {
+                return medusa_tcpsocket_commit_write_buffer(tcpsocket);
+        }
+        return 0;
+}
+
 static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
 {
         int rc;
@@ -738,7 +748,14 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_buffered_unloc
         if (enabled) {
                 tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_BUFFERED);
                 if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->wbuffer)) {
-                        tcpsocket->wbuffer = medusa_buffer_create(MEDUSA_BUFFER_TYPE_DEFAULT);
+                        struct medusa_buffer_init_options buffer_init_options;
+                        rc = medusa_buffer_init_options_default(&buffer_init_options);
+                        if (rc != 0) {
+                                return rc;
+                        }
+                        buffer_init_options.onevent = tcpsocket_wbuffer_onevent;
+                        buffer_init_options.context = tcpsocket;
+                        tcpsocket->wbuffer = medusa_buffer_create_with_options(&buffer_init_options);
                         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->wbuffer)) {
                                 return MEDUSA_PTR_ERR(tcpsocket->wbuffer);
                         }
