@@ -26,16 +26,18 @@ enum {
         MEDUSA_TCPSOCKET_EVENT_RESOLVED                 = (1 <<  6), /* 0x00000040 */
         MEDUSA_TCPSOCKET_EVENT_CONNECTING               = (1 <<  7), /* 0x00000080 */
         MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT          = (1 <<  8), /* 0x00000100 */
-        MEDUSA_TCPSOCKET_EVENT_CONNECTED                = (1 <<  9), /* 0x00000200 */
-        MEDUSA_TCPSOCKET_EVENT_IN                       = (1 << 10), /* 0x00000400 */
-        MEDUSA_TCPSOCKET_EVENT_OUT                      = (1 << 11), /* 0x00000800 */
-        MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ            = (1 << 12), /* 0x00001000 */
-        MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ_TIMEOUT    = (1 << 13), /* 0x00002000 */
-        MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE           = (1 << 14), /* 0x00004000 */
-        MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_TIMEOUT   = (1 << 15), /* 0x00008000 */
-        MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED  = (1 << 16), /* 0x00010000 */
-        MEDUSA_TCPSOCKET_EVENT_DISCONNECTED             = (1 << 17), /* 0x00020000 */
-        MEDUSA_TCPSOCKET_EVENT_DESTROY                  = (1 << 18)  /* 0x00040000 */
+        MEDUSA_TCPSOCKET_EVENT_CONNECT_ERROR            = (1 <<  9), /* 0x00000200 */
+        MEDUSA_TCPSOCKET_EVENT_CONNECTED                = (1 << 10), /* 0x00000400 */
+        MEDUSA_TCPSOCKET_EVENT_IN                       = (1 << 11), /* 0x00000800 */
+        MEDUSA_TCPSOCKET_EVENT_OUT                      = (1 << 12), /* 0x00001000 */
+        MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ            = (1 << 13), /* 0x00002000 */
+        MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ_TIMEOUT    = (1 << 14), /* 0x00004000 */
+        MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE           = (1 << 15), /* 0x00008000 */
+        MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_TIMEOUT   = (1 << 16), /* 0x00010000 */
+        MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED  = (1 << 17), /* 0x00020000 */
+        MEDUSA_TCPSOCKET_EVENT_DISCONNECTED             = (1 << 18), /* 0x00040000 */
+        MEDUSA_TCPSOCKET_EVENT_ERROR                    = (1 << 19), /* 0x00080000 */
+        MEDUSA_TCPSOCKET_EVENT_DESTROY                  = (1 << 20)  /* 0x00100000 */
 #define MEDUSA_TCPSOCKET_EVENT_BINDING                  MEDUSA_TCPSOCKET_EVENT_BINDING
 #define MEDUSA_TCPSOCKET_EVENT_BOUND                    MEDUSA_TCPSOCKET_EVENT_BOUND
 #define MEDUSA_TCPSOCKET_EVENT_LISTENING                MEDUSA_TCPSOCKET_EVENT_LISTENING
@@ -54,6 +56,7 @@ enum {
 #define MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_TIMEOUT   MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_TIMEOUT
 #define MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED  MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED
 #define MEDUSA_TCPSOCKET_EVENT_DISCONNECTED             MEDUSA_TCPSOCKET_EVENT_DISCONNECTED
+#define MEDUSA_TCPSOCKET_EVENT_ERROR                    MEDUSA_TCPSOCKET_EVENT_ERROR
 #define MEDUSA_TCPSOCKET_EVENT_DESTROY                  MEDUSA_TCPSOCKET_EVENT_DESTROY
 };
 
@@ -167,6 +170,7 @@ void * medusa_tcpsocket_get_userdata (struct medusa_tcpsocket *tcpsocket);
 int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 struct medusa_monitor * medusa_tcpsocket_get_monitor (struct medusa_tcpsocket *tcpsocket);
 
+const char * medusa_tcpsocket_state_string (unsigned int state);
 const char * medusa_tcpsocket_event_string (unsigned int events);
 
 #ifdef __cplusplus
