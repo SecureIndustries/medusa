@@ -51,7 +51,6 @@ double medusa_tcpsocket_get_read_timeout_unlocked (const struct medusa_tcpsocket
 int medusa_tcpsocket_get_fd_unlocked (const struct medusa_tcpsocket *tcpsocket);
 struct medusa_buffer * medusa_tcpsocket_get_read_buffer_unlocked (const struct medusa_tcpsocket *tcpsocket);
 struct medusa_buffer * medusa_tcpsocket_get_write_buffer_unlocked (const struct medusa_tcpsocket *tcpsocket);
-int medusa_tcpsocket_commit_write_buffer_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_events_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 int medusa_tcpsocket_add_events_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events);
