@@ -222,11 +222,6 @@ static int server_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                         fprintf(stderr, "can not write to tcpsocket buffer (rc: %d)\n", rc);
                         goto bail;
                 }
-                rc = medusa_tcpsocket_commit_write_buffer(session->tcpsocket);
-                if (rc != 0) {
-                        fprintf(stderr, "can not commit tcpsocket write buffer\n");
-                        goto bail;
-                }
         }
 
         return 0;
