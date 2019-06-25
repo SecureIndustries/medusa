@@ -16,6 +16,17 @@
 
 #define MIN(a, b)       (((a) < (b)) ? (a) : (b))
 
+static inline int buffer_onevent (struct medusa_buffer *buffer, unsigned int events)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (buffer->onevent == NULL) {
+                return 0;
+        }
+        return buffer->onevent(buffer, events, buffer->context);
+}
+
 __attribute__ ((visibility ("default"))) int medusa_buffer_reset (struct medusa_buffer *buffer)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
@@ -161,11 +172,9 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertv (struct m
                 return ret;
         }
         if (ret > 0) {
-                if (buffer->onevent != NULL) {
-                        rc = buffer->onevent(buffer, MEDUSA_BUFFER_EVENT_WRITE, buffer->context);
-                        if (rc != 0) {
-                                return rc;
-                        }
+                rc = buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_WRITE);
+                if (rc != 0) {
+                        return rc;
                 }
         }
         return ret;
@@ -481,6 +490,8 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_reservev (struct 
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_commitv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
 {
+        int rc;
+        int64_t ret;
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
@@ -496,7 +507,18 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_commitv (struct m
         if (niovecs < 0) {
                 return -EINVAL;
         }
-        return buffer->backend->commitv(buffer, iovecs, niovecs);
+        ret = buffer->backend->commitv(buffer, iovecs, niovecs);
+        if (ret < 0) {
+                return ret;
+        }
+        if (ret > 0) {
+                rc = buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_WRITE);
+                if (rc != 0) {
+                        return rc;
+                }
+        }
+        return ret;
+
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_queryv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
@@ -1135,9 +1157,7 @@ __attribute__ ((visibility ("default"))) void medusa_buffer_destroy (struct medu
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->destroy)) {
                 return;
         }
-        if (buffer->onevent != NULL) {
-                buffer->onevent(buffer, MEDUSA_BUFFER_EVENT_DESTROY, buffer->context);
-        }
+        buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_DESTROY);
         buffer->backend->destroy(buffer);
 }
 
