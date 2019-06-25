@@ -26,6 +26,8 @@ struct medusa_buffer_backend {
 
 struct medusa_buffer {
         const struct medusa_buffer_backend *backend;
+        int (*onevent) (struct medusa_buffer *buffer, unsigned int events, void *context, ...);
+        void *context;
 };
 
 #endif

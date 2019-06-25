@@ -6,19 +6,24 @@ struct iovec;
 struct medusa_buffer;
 
 enum {
-        MEDUSA_BUFFER_TYPE_SIMPLE       = 0,
-        MEDUSA_BUFFER_TYPE_DEFAULT      = MEDUSA_BUFFER_TYPE_SIMPLE
-#define MEDUSA_BUFFER_TYPE_SIMPLE       MEDUSA_BUFFER_TYPE_SIMPLE
-#define MEDUSA_BUFFER_TYPE_DEFAULT      MEDUSA_BUFFER_TYPE_DEFAULT
+        MEDUSA_BUFFER_TYPE_SIMPLE               = 0,
+        MEDUSA_BUFFER_TYPE_DEFAULT              = MEDUSA_BUFFER_TYPE_SIMPLE
+#define MEDUSA_BUFFER_TYPE_SIMPLE               MEDUSA_BUFFER_TYPE_SIMPLE
+#define MEDUSA_BUFFER_TYPE_DEFAULT              MEDUSA_BUFFER_TYPE_DEFAULT
 };
 
 enum {
-        MEDUSA_BUFFER_FLAG_NONE         = 0x00000001,
-        MEDUSA_BUFFER_FLAG_THREAD_SAFE  = 0x00000002,
-        MEDUSA_BUFFER_FLAG_DEFAULT      = MEDUSA_BUFFER_FLAG_THREAD_SAFE,
-#define MEDUSA_BUFFER_FLAG_NONE         MEDUSA_BUFFER_FLAG_NONE
-#define MEDUSA_BUFFER_FLAG_THREAD_SAFE  MEDUSA_BUFFER_FLAG_THREAD_SAFE
-#define MEDUSA_BUFFER_FLAG_DEFAULT      MEDUSA_BUFFER_FLAG_DEFAULT
+        MEDUSA_BUFFER_FLAG_NONE                 = 0x00000001,
+        MEDUSA_BUFFER_FLAG_THREAD_SAFE          = 0x00000002,
+        MEDUSA_BUFFER_FLAG_DEFAULT              = MEDUSA_BUFFER_FLAG_THREAD_SAFE,
+#define MEDUSA_BUFFER_FLAG_NONE                 MEDUSA_BUFFER_FLAG_NONE
+#define MEDUSA_BUFFER_FLAG_THREAD_SAFE          MEDUSA_BUFFER_FLAG_THREAD_SAFE
+#define MEDUSA_BUFFER_FLAG_DEFAULT              MEDUSA_BUFFER_FLAG_DEFAULT
+};
+
+enum {
+        MEDUSA_BUFFER_EVENT_WRITE               = (1 <<  0), /* 0x00000001 */
+#define MEDUSA_BUFFER_EVENT_WRITE               MEDUSA_BUFFER_EVENT_WRITE
 };
 
 #define MEDUSA_BUFFER_DEFAULT_GROW_SIZE         1024
@@ -31,6 +36,8 @@ struct medusa_buffer_init_options {
                         unsigned int grow_size;
                 } simple;
         } u;
+        int (*onevent) (struct medusa_buffer *buffer, unsigned int events, void *context, ...);
+        void *context;
 };
 
 #ifdef __cplusplus

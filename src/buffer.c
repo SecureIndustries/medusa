@@ -136,6 +136,8 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert (struct me
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertv (struct medusa_buffer *buffer, int64_t offset, const struct iovec *iovecs, int64_t niovecs)
 {
+        int rc;
+        int64_t ret;
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
@@ -154,7 +156,19 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertv (struct m
         if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
                 return -EINVAL;
         }
-        return buffer->backend->insertv(buffer, offset, iovecs, niovecs);
+        ret = buffer->backend->insertv(buffer, offset, iovecs, niovecs);
+        if (ret < 0) {
+                return ret;
+        }
+        if (ret > 0) {
+                if (buffer->onevent != NULL) {
+                        rc = buffer->onevent(buffer, MEDUSA_BUFFER_EVENT_WRITE, buffer->context);
+                        if (rc != 0) {
+                                return rc;
+                        }
+                }
+        }
+        return ret;
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_prependf (struct medusa_buffer *buffer, const char *format, ...)
@@ -1085,6 +1099,7 @@ __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_cr
 
 __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_create_with_options (const struct medusa_buffer_init_options *options)
 {
+        struct medusa_buffer *buffer;
         if (MEDUSA_IS_ERR_OR_NULL(options)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
@@ -1095,12 +1110,18 @@ __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_cr
                 if (rc < 0) {
                         return MEDUSA_ERR_PTR(rc);
                 }
-                simple_options.flags = MEDUSA_BUFFER_SIMPLE_FLAG_DEFAULT;
-                simple_options.grow = options->u.simple.grow_size;
-                return medusa_buffer_simple_create_with_options(&simple_options);
+                simple_options.flags   = MEDUSA_BUFFER_SIMPLE_FLAG_DEFAULT;
+                simple_options.grow    = options->u.simple.grow_size;
+                buffer = medusa_buffer_simple_create_with_options(&simple_options);
         } else {
                 return MEDUSA_ERR_PTR(-ENOENT);
         }
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return buffer;
+        }
+        buffer->onevent = options->onevent;
+        buffer->context = options->context;
+        return buffer;
 }
 
 __attribute__ ((visibility ("default"))) void medusa_buffer_destroy (struct medusa_buffer *buffer)
