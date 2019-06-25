@@ -23,7 +23,9 @@ enum {
 
 enum {
         MEDUSA_BUFFER_EVENT_WRITE               = (1 <<  0), /* 0x00000001 */
+        MEDUSA_BUFFER_EVENT_DESTROY             = (1 <<  1), /* 0x00000002 */
 #define MEDUSA_BUFFER_EVENT_WRITE               MEDUSA_BUFFER_EVENT_WRITE
+#define MEDUSA_BUFFER_EVENT_DESTROY             MEDUSA_BUFFER_EVENT_DESTROY
 };
 
 #define MEDUSA_BUFFER_DEFAULT_GROW_SIZE         1024
@@ -154,6 +156,8 @@ int medusa_buffer_read_uint32_be (struct medusa_buffer *buffer, int64_t offset, 
 int medusa_buffer_read_uint64    (struct medusa_buffer *buffer, int64_t offset, uint64_t *value);
 int medusa_buffer_read_uint64_le (struct medusa_buffer *buffer, int64_t offset, uint64_t *value);
 int medusa_buffer_read_uint64_be (struct medusa_buffer *buffer, int64_t offset, uint64_t *value);
+
+const char * medusa_buffer_event_string (unsigned int events);
 
 #ifdef __cplusplus
 }

@@ -1135,5 +1135,15 @@ __attribute__ ((visibility ("default"))) void medusa_buffer_destroy (struct medu
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->destroy)) {
                 return;
         }
+        if (buffer->onevent != NULL) {
+                buffer->onevent(buffer, MEDUSA_BUFFER_EVENT_DESTROY, buffer->context);
+        }
         buffer->backend->destroy(buffer);
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_buffer_event_string (unsigned int events)
+{
+        if (events == MEDUSA_BUFFER_EVENT_WRITE)        return "MEDUSA_BUFFER_EVENT_WRITE";
+        if (events == MEDUSA_BUFFER_EVENT_DESTROY)      return "MEDUSA_BUFFER_EVENT_DESTROY";
+        return "MEDUSA_BUFFER_EVENT_UNKNOWN";
 }
