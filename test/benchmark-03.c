@@ -125,7 +125,10 @@ static int test_poll (unsigned int poll)
                 space = g_npipes / g_nactives;
                 space = space * 2;
                 for (i = 0; i < g_nactives; i++, g_fired++) {
-                        (void) write(g_pipes[i * space + 1], "e", 1);
+                        rc = write(g_pipes[i * space + 1], "e", 1);
+                        if (rc != 1) {
+                                goto bail;
+                        }
                 }
 
                 g_count = 0;
