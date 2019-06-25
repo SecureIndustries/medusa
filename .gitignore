@@ -3,6 +3,7 @@
 .settings
 .pydevproject
 .vscode
+.devcontainer
 dist
 src/.libmedusa.a
 src/.libmedusa.o
