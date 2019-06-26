@@ -72,7 +72,7 @@ struct medusa_monitor_init_options {
                 union {
                         struct {
 
-                        } signalfd;
+                        } sigaction;
                 } u;
         } signal;
 };
