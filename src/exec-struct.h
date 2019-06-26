@@ -20,6 +20,7 @@ struct medusa_exec {
         pid_t pid;
         int wstatus;
         struct medusa_timer *timer;
+        void *userdata;
 };
 
 int medusa_exec_init (struct medusa_exec *exec, struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...), void *context);

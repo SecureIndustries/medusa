@@ -26,6 +26,9 @@ unsigned int medusa_signal_get_resolution_unlocked (const struct medusa_signal *
 int medusa_signal_set_enabled_unlocked (struct medusa_signal *signal, int enabled);
 int medusa_signal_get_enabled_unlocked (const struct medusa_signal *signal);
 
+void * medusa_signal_get_userdata_unlocked (struct medusa_signal *signal);
+int medusa_signal_set_userdata_unlocked (struct medusa_signal *signal, void *userdata);
+
 struct medusa_monitor * medusa_signal_get_monitor_unlocked (const struct medusa_signal *signal);
 
 int medusa_signal_onevent_unlocked (struct medusa_signal *signal, unsigned int events);

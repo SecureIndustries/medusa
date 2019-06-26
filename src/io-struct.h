@@ -8,10 +8,11 @@ struct medusa_io;
 
 struct medusa_io {
         struct medusa_subject subject;
-        int fd;
         unsigned int flags;
+        int fd;
         int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...);
         void *context;
+        void *userdata;
 };
 
 int medusa_io_init (struct medusa_io *io, struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...), void *context);

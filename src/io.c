@@ -421,6 +421,47 @@ __attribute__ ((visibility ("default"))) int medusa_io_disable (struct medusa_io
         return medusa_io_set_enabled(io, 0);
 }
 
+__attribute__ ((visibility ("default"))) int medusa_io_set_userdata_unlocked (struct medusa_io *io, void *userdata)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(io)) {
+                return -EINVAL;
+        }
+        io->userdata = userdata;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_set_userdata (struct medusa_io *io, void *userdata)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(io)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(io->subject.monitor);
+        rc = medusa_io_set_userdata_unlocked(io, userdata);
+        medusa_monitor_unlock(io->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_io_get_userdata_unlocked (struct medusa_io *io)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(io)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return io->userdata;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_io_get_userdata (struct medusa_io *io)
+{
+        void *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(io)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(io->subject.monitor);
+        rc = medusa_io_get_userdata_unlocked(io);
+        medusa_monitor_unlock(io->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_io_get_monitor_unlocked (const struct medusa_io *io)
 {
         if (MEDUSA_IS_ERR_OR_NULL(io)) {

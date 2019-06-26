@@ -431,6 +431,47 @@ __attribute__ ((visibility ("default"))) int medusa_signal_disable (struct medus
         return medusa_signal_set_enabled(signal, 0);
 }
 
+__attribute__ ((visibility ("default"))) int medusa_signal_set_userdata_unlocked (struct medusa_signal *signal, void *userdata)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(signal)) {
+                return -EINVAL;
+        }
+        signal->userdata = userdata;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_signal_set_userdata (struct medusa_signal *signal, void *userdata)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(signal)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(signal->subject.monitor);
+        rc = medusa_signal_set_userdata_unlocked(signal, userdata);
+        medusa_monitor_unlock(signal->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_signal_get_userdata_unlocked (struct medusa_signal *signal)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(signal)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return signal->userdata;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_signal_get_userdata (struct medusa_signal *signal)
+{
+        void *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(signal)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(signal->subject.monitor);
+        rc = medusa_signal_get_userdata_unlocked(signal);
+        medusa_monitor_unlock(signal->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_signal_get_monitor_unlocked (const struct medusa_signal *signal)
 {
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {

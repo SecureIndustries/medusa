@@ -7,16 +7,14 @@ struct medusa_timer_init_options;
 
 struct medusa_timer {
         struct medusa_subject subject;
-
         unsigned int flags;
-
         struct timespec initial;
         struct timespec interval;
         int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...);
         void *context;
-
         struct timespec _timespec;
         unsigned int _position;
+        void *userdata;
 };
 
 int medusa_timer_init (struct medusa_timer *timer, struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context);

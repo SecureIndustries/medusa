@@ -52,6 +52,9 @@ int medusa_exec_disable (struct medusa_exec *exec);
 int medusa_exec_start (struct medusa_exec *exec);
 int medusa_exec_stop (struct medusa_exec *exec);
 
+int medusa_exec_set_userdata (struct medusa_exec *exec, void *userdata);
+void * medusa_exec_get_userdata (struct medusa_exec *exec);
+
 struct medusa_monitor * medusa_exec_get_monitor (const struct medusa_exec *exec);
 
 #ifdef __cplusplus

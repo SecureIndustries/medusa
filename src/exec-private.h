@@ -19,6 +19,9 @@ int medusa_exec_get_wstatus_unlocked (const struct medusa_exec *exec);
 int medusa_exec_set_enabled_unlocked (struct medusa_exec *exec, int enabled);
 int medusa_exec_get_enabled_unlocked (const struct medusa_exec *exec);
 
+void * medusa_exec_get_userdata_unlocked (struct medusa_exec *exec);
+int medusa_exec_set_userdata_unlocked (struct medusa_exec *exec, void *userdata);
+
 struct medusa_monitor * medusa_exec_get_monitor_unlocked (const struct medusa_exec *exec);
 
 int medusa_exec_onevent_unlocked (struct medusa_exec *exec, unsigned int events);

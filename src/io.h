@@ -58,6 +58,9 @@ int medusa_io_get_enabled (const struct medusa_io *io);
 int medusa_io_enable (struct medusa_io *io);
 int medusa_io_disable (struct medusa_io *io);
 
+int medusa_io_set_userdata (struct medusa_io *io, void *userdata);
+void * medusa_io_get_userdata (struct medusa_io *io);
+
 struct medusa_monitor * medusa_io_get_monitor (const struct medusa_io *io);
 
 #ifdef __cplusplus

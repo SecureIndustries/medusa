@@ -644,6 +644,47 @@ __attribute__ ((visibility ("default"))) int medusa_exec_stop (struct medusa_exe
         return medusa_exec_set_enabled(exec, 0);
 }
 
+__attribute__ ((visibility ("default"))) int medusa_exec_set_userdata_unlocked (struct medusa_exec *exec, void *userdata)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(exec)) {
+                return -EINVAL;
+        }
+        exec->userdata = userdata;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_exec_set_userdata (struct medusa_exec *exec, void *userdata)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(exec)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(exec->subject.monitor);
+        rc = medusa_exec_set_userdata_unlocked(exec, userdata);
+        medusa_monitor_unlock(exec->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_exec_get_userdata_unlocked (struct medusa_exec *exec)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(exec)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return exec->userdata;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_exec_get_userdata (struct medusa_exec *exec)
+{
+        void *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(exec)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(exec->subject.monitor);
+        rc = medusa_exec_get_userdata_unlocked(exec);
+        medusa_monitor_unlock(exec->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_exec_get_monitor_unlocked (const struct medusa_exec *exec)
 {
         if (MEDUSA_IS_ERR_OR_NULL(exec)) {
