@@ -67,7 +67,8 @@ double medusa_tcpsocket_get_connect_timeout_unlocked (const struct medusa_tcpsoc
 void * medusa_tcpsocket_get_userdata_unlocked (struct medusa_tcpsocket *tcpsocket);
 int medusa_tcpsocket_set_userdata_unlocked (struct medusa_tcpsocket *tcpsocket, void *userdata);
 
-struct medusa_monitor * medusa_tcpsocket_get_monitor_unlocked (struct medusa_tcpsocket *tcpsocket);
 int medusa_tcpsocket_onevent_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events);
+int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events);
+struct medusa_monitor * medusa_tcpsocket_get_monitor_unlocked (struct medusa_tcpsocket *tcpsocket);
 
 #endif
