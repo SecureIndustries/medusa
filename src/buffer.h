@@ -13,8 +13,8 @@ enum {
 };
 
 enum {
-        MEDUSA_BUFFER_FLAG_NONE                 = 0x00000001,
-        MEDUSA_BUFFER_FLAG_THREAD_SAFE          = 0x00000002,
+        MEDUSA_BUFFER_FLAG_NONE                 = (1 <<  0), /* 0x00000001 */
+        MEDUSA_BUFFER_FLAG_THREAD_SAFE          = (1 <<  1), /* 0x00000002 */
         MEDUSA_BUFFER_FLAG_DEFAULT              = MEDUSA_BUFFER_FLAG_THREAD_SAFE,
 #define MEDUSA_BUFFER_FLAG_NONE                 MEDUSA_BUFFER_FLAG_NONE
 #define MEDUSA_BUFFER_FLAG_THREAD_SAFE          MEDUSA_BUFFER_FLAG_THREAD_SAFE
