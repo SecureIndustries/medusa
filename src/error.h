@@ -28,7 +28,7 @@ static inline int MEDUSA_IS_ERR_OR_NULL (const void *ptr)
         return (!ptr) || MEDUSA_IS_ERR_VALUE((unsigned long) ptr);
 }
 
-inline char * medusa_strerror (int error)
+static inline char * medusa_strerror (int error)
 {
         if (error < 0) {
                 return strerror(-error);

@@ -19,7 +19,8 @@ struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options_unlocked (struct 
 void medusa_tcpsocket_uninit_unlocked (struct medusa_tcpsocket *tcpsocket);
 void medusa_tcpsocket_destroy_unlocked (struct medusa_tcpsocket *tcpsocket);
 
-unsigned int medusa_tcpsocket_get_state_unlocked (const struct medusa_tcpsocket *tcpsocket);
+int medusa_tcpsocket_get_state_unlocked (const struct medusa_tcpsocket *tcpsocket);
+int medusa_tcpsocket_get_error_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_enabled_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_enabled_unlocked (const struct medusa_tcpsocket *tcpsocket);

@@ -52,6 +52,9 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
         int rc;
         const char *option_string = context;
 
+        if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
+        }
+
         if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE) {
         }
 

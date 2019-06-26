@@ -56,11 +56,14 @@ enum {
 #define MEDUSA_TCPSOCKET_FLAG_BACKLOG           MEDUSA_TCPSOCKET_FLAG_BACKLOG
 };
 
-#define MEDUSA_TCPSOCKET_FLAG_MASK              0xff
-#define MEDUSA_TCPSOCKET_FLAG_SHIFT             0x00
+#define MEDUSA_TCPSOCKET_FLAG_MASK              0x000000ff
+#define MEDUSA_TCPSOCKET_FLAG_SHIFT             0x00000000
 
-#define MEDUSA_TCPSOCKET_STATE_MASK             0xff
-#define MEDUSA_TCPSOCKET_STATE_SHIFT            0x18
+#define MEDUSA_TCPSOCKET_ERROR_MASK             0x00000fff
+#define MEDUSA_TCPSOCKET_ERROR_SHIFT            0x00000008
+
+#define MEDUSA_TCPSOCKET_STATE_MASK             0x000000ff
+#define MEDUSA_TCPSOCKET_STATE_SHIFT            0x00000018
 
 #if defined(MEDUSA_TCPSOCKET_USE_POOL) && (MEDUSA_TCPSOCKET_USE_POOL == 1)
 static struct medusa_pool *g_pool;
@@ -87,19 +90,38 @@ static inline int tcpsocket_has_flag (const struct medusa_tcpsocket *tcpsocket, 
         return !!(tcpsocket->flags & ((flag & MEDUSA_TCPSOCKET_FLAG_MASK) << MEDUSA_TCPSOCKET_FLAG_SHIFT));
 }
 
-static inline unsigned int tcpsocket_get_state (const struct medusa_tcpsocket *tcpsocket)
-{
-        return (tcpsocket->flags >> MEDUSA_TCPSOCKET_STATE_SHIFT) & MEDUSA_TCPSOCKET_STATE_MASK;
-}
-
 static inline unsigned int tcpsocket_get_buffered (const struct medusa_tcpsocket *tcpsocket)
 {
         return tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_BUFFERED);
 }
 
+static inline int tcpsocket_get_error (const struct medusa_tcpsocket *tcpsocket)
+{
+        return (tcpsocket->flags >> MEDUSA_TCPSOCKET_ERROR_SHIFT) & MEDUSA_TCPSOCKET_ERROR_MASK;
+}
+
+static inline int tcpsocket_set_error (struct medusa_tcpsocket *tcpsocket, int error)
+{
+        if (error < 0) {
+                error = -error;
+        }
+        if (error & ~MEDUSA_TCPSOCKET_ERROR_MASK) {
+                error = EIO;
+        }
+        tcpsocket->flags = (tcpsocket->flags & ~(MEDUSA_TCPSOCKET_ERROR_MASK << MEDUSA_TCPSOCKET_ERROR_SHIFT)) |
+                           ((error & MEDUSA_TCPSOCKET_ERROR_MASK) << MEDUSA_TCPSOCKET_ERROR_SHIFT);
+        return 0;
+}
+
+static inline unsigned int tcpsocket_get_state (const struct medusa_tcpsocket *tcpsocket)
+{
+        return (tcpsocket->flags >> MEDUSA_TCPSOCKET_STATE_SHIFT) & MEDUSA_TCPSOCKET_STATE_MASK;
+}
+
 static inline int tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsigned int state)
 {
         int rc;
+        tcpsocket_set_error(tcpsocket, 0);
         if (state == MEDUSA_TCPSOCKET_STATE_CONNECTING) {
                 if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ctimer)) {
                         rc = medusa_timer_set_enabled_unlocked(tcpsocket->ctimer, 1);
@@ -164,12 +186,16 @@ static inline int tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsig
 
 static int tcpsocket_ctimer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
 {
+        int rc;
         struct medusa_tcpsocket *tcpsocket = (struct medusa_tcpsocket *) context;
         (void) timer;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
+                rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                if (rc < 0) {
+                        return rc;
+                }
                 return medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT);
         }
-
         return 0;
 }
 
@@ -180,7 +206,6 @@ static int tcpsocket_rtimer_onevent (struct medusa_timer *timer, unsigned int ev
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 return medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ_TIMEOUT);
         }
-
         return 0;
 }
 
@@ -251,8 +276,15 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                 goto bail;
                         }
                         if (valopt != 0) {
-                                tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
-                                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECT_ERROR);
+                                rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                if (rc < 0) {
+                                        goto bail;
+                                }
+                                rc = tcpsocket_set_error(tcpsocket, valopt);
+                                if (rc < 0) {
+                                        goto bail;
+                                }
+                                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR);
                                 if (rc < 0) {
                                         goto bail;
                                 }
@@ -261,7 +293,10 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                 if (rc < 0) {
                                         goto bail;
                                 }
-                                tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_CONNECTED);
+                                rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_CONNECTED);
+                                if (rc < 0) {
+                                        goto bail;
+                                }
                                 rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTED);
                                 if (rc < 0) {
                                         goto bail;
@@ -294,15 +329,25 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                 } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
                                                         break;
                                                 } else if (errno == ECONNRESET) {
-                                                        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                        rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                        if (rc < 0) {
+                                                                goto bail;
+                                                        }
                                                         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DISCONNECTED);
                                                         if (rc < 0) {
                                                                 goto bail;
                                                         }
                                                         break;
                                                 } else if (errno == ETIMEDOUT) {
-                                                        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
-                                                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECT_ERROR);
+                                                        rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                        if (rc < 0) {
+                                                                goto bail;
+                                                        }
+                                                        rc = tcpsocket_set_error(tcpsocket, errno);
+                                                        if (rc < 0) {
+                                                                goto bail;
+                                                        }
+                                                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR);
                                                         if (rc < 0) {
                                                                 goto bail;
                                                         }
@@ -311,7 +356,10 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                         goto bail;
                                                 }
                                         } else if (wlength == 0) {
-                                                tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                if (rc < 0) {
+                                                        goto bail;
+                                                }
                                                 rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DISCONNECTED);
                                                 if (rc < 0) {
                                                         goto bail;
@@ -390,13 +438,23 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                         }
                                         if (niovecs == 0) {
                                                 if (n == 0) {
-                                                        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                        rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                        if (rc < 0) {
+                                                                goto bail;
+                                                        }
                                                         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DISCONNECTED);
                                                         if (rc < 0) {
                                                                 goto bail;
                                                         }
                                                 } else {
-                                                        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                        rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                        if (rc < 0) {
+                                                                goto bail;
+                                                        }
+                                                        rc = tcpsocket_set_error(tcpsocket, EIO);
+                                                        if (rc < 0) {
+                                                                goto bail;
+                                                        }
                                                         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR);
                                                         if (rc < 0) {
                                                                 goto bail;
@@ -411,15 +469,25 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                 } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
                                                         break;
                                                 } else if (errno == ECONNRESET) {
-                                                        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                        rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                        if (rc < 0) {
+                                                                goto bail;
+                                                        }
                                                         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DISCONNECTED);
                                                         if (rc < 0) {
                                                                 goto bail;
                                                         }
                                                         break;
                                                 } else if (errno == ECONNREFUSED || errno == ETIMEDOUT) {
-                                                        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
-                                                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECT_ERROR);
+                                                        rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                        if (rc < 0) {
+                                                                goto bail;
+                                                        }
+                                                        rc = tcpsocket_set_error(tcpsocket, errno);
+                                                        if (rc < 0) {
+                                                                goto bail;
+                                                        }
+                                                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR);
                                                         if (rc < 0) {
                                                                 goto bail;
                                                         }
@@ -428,7 +496,10 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                         goto bail;
                                                 }
                                         } else if (rc == 0) {
-                                                tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                                                if (rc < 0) {
+                                                        goto bail;
+                                                }
                                                 rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DISCONNECTED);
                                                 if (rc < 0) {
                                                         goto bail;
@@ -466,7 +537,14 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                         goto bail;
                 }
         } else if (events & (MEDUSA_IO_EVENT_ERR | MEDUSA_IO_EVENT_HUP)) {
-                tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+                if (rc < 0) {
+                        goto bail;
+                }
+                rc = tcpsocket_set_error(tcpsocket, EIO);
+                if (rc < 0) {
+                        goto bail;
+                }
                 rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR);
                 if (rc < 0) {
                         goto bail;
@@ -541,7 +619,10 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_with_options_
         medusa_subject_set_type(&tcpsocket->subject, MEDUSA_SUBJECT_TYPE_TCPSOCKET);
         tcpsocket->subject.monitor = NULL;
         tcpsocket_set_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NONE);
-        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+        rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
+        if (rc < 0 ) {
+                return rc;
+        }
         tcpsocket->onevent = options->onevent;
         tcpsocket->context = options->context;
         rc = medusa_tcpsocket_set_nonblocking_unlocked(tcpsocket, options->nonblocking);
@@ -713,7 +794,7 @@ __attribute__ ((visibility ("default"))) void medusa_tcpsocket_destroy (struct m
         medusa_monitor_unlock(tcpsocket->subject.monitor);
 }
 
-__attribute__ ((visibility ("default"))) unsigned int medusa_tcpsocket_get_state_unlocked (const struct medusa_tcpsocket *tcpsocket)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_state_unlocked (const struct medusa_tcpsocket *tcpsocket)
 {
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
@@ -721,14 +802,34 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_tcpsocket_get_state
         return tcpsocket_get_state(tcpsocket);
 }
 
-__attribute__ ((visibility ("default"))) unsigned int medusa_tcpsocket_get_state (const struct medusa_tcpsocket *tcpsocket)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_state (const struct medusa_tcpsocket *tcpsocket)
 {
-        unsigned int rc;
+        int rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
         medusa_monitor_lock(tcpsocket->subject.monitor);
         rc = medusa_tcpsocket_get_state_unlocked(tcpsocket);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_error_unlocked (const struct medusa_tcpsocket *tcpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        return tcpsocket_get_error(tcpsocket);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_error (const struct medusa_tcpsocket *tcpsocket)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_get_error_unlocked(tcpsocket);
         medusa_monitor_unlock(tcpsocket->subject.monitor);
         return rc;
 }
@@ -1526,7 +1627,11 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind_unlocked (str
         if (medusa_io_get_fd_unlocked(tcpsocket->io) >= 0) {
                 return -EIO;
         }
-        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_BINDING);
+        rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_BINDING);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BINDING);
         if (rc < 0) {
                 ret = rc;
@@ -1668,7 +1773,11 @@ ipv6:
                 ret = -errno;
                 goto bail;
         }
-        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_BOUND);
+        rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_BOUND);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BOUND);
         if (rc < 0) {
                 ret = rc;
@@ -1686,7 +1795,11 @@ ipv6:
                 ret = rc;
                 goto bail;
         }
-        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_LISTENING);
+        rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_LISTENING);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_LISTENING);
         if (rc < 0) {
                 ret = rc;
@@ -1735,7 +1848,11 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_unlocked (
         if (medusa_io_get_fd_unlocked(tcpsocket->io) >= 0) {
                 return -EINVAL;
         }
-        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_RESOLVING);
+        rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_RESOLVING);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_RESOLVING);
         if (rc < 0) {
                 ret = rc;
@@ -1757,13 +1874,21 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_unlocked (
                 ret = -EIO;
                 goto bail;
         }
-        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_RESOLVED);
+        rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_RESOLVED);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_RESOLVED);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
         }
-        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_CONNECTING);
+        rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_CONNECTING);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTING);
         if (rc < 0) {
                 ret = rc;
@@ -1882,7 +2007,11 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_unlocked (
                 goto bail;
         }
         if (rc == 0) {
-                tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_CONNECTED);
+                rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_CONNECTED);
+                if (rc < 0) {
+                        ret = rc;
+                        goto bail;
+                }
                 rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTED);
                 if (rc < 0) {
                         ret = rc;
@@ -1996,7 +2125,11 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach_unlocked (s
                 }
 
         }
-        tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_CONNECTED);
+        rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_CONNECTED);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTED);
         if (rc < 0) {
                 ret = rc;
@@ -2138,7 +2271,11 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_accept_init_with_o
                         return -errno;
                 }
         }
-        tcpsocket_set_state(accepted, MEDUSA_TCPSOCKET_STATE_CONNECTED);
+        rc = tcpsocket_set_state(accepted, MEDUSA_TCPSOCKET_STATE_CONNECTED);
+        if (rc < 0) {
+                medusa_tcpsocket_destroy_unlocked(accepted);
+                return rc;
+        }
         rc = medusa_tcpsocket_onevent_unlocked(accepted, MEDUSA_TCPSOCKET_EVENT_CONNECTED);
         if (rc < 0) {
                 medusa_tcpsocket_destroy_unlocked(accepted);
@@ -2251,7 +2388,11 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                         return MEDUSA_ERR_PTR(-errno);
                 }
         }
-        tcpsocket_set_state(accepted, MEDUSA_TCPSOCKET_STATE_CONNECTED);
+        rc = tcpsocket_set_state(accepted, MEDUSA_TCPSOCKET_STATE_CONNECTED);
+        if (rc < 0) {
+                medusa_tcpsocket_destroy_unlocked(accepted);
+                return MEDUSA_ERR_PTR(rc);
+        }
         rc = medusa_tcpsocket_onevent_unlocked(accepted, MEDUSA_TCPSOCKET_EVENT_CONNECTED);
         if (rc < 0) {
                 medusa_tcpsocket_destroy_unlocked(accepted);
@@ -2455,7 +2596,6 @@ __attribute__ ((visibility ("default"))) const char * medusa_tcpsocket_event_str
         if (events == MEDUSA_TCPSOCKET_EVENT_RESOLVED)                  return "MEDUSA_TCPSOCKET_EVENT_RESOLVED";
         if (events == MEDUSA_TCPSOCKET_EVENT_CONNECTING)                return "MEDUSA_TCPSOCKET_EVENT_CONNECTING";
         if (events == MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT)           return "MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT";
-        if (events == MEDUSA_TCPSOCKET_EVENT_CONNECT_ERROR)             return "MEDUSA_TCPSOCKET_EVENT_CONNECT_ERROR";
         if (events == MEDUSA_TCPSOCKET_EVENT_CONNECTED)                 return "MEDUSA_TCPSOCKET_EVENT_CONNECTED";
         if (events == MEDUSA_TCPSOCKET_EVENT_IN)                        return "MEDUSA_TCPSOCKET_EVENT_IN";
         if (events == MEDUSA_TCPSOCKET_EVENT_OUT)                       return "MEDUSA_TCPSOCKET_EVENT_OUT";
