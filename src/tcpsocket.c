@@ -315,7 +315,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                 int64_t niovecs;
                                 struct iovec iovec;
                                 while (1) {
-                                        niovecs = medusa_buffer_queryv(tcpsocket->wbuffer, 0, -1, &iovec, 1);
+                                        niovecs = medusa_buffer_peekv(tcpsocket->wbuffer, 0, -1, &iovec, 1);
                                         if (niovecs < 0) {
                                                 goto bail;
                                         }

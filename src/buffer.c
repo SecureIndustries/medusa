@@ -521,7 +521,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_commitv (struct m
 
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_queryv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_peekv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
@@ -529,10 +529,10 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_queryv (const str
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->queryv)) {
+        if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->peekv)) {
                 return -EINVAL;
         }
-        return buffer->backend->queryv(buffer, offset, length, iovecs, niovecs);
+        return buffer->backend->peekv(buffer, offset, length, iovecs, niovecs);
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_choke (struct medusa_buffer *buffer, int64_t offset, int64_t length)
@@ -588,7 +588,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_memcmp (const struct 
         if (l < length) {
                 return -1;
         }
-        niovecs = medusa_buffer_queryv(buffer, offset, length, NULL, 0);
+        niovecs = medusa_buffer_peekv(buffer, offset, length, NULL, 0);
         if (niovecs < 0) {
                 return niovecs;
         }
@@ -600,7 +600,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_memcmp (const struct 
         } else {
                 iovecs = _iovecs;
         }
-        niovecs = medusa_buffer_queryv(buffer, offset, length, iovecs, niovecs);
+        niovecs = medusa_buffer_peekv(buffer, offset, length, iovecs, niovecs);
         if (niovecs < 0) {
                 ret = niovecs;
                 goto out;
@@ -730,7 +730,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_peek_data (const stru
         if (l < length) {
                 return -1;
         }
-        niovecs = medusa_buffer_queryv(buffer, offset, length, NULL, 0);
+        niovecs = medusa_buffer_peekv(buffer, offset, length, NULL, 0);
         if (niovecs < 0) {
                 return niovecs;
         }
@@ -743,7 +743,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_peek_data (const stru
                 iovecs = _iovecs;
         }
         ret = 0;
-        niovecs = medusa_buffer_queryv(buffer, offset, length, iovecs, niovecs);
+        niovecs = medusa_buffer_peekv(buffer, offset, length, iovecs, niovecs);
         if (niovecs < 0) {
                 ret = niovecs;
                 goto out;

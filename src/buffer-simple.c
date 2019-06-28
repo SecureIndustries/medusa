@@ -220,7 +220,7 @@ static int64_t simple_buffer_commitv (struct medusa_buffer *buffer, const struct
         return niovecs;
 }
 
-static int64_t simple_buffer_queryv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
+static int64_t simple_buffer_peekv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
 {
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
@@ -350,7 +350,7 @@ const struct medusa_buffer_backend simple_buffer_backend = {
         .reservev       = simple_buffer_reservev,
         .commitv        = simple_buffer_commitv,
 
-        .queryv         = simple_buffer_queryv,
+        .peekv          = simple_buffer_peekv,
         .choke          = simple_buffer_choke,
 
         .linearize      = simple_buffer_linearize,

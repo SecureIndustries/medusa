@@ -603,7 +603,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                         if (fd < 0) {
                                 goto bail;
                         }
-                        niovecs = medusa_buffer_queryv(httprequest->wbuffer, 0, -1, &iovec, 1);
+                        niovecs = medusa_buffer_peekv(httprequest->wbuffer, 0, -1, &iovec, 1);
                         if (niovecs < 0) {
                                 goto bail;
                         }
@@ -737,7 +737,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                         int64_t niovecs;
                         struct iovec iovec;
 
-                        niovecs = medusa_buffer_queryv(httprequest->rbuffer, 0, -1, &iovec, 1);
+                        niovecs = medusa_buffer_peekv(httprequest->rbuffer, 0, -1, &iovec, 1);
                         if (niovecs < 0) {
                                 goto bail;
                         }
@@ -1199,7 +1199,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
         }
         olen = 0;
         while (1) {
-                niovecs = medusa_buffer_queryv(httprequest->headers, olen, -1, iovecs, sizeof(iovecs) / sizeof(iovecs[0]));
+                niovecs = medusa_buffer_peekv(httprequest->headers, olen, -1, iovecs, sizeof(iovecs) / sizeof(iovecs[0]));
                 if (niovecs < 0) {
                         goto bail;
                 }

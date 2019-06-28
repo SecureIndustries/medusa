@@ -117,8 +117,8 @@ int64_t medusa_buffer_vprintf (struct medusa_buffer *buffer, const char *format,
 int64_t medusa_buffer_reservev (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs);
 int64_t medusa_buffer_commitv  (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs);
 
-int64_t medusa_buffer_queryv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs);
-int64_t medusa_buffer_choke  (struct medusa_buffer *buffer, int64_t offset, int64_t length);
+int64_t medusa_buffer_peekv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs);
+int64_t medusa_buffer_choke (struct medusa_buffer *buffer, int64_t offset, int64_t length);
 
 void * medusa_buffer_linearize (struct medusa_buffer *buffer, int64_t offset, int64_t length);
 

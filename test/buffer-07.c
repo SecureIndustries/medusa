@@ -76,7 +76,7 @@ static int test_buffer (unsigned int type, unsigned int count)
                 return -1;
         }
 
-        niovecs = medusa_buffer_queryv(buffer, 0, strlen(pdata), NULL, 0);
+        niovecs = medusa_buffer_peekv(buffer, 0, strlen(pdata), NULL, 0);
         if (niovecs < 0) {
                 fprintf(stderr, "medusa_buffer_queryv failed\n");
                 return -1;
@@ -88,7 +88,7 @@ static int test_buffer (unsigned int type, unsigned int count)
                 return -1;
         }
 
-        niovecs = medusa_buffer_queryv(buffer, 0, strlen(pdata), iovecs, niovecs);
+        niovecs = medusa_buffer_peekv(buffer, 0, strlen(pdata), iovecs, niovecs);
         if (niovecs < 0) {
                 fprintf(stderr, "medusa_buffer_queryv failed, count: %d\n", count);
                 return -1;
@@ -123,7 +123,7 @@ static int test_buffer (unsigned int type, unsigned int count)
                 return -1;
         }
 
-        niovecs = medusa_buffer_queryv(buffer, 0, -1, NULL, 0);
+        niovecs = medusa_buffer_peekv(buffer, 0, -1, NULL, 0);
         if (niovecs < 0) {
                 fprintf(stderr, "medusa_buffer_queryv failed\n");
                 return -1;
@@ -135,7 +135,7 @@ static int test_buffer (unsigned int type, unsigned int count)
                 return -1;
         }
 
-        niovecs = medusa_buffer_queryv(buffer, 0, -1, iovecs, niovecs);
+        niovecs = medusa_buffer_peekv(buffer, 0, -1, iovecs, niovecs);
         if (niovecs < 0) {
                 fprintf(stderr, "medusa_buffer_queryv failed, count: %d\n", count);
                 return -1;
