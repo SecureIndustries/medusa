@@ -84,7 +84,8 @@ extern "C"
 
 int medusa_monitor_init_options_default (struct medusa_monitor_init_options *options);
 
-struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_options *options);
+struct medusa_monitor * medusa_monitor_create_with_options (const struct medusa_monitor_init_options *options);
+struct medusa_monitor * medusa_monitor_create (void);
 void medusa_monitor_destroy (struct medusa_monitor *monitor);
 
 int medusa_monitor_run (struct medusa_monitor *monitor);

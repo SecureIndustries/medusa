@@ -771,10 +771,10 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_init_options_default
         }
         memcpy(options, &g_init_options, sizeof(struct medusa_monitor_init_options));
         return 0;
-bail:   return -1;
+bail:   return -EIO;
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_create (const struct medusa_monitor_init_options *options)
+__attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_create_with_options (const struct medusa_monitor_init_options *options)
 {
         int rc;
         struct medusa_monitor *monitor;
@@ -945,6 +945,22 @@ bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);
         }
         return NULL;
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_create (void)
+{
+        int rc;
+        struct medusa_monitor *monitor;
+        struct medusa_monitor_init_options monitor_init_options;
+        rc = medusa_monitor_init_options_default(&monitor_init_options);
+        if (rc != 0) {
+                return MEDUSA_ERR_PTR(rc);
+        }
+        monitor = medusa_monitor_create_with_options(&monitor_init_options);
+        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
+                return monitor;
+        }
+        return monitor;
 }
 
 __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct medusa_monitor *monitor)
