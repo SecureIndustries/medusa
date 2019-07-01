@@ -1,0 +1,15 @@
+#libmedusa pkg-config source file
+
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libmedusa
+Description: medusa
+Version: 1.0.0
+Requires:
+Conflicts:
+Libs: -L${libdir} -lmedusa
+Libs.private:
+Cflags: -I${includedir}
