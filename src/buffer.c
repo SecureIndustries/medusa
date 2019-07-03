@@ -644,7 +644,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_memmem (const str
                 return 0;
         }
         if (l < length) {
-                return -1;
+                return -ENOENT;
         }
         for (i = offset; i <= l - length; i++) {
                 rc = medusa_buffer_memcmp(buffer, i, data, length);
@@ -652,7 +652,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_memmem (const str
                         return i;
                 }
         }
-        return -1;
+        return -ENOENT;
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_peek (const struct medusa_buffer *buffer, void *data, int64_t length)
