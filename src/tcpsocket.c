@@ -204,7 +204,11 @@ static int tcpsocket_rtimer_onevent (struct medusa_timer *timer, unsigned int ev
         struct medusa_tcpsocket *tcpsocket = (struct medusa_tcpsocket *) context;
         (void) timer;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
-                return medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ_TIMEOUT);
+                if (tcpsocket_get_buffered(tcpsocket)) {
+                        return medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ_TIMEOUT);
+                } else {
+                        return medusa_tcpsocket_onevent(tcpsocket, MEDUSA_TCPSOCKET_EVENT_IN_TIMEOUT);
+                }
         }
         return 0;
 }
@@ -2724,6 +2728,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_tcpsocket_event_str
         if (events == MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT)           return "MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT";
         if (events == MEDUSA_TCPSOCKET_EVENT_CONNECTED)                 return "MEDUSA_TCPSOCKET_EVENT_CONNECTED";
         if (events == MEDUSA_TCPSOCKET_EVENT_IN)                        return "MEDUSA_TCPSOCKET_EVENT_IN";
+        if (events == MEDUSA_TCPSOCKET_EVENT_IN_TIMEOUT)                return "MEDUSA_TCPSOCKET_EVENT_IN_TIMEOUT";
         if (events == MEDUSA_TCPSOCKET_EVENT_OUT)                       return "MEDUSA_TCPSOCKET_EVENT_OUT";
         if (events == MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ)             return "MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ";
         if (events == MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ_TIMEOUT)     return "MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ_TIMEOUT";

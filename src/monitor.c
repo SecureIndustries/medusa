@@ -21,6 +21,8 @@
 #include "signal-private.h"
 #include "tcpsocket.h"
 #include "tcpsocket-private.h"
+#include "udpsocket.h"
+#include "udpsocket-private.h"
 #include "httprequest.h"
 #include "httprequest-private.h"
 #include "exec.h"
@@ -267,6 +269,17 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                 }
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_UDPSOCKET) {
+                        struct medusa_udpsocket *udpsocket;
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        udpsocket = (struct medusa_udpsocket *) subject;
+                        rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_DESTROY);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                }
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_IO) {
                         struct medusa_io *io;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
@@ -442,6 +455,11 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                                 subject->flags |= MEDUSA_SUBJECT_FLAG_HEAP;
                         }
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
+                        TAILQ_REMOVE(&monitor->changes, subject, list);
+                        TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_UDPSOCKET) {
                         TAILQ_REMOVE(&monitor->changes, subject, list);
                         TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
@@ -1005,6 +1023,14 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         tcpsocket = (struct medusa_tcpsocket *) subject;
                         medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
+                }
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_UDPSOCKET) {
+                        struct medusa_udpsocket *udpsocket;
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        udpsocket = (struct medusa_udpsocket *) subject;
+                        medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_DESTROY);
                 }
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {

@@ -77,7 +77,8 @@ libmedusa.a_files-${MEDUSA_SIGNAL_SIGNALFD_ENABLE} += \
 	signal-signalfd.c
 
 libmedusa.a_files-y += \
-	tcpsocket.c
+	tcpsocket.c \
+	udpsocket.c
 
 libmedusa.a_files-y += \
 	httprequest.c \
@@ -114,6 +115,7 @@ dist.include-y = \
 	signal.h \
 	timer.h \
 	tcpsocket.h \
+	udpsocket.h \
 	httprequest.h \
 	exec.h \
 	queue.h
