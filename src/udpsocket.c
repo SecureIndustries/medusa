@@ -205,7 +205,6 @@ static int udpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
         monitor = medusa_io_get_monitor(io);
         medusa_monitor_lock(monitor);
 
-        fprintf(stderr, "events: 0x%08x\n", events);
         if (events & MEDUSA_IO_EVENT_OUT) {
                 if (udpsocket_get_state(udpsocket) == MEDUSA_UDPSOCKET_STATE_DISCONNECTED) {
                 } else if (udpsocket_get_state(udpsocket) == MEDUSA_UDPSOCKET_STATE_CONNECTING) {
