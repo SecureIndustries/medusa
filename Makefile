@@ -38,6 +38,7 @@ install: src test
 	install -m 0644 dist/include/medusa/queue.h ${DESTDIR}/usr/local/include/medusa/queue.h
 	install -m 0644 dist/include/medusa/signal.h ${DESTDIR}/usr/local/include/medusa/signal.h
 	install -m 0644 dist/include/medusa/tcpsocket.h ${DESTDIR}/usr/local/include/medusa/tcpsocket.h
+	install -m 0644 dist/include/medusa/udpsocket.h ${DESTDIR}/usr/local/include/medusa/udpsocket.h
 	install -m 0644 dist/include/medusa/timer.h ${DESTDIR}/usr/local/include/medusa/timer.h
 	
 	install -d ${DESTDIR}/usr/local/lib
