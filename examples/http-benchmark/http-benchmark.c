@@ -1110,7 +1110,7 @@ int main (int argc, char *argv[])
                 nclients += 1;
         }
 
-        monitor = medusa_monitor_create(NULL);
+        monitor = medusa_monitor_create_with_options(NULL);
         if (monitor == NULL) {
                 errorf("can not create monitor");
                 goto bail;

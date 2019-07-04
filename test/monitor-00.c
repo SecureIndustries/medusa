@@ -8,7 +8,7 @@ int main (int argc, char *argv[])
         struct medusa_monitor *monitor;
         (void) argc;
         (void) argv;
-        monitor = medusa_monitor_create(NULL);
+        monitor = medusa_monitor_create_with_options(NULL);
         if (monitor == NULL) {
                 return -1;
         }

@@ -56,7 +56,7 @@ static int test_poll (unsigned int poll)
         g_ntimeouts = 0;
         g_ndestroys = 0;
 
-        monitor = medusa_monitor_create(&options);
+        monitor = medusa_monitor_create_with_options(&options);
         if (monitor == NULL) {
                 fprintf(stderr, "medusa_monitor_create failed\n");
                 goto bail;

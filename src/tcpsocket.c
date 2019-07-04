@@ -1605,11 +1605,24 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_tcpsocket_get_event
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind_options_default (struct medusa_tcpsocket_bind_options *options)
+{
+        if (options == NULL) {
+                return -EINVAL;
+        }
+        memset(options, 0, sizeof(struct medusa_tcpsocket_bind_options));
+        options->protocol = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind_with_options_unlocked (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_bind_options *options)
 {
         int rc;
         int fd;
         int ret;
+        unsigned int protocol;
+        const char *address;
+        unsigned short port;
         unsigned int length;
         struct sockaddr *sockaddr;
         struct sockaddr_in sockaddr_in;
@@ -1618,6 +1631,12 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind_unlocked (str
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
+        if (options == NULL) {
+                return -EINVAL;
+        }
+        protocol = options->protocol;
+        address  = options->address;
+        port     = options->port;
         if (port == 0) {
                 return -EINVAL;
         }
@@ -1811,6 +1830,32 @@ bail:   tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
         return ret;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_bind_options *options)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_bind_with_options_unlocked(tcpsocket, options);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port)
+{
+        int rc;
+        struct medusa_tcpsocket_bind_options options;
+        rc = medusa_tcpsocket_bind_options_default(&options);
+        if (rc < 0) {
+                return rc;
+        }
+        options.protocol = protocol;
+        options.address  = address;
+        options.port     = port;
+        return medusa_tcpsocket_bind_with_options_unlocked(tcpsocket, &options);
+}
+
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port)
 {
         int rc;
@@ -1823,11 +1868,24 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind (struct medus
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_options_default (struct medusa_tcpsocket_connect_options *options)
+{
+        if (options == NULL) {
+                return -EINVAL;
+        }
+        memset(options, 0, sizeof(struct medusa_tcpsocket_connect_options));
+        options->protocol = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_with_options_unlocked (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_connect_options *options)
 {
         int rc;
         int fd;
         int ret;
+        unsigned int protocol;
+        const char *address;
+        unsigned short port;
         struct addrinfo hints;
         struct addrinfo *result;
         struct addrinfo *res;
@@ -1836,6 +1894,12 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_unlocked (
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
+        if (options == NULL) {
+                return -EINVAL;
+        }
+        protocol = options->protocol;
+        address  = options->address;
+        port     = options->port;
         if (address == NULL) {
                 return -EINVAL;
         }
@@ -2034,6 +2098,32 @@ bail:   if (result != NULL) {
         return ret;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_connect_options *options)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_connect_with_options_unlocked(tcpsocket, options);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port)
+{
+        int rc;
+        struct medusa_tcpsocket_connect_options options;
+        rc = medusa_tcpsocket_connect_options_default(&options);
+        if (rc < 0) {
+                return rc;
+        }
+        options.protocol = protocol;
+        options.address  = address;
+        options.port     = port;
+        return medusa_tcpsocket_connect_with_options_unlocked(tcpsocket, &options);
+}
+
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port)
 {
         int rc;
@@ -2046,14 +2136,29 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect (struct me
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach_unlocked (struct medusa_tcpsocket *tcpsocket, int fd)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach_options_default (struct medusa_tcpsocket_attach_options *options)
+{
+        if (options == NULL) {
+                return -EINVAL;
+        }
+        memset(options, 0, sizeof(struct medusa_tcpsocket_attach_options));
+        options->fd = -1;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach_with_options_unlocked (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_attach_options *options)
 {
         int rc;
+        int fd;
         int ret;
         struct medusa_io_init_options io_init_options;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
+        if (options == NULL) {
+                return -EINVAL;
+        }
+        fd = options->fd;
         if (fd < 0) {
                 return -EINVAL;
         }
@@ -2141,13 +2246,34 @@ bail:   tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
         return ret;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach (struct medusa_tcpsocket *tcpsocket, int fd)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_attach_options *options)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
-        if (fd < 0) {
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_attach_with_options_unlocked(tcpsocket, options);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach_unlocked (struct medusa_tcpsocket *tcpsocket, int fd)
+{
+        int rc;
+        struct medusa_tcpsocket_attach_options options;
+        rc = medusa_tcpsocket_attach_options_default(&options);
+        if (rc < 0) {
+                return rc;
+        }
+        options.fd = fd;
+        return medusa_tcpsocket_attach_with_options_unlocked(tcpsocket, &options);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach (struct medusa_tcpsocket *tcpsocket, int fd)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
         medusa_monitor_lock(tcpsocket->subject.monitor);

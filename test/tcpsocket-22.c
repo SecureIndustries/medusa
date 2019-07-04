@@ -218,7 +218,7 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
         monitor_init_options.poll.type = poll;
-        monitor = medusa_monitor_create(&monitor_init_options);
+        monitor = medusa_monitor_create_with_options(&monitor_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
                 fprintf(stderr, "can not create monitor\n");
                 goto bail;

@@ -13,9 +13,6 @@ struct medusa_tcpsocket * medusa_tcpsocket_create_with_options_unlocked (const s
 int medusa_tcpsocket_accept_init_unlocked (struct medusa_tcpsocket *accepted, struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
 int medusa_tcpsocket_accept_init_with_options_unlocked (struct medusa_tcpsocket *accepted, struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_accept_options *options);
 
-struct medusa_tcpsocket * medusa_tcpsocket_accept_unlocked (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
-struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options_unlocked (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_accept_options *options);
-
 void medusa_tcpsocket_uninit_unlocked (struct medusa_tcpsocket *tcpsocket);
 void medusa_tcpsocket_destroy_unlocked (struct medusa_tcpsocket *tcpsocket);
 
@@ -58,8 +55,16 @@ int medusa_tcpsocket_add_events_unlocked (struct medusa_tcpsocket *tcpsocket, un
 unsigned int medusa_tcpsocket_get_events_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_bind_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
+int medusa_tcpsocket_bind_with_options_unlocked (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_bind_options *options);
+;
 int medusa_tcpsocket_connect_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
+int medusa_tcpsocket_connect_with_options_unlocked (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_connect_options *options);
+
 int medusa_tcpsocket_attach_unlocked (struct medusa_tcpsocket *tcpsocket, int fd);
+int medusa_tcpsocket_attach_with_options_unlocked (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_attach_options *options);
+
+struct medusa_tcpsocket * medusa_tcpsocket_accept_unlocked (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
+struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options_unlocked (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_accept_options *options);
 
 int medusa_tcpsocket_set_connect_timeout_unlocked (struct medusa_tcpsocket *tcpsocket, double timeout);
 double medusa_tcpsocket_get_connect_timeout_unlocked (const struct medusa_tcpsocket *tcpsocket);

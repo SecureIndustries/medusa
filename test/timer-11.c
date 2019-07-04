@@ -53,7 +53,7 @@ static int test_poll (unsigned int poll)
         medusa_monitor_init_options_default(&options);
         options.poll.type = poll;
 
-        g_monitor = medusa_monitor_create(&options);
+        g_monitor = medusa_monitor_create_with_options(&options);
         if (g_monitor == NULL) {
                 fprintf(stderr, "medusa_monitor_create failed\n");
                 goto bail;

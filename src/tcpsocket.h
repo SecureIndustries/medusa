@@ -102,6 +102,22 @@ struct medusa_tcpsocket_accept_options {
         int enabled;
 };
 
+struct medusa_tcpsocket_bind_options {
+        unsigned int protocol;
+        const char *address;
+        unsigned short port;
+};
+
+struct medusa_tcpsocket_connect_options {
+        unsigned int protocol;
+        const char *address;
+        unsigned short port;
+};
+
+struct medusa_tcpsocket_attach_options {
+        int fd;
+};
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -155,12 +171,19 @@ int medusa_tcpsocket_add_events (struct medusa_tcpsocket *tcpsocket, unsigned in
 int medusa_tcpsocket_del_events (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 unsigned int medusa_tcpsocket_get_events (const struct medusa_tcpsocket *io);
 
+int medusa_tcpsocket_bind_options_default (struct medusa_tcpsocket_bind_options *options);
 int medusa_tcpsocket_bind (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
+int medusa_tcpsocket_bind_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_bind_options *options);
+;
+int medusa_tcpsocket_connect_options_default (struct medusa_tcpsocket_connect_options *options);
 int medusa_tcpsocket_connect (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
+int medusa_tcpsocket_connect_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_connect_options *options);
+
+int medusa_tcpsocket_attach_options_default (struct medusa_tcpsocket_attach_options *options);
 int medusa_tcpsocket_attach (struct medusa_tcpsocket *tcpsocket, int fd);
+int medusa_tcpsocket_attach_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_attach_options *options);
 
 int medusa_tcpsocket_accept_options_default (struct medusa_tcpsocket_accept_options *options);
-
 struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
 struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_accept_options *options);
 

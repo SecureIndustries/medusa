@@ -171,7 +171,7 @@ int main (int argc, char *argv[])
                 err = rc;
                 goto out;
         }
-        medusa_monitor = medusa_monitor_create(&medusa_monitor_init_options);
+        medusa_monitor = medusa_monitor_create_with_options(&medusa_monitor_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(medusa_monitor)) {
                 err = MEDUSA_PTR_ERR(medusa_monitor);
                 goto out;

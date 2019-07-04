@@ -14,7 +14,7 @@ int main (int argc, char *argv[])
         if (rc != 0) {
                 return -1;
         }
-        monitor = medusa_monitor_create(&options);
+        monitor = medusa_monitor_create_with_options(&options);
         if (monitor == NULL) {
                 return -1;
         }

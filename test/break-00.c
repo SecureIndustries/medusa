@@ -41,7 +41,7 @@ int main (int argc, char *argv[])
 
         alarm(5);
 
-        monitor = medusa_monitor_create(NULL);
+        monitor = medusa_monitor_create_with_options(NULL);
         if (monitor == NULL) {
                 fprintf(stderr, "can not create monitor\n");
                 return -1;

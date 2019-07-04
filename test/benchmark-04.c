@@ -140,7 +140,7 @@ static int test_poll (unsigned int poll)
 
         for (j = 0; j < g_nloops; j++) {
                 gettimeofday(&create_start, NULL);
-                monitor = medusa_monitor_create(&options);
+                monitor = medusa_monitor_create_with_options(&options);
                 if (monitor == NULL) {
                         goto bail;
                 }

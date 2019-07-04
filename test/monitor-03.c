@@ -26,7 +26,7 @@ int main (int argc, char *argv[])
         for (i = 0; i < sizeof(polls) / sizeof(polls[0]); i++) {
                 medusa_monitor_init_options_default(&options);
                 options.poll.type = polls[i];
-                monitor = medusa_monitor_create(&options);
+                monitor = medusa_monitor_create_with_options(&options);
                 if (monitor == NULL) {
                         return -1;
                 }

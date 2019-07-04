@@ -142,7 +142,7 @@ static int test_poll (unsigned int poll)
 
                 gettimeofday(&create_start, NULL);
 
-                monitor = medusa_monitor_create(&monitor_init_options);
+                monitor = medusa_monitor_create_with_options(&monitor_init_options);
                 if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
                         goto bail;
                 }

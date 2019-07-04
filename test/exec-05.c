@@ -59,7 +59,7 @@ static int test_poll (unsigned int poll)
         medusa_monitor_init_options_default(&monitor_options);
         monitor_options.poll.type = poll;
 
-        monitor = medusa_monitor_create(&monitor_options);
+        monitor = medusa_monitor_create_with_options(&monitor_options);
         if (monitor == NULL) {
                 goto bail;
         }
