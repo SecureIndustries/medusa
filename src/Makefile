@@ -35,6 +35,7 @@ libmedusa.a_files-y = \
 	buffer.c \
 	buffer-simple.c \
 	pqueue.c \
+	condition.c \
 	exec.c \
 	io.c \
 	signal.c \
