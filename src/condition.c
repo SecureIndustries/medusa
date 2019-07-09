@@ -273,7 +273,7 @@ __attribute__ ((visibility ("default"))) int medusa_condition_get_signalled_unlo
         if (MEDUSA_IS_ERR_OR_NULL(condition)) {
                 return -EINVAL;
         }
-        return !!(condition->flags & MEDUSA_CONDITION_FLAG_ENABLED);
+        return !!(condition->flags & MEDUSA_CONDITION_FLAG_SIGNALLED);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_condition_get_signalled (const struct medusa_condition *condition)
@@ -423,6 +423,7 @@ __attribute__ ((visibility ("default"))) int medusa_condition_onevent_unlocked (
         rc = 0;
         monitor = condition->subject.monitor;
         if (events & MEDUSA_CONDITION_EVENT_SIGNAL) {
+                condition_set_signalled(condition, 0);
         }
         if (condition->onevent != NULL) {
                 if ((medusa_subject_is_active(&condition->subject)) ||

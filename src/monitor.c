@@ -242,7 +242,7 @@ static int monitor_condition_subject_compare (void *a, void *b)
 {
         struct medusa_condition *ta = a;
         struct medusa_condition *tb = b;
-        return medusa_condition_get_signalled_unlocked(ta) > medusa_condition_get_signalled_unlocked(tb);
+        return medusa_condition_get_signalled_unlocked(ta) < medusa_condition_get_signalled_unlocked(tb);
 }
 
 static void monitor_condition_subject_set_position (void *entry, unsigned int position)
@@ -500,6 +500,7 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_CONDITION) {
                         struct medusa_condition *condition;
                         condition = (struct medusa_condition *) subject;
+                        fprintf(stderr, "process change condition: %p (%s %s:%d)\n", condition, __FUNCTION__, __FILE__, __LINE__);
                         if (!medusa_condition_is_valid_unlocked(condition)) {
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
                                         rc = pqueue_del(monitor->condition.pqueue, condition);
@@ -515,11 +516,13 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                                 subject->flags |= MEDUSA_SUBJECT_FLAG_ROGUE;
                         } else {
                                 if (subject->flags & MEDUSA_SUBJECT_FLAG_HEAP) {
+                                        fprintf(stderr, "  heap del (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__);
                                         rc = pqueue_del(monitor->condition.pqueue, subject);
                                         if (rc != 0) {
                                                 goto bail;
                                         }
                                 }
+                                fprintf(stderr, "  heap add (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__);
                                 rc = pqueue_add(monitor->condition.pqueue, subject);
                                 if (rc != 0) {
                                         goto bail;
@@ -530,6 +533,10 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
                                 subject->flags |= MEDUSA_SUBJECT_FLAG_HEAP;
                                 monitor->condition.dirty = 1;
+                                if (medusa_condition_get_signalled_unlocked(condition) > 0) {
+                                        fprintf(stderr, "set condition fired (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__);
+                                        subject->monitor->condition.fired = 1;
+                                }
                         }
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
                         TAILQ_REMOVE(&monitor->changes, subject, list);
@@ -640,6 +647,27 @@ static int monitor_check_timer (struct medusa_monitor *monitor)
 bail:   return -1;
 }
 
+static __attribute__ ((__unused__))  int monitor_traverse_condition_callback (void *context, void *a)
+{
+        struct medusa_condition *condition = a;
+        struct medusa_monitor *monitor = context;
+        (void) monitor;
+        fprintf(stderr, "  condition: %p, signalled: %d (%s %s:%d)\n", condition, medusa_condition_get_signalled_unlocked(condition), __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int monitor_traverse_condition (struct medusa_monitor *monitor)
+{
+        int rc;
+        fprintf(stderr, "condition traverse (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__);
+        rc = pqueue_traverse(monitor->condition.pqueue, monitor_traverse_condition_callback, monitor);
+        if (rc != 0) {
+                goto bail;
+        }
+        return 0;
+bail:   return -1;
+}
+
 static __attribute__ ((__unused__))  int monitor_hit_condition (void *context, void *a)
 {
         int rc;
@@ -667,14 +695,20 @@ static int monitor_check_condition (struct medusa_monitor *monitor)
                 goto bail;
         }
         if (monitor->condition.fired != 0) {
-#if 0
+                rc = monitor_traverse_condition(monitor);
+                if (rc < 0) {
+                        goto bail;
+                }
+#if 1
                 struct medusa_condition *condition;
+                fprintf(stderr, "condition fired (%s %s:%d)\n", __FUNCTION__, __FILE__, __LINE__);
                 while (1) {
                         condition = pqueue_peek(monitor->condition.pqueue);
                         if (condition == NULL) {
                                 break;
                         }
-                        if (medusa_timespec_compare(&condition->_timespec, &now, >)) {
+                        fprintf(stderr, "  condition: %p, signalled: %d (%s %s:%d)\n", condition, medusa_condition_get_signalled_unlocked(condition), __FUNCTION__, __FILE__, __LINE__);
+                        if (medusa_condition_get_signalled_unlocked(condition) == 0) {
                                 break;
                         }
                         condition = pqueue_pop(monitor->condition.pqueue);
@@ -693,9 +727,9 @@ static int monitor_check_condition (struct medusa_monitor *monitor)
                         }
                 }
 #else
-                struct medusa_condition tk;
-                memset(&tk, 0, sizeof(struct medusa_condition));
-                tk._timespec = now;
+                struct medusa_condition ck;
+                memset(&ck, 0, sizeof(struct medusa_condition));
+                ck._timespec = now;
                 rc = pqueue_search(monitor->condition.pqueue, &tk, monitor_hit_condition, monitor);
                 if (rc != 0) {
                         goto bail;
@@ -826,6 +860,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod_unlocked (struct
                         }
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                 }
+#if 1
         } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_CONDITION) {
                 struct medusa_condition *condition;
                 condition = (struct medusa_condition *) subject;
@@ -838,6 +873,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_mod_unlocked (struct
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         subject->monitor->condition.dirty = 1;
                 }
+#endif
         }
         rc = monitor_signal(subject->monitor, WAKEUP_REASON_SUBJECT_MOD);
         if (rc < 0) {

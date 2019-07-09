@@ -8,7 +8,7 @@
 #include <errno.h>
 
 #include "medusa/error.h"
-#include "medusa/timer.h"
+#include "medusa/condition.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
@@ -23,10 +23,10 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int condition_onevent (struct medusa_condition *condition, unsigned int events, void *context, ...)
 {
         unsigned int *tevents = (unsigned int *) context;
-        (void) timer;
+        (void) condition;
         *tevents |= events;
         return 0;
 }
@@ -38,8 +38,8 @@ static int test_poll (unsigned int poll)
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
-        unsigned int tevents;
-        struct medusa_timer *timer;
+        unsigned int cevents;
+        struct medusa_condition *condition;
 
         monitor = NULL;
 
@@ -51,28 +51,12 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        tevents = 0;
-        timer = medusa_timer_create(monitor, timer_onevent, &tevents);
-        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+        cevents = 0;
+        condition = medusa_condition_create(monitor, condition_onevent, &cevents);
+        if (MEDUSA_IS_ERR_OR_NULL(condition)) {
                 goto bail;
         }
-        rc = medusa_timer_set_initial(timer, 1.0);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_interval(timer, 1.0);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_singleshot(timer, 1);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_resolution(timer, MEDUSA_TIMER_RESOLUTION_NANOSECOMDS);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_enabled(timer, 1);
+        rc = medusa_condition_set_enabled(condition, 1);
         if (rc < 0) {
                 goto bail;
         }
@@ -80,8 +64,8 @@ static int test_poll (unsigned int poll)
         medusa_monitor_destroy(monitor);
         monitor = NULL;
 
-        if (tevents != (MEDUSA_TIMER_EVENT_DESTROY)) {
-                fprintf(stderr, "tevents: 0x%08x is invalid\n", tevents);
+        if (cevents != (MEDUSA_CONDITION_EVENT_DESTROY)) {
+                fprintf(stderr, "tevents: 0x%08x is invalid\n", cevents);
                 goto bail;
         }
         return 0;

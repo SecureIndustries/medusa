@@ -112,6 +112,7 @@ dist.include-y = \
 	error.h \
 	pool.h \
 	buffer.h \
+	condition.h \
 	io.h \
 	signal.h \
 	timer.h \
