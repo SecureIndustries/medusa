@@ -242,6 +242,48 @@ int pqueue_search (struct pqueue_head *head, void *key, int (*callback) (void *c
         return 0;
 }
 
+static int pqueue_traverse_actual (struct pqueue_head *head, int (*callback) (void *context, void *entry), void *context, unsigned int pos)
+{
+        int rc;
+        if (pqueue_left(pos) < head->count) {
+                rc = callback(context, head->entries[pqueue_left(pos)]);
+                if (rc != 0) {
+                        return rc;
+                }
+                rc = pqueue_traverse_actual(head, callback, context, pqueue_left(pos));
+                if (rc != 0) {
+                        return rc;
+                }
+        }
+        if (pqueue_right(pos) < head->count) {
+                rc = callback(context, head->entries[pqueue_right(pos)]);
+                if (rc != 0) {
+                        return rc;
+                }
+                rc = pqueue_traverse_actual(head, callback, context, pqueue_right(pos));
+                if (rc != 0) {
+                        return rc;
+                }
+        }
+        return 0;
+}
+
+int pqueue_traverse (struct pqueue_head *head, int (*callback) (void *context, void *entry), void *context)
+{
+        int rc;
+        if (1 < head->count) {
+                rc = callback(context, head->entries[1]);
+                if (rc != 0) {
+                        return rc;
+                }
+                rc = pqueue_traverse_actual(head, callback, context, 1);
+                if (rc != 0) {
+                        return rc;
+                }
+        }
+        return 0;
+}
+
 static int pqueue_is_valid_actual (struct pqueue_head *head, unsigned int pos)
 {
         if (pqueue_left(pos) < head->count) {

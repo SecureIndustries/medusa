@@ -73,6 +73,8 @@ bail:   return -1;
 
 static int internal_get (struct medusa_timer_backend *backend, struct timespec *timespec)
 {
+        int rc;
+        struct itimerspec itimerspec;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
@@ -80,6 +82,12 @@ static int internal_get (struct medusa_timer_backend *backend, struct timespec *
         if (timespec == NULL) {
                 goto bail;
         }
+        rc = timerfd_gettime(internal->tfd, &itimerspec);
+        if (rc != 0) {
+                goto bail;
+        }
+        timespec->tv_sec  = itimerspec.it_value.tv_sec;
+        timespec->tv_nsec = itimerspec.it_value.tv_nsec;
         return 0;
 bail:   return -1;
 }

@@ -35,6 +35,7 @@ libmedusa.a_files-y = \
 	buffer.c \
 	buffer-simple.c \
 	pqueue.c \
+	condition.c \
 	exec.c \
 	io.c \
 	signal.c \
@@ -111,6 +112,7 @@ dist.include-y = \
 	error.h \
 	pool.h \
 	buffer.h \
+	condition.h \
 	io.h \
 	signal.h \
 	timer.h \

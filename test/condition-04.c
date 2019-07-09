@@ -1,14 +1,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
-#include <time.h>
+#include <string.h>
 #include <signal.h>
+#include <time.h>
 #include <errno.h>
 
 #include "medusa/error.h"
 #include "medusa/timer.h"
+#include "medusa/condition.h"
 #include "medusa/monitor.h"
 
 static const unsigned int g_polls[] = {
@@ -23,11 +24,19 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+#define CONDITIONS_COUNT        10
+
+static int condition_onevent (struct medusa_condition *condition, unsigned int events, void *context, ...)
 {
-        unsigned int *tevents = (unsigned int *) context;
-        (void) timer;
-        *tevents |= events;
+        (void) condition;
+        fprintf(stderr, "condition: %p, events: 0x%08x, %s\n", condition, events, medusa_condition_event_string(events));
+        if (events & MEDUSA_CONDITION_EVENT_SIGNAL) {
+                if (context != NULL) {
+                        return medusa_condition_signal((struct medusa_condition *) context);
+                } else {
+                        return medusa_monitor_break(medusa_condition_get_monitor(condition));
+                }
+        }
         return 0;
 }
 
@@ -38,8 +47,8 @@ static int test_poll (unsigned int poll)
         struct medusa_monitor *monitor;
         struct medusa_monitor_init_options options;
 
-        unsigned int tevents;
-        struct medusa_timer *timer;
+        unsigned int i;
+        struct medusa_condition *conditions[CONDITIONS_COUNT];
 
         monitor = NULL;
 
@@ -51,39 +60,32 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        tevents = 0;
-        timer = medusa_timer_create(monitor, timer_onevent, &tevents);
-        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
-                goto bail;
+        fprintf(stderr, "conditions\n");
+        for (i = 0; i < CONDITIONS_COUNT; i++) {
+                conditions[i] = medusa_condition_create(monitor, condition_onevent, (i > 0) ? conditions[i - 1] : NULL);
+                fprintf(stderr, "  %d - %p\n", i, conditions[i]);
+                if (MEDUSA_IS_ERR_OR_NULL(conditions[i])) {
+                        goto bail;
+                }
+                rc = medusa_condition_set_enabled(conditions[i], 1);
+                if (rc < 0) {
+                        goto bail;
+                }
         }
-        rc = medusa_timer_set_initial(timer, 1.0);
+        rc = medusa_condition_signal(conditions[i - 1]);
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_timer_set_interval(timer, 1.0);
-        if (rc < 0) {
-                goto bail;
+
+        rc = medusa_monitor_run(monitor);
+        if (rc != 0) {
+                fprintf(stderr, "can not run monitor\n");
+                return -1;
         }
-        rc = medusa_timer_set_singleshot(timer, 1);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_resolution(timer, MEDUSA_TIMER_RESOLUTION_NANOSECOMDS);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_timer_set_enabled(timer, 1);
-        if (rc < 0) {
-                goto bail;
-        }
+
+        fprintf(stderr, "finish\n");
 
         medusa_monitor_destroy(monitor);
-        monitor = NULL;
-
-        if (tevents != (MEDUSA_TIMER_EVENT_DESTROY)) {
-                fprintf(stderr, "tevents: 0x%08x is invalid\n", tevents);
-                goto bail;
-        }
         return 0;
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);

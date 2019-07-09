@@ -21,5 +21,6 @@ int pqueue_verify (struct pqueue_head *head);
 void * pqueue_peek (struct pqueue_head *head);
 void * pqueue_pop (struct pqueue_head *head);
 int pqueue_search (struct pqueue_head *head, void *key, int (*callback) (void *context, void *entry), void *context);
+int pqueue_traverse (struct pqueue_head *head, int (*callback) (void *context, void *entry), void *context);
 
 #endif
