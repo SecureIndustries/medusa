@@ -24,24 +24,20 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-#define CONDITIONS_COUNT        3
+#define CONDITIONS_COUNT        10
 
 static int condition_onevent (struct medusa_condition *condition, unsigned int events, void *context, ...)
 {
-        int rc;
         (void) condition;
         fprintf(stderr, "condition: %p, events: 0x%08x, %s\n", condition, events, medusa_condition_event_string(events));
         if (events & MEDUSA_CONDITION_EVENT_SIGNAL) {
                 if (context != NULL) {
-                        rc = medusa_condition_signal((struct medusa_condition *) context);
-                        if (rc < 0) {
-                                fprintf(stderr, "  can not signal: %p\n", (struct medusa_condition *) context);
-                                goto bail;
-                        }
+                        return medusa_condition_signal((struct medusa_condition *) context);
+                } else {
+                        return medusa_monitor_break(medusa_condition_get_monitor(condition));
                 }
         }
         return 0;
-bail:   return -1;
 }
 
 static int test_poll (unsigned int poll)
