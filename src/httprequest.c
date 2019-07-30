@@ -651,6 +651,10 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                         if (rc < 0) {
                                 goto bail;
                         }
+                        rc = medusa_tcpsocket_del_events_unlocked(httprequest->tcpsocket, MEDUSA_TCPSOCKET_EVENT_OUT);
+                        if (rc < 0) {
+                                goto bail;
+                        }
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_IN) {
