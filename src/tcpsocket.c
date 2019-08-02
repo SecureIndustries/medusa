@@ -1879,6 +1879,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_options_de
         }
         memset(options, 0, sizeof(struct medusa_tcpsocket_connect_options));
         options->protocol = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
+        options->timeout  = -1;
         return 0;
 }
 
@@ -2053,6 +2054,13 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_with_optio
                                 goto bail;
                         }
 
+                }
+                if (options->timeout > 0) {
+                        rc = medusa_tcpsocket_set_connect_timeout_unlocked(tcpsocket, options->timeout);
+                        if (rc < 0) {
+                                ret = rc;
+                                goto bail;
+                        }
                 }
                 rc = connect(fd, res->ai_addr, res->ai_addrlen);
                 if (rc != 0) {

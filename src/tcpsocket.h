@@ -116,6 +116,7 @@ struct medusa_tcpsocket_connect_options {
         unsigned int protocol;
         const char *address;
         unsigned short port;
+        double timeout;
 };
 
 struct medusa_tcpsocket_attach_options {
