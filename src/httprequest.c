@@ -779,6 +779,13 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                         goto bail;
                 }
         }
+        if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
+                httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
+                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_ERROR);
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
         if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
                 rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
@@ -1441,6 +1448,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_httprequest_event_s
         if (events == MEDUSA_HTTPREQUEST_EVENT_RECEIVE_TIMEOUT) return "MEDUSA_HTTPREQUEST_EVENT_RECEIVE_TIMEOUT";
         if (events == MEDUSA_HTTPREQUEST_EVENT_RECEIVED)        return "MEDUSA_HTTPREQUEST_EVENT_RECEIVED";
         if (events == MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED)    return "MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED";
+        if (events == MEDUSA_HTTPREQUEST_EVENT_ERROR)           return "MEDUSA_HTTPREQUEST_EVENT_ERROR";
         if (events == MEDUSA_HTTPREQUEST_EVENT_DESTROY)         return "MEDUSA_HTTPREQUEST_EVENT_DESTROY";
         return "MEDUSA_HTTPREQUEST_EVENT_UNKNOWN";
 }
