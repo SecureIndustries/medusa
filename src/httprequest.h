@@ -94,6 +94,9 @@ unsigned int medusa_httprequest_get_state (const struct medusa_httprequest *http
 int medusa_httprequest_set_connect_timeout (struct medusa_httprequest *httprequest, double timeout);
 double medusa_httprequest_get_connect_timeout (const struct medusa_httprequest *httprequest);
 
+int medusa_httprequest_set_read_timeout (struct medusa_httprequest *httprequest, double timeout);
+double medusa_httprequest_get_read_timeout (const struct medusa_httprequest *httprequest);
+
 int medusa_httprequest_add_header (struct medusa_httprequest *httprequest, const char *key, const char *value, ...) __attribute__((format(printf, 3, 4)));
 int medusa_httprequest_add_vheader (struct medusa_httprequest *httprequest, const char *key, const char *value, va_list va);
 

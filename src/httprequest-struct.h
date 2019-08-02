@@ -12,6 +12,7 @@ struct medusa_httprequest {
         struct medusa_buffer *rbuffer;
         struct medusa_tcpsocket *tcpsocket;
         double connect_timeout;
+        double read_timeout;
         http_parser http_parser;
         http_parser_settings http_parser_settings;
         struct medusa_httprequest_reply *reply;

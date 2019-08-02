@@ -12,19 +12,26 @@
 #define OPTIONS_DEFAULT_URL             "http://127.0.0.1"
 #define OPTIONS_DEFAULT_METHOD          "post"
 #define OPTIONS_DEFAULT_DATA            NULL
+#define OPTIONS_DEFAULT_CONNECT_TIMEOUT 5.0
+#define OPTIONS_DEFAULT_READ_TIMEOUT    5.0
 
 #define OPTION_HELP                     'h'
 #define OPTION_URL                      'u'
 #define OPTION_METHOD                   'm'
 #define OPTION_HEADER                   'e'
 #define OPTION_DATA                     'd'
+#define OPTION_CONNECT_TIMEOUT          'c'
+#define OPTION_READ_TIMEOUT             'r'
+
 static struct option longopts[] = {
-        { "help",               no_argument,            NULL,        OPTION_HELP        },
-        { "url",                required_argument,      NULL,        OPTION_URL      },
-        { "method",             required_argument,      NULL,        OPTION_METHOD      },
-        { "header",             required_argument,      NULL,        OPTION_HEADER      },
-        { "data",               required_argument,      NULL,        OPTION_DATA        },
-        { NULL,                 0,                      NULL,        0                  },
+        { "help",               no_argument,            NULL,        OPTION_HELP                },
+        { "url",                required_argument,      NULL,        OPTION_URL                 },
+        { "method",             required_argument,      NULL,        OPTION_METHOD              },
+        { "header",             required_argument,      NULL,        OPTION_HEADER              },
+        { "data",               required_argument,      NULL,        OPTION_DATA                },
+        { "connect-timeout",    required_argument,      NULL,        OPTION_CONNECT_TIMEOUT     },
+        { "read-timeout",       required_argument,      NULL,        OPTION_READ_TIMEOUT        },
+        { NULL,                 0,                      NULL,        0                          },
 };
 
 static void usage (const char *pname)
@@ -39,6 +46,8 @@ static void usage (const char *pname)
         fprintf(stdout, "  -m, --method: request method (default: %s)\n", OPTIONS_DEFAULT_METHOD);
         fprintf(stdout, "  -e, --header: add header\n");
         fprintf(stdout, "  -d, --data  : request data (default: %s)\n", (OPTIONS_DEFAULT_DATA) ? OPTIONS_DEFAULT_DATA : "(null)");
+        fprintf(stdout, "  -c, --connect-timeout: connect timeout (default: %.2f)\n", OPTIONS_DEFAULT_CONNECT_TIMEOUT);
+        fprintf(stdout, "  -c, --read-timeout   : read timeout (default: %.2f)\n", OPTIONS_DEFAULT_READ_TIMEOUT);
         fprintf(stdout, "  -h, --help  : this text\n");
         fprintf(stdout, "\n");
         fprintf(stdout, "example:\n");
@@ -116,6 +125,8 @@ int main (int argc, char *argv[])
         const char *option_method;
         const char *option_header;
         const char *option_data;
+        double option_connect_timeout;
+        double option_read_timeout;
 
         int rc;
         struct medusa_monitor *monitor;
@@ -128,10 +139,12 @@ int main (int argc, char *argv[])
 
         monitor = NULL;
 
-        option_url    = OPTIONS_DEFAULT_URL;
-        option_method = OPTIONS_DEFAULT_METHOD;
-        option_header = NULL;
-        option_data   = NULL;
+        option_url             = OPTIONS_DEFAULT_URL;
+        option_method          = OPTIONS_DEFAULT_METHOD;
+        option_header          = NULL;
+        option_data            = NULL;
+        option_connect_timeout = OPTIONS_DEFAULT_CONNECT_TIMEOUT;
+        option_read_timeout    = OPTIONS_DEFAULT_READ_TIMEOUT;
 
         _argv = malloc(sizeof(char *) * (argc + 1));
 
@@ -156,6 +169,12 @@ int main (int argc, char *argv[])
                         case OPTION_DATA:
                                 option_data = optarg;
                                 break;
+                        case OPTION_CONNECT_TIMEOUT:
+                                option_connect_timeout = atof(optarg);
+                                break;
+                        case OPTION_READ_TIMEOUT:
+                                option_read_timeout = atof(optarg);
+                                break;
                         default:
                                 fprintf(stderr, "invalid option: %s\n", argv[optind - 1]);
                                 goto bail;
@@ -176,6 +195,16 @@ int main (int argc, char *argv[])
         httprequest = medusa_httprequest_create_with_options(&httprequest_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
                 fprintf(stderr, "can not create httprequest\n");
+                goto bail;
+        }
+        rc = medusa_httprequest_set_connect_timeout(httprequest, option_connect_timeout);
+        if (rc != 0) {
+                fprintf(stderr, "can not set httprequest connect timeout\n");
+                goto bail;
+        }
+        rc = medusa_httprequest_set_read_timeout(httprequest, option_read_timeout);
+        if (rc != 0) {
+                fprintf(stderr, "can not set httprequest read timeout\n");
                 goto bail;
         }
 

@@ -585,6 +585,13 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                 http_parser_init(&httprequest->http_parser, HTTP_RESPONSE);
                 httprequest->http_parser.data = httprequest;
         }
+        if (events & MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT) {
+                httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
+                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_CONNECT_TIMEOUT);
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
         if (events & MEDUSA_TCPSOCKET_EVENT_OUT) {
                 if (httprequest_get_state(httprequest) == MEDUSA_HTTPREQUEST_STATE_CONNECTED) {
                         httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_REQUESTING);
@@ -766,6 +773,12 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                         }
                 }
         }
+        if (events & MEDUSA_TCPSOCKET_EVENT_IN_TIMEOUT) {
+                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RECEIVE_TIMEOUT);
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
         if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
                 rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
@@ -840,6 +853,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_init_with_option
         httprequest->onevent = options->onevent;
         httprequest->context = options->context;
         httprequest->connect_timeout = -1;
+        httprequest->read_timeout    = -1;
         httprequest->headers = medusa_buffer_create(MEDUSA_BUFFER_TYPE_DEFAULT);
         if (MEDUSA_IS_ERR_OR_NULL(httprequest->headers)) {
                 return MEDUSA_PTR_ERR(httprequest->headers);
@@ -1050,6 +1064,47 @@ __attribute__ ((visibility ("default"))) double medusa_httprequest_get_connect_t
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_read_timeout_unlocked (struct medusa_httprequest *httprequest, double timeout)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        httprequest->read_timeout = timeout;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_read_timeout (struct medusa_httprequest *httprequest, double timeout)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httprequest->subject.monitor);
+        rc = medusa_httprequest_set_read_timeout_unlocked(httprequest, timeout);
+        medusa_monitor_unlock(httprequest->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) double medusa_httprequest_get_read_timeout_unlocked (const struct medusa_httprequest *httprequest)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        return httprequest->read_timeout;
+}
+
+__attribute__ ((visibility ("default"))) double medusa_httprequest_get_read_timeout (const struct medusa_httprequest *httprequest)
+{
+        double rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httprequest->subject.monitor);
+        rc = medusa_httprequest_get_read_timeout(httprequest);
+        medusa_monitor_unlock(httprequest->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_httprequest_add_header_unlocked (struct medusa_httprequest *httprequest, const char *key, const char *value, ...)
 {
         int64_t rc;
@@ -1183,6 +1238,11 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 goto bail;
         }
         rc = medusa_tcpsocket_set_connect_timeout_unlocked(httprequest->tcpsocket, httprequest->connect_timeout);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_read_timeout_unlocked(httprequest->tcpsocket, httprequest->read_timeout);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
