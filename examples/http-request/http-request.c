@@ -152,7 +152,7 @@ int main (int argc, char *argv[])
         for (_argc = 0; _argc < argc; _argc++) {
                 _argv[_argc] = argv[_argc];
         }
-        while ((c = getopt_long(_argc, _argv, "hu:m:e:d:", longopts, NULL)) != -1) {
+        while ((c = getopt_long(_argc, _argv, "hu:m:e:d:c:r:", longopts, NULL)) != -1) {
                 switch (c) {
                         case OPTION_HELP:
                                 usage(argv[0]);
