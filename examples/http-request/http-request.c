@@ -50,7 +50,7 @@ static int httprequest_onevent (struct medusa_httprequest *httprequest, unsigned
         (void) httprequest;
         (void) events;
         (void) context;
-        fprintf(stderr, "httprequest events: 0x%08x\n", events);
+        fprintf(stderr, "httprequest events: 0x%08x, %s\n", events, medusa_httprequest_event_string(events));
         if (events & MEDUSA_HTTPREQUEST_EVENT_RECEIVED) {
                 const struct medusa_httprequest_reply *httprequest_reply;
                 const struct medusa_httprequest_reply_status *httprequest_reply_status;
@@ -98,7 +98,8 @@ static int httprequest_onevent (struct medusa_httprequest *httprequest, unsigned
                 fprintf(stderr, "  value : %.*s\n",
                         (int) medusa_httprequest_reply_body_get_length(httprequest_reply_body),
                         (char *) medusa_httprequest_reply_body_get_value(httprequest_reply_body));
-
+        }
+        if (events & MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED) {
                 medusa_monitor_break(medusa_httprequest_get_monitor(httprequest));
         }
         return 0;

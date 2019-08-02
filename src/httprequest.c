@@ -381,7 +381,7 @@ static inline unsigned int httprequest_get_state (const struct medusa_httpreques
 
 static inline int httprequest_set_state (struct medusa_httprequest *httprequest, unsigned int state)
 {
-        if (state == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+        if (state == MEDUSA_HTTPREQUEST_STATE_DISCONNECTED) {
                 if (!MEDUSA_IS_ERR_OR_NULL(httprequest->tcpsocket)) {
                         medusa_tcpsocket_destroy_unlocked(httprequest->tcpsocket);
                         httprequest->tcpsocket = NULL;
@@ -508,10 +508,12 @@ static int httprequest_httpparser_on_message_complete (http_parser *http_parser)
         if (rc < 0) {
                 return rc;
         }
+#if 0
         if (!MEDUSA_IS_ERR_OR_NULL(httprequest->tcpsocket)) {
                 medusa_tcpsocket_destroy_unlocked(httprequest->tcpsocket);
                 httprequest->tcpsocket = NULL;
         }
+#endif
         return 0;
 }
 

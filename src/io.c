@@ -539,6 +539,20 @@ __attribute__ ((visibility ("default"))) int medusa_io_is_valid_unlocked (const 
         return 1;
 }
 
+__attribute__ ((visibility ("default"))) const char * medusa_io_event_string (unsigned int events)
+{
+        if (events == MEDUSA_IO_EVENT_NONE)     return "MEDUSA_IO_EVENT_NONE";
+        if (events == MEDUSA_IO_EVENT_IN)       return "MEDUSA_IO_EVENT_IN";
+        if (events == MEDUSA_IO_EVENT_OUT)      return "MEDUSA_IO_EVENT_OUT";
+        if (events == MEDUSA_IO_EVENT_PRI)      return "MEDUSA_IO_EVENT_PRI";
+        if (events == MEDUSA_IO_EVENT_ERR)      return "MEDUSA_IO_EVENT_ERR";
+        if (events == MEDUSA_IO_EVENT_HUP)      return "MEDUSA_IO_EVENT_HUP";
+        if (events == MEDUSA_IO_EVENT_HUP)      return "MEDUSA_IO_EVENT_HUP";
+        if (events == MEDUSA_IO_EVENT_NVAL)     return "MEDUSA_IO_EVENT_NVAL";
+        if (events == MEDUSA_IO_EVENT_DESTROY)  return "MEDUSA_IO_EVENT_DESTROY";
+        return "MEDUSA_IO_EVENT_UNKNOWN";
+}
+
 __attribute__ ((constructor)) static void io_constructor (void)
 {
 #if defined(MEDUSA_IO_USE_POOL) && (MEDUSA_IO_USE_POOL == 1)

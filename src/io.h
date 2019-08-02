@@ -63,6 +63,8 @@ void * medusa_io_get_userdata (struct medusa_io *io);
 
 struct medusa_monitor * medusa_io_get_monitor (const struct medusa_io *io);
 
+const char * medusa_io_event_string (unsigned int events);
+
 #ifdef __cplusplus
 }
 #endif
