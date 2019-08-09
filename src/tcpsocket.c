@@ -2987,12 +2987,14 @@ __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_vprintf_unlock
                 rc = vsnprintf(buffer, length + 1, format, vs);
                 va_end(vs);
                 if (rc < 0) {
+                        free(buffer);
                         return -EIO;
                 }
                 rc = send(fd, buffer, length, 0);
                 if (rc < 0) {
                         rc = -errno;
                 }
+                free(buffer);
         }
         return rc;
 }
