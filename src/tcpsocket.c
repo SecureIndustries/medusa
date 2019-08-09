@@ -2770,6 +2770,72 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_tcpsocke
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_peek_unlocked (const struct medusa_tcpsocket *tcpsocket, void *data, int64_t length)
+{
+        int64_t rc;
+        struct medusa_buffer *buffer;
+        buffer = medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket);
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return MEDUSA_PTR_ERR(buffer);
+        }
+        rc = medusa_buffer_peek(buffer, data, length);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_peek (const struct medusa_tcpsocket *tcpsocket, void *data, int64_t length)
+{
+        int64_t rc;
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_peek_unlocked(tcpsocket, data, length);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_read_unlocked (struct medusa_tcpsocket *tcpsocket, void *data, int64_t length)
+{
+        int64_t rc;
+        struct medusa_buffer *buffer;
+        buffer = medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket);
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return MEDUSA_PTR_ERR(buffer);
+        }
+        rc = medusa_buffer_read(buffer, data, length);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_read (struct medusa_tcpsocket *tcpsocket, void *data, int64_t length)
+{
+        int64_t rc;
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_read_unlocked(tcpsocket, data, length);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_write_unlocked (struct medusa_tcpsocket *tcpsocket, const void *data, int64_t length)
+{
+        int64_t rc;
+        struct medusa_buffer *buffer;
+        buffer = medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket);
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return MEDUSA_PTR_ERR(buffer);
+        }
+        rc = medusa_buffer_write(buffer, data, length);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_write (struct medusa_tcpsocket *tcpsocket, const void *data, int64_t length)
+{
+        int64_t rc;
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_write_unlocked(tcpsocket, data, length);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) const char * medusa_tcpsocket_state_string (unsigned int state)
 {
         if (state == MEDUSA_TCPSOCKET_STATE_UNKNOWN)                    return "MEDUSA_TCPSOCKET_STATE_UNKNOWN";

@@ -78,4 +78,8 @@ int medusa_tcpsocket_onevent_unlocked (struct medusa_tcpsocket *tcpsocket, unsig
 int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 struct medusa_monitor * medusa_tcpsocket_get_monitor_unlocked (struct medusa_tcpsocket *tcpsocket);
 
+int64_t medusa_tcpsocket_peek_unlocked  (const struct medusa_tcpsocket *tcpsocket, void *data, int64_t length);
+int64_t medusa_tcpsocket_read_unlocked  (struct medusa_tcpsocket *tcpsocket, void *data, int64_t length);
+int64_t medusa_tcpsocket_write_unlocked (struct medusa_tcpsocket *tcpsocket, const void *data, int64_t length);
+
 #endif

@@ -127,7 +127,7 @@ int64_t medusa_buffer_memmem (const struct medusa_buffer *buffer, int64_t offset
 
 int64_t medusa_buffer_peek  (const struct medusa_buffer *buffer, void *data, int64_t length);
 int64_t medusa_buffer_read  (struct medusa_buffer *buffer, void *data, int64_t length);
-int64_t medusa_buffer_write (struct medusa_buffer *buffer, void *data, int64_t length);
+int64_t medusa_buffer_write (struct medusa_buffer *buffer, const void *data, int64_t length);
 
 int medusa_buffer_peek_data      (const struct medusa_buffer *buffer, int64_t offset, void *data, int64_t length);
 int medusa_buffer_peek_uint8     (const struct medusa_buffer *buffer, int64_t offset, uint8_t *value);

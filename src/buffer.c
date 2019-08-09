@@ -700,7 +700,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_read (struct medu
         }
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_write (struct medusa_buffer *buffer, void *data, int64_t length)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_write (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
         return medusa_buffer_append(buffer, data, length);
 }
