@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -460,6 +461,66 @@ __attribute__ ((visibility ("default"))) void * medusa_io_get_userdata (struct m
         rc = medusa_io_get_userdata_unlocked(io);
         medusa_monitor_unlock(io->subject.monitor);
         return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_set_userdata_ptr_unlocked (struct medusa_io *io, void *userdata)
+{
+        return medusa_io_set_userdata_unlocked(io, userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_set_userdata_ptr (struct medusa_io *io, void *userdata)
+{
+        return medusa_io_set_userdata(io, userdata);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_io_get_userdata_ptr_unlocked (struct medusa_io *io)
+{
+        return medusa_io_get_userdata_unlocked(io);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_io_get_userdata_ptr (struct medusa_io *io)
+{
+        return medusa_io_get_userdata(io);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_set_userdata_int_unlocked (struct medusa_io *io, int userdata)
+{
+        return medusa_io_set_userdata_unlocked(io, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_set_userdata_int (struct medusa_io *io, int userdata)
+{
+        return medusa_io_set_userdata(io, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_get_userdata_int_unlocked (struct medusa_io *io)
+{
+        return (int) (intptr_t) medusa_io_get_userdata_unlocked(io);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_get_userdata_int (struct medusa_io *io)
+{
+        return (int) (intptr_t) medusa_io_get_userdata(io);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_set_userdata_uint_unlocked (struct medusa_io *io, unsigned int userdata)
+{
+        return medusa_io_set_userdata_unlocked(io, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_set_userdata_uint (struct medusa_io *io, unsigned int userdata)
+{
+        return medusa_io_set_userdata(io, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_io_get_userdata_uint_unlocked (struct medusa_io *io)
+{
+        return (unsigned int) (intptr_t) medusa_io_get_userdata_unlocked(io);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_io_get_userdata_uint (struct medusa_io *io)
+{
+        return (unsigned int) (uintptr_t) medusa_io_get_userdata(io);
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_io_get_monitor_unlocked (const struct medusa_io *io)

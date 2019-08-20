@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -394,6 +395,66 @@ __attribute__ ((visibility ("default"))) void * medusa_condition_get_userdata (s
         rc = medusa_condition_get_userdata_unlocked(condition);
         medusa_monitor_unlock(condition->subject.monitor);
         return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_condition_set_userdata_ptr_unlocked (struct medusa_condition *condition, void *userdata)
+{
+        return medusa_condition_set_userdata_unlocked(condition, userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_condition_set_userdata_ptr (struct medusa_condition *condition, void *userdata)
+{
+        return medusa_condition_set_userdata(condition, userdata);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_condition_get_userdata_ptr_unlocked (struct medusa_condition *condition)
+{
+        return medusa_condition_get_userdata_unlocked(condition);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_condition_get_userdata_ptr (struct medusa_condition *condition)
+{
+        return medusa_condition_get_userdata(condition);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_condition_set_userdata_int_unlocked (struct medusa_condition *condition, int userdata)
+{
+        return medusa_condition_set_userdata_unlocked(condition, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_condition_set_userdata_int (struct medusa_condition *condition, int userdata)
+{
+        return medusa_condition_set_userdata(condition, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_condition_get_userdata_int_unlocked (struct medusa_condition *condition)
+{
+        return (int) (intptr_t) medusa_condition_get_userdata_unlocked(condition);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_condition_get_userdata_int (struct medusa_condition *condition)
+{
+        return (int) (intptr_t) medusa_condition_get_userdata(condition);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_condition_set_userdata_uint_unlocked (struct medusa_condition *condition, unsigned int userdata)
+{
+        return medusa_condition_set_userdata_unlocked(condition, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_condition_set_userdata_uint (struct medusa_condition *condition, unsigned int userdata)
+{
+        return medusa_condition_set_userdata(condition, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_condition_get_userdata_uint_unlocked (struct medusa_condition *condition)
+{
+        return (unsigned int) (intptr_t) medusa_condition_get_userdata_unlocked(condition);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_condition_get_userdata_uint (struct medusa_condition *condition)
+{
+        return (unsigned int) (uintptr_t) medusa_condition_get_userdata(condition);
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_condition_get_monitor_unlocked (const struct medusa_condition *condition)

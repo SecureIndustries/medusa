@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -470,6 +471,66 @@ __attribute__ ((visibility ("default"))) void * medusa_signal_get_userdata (stru
         rc = medusa_signal_get_userdata_unlocked(signal);
         medusa_monitor_unlock(signal->subject.monitor);
         return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_signal_set_userdata_ptr_unlocked (struct medusa_signal *signal, void *userdata)
+{
+        return medusa_signal_set_userdata_unlocked(signal, userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_signal_set_userdata_ptr (struct medusa_signal *signal, void *userdata)
+{
+        return medusa_signal_set_userdata(signal, userdata);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_signal_get_userdata_ptr_unlocked (struct medusa_signal *signal)
+{
+        return medusa_signal_get_userdata_unlocked(signal);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_signal_get_userdata_ptr (struct medusa_signal *signal)
+{
+        return medusa_signal_get_userdata(signal);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_signal_set_userdata_int_unlocked (struct medusa_signal *signal, int userdata)
+{
+        return medusa_signal_set_userdata_unlocked(signal, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_signal_set_userdata_int (struct medusa_signal *signal, int userdata)
+{
+        return medusa_signal_set_userdata(signal, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_signal_get_userdata_int_unlocked (struct medusa_signal *signal)
+{
+        return (int) (intptr_t) medusa_signal_get_userdata_unlocked(signal);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_signal_get_userdata_int (struct medusa_signal *signal)
+{
+        return (int) (intptr_t) medusa_signal_get_userdata(signal);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_signal_set_userdata_uint_unlocked (struct medusa_signal *signal, unsigned int userdata)
+{
+        return medusa_signal_set_userdata_unlocked(signal, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_signal_set_userdata_uint (struct medusa_signal *signal, unsigned int userdata)
+{
+        return medusa_signal_set_userdata(signal, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_signal_get_userdata_uint_unlocked (struct medusa_signal *signal)
+{
+        return (unsigned int) (intptr_t) medusa_signal_get_userdata_unlocked(signal);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_signal_get_userdata_uint (struct medusa_signal *signal)
+{
+        return (unsigned int) (uintptr_t) medusa_signal_get_userdata(signal);
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_signal_get_monitor_unlocked (const struct medusa_signal *signal)

@@ -2679,6 +2679,86 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_userdata (stru
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) void * medusa_tcpsocket_get_userdata_unlocked (struct medusa_tcpsocket *tcpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return tcpsocket->userdata;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_tcpsocket_get_userdata (struct medusa_tcpsocket *tcpsocket)
+{
+        void *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_get_userdata_unlocked(tcpsocket);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_userdata_ptr_unlocked (struct medusa_tcpsocket *tcpsocket, void *userdata)
+{
+        return medusa_tcpsocket_set_userdata_unlocked(tcpsocket, userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_userdata_ptr (struct medusa_tcpsocket *tcpsocket, void *userdata)
+{
+        return medusa_tcpsocket_set_userdata(tcpsocket, userdata);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_tcpsocket_get_userdata_ptr_unlocked (struct medusa_tcpsocket *tcpsocket)
+{
+        return medusa_tcpsocket_get_userdata_unlocked(tcpsocket);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_tcpsocket_get_userdata_ptr (struct medusa_tcpsocket *tcpsocket)
+{
+        return medusa_tcpsocket_get_userdata(tcpsocket);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_userdata_int_unlocked (struct medusa_tcpsocket *tcpsocket, int userdata)
+{
+        return medusa_tcpsocket_set_userdata_unlocked(tcpsocket, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_userdata_int (struct medusa_tcpsocket *tcpsocket, int userdata)
+{
+        return medusa_tcpsocket_set_userdata(tcpsocket, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_userdata_int_unlocked (struct medusa_tcpsocket *tcpsocket)
+{
+        return (int) (intptr_t) medusa_tcpsocket_get_userdata_unlocked(tcpsocket);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_userdata_int (struct medusa_tcpsocket *tcpsocket)
+{
+        return (int) (intptr_t) medusa_tcpsocket_get_userdata(tcpsocket);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_userdata_uint_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int userdata)
+{
+        return medusa_tcpsocket_set_userdata_unlocked(tcpsocket, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_userdata_uint (struct medusa_tcpsocket *tcpsocket, unsigned int userdata)
+{
+        return medusa_tcpsocket_set_userdata(tcpsocket, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_tcpsocket_get_userdata_uint_unlocked (struct medusa_tcpsocket *tcpsocket)
+{
+        return (unsigned int) (intptr_t) medusa_tcpsocket_get_userdata_unlocked(tcpsocket);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_tcpsocket_get_userdata_uint (struct medusa_tcpsocket *tcpsocket)
+{
+        return (unsigned int) (uintptr_t) medusa_tcpsocket_get_userdata(tcpsocket);
+}
+
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_peername_unlocked (struct medusa_tcpsocket *tcpsocket, struct sockaddr_storage *sockaddr)
 {
         int fd;
@@ -2714,26 +2794,6 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_peername (stru
         }
         medusa_monitor_lock(tcpsocket->subject.monitor);
         rc = medusa_tcpsocket_get_peername_unlocked(tcpsocket, sockaddr);
-        medusa_monitor_unlock(tcpsocket->subject.monitor);
-        return rc;
-}
-
-__attribute__ ((visibility ("default"))) void * medusa_tcpsocket_get_userdata_unlocked (struct medusa_tcpsocket *tcpsocket)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
-                return MEDUSA_ERR_PTR(-EINVAL);
-        }
-        return tcpsocket->userdata;
-}
-
-__attribute__ ((visibility ("default"))) void * medusa_tcpsocket_get_userdata (struct medusa_tcpsocket *tcpsocket)
-{
-        void *rc;
-        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
-                return MEDUSA_ERR_PTR(-EINVAL);
-        }
-        medusa_monitor_lock(tcpsocket->subject.monitor);
-        rc = medusa_tcpsocket_get_userdata_unlocked(tcpsocket);
         medusa_monitor_unlock(tcpsocket->subject.monitor);
         return rc;
 }

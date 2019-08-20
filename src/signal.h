@@ -48,6 +48,15 @@ int medusa_signal_disable (struct medusa_signal *signal);
 int medusa_signal_set_userdata (struct medusa_signal *signal, void *userdata);
 void * medusa_signal_get_userdata (struct medusa_signal *signal);
 
+int medusa_signal_set_userdata_ptr (struct medusa_signal *signal, void *userdata);
+void * medusa_signal_get_userdata_ptr (struct medusa_signal *signal);
+
+int medusa_signal_set_userdata_int (struct medusa_signal *signal, int userdara);
+int medusa_signal_get_userdata_int (struct medusa_signal *signal);
+
+int medusa_signal_set_userdata_uint (struct medusa_signal *signal, unsigned int userdata);
+unsigned int medusa_signal_get_userdata_uint (struct medusa_signal *signal);
+
 struct medusa_monitor * medusa_signal_get_monitor (const struct medusa_signal *signal);
 
 #ifdef __cplusplus

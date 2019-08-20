@@ -55,6 +55,15 @@ int medusa_exec_stop (struct medusa_exec *exec);
 int medusa_exec_set_userdata (struct medusa_exec *exec, void *userdata);
 void * medusa_exec_get_userdata (struct medusa_exec *exec);
 
+int medusa_exec_set_userdata_ptr (struct medusa_exec *exec, void *userdata);
+void * medusa_exec_get_userdata_ptr (struct medusa_exec *exec);
+
+int medusa_exec_set_userdata_int (struct medusa_exec *exec, int userdara);
+int medusa_exec_get_userdata_int (struct medusa_exec *exec);
+
+int medusa_exec_set_userdata_uint (struct medusa_exec *exec, unsigned int userdata);
+unsigned int medusa_exec_get_userdata_uint (struct medusa_exec *exec);
+
 struct medusa_monitor * medusa_exec_get_monitor (const struct medusa_exec *exec);
 
 #ifdef __cplusplus

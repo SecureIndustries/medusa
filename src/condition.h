@@ -43,6 +43,15 @@ int medusa_condition_disable (struct medusa_condition *condition);
 int medusa_condition_set_userdata (struct medusa_condition *condition, void *userdata);
 void * medusa_condition_get_userdata (struct medusa_condition *condition);
 
+int medusa_condition_set_userdata_ptr (struct medusa_condition *condition, void *userdata);
+void * medusa_condition_get_userdata_ptr (struct medusa_condition *condition);
+
+int medusa_condition_set_userdata_int (struct medusa_condition *condition, int userdara);
+int medusa_condition_get_userdata_int (struct medusa_condition *condition);
+
+int medusa_condition_set_userdata_uint (struct medusa_condition *condition, unsigned int userdata);
+unsigned int medusa_condition_get_userdata_uint (struct medusa_condition *condition);
+
 struct medusa_monitor * medusa_condition_get_monitor (const struct medusa_condition *condition);
 
 const char * medusa_condition_event_string (unsigned int events);

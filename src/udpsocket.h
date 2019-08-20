@@ -155,6 +155,15 @@ int medusa_udpsocket_attach_with_options (struct medusa_udpsocket *udpsocket, co
 int medusa_udpsocket_set_userdata (struct medusa_udpsocket *udpsocket, void *userdata);
 void * medusa_udpsocket_get_userdata (struct medusa_udpsocket *udpsocket);
 
+int medusa_udpsocket_set_userdata_ptr (struct medusa_udpsocket *udpsocket, void *userdata);
+void * medusa_udpsocket_get_userdata_ptr (struct medusa_udpsocket *udpsocket);
+
+int medusa_udpsocket_set_userdata_int (struct medusa_udpsocket *udpsocket, int userdara);
+int medusa_udpsocket_get_userdata_int (struct medusa_udpsocket *udpsocket);
+
+int medusa_udpsocket_set_userdata_uint (struct medusa_udpsocket *udpsocket, unsigned int userdata);
+unsigned int medusa_udpsocket_get_userdata_uint (struct medusa_udpsocket *udpsocket);
+
 struct medusa_monitor * medusa_udpsocket_get_monitor (struct medusa_udpsocket *udpsocket);
 
 const char * medusa_udpsocket_state_string (unsigned int state);

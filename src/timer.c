@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -969,6 +970,66 @@ __attribute__ ((visibility ("default"))) int medusa_timer_set_userdata (struct m
         rc = medusa_timer_set_userdata_unlocked(timer, userdata);
         medusa_monitor_unlock(timer->subject.monitor);
         return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_set_userdata_ptr_unlocked (struct medusa_timer *timer, void *userdata)
+{
+        return medusa_timer_set_userdata_unlocked(timer, userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_set_userdata_ptr (struct medusa_timer *timer, void *userdata)
+{
+        return medusa_timer_set_userdata(timer, userdata);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_timer_get_userdata_ptr_unlocked (struct medusa_timer *timer)
+{
+        return medusa_timer_get_userdata_unlocked(timer);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_timer_get_userdata_ptr (struct medusa_timer *timer)
+{
+        return medusa_timer_get_userdata(timer);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_set_userdata_int_unlocked (struct medusa_timer *timer, int userdata)
+{
+        return medusa_timer_set_userdata_unlocked(timer, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_set_userdata_int (struct medusa_timer *timer, int userdata)
+{
+        return medusa_timer_set_userdata(timer, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_get_userdata_int_unlocked (struct medusa_timer *timer)
+{
+        return (int) (intptr_t) medusa_timer_get_userdata_unlocked(timer);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_get_userdata_int (struct medusa_timer *timer)
+{
+        return (int) (intptr_t) medusa_timer_get_userdata(timer);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_set_userdata_uint_unlocked (struct medusa_timer *timer, unsigned int userdata)
+{
+        return medusa_timer_set_userdata_unlocked(timer, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_set_userdata_uint (struct medusa_timer *timer, unsigned int userdata)
+{
+        return medusa_timer_set_userdata(timer, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_timer_get_userdata_uint_unlocked (struct medusa_timer *timer)
+{
+        return (unsigned int) (intptr_t) medusa_timer_get_userdata_unlocked(timer);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_timer_get_userdata_uint (struct medusa_timer *timer)
+{
+        return (unsigned int) (uintptr_t) medusa_timer_get_userdata(timer);
 }
 
 __attribute__ ((visibility ("default"))) void * medusa_timer_get_userdata_unlocked (struct medusa_timer *timer)

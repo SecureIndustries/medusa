@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -683,6 +684,66 @@ __attribute__ ((visibility ("default"))) void * medusa_exec_get_userdata (struct
         rc = medusa_exec_get_userdata_unlocked(exec);
         medusa_monitor_unlock(exec->subject.monitor);
         return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_exec_set_userdata_ptr_unlocked (struct medusa_exec *exec, void *userdata)
+{
+        return medusa_exec_set_userdata_unlocked(exec, userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_exec_set_userdata_ptr (struct medusa_exec *exec, void *userdata)
+{
+        return medusa_exec_set_userdata(exec, userdata);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_exec_get_userdata_ptr_unlocked (struct medusa_exec *exec)
+{
+        return medusa_exec_get_userdata_unlocked(exec);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_exec_get_userdata_ptr (struct medusa_exec *exec)
+{
+        return medusa_exec_get_userdata(exec);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_exec_set_userdata_int_unlocked (struct medusa_exec *exec, int userdata)
+{
+        return medusa_exec_set_userdata_unlocked(exec, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_exec_set_userdata_int (struct medusa_exec *exec, int userdata)
+{
+        return medusa_exec_set_userdata(exec, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_exec_get_userdata_int_unlocked (struct medusa_exec *exec)
+{
+        return (int) (intptr_t) medusa_exec_get_userdata_unlocked(exec);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_exec_get_userdata_int (struct medusa_exec *exec)
+{
+        return (int) (intptr_t) medusa_exec_get_userdata(exec);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_exec_set_userdata_uint_unlocked (struct medusa_exec *exec, unsigned int userdata)
+{
+        return medusa_exec_set_userdata_unlocked(exec, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_exec_set_userdata_uint (struct medusa_exec *exec, unsigned int userdata)
+{
+        return medusa_exec_set_userdata(exec, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_exec_get_userdata_uint_unlocked (struct medusa_exec *exec)
+{
+        return (unsigned int) (intptr_t) medusa_exec_get_userdata_unlocked(exec);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_exec_get_userdata_uint (struct medusa_exec *exec)
+{
+        return (unsigned int) (uintptr_t) medusa_exec_get_userdata(exec);
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_exec_get_monitor_unlocked (const struct medusa_exec *exec)

@@ -1831,6 +1831,66 @@ __attribute__ ((visibility ("default"))) void * medusa_udpsocket_get_userdata (s
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_set_userdata_ptr_unlocked (struct medusa_udpsocket *udpsocket, void *userdata)
+{
+        return medusa_udpsocket_set_userdata_unlocked(udpsocket, userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_set_userdata_ptr (struct medusa_udpsocket *udpsocket, void *userdata)
+{
+        return medusa_udpsocket_set_userdata(udpsocket, userdata);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_udpsocket_get_userdata_ptr_unlocked (struct medusa_udpsocket *udpsocket)
+{
+        return medusa_udpsocket_get_userdata_unlocked(udpsocket);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_udpsocket_get_userdata_ptr (struct medusa_udpsocket *udpsocket)
+{
+        return medusa_udpsocket_get_userdata(udpsocket);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_set_userdata_int_unlocked (struct medusa_udpsocket *udpsocket, int userdata)
+{
+        return medusa_udpsocket_set_userdata_unlocked(udpsocket, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_set_userdata_int (struct medusa_udpsocket *udpsocket, int userdata)
+{
+        return medusa_udpsocket_set_userdata(udpsocket, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_get_userdata_int_unlocked (struct medusa_udpsocket *udpsocket)
+{
+        return (int) (intptr_t) medusa_udpsocket_get_userdata_unlocked(udpsocket);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_get_userdata_int (struct medusa_udpsocket *udpsocket)
+{
+        return (int) (intptr_t) medusa_udpsocket_get_userdata(udpsocket);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_set_userdata_uint_unlocked (struct medusa_udpsocket *udpsocket, unsigned int userdata)
+{
+        return medusa_udpsocket_set_userdata_unlocked(udpsocket, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_set_userdata_uint (struct medusa_udpsocket *udpsocket, unsigned int userdata)
+{
+        return medusa_udpsocket_set_userdata(udpsocket, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_udpsocket_get_userdata_uint_unlocked (struct medusa_udpsocket *udpsocket)
+{
+        return (unsigned int) (intptr_t) medusa_udpsocket_get_userdata_unlocked(udpsocket);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_udpsocket_get_userdata_uint (struct medusa_udpsocket *udpsocket)
+{
+        return (unsigned int) (uintptr_t) medusa_udpsocket_get_userdata(udpsocket);
+}
+
 __attribute__ ((visibility ("default"))) int medusa_udpsocket_onevent (struct medusa_udpsocket *udpsocket, unsigned int events)
 {
         int rc;

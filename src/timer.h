@@ -85,6 +85,15 @@ int medusa_timer_stop (struct medusa_timer *timer);
 int medusa_timer_set_userdata (struct medusa_timer *timer, void *userdata);
 void * medusa_timer_get_userdata (struct medusa_timer *timer);
 
+int medusa_timer_set_userdata_ptr (struct medusa_timer *timer, void *userdata);
+void * medusa_timer_get_userdata_ptr (struct medusa_timer *timer);
+
+int medusa_timer_set_userdata_int (struct medusa_timer *timer, int userdara);
+int medusa_timer_get_userdata_int (struct medusa_timer *timer);
+
+int medusa_timer_set_userdata_uint (struct medusa_timer *timer, unsigned int userdata);
+unsigned int medusa_timer_get_userdata_uint (struct medusa_timer *timer);
+
 struct medusa_monitor * medusa_timer_get_monitor (const struct medusa_timer *timer);
 
 const char * medusa_timer_event_string (unsigned int events);

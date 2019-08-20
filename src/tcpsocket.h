@@ -199,6 +199,15 @@ int medusa_tcpsocket_set_onevent (struct medusa_tcpsocket *tcpsocket, int (*onev
 int medusa_tcpsocket_set_userdata (struct medusa_tcpsocket *tcpsocket, void *userdata);
 void * medusa_tcpsocket_get_userdata (struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_set_userdata_ptr (struct medusa_tcpsocket *tcpsocket, void *userdata);
+void * medusa_tcpsocket_get_userdata_ptr (struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_userdata_int (struct medusa_tcpsocket *tcpsocket, int userdara);
+int medusa_tcpsocket_get_userdata_int (struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_userdata_uint (struct medusa_tcpsocket *tcpsocket, unsigned int userdata);
+unsigned int medusa_tcpsocket_get_userdata_uint (struct medusa_tcpsocket *tcpsocket);
+
 struct medusa_monitor * medusa_tcpsocket_get_monitor (struct medusa_tcpsocket *tcpsocket);
 
 int64_t medusa_tcpsocket_peek   (const struct medusa_tcpsocket *tcpsocket, void *data, int64_t length);

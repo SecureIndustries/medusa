@@ -61,6 +61,15 @@ int medusa_io_disable (struct medusa_io *io);
 int medusa_io_set_userdata (struct medusa_io *io, void *userdata);
 void * medusa_io_get_userdata (struct medusa_io *io);
 
+int medusa_io_set_userdata_ptr (struct medusa_io *io, void *userdata);
+void * medusa_io_get_userdata_ptr (struct medusa_io *io);
+
+int medusa_io_set_userdata_int (struct medusa_io *io, int userdara);
+int medusa_io_get_userdata_int (struct medusa_io *io);
+
+int medusa_io_set_userdata_uint (struct medusa_io *io, unsigned int userdata);
+unsigned int medusa_io_get_userdata_uint (struct medusa_io *io);
+
 struct medusa_monitor * medusa_io_get_monitor (const struct medusa_io *io);
 
 const char * medusa_io_event_string (unsigned int events);
