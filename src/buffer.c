@@ -240,6 +240,8 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertf (struct m
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertfv (struct medusa_buffer *buffer, int64_t offset, const char *format, va_list va)
 {
+        int rc;
+        int64_t ret;
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
@@ -252,7 +254,17 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertfv (struct 
         if (MEDUSA_IS_ERR_OR_NULL(format)) {
                 return -EINVAL;
         }
-        return buffer->backend->insertfv(buffer, offset, format, va);
+        ret = buffer->backend->insertfv(buffer, offset, format, va);
+        if (ret < 0) {
+                return ret;
+        }
+        if (ret > 0) {
+                rc = buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_WRITE);
+                if (rc != 0) {
+                        return rc;
+                }
+        }
+        return ret;
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend_uint8 (struct medusa_buffer *buffer, uint8_t value)
