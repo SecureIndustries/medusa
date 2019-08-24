@@ -88,6 +88,10 @@ struct medusa_udpsocket_bind_options {
         unsigned short port;
 };
 
+struct medusa_udpsocket_open_options {
+        unsigned int protocol;
+};
+
 struct medusa_udpsocket_connect_options {
         unsigned int protocol;
         const char *address;
@@ -143,7 +147,11 @@ unsigned int medusa_udpsocket_get_events (const struct medusa_udpsocket *io);
 int medusa_udpsocket_bind_options_default (struct medusa_udpsocket_bind_options *options);
 int medusa_udpsocket_bind (struct medusa_udpsocket *udpsocket, unsigned int protocol, const char *address, unsigned short port);
 int medusa_udpsocket_bind_with_options (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_bind_options *options);
-;
+
+int medusa_udpsocket_open_options_default (struct medusa_udpsocket_open_options *options);
+int medusa_udpsocket_open (struct medusa_udpsocket *udpsocket, unsigned int protocol);
+int medusa_udpsocket_open_with_options (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_open_options *options);
+
 int medusa_udpsocket_connect_options_default (struct medusa_udpsocket_connect_options *options);
 int medusa_udpsocket_connect (struct medusa_udpsocket *udpsocket, unsigned int protocol, const char *address, unsigned short port);
 int medusa_udpsocket_connect_with_options (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_connect_options *options);

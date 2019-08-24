@@ -42,7 +42,10 @@ unsigned int medusa_udpsocket_get_events_unlocked (const struct medusa_udpsocket
 
 int medusa_udpsocket_bind_unlocked (struct medusa_udpsocket *udpsocket, unsigned int protocol, const char *address, unsigned short port);
 int medusa_udpsocket_bind_with_options_unlocked (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_bind_options *options);
-;
+
+int medusa_udpsocket_open_unlocked (struct medusa_udpsocket *udpsocket, unsigned int protocol);
+int medusa_udpsocket_open_with_options_unlocked (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_open_options *options);
+
 int medusa_udpsocket_connect_unlocked (struct medusa_udpsocket *udpsocket, unsigned int protocol, const char *address, unsigned short port);
 int medusa_udpsocket_connect_with_options_unlocked (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_connect_options *options);
 

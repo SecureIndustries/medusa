@@ -1356,6 +1356,168 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_bind (struct medus
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_open_options_default (struct medusa_udpsocket_open_options *options)
+{
+        if (options == NULL) {
+                return -EINVAL;
+        }
+        memset(options, 0, sizeof(struct medusa_udpsocket_open_options));
+        options->protocol = MEDUSA_UDPSOCKET_PROTOCOL_ANY;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_open_with_options_unlocked (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_open_options *options)
+{
+        int rc;
+        int fd;
+        int ret;
+        int domain;
+        int type;
+        unsigned int protocol;
+        struct medusa_io_init_options io_init_options;
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        if (options == NULL) {
+                return -EINVAL;
+        }
+        protocol = options->protocol;
+        if (udpsocket_get_state(udpsocket) != MEDUSA_UDPSOCKET_STATE_DISCONNECTED) {
+                return -EINVAL;
+        }
+        if (medusa_io_get_fd_unlocked(udpsocket->io) >= 0) {
+                return -EINVAL;
+        }
+        if (protocol == MEDUSA_UDPSOCKET_PROTOCOL_IPV4) {
+                domain = AF_INET;
+                type   = SOCK_DGRAM;
+        } else if (protocol == MEDUSA_UDPSOCKET_PROTOCOL_IPV6) {
+                domain = AF_INET6;
+                type   = SOCK_DGRAM;
+        } else {
+                domain = AF_UNSPEC;
+                type   = SOCK_DGRAM;
+        }
+        rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_CONNECTING);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
+        rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_CONNECTING);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
+        fd = socket(domain, type, 0);
+        if (fd < 0) {
+                ret = -errno;
+                goto bail;
+        }
+        rc = medusa_io_init_options_default(&io_init_options);
+        if (rc < 0) {
+                close(fd);
+                ret = rc;
+                goto bail;
+        }
+        io_init_options.monitor = udpsocket->subject.monitor;
+        io_init_options.fd      = fd;
+        io_init_options.events  = MEDUSA_IO_EVENT_IN;
+        io_init_options.onevent = udpsocket_io_onevent;
+        io_init_options.context = udpsocket;
+        io_init_options.enabled = udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_ENABLED);
+        udpsocket->io = medusa_io_create_with_options_unlocked(&io_init_options);
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
+                ret = MEDUSA_PTR_ERR(udpsocket->io);
+                goto bail;
+        }
+        {
+                int rc;
+                int flags;
+                flags = fcntl(fd, F_GETFL, 0);
+                if (flags < 0) {
+                        ret = -errno;
+                        goto bail;
+                }
+                flags = (udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_NONBLOCKING)) ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
+                rc = fcntl(fd, F_SETFL, flags);
+                if (rc != 0) {
+                        ret = -errno;
+                        goto bail;
+                }
+        }
+        {
+                int rc;
+                int on;
+                on = udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_REUSEADDR);
+                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+                if (rc < 0) {
+                        ret = -errno;
+                        goto bail;
+                }
+        }
+        {
+                int rc;
+                int on;
+                on = udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_REUSEPORT);
+                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+                if (rc < 0) {
+                        ret = -errno;
+                        goto bail;
+                }
+
+        }
+        rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_CONNECTED);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
+        rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_CONNECTED);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
+        return 0;
+bail:   udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_DISCONNECTED);
+        medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_DISCONNECTED);
+        return ret;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_open_with_options (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_open_options *options)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(udpsocket->subject.monitor);
+        rc = medusa_udpsocket_open_with_options_unlocked(udpsocket, options);
+        medusa_monitor_unlock(udpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_open_unlocked (struct medusa_udpsocket *udpsocket, unsigned int protocol)
+{
+        int rc;
+        struct medusa_udpsocket_open_options options;
+        rc = medusa_udpsocket_open_options_default(&options);
+        if (rc < 0) {
+                return rc;
+        }
+        options.protocol = protocol;
+        return medusa_udpsocket_open_with_options_unlocked(udpsocket, &options);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_open (struct medusa_udpsocket *udpsocket, unsigned int protocol)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(udpsocket->subject.monitor);
+        rc = medusa_udpsocket_open_unlocked(udpsocket, protocol);
+        medusa_monitor_unlock(udpsocket->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_udpsocket_connect_options_default (struct medusa_udpsocket_connect_options *options)
 {
         if (options == NULL) {
