@@ -667,6 +667,202 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_memmem (const str
         return -ENOENT;
 }
 
+int medusa_buffer_strcmp (const struct medusa_buffer *buffer, int64_t offset, const char *str)
+{
+        int ret;
+        int64_t i;
+        int64_t l;
+        int64_t length;
+        int64_t niovecs;
+        struct iovec *iovecs;
+        struct iovec _iovecs[16];
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(str)) {
+                return -EINVAL;
+        }
+        length = strlen(str);
+        l = medusa_buffer_get_length(buffer);
+        if (length == 0 &&
+            l == 0) {
+                return 0;
+        }
+        if (l < length) {
+                return -1;
+        }
+        niovecs = medusa_buffer_peekv(buffer, offset, length, NULL, 0);
+        if (niovecs < 0) {
+                return niovecs;
+        }
+        if (niovecs > (int64_t) (sizeof(_iovecs) / sizeof(_iovecs[0]))) {
+                iovecs = malloc(sizeof(struct iovec) * niovecs);
+                if (iovecs == NULL) {
+                        return -ENOMEM;
+                }
+        } else {
+                iovecs = _iovecs;
+        }
+        niovecs = medusa_buffer_peekv(buffer, offset, length, iovecs, niovecs);
+        if (niovecs < 0) {
+                ret = niovecs;
+                goto out;
+        }
+        for (i = 0; l > 0 && i < niovecs; i++) {
+                l = MIN(length, (int64_t) iovecs[i].iov_len);
+                ret = strncmp(str, iovecs[i].iov_base, l);
+                if (ret != 0) {
+                        break;
+                }
+                length -= l;
+                str    += l;
+        }
+        if (length > 0) {
+                ret = -1;
+        }
+out:    if (iovecs != NULL &&
+            iovecs != _iovecs) {
+                free(iovecs);
+        }
+        return ret;
+}
+
+int medusa_buffer_strcasecmp (const struct medusa_buffer *buffer, int64_t offset, const char *str)
+{
+        int ret;
+        int64_t i;
+        int64_t l;
+        int64_t length;
+        int64_t niovecs;
+        struct iovec *iovecs;
+        struct iovec _iovecs[16];
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(str)) {
+                return -EINVAL;
+        }
+        length = strlen(str);
+        l = medusa_buffer_get_length(buffer);
+        if (length == 0 &&
+            l == 0) {
+                return 0;
+        }
+        if (l < length) {
+                return -1;
+        }
+        niovecs = medusa_buffer_peekv(buffer, offset, length, NULL, 0);
+        if (niovecs < 0) {
+                return niovecs;
+        }
+        if (niovecs > (int64_t) (sizeof(_iovecs) / sizeof(_iovecs[0]))) {
+                iovecs = malloc(sizeof(struct iovec) * niovecs);
+                if (iovecs == NULL) {
+                        return -ENOMEM;
+                }
+        } else {
+                iovecs = _iovecs;
+        }
+        niovecs = medusa_buffer_peekv(buffer, offset, length, iovecs, niovecs);
+        if (niovecs < 0) {
+                ret = niovecs;
+                goto out;
+        }
+        for (i = 0; l > 0 && i < niovecs; i++) {
+                l = MIN(length, (int64_t) iovecs[i].iov_len);
+                ret = strncasecmp(str, iovecs[i].iov_base, l);
+                if (ret != 0) {
+                        break;
+                }
+                length -= l;
+                str    += l;
+        }
+        if (length > 0) {
+                ret = -1;
+        }
+out:    if (iovecs != NULL &&
+            iovecs != _iovecs) {
+                free(iovecs);
+        }
+        return ret;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_strchr (const struct medusa_buffer *buffer, int64_t offset, const char chr)
+{
+        char str[2];
+        str[0] = chr;
+        str[1] = '\0';
+        return medusa_buffer_strstr(buffer, offset, str);
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_strcasechr (const struct medusa_buffer *buffer, int64_t offset, const char chr)
+{
+        char str[2];
+        str[0] = chr;
+        str[1] = '\0';
+        return medusa_buffer_strcasestr(buffer, offset, str);
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_strstr (const struct medusa_buffer *buffer, int64_t offset, const char *str)
+{
+        int rc;
+        int64_t i;
+        int64_t l;
+        int64_t length;
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(str)) {
+                return -EINVAL;
+        }
+        length = strlen(str);
+        l = medusa_buffer_get_length(buffer);
+        if (length == 0 &&
+            l == 0) {
+                return 0;
+        }
+        if (l < length) {
+                return -ENOENT;
+        }
+        for (i = offset; i <= l - length; i++) {
+                rc = medusa_buffer_strcmp(buffer, i, str);
+                if (rc == 0) {
+                        return i;
+                }
+        }
+        return -ENOENT;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_strcasestr (const struct medusa_buffer *buffer, int64_t offset, const char *str)
+{
+        int rc;
+        int64_t i;
+        int64_t l;
+        int64_t length;
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(str)) {
+                return -EINVAL;
+        }
+        length = strlen(str);
+        l = medusa_buffer_get_length(buffer);
+        if (length == 0 &&
+            l == 0) {
+                return 0;
+        }
+        if (l < length) {
+                return -ENOENT;
+        }
+        for (i = offset; i <= l - length; i++) {
+                rc = medusa_buffer_strcasecmp(buffer, i, str);
+                if (rc == 0) {
+                        return i;
+                }
+        }
+        return -ENOENT;
+}
+
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_peek (const struct medusa_buffer *buffer, void *data, int64_t length)
 {
         int rc;

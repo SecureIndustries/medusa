@@ -125,6 +125,13 @@ void * medusa_buffer_linearize (struct medusa_buffer *buffer, int64_t offset, in
 int medusa_buffer_memcmp (const struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length);
 int64_t medusa_buffer_memmem (const struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length);
 
+int medusa_buffer_strcmp (const struct medusa_buffer *buffer, int64_t offset, const char *str);
+int medusa_buffer_strcasecmp (const struct medusa_buffer *buffer, int64_t offset, const char *str);
+int64_t medusa_buffer_strchr (const struct medusa_buffer *buffer, int64_t offset, const char chr);
+int64_t medusa_buffer_strcasechr (const struct medusa_buffer *buffer, int64_t offset, const char chr);
+int64_t medusa_buffer_strstr (const struct medusa_buffer *buffer, int64_t offset, const char *str);
+int64_t medusa_buffer_strcasestr (const struct medusa_buffer *buffer, int64_t offset, const char *str);
+
 int64_t medusa_buffer_peek  (const struct medusa_buffer *buffer, void *data, int64_t length);
 int64_t medusa_buffer_read  (struct medusa_buffer *buffer, void *data, int64_t length);
 int64_t medusa_buffer_write (struct medusa_buffer *buffer, const void *data, int64_t length);
