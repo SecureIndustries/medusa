@@ -76,9 +76,6 @@ struct medusa_udpsocket_init_options {
         int nonblocking;
         int reuseaddr;
         int reuseport;
-        int backlog;
-        int nodelay;
-        int buffered;
         int enabled;
 };
 
