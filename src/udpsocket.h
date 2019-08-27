@@ -157,6 +157,9 @@ int medusa_udpsocket_attach_options_default (struct medusa_udpsocket_attach_opti
 int medusa_udpsocket_attach (struct medusa_udpsocket *udpsocket, int fd);
 int medusa_udpsocket_attach_with_options (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_attach_options *options);
 
+int medusa_udpsocket_get_sockname (struct medusa_udpsocket *udpsocket, struct sockaddr_storage *sockaddr);
+int medusa_udpsocket_get_peername (struct medusa_udpsocket *udpsocket, struct sockaddr_storage *sockaddr);
+
 int medusa_udpsocket_set_userdata (struct medusa_udpsocket *udpsocket, void *userdata);
 void * medusa_udpsocket_get_userdata (struct medusa_udpsocket *udpsocket);
 

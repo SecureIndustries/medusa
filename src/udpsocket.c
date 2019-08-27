@@ -1961,6 +1961,84 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_set_userdata_unloc
         return 0;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_get_sockname_unlocked (struct medusa_udpsocket *udpsocket, struct sockaddr_storage *sockaddr)
+{
+        int fd;
+        int rc;
+        socklen_t sockaddr_length;
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        if (sockaddr == NULL) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
+                return -EINVAL;
+        }
+        fd = medusa_udpsocket_get_fd_unlocked(udpsocket);
+        if (fd < 0) {
+                return fd;
+        }
+        sockaddr_length = sizeof(struct sockaddr_storage);
+        memset(sockaddr, 0, sockaddr_length);
+        rc = getsockname(fd, (struct sockaddr *) sockaddr, &sockaddr_length);
+        if (rc != 0) {
+                return -errno;
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_get_sockname (struct medusa_udpsocket *udpsocket, struct sockaddr_storage *sockaddr)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(udpsocket->subject.monitor);
+        rc = medusa_udpsocket_get_sockname_unlocked(udpsocket, sockaddr);
+        medusa_monitor_unlock(udpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_get_peername_unlocked (struct medusa_udpsocket *udpsocket, struct sockaddr_storage *sockaddr)
+{
+        int fd;
+        int rc;
+        socklen_t sockaddr_length;
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        if (sockaddr == NULL) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
+                return -EINVAL;
+        }
+        fd = medusa_udpsocket_get_fd_unlocked(udpsocket);
+        if (fd < 0) {
+                return fd;
+        }
+        sockaddr_length = sizeof(struct sockaddr_storage);
+        memset(sockaddr, 0, sockaddr_length);
+        rc = getpeername(fd, (struct sockaddr *) sockaddr, &sockaddr_length);
+        if (rc != 0) {
+                return -errno;
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_get_peername (struct medusa_udpsocket *udpsocket, struct sockaddr_storage *sockaddr)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(udpsocket->subject.monitor);
+        rc = medusa_udpsocket_get_peername_unlocked(udpsocket, sockaddr);
+        medusa_monitor_unlock(udpsocket->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_udpsocket_set_userdata (struct medusa_udpsocket *udpsocket, void *userdata)
 {
         int rc;

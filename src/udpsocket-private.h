@@ -52,6 +52,9 @@ int medusa_udpsocket_connect_with_options_unlocked (struct medusa_udpsocket *udp
 int medusa_udpsocket_attach_unlocked (struct medusa_udpsocket *udpsocket, int fd);
 int medusa_udpsocket_attach_with_options_unlocked (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_attach_options *options);
 
+int medusa_udpsocket_get_sockname_unlocked (struct medusa_udpsocket *udpsocket, struct sockaddr_storage *sockaddr);
+int medusa_udpsocket_get_peername_unlocked (struct medusa_udpsocket *udpsocket, struct sockaddr_storage *sockaddr);
+
 void * medusa_udpsocket_get_userdata_unlocked (struct medusa_udpsocket *udpsocket);
 int medusa_udpsocket_set_userdata_unlocked (struct medusa_udpsocket *udpsocket, void *userdata);
 
