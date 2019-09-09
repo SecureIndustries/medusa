@@ -280,7 +280,9 @@ static int test_poll (unsigned int poll)
                 fprintf(stderr, "can not init tcpsocket attach options\n");
                 goto bail;
         }
-        tcpsocket_attach_options.fd = fd;
+        tcpsocket_attach_options.fd         = fd;
+        tcpsocket_attach_options.bound      = 1;
+        tcpsocket_attach_options.clodestroy = 1;
         rc = medusa_tcpsocket_attach_with_options(tcpsocket, &tcpsocket_attach_options);
         if (rc != 0) {
                 fprintf(stderr, "medusa_tcpsocket_attach failed\n");

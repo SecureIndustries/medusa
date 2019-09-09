@@ -2160,6 +2160,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach_options_def
         }
         memset(options, 0, sizeof(struct medusa_tcpsocket_attach_options));
         options->fd         = -1;
+        options->bound      = 0;
         options->clodestroy = 1;
         return 0;
 }
@@ -2169,7 +2170,6 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach_with_option
         int rc;
         int fd;
         int ret;
-        int bound;
         struct medusa_io_init_options io_init_options;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
@@ -2254,32 +2254,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach_with_option
                 }
         }
 
-        bound = 0;
-        {
-                socklen_t sockaddr_length;
-                struct sockaddr_storage sockaddr_storage;
-                unsigned short sockaddr_port;
-                sockaddr_length = sizeof(struct sockaddr_storage);
-                memset(&sockaddr_storage, 0, sockaddr_length);
-                rc = getsockname(fd, (struct sockaddr *) &sockaddr_storage, &sockaddr_length);
-                if (rc != 0) {
-                        ret = -errno;
-                        goto bail;
-                }
-                if (sockaddr_storage.ss_family == AF_INET) {
-                        sockaddr_port = ntohs(((struct sockaddr_in *) &sockaddr_storage)->sin_port);
-                } else if (sockaddr_storage.ss_family == AF_INET6) {
-                        sockaddr_port = ntohs(((struct sockaddr_in6 *) &sockaddr_storage)->sin6_port);
-                } else {
-                        ret = -EINVAL;
-                        goto bail;
-                }
-                if (sockaddr_port != 0) {
-                        bound = 1;
-                }
-        }
-
-        if (bound == 0) {
+        if (options->bound == 0) {
                 rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_RESOLVING);
                 if (rc < 0) {
                         ret = rc;

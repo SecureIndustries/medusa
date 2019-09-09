@@ -121,6 +121,7 @@ struct medusa_tcpsocket_connect_options {
 
 struct medusa_tcpsocket_attach_options {
         int fd;
+        int bound;
         int clodestroy;
 };
 
