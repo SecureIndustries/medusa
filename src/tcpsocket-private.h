@@ -75,8 +75,9 @@ int medusa_tcpsocket_set_onevent_unlocked (struct medusa_tcpsocket *tcpsocket, i
 void * medusa_tcpsocket_get_userdata_unlocked (struct medusa_tcpsocket *tcpsocket);
 int medusa_tcpsocket_set_userdata_unlocked (struct medusa_tcpsocket *tcpsocket, void *userdata);
 
-int medusa_tcpsocket_onevent_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events);
-int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events);
+int medusa_tcpsocket_onevent_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events, ...);
+int medusa_tcpsocket_oneventv_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events, va_list va);
+int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, ...);
 struct medusa_monitor * medusa_tcpsocket_get_monitor_unlocked (struct medusa_tcpsocket *tcpsocket);
 
 int64_t medusa_tcpsocket_peek_unlocked  (const struct medusa_tcpsocket *tcpsocket, void *data, int64_t length);

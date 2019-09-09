@@ -2,8 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <time.h>
 #include <signal.h>
 #include <errno.h>
@@ -82,6 +84,14 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                         fprintf(stderr, "can not write to tcpsocket buffer (rc: %d)\n", rc);
                         goto bail;
                 }
+        }
+        if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE) {
+                va_list ap;
+                int64_t written;
+                va_start(ap, context);
+                written = va_arg(ap, int64_t);
+                va_end(ap);
+                fprintf(stderr, "  written: %"PRIi64"\n", written);
         }
         return 0;
 bail:   return -1;
