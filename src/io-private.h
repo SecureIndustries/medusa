@@ -23,6 +23,9 @@ unsigned int medusa_io_get_events_unlocked (const struct medusa_io *io);
 int medusa_io_set_enabled_unlocked (struct medusa_io *io, int enabled);
 int medusa_io_get_enabled_unlocked (const struct medusa_io *io);
 
+int medusa_io_set_clodestroy_unlocked (struct medusa_io *io, int clodestroy);
+int medusa_io_get_clodestroy_unlocked (const struct medusa_io *io);
+
 void * medusa_io_get_userdata_unlocked (struct medusa_io *io);
 int medusa_io_set_userdata_unlocked (struct medusa_io *io, void *userdata);
 

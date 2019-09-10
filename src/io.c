@@ -23,13 +23,22 @@
 #define MEDUSA_IO_EVENT_MASK            0xff
 #define MEDUSA_IO_EVENT_SHIFT           0x00
 
-#define MEDUSA_IO_ENABLE_MASK           0xff
-#define MEDUSA_IO_ENABLE_SHIFT          0x18
+#define MEDUSA_IO_FLAG_MASK             0xff
+#define MEDUSA_IO_FLAG_SHIFT            0x18
 
 #define MEDUSA_IO_USE_POOL              1
 #if defined(MEDUSA_IO_USE_POOL) && (MEDUSA_IO_USE_POOL == 1)
 static struct medusa_pool *g_pool;
 #endif
+
+enum {
+        MEDUSA_IO_FLAG_NONE              = 0x00000000,
+        MEDUSA_IO_FLAG_ENABLED           = 0x00000001,
+        MEDUSA_IO_FLAG_CLODESTROY        = 0x00000002
+#define MEDUSA_IO_FLAG_NONE              MEDUSA_IO_FLAG_NONE
+#define MEDUSA_IO_FLAG_ENABLED           MEDUSA_IO_FLAG_ENABLED
+#define MEDUSA_IO_FLAG_CLODESTROY        MEDUSA_IO_FLAG_CLODESTROY
+};
 
 static inline void io_set_events (struct medusa_io *io, unsigned int events)
 {
@@ -52,15 +61,53 @@ static inline unsigned int io_get_events (const struct medusa_io *io)
         return (io->flags >> MEDUSA_IO_EVENT_SHIFT) & MEDUSA_IO_EVENT_MASK;
 }
 
+static inline void io_set_flag (struct medusa_io *io, unsigned int flag)
+{
+        io->flags = (io->flags & ~(MEDUSA_IO_FLAG_MASK << MEDUSA_IO_FLAG_SHIFT)) |
+                           ((flag & MEDUSA_IO_FLAG_MASK) << MEDUSA_IO_FLAG_SHIFT);
+}
+
+static inline void io_add_flag (struct medusa_io *io, unsigned int flag)
+{
+        io->flags |= ((flag & MEDUSA_IO_FLAG_MASK) << MEDUSA_IO_FLAG_SHIFT);
+}
+
+static inline void io_del_flag (struct medusa_io *io, unsigned int flag)
+{
+        io->flags &= ~((flag & MEDUSA_IO_FLAG_MASK) << MEDUSA_IO_FLAG_SHIFT);
+}
+
+static inline int io_has_flag (const struct medusa_io *io, unsigned int flag)
+{
+        return !!(io->flags & ((flag & MEDUSA_IO_FLAG_MASK) << MEDUSA_IO_FLAG_SHIFT));
+}
+
 static inline unsigned int io_get_enabled (const struct medusa_io *io)
 {
-        return (io->flags >> MEDUSA_IO_ENABLE_SHIFT) & MEDUSA_IO_ENABLE_MASK;
+        return io_has_flag(io, MEDUSA_IO_FLAG_ENABLED);
 }
 
 static inline void io_set_enabled (struct medusa_io *io, unsigned int enabled)
 {
-        io->flags = (io->flags & ~(MEDUSA_IO_ENABLE_MASK << MEDUSA_IO_ENABLE_SHIFT)) |
-                    ((enabled & MEDUSA_IO_ENABLE_MASK) << MEDUSA_IO_ENABLE_SHIFT);
+        if (enabled) {
+                io_add_flag(io, MEDUSA_IO_FLAG_ENABLED);
+        } else {
+                io_del_flag(io, MEDUSA_IO_FLAG_ENABLED);
+        }
+}
+
+static inline unsigned int io_get_clodestroy (const struct medusa_io *io)
+{
+        return io_has_flag(io, MEDUSA_IO_FLAG_CLODESTROY);
+}
+
+static inline void io_set_clodestroy (struct medusa_io *io, unsigned int clodestroy)
+{
+        if (clodestroy) {
+                io_add_flag(io, MEDUSA_IO_FLAG_CLODESTROY);
+        } else {
+                io_del_flag(io, MEDUSA_IO_FLAG_CLODESTROY);
+        }
 }
 
 __attribute__ ((visibility ("default"))) int medusa_io_init_options_default (struct medusa_io_init_options *options)
@@ -69,6 +116,9 @@ __attribute__ ((visibility ("default"))) int medusa_io_init_options_default (str
                 return -EINVAL;
         }
         memset(options, 0, sizeof(struct medusa_io_init_options));
+        options->fd         = -1;
+        options->clodestroy = 0;
+        options->enabled    = 0;
         return 0;
 }
 
@@ -125,6 +175,7 @@ __attribute__ ((visibility ("default"))) int medusa_io_init_with_options_unlocke
         io->context = options->context;
         io_set_events(io, options->events);
         io_set_enabled(io, !!options->enabled);
+        io_set_clodestroy(io, !!options->clodestroy);
         medusa_subject_set_type(&io->subject, MEDUSA_SUBJECT_TYPE_IO);
         io->subject.monitor = NULL;
         return medusa_monitor_add_unlocked(options->monitor, &io->subject);
@@ -412,6 +463,47 @@ __attribute__ ((visibility ("default"))) int medusa_io_get_enabled (const struct
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_io_set_clodestroy_unlocked (struct medusa_io *io, int clodestroy)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(io)) {
+                return -EINVAL;
+        }
+        io_set_clodestroy(io, !!clodestroy);
+        return medusa_monitor_mod_unlocked(&io->subject);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_set_clodestroy (struct medusa_io *io, int clodestroy)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(io)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(io->subject.monitor);
+        rc = medusa_io_set_clodestroy_unlocked(io, clodestroy);
+        medusa_monitor_unlock(io->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_get_clodestroy_unlocked (const struct medusa_io *io)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(io)) {
+                return -EINVAL;
+        }
+        return io_get_clodestroy(io);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_io_get_clodestroy (const struct medusa_io *io)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(io)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(io->subject.monitor);
+        rc = medusa_io_get_clodestroy_unlocked(io);
+        medusa_monitor_unlock(io->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_io_enable (struct medusa_io *io)
 {
         return medusa_io_set_enabled(io, 1);
@@ -558,6 +650,9 @@ __attribute__ ((visibility ("default"))) int medusa_io_onevent_unlocked (struct 
                 }
         }
         if (events & MEDUSA_IO_EVENT_DESTROY) {
+                if (io_get_clodestroy(io)) {
+                        close(io->fd);
+                }
                 if (io->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
 #if defined(MEDUSA_IO_USE_POOL) && (MEDUSA_IO_USE_POOL == 1)
                         medusa_pool_free(io);

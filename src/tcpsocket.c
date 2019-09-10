@@ -45,8 +45,7 @@ enum {
         MEDUSA_TCPSOCKET_FLAG_NODELAY           = 0x00000008,
         MEDUSA_TCPSOCKET_FLAG_REUSEADDR         = 0x00000010,
         MEDUSA_TCPSOCKET_FLAG_REUSEPORT         = 0x00000020,
-        MEDUSA_TCPSOCKET_FLAG_BACKLOG           = 0x00000040,
-        MEDUSA_TCPSOCKET_FLAG_CLODESTROY        = 0x00000080,
+        MEDUSA_TCPSOCKET_FLAG_BACKLOG           = 0x00000040
 #define MEDUSA_TCPSOCKET_FLAG_NONE              MEDUSA_TCPSOCKET_FLAG_NONE
 #define MEDUSA_TCPSOCKET_FLAG_ENABLED           MEDUSA_TCPSOCKET_FLAG_ENABLED
 #define MEDUSA_TCPSOCKET_FLAG_BUFFERED          MEDUSA_TCPSOCKET_FLAG_BUFFERED
@@ -55,7 +54,6 @@ enum {
 #define MEDUSA_TCPSOCKET_FLAG_REUSEADDR         MEDUSA_TCPSOCKET_FLAG_REUSEADDR
 #define MEDUSA_TCPSOCKET_FLAG_REUSEPORT         MEDUSA_TCPSOCKET_FLAG_REUSEPORT
 #define MEDUSA_TCPSOCKET_FLAG_BACKLOG           MEDUSA_TCPSOCKET_FLAG_BACKLOG
-#define MEDUSA_TCPSOCKET_FLAG_CLODESTROY        MEDUSA_TCPSOCKET_FLAG_CLODESTROY
 };
 
 #define MEDUSA_TCPSOCKET_FLAG_MASK              0x000000ff
@@ -556,13 +554,6 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                         goto bail;
                 }
         } else if (events & MEDUSA_IO_EVENT_DESTROY) {
-                if (tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_CLODESTROY)) {
-                        int fd;
-                        fd = medusa_io_get_fd_unlocked(io);
-                        if (fd >= 0) {
-                                close(fd);
-                        }
-                }
         }
         medusa_monitor_unlock(monitor);
         return 0;
@@ -627,7 +618,6 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_init_with_options_
         medusa_subject_set_type(&tcpsocket->subject, MEDUSA_SUBJECT_TYPE_TCPSOCKET);
         tcpsocket->subject.monitor = NULL;
         tcpsocket_set_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NONE);
-        tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_CLODESTROY);
         rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
         if (rc < 0 ) {
                 return rc;
@@ -1739,12 +1729,13 @@ ipv6:
                 ret = rc;
                 goto bail;
         }
-        io_init_options.monitor = tcpsocket->subject.monitor;
-        io_init_options.fd      = fd;
-        io_init_options.events  = MEDUSA_IO_EVENT_IN;
-        io_init_options.onevent = tcpsocket_io_onevent;
-        io_init_options.context = tcpsocket;
-        io_init_options.enabled = tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ENABLED);
+        io_init_options.monitor    = tcpsocket->subject.monitor;
+        io_init_options.fd         = fd;
+        io_init_options.events     = MEDUSA_IO_EVENT_IN;
+        io_init_options.onevent    = tcpsocket_io_onevent;
+        io_init_options.context    = tcpsocket;
+        io_init_options.clodestroy = 1;
+        io_init_options.enabled    = tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ENABLED);
         tcpsocket->io = medusa_io_create_with_options_unlocked(&io_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
                 ret = MEDUSA_PTR_ERR(tcpsocket->io);
@@ -2003,12 +1994,13 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_with_optio
                         ret = rc;
                         goto bail;
                 }
-                io_init_options.monitor = tcpsocket->subject.monitor;
-                io_init_options.fd      = fd;
-                io_init_options.events  = MEDUSA_IO_EVENT_IN;
-                io_init_options.onevent = tcpsocket_io_onevent;
-                io_init_options.context = tcpsocket;
-                io_init_options.enabled = tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ENABLED);
+                io_init_options.monitor    = tcpsocket->subject.monitor;
+                io_init_options.fd         = fd;
+                io_init_options.events     = MEDUSA_IO_EVENT_IN;
+                io_init_options.onevent    = tcpsocket_io_onevent;
+                io_init_options.context    = tcpsocket;
+                io_init_options.clodestroy = 1;
+                io_init_options.enabled    = tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ENABLED);
                 tcpsocket->io = medusa_io_create_with_options_unlocked(&io_init_options);
                 if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
                         ret = MEDUSA_PTR_ERR(tcpsocket->io);
@@ -2161,7 +2153,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach_options_def
         memset(options, 0, sizeof(struct medusa_tcpsocket_attach_options));
         options->fd         = -1;
         options->bound      = 0;
-        options->clodestroy = 1;
+        options->clodestroy = 0;
         return 0;
 }
 
@@ -2192,21 +2184,17 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach_with_option
                 ret = rc;
                 goto bail;
         }
-        io_init_options.monitor = tcpsocket->subject.monitor;
-        io_init_options.fd      = fd;
-        io_init_options.events  = MEDUSA_IO_EVENT_IN;
-        io_init_options.onevent = tcpsocket_io_onevent;
-        io_init_options.context = tcpsocket;
-        io_init_options.enabled = tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ENABLED);
+        io_init_options.monitor    = tcpsocket->subject.monitor;
+        io_init_options.fd         = fd;
+        io_init_options.events     = MEDUSA_IO_EVENT_IN;
+        io_init_options.onevent    = tcpsocket_io_onevent;
+        io_init_options.context    = tcpsocket;
+        io_init_options.clodestroy = options->clodestroy;
+        io_init_options.enabled    = tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ENABLED);
         tcpsocket->io = medusa_io_create_with_options_unlocked(&io_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
                 ret = MEDUSA_PTR_ERR(tcpsocket->io);
                 goto bail;
-        }
-        if (options->clodestroy) {
-                tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_CLODESTROY);
-        } else {
-                tcpsocket_del_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_CLODESTROY);
         }
         {
                 int rc;
@@ -2429,12 +2417,13 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_accept_init_with_o
                 close(fd);
                 return rc;
         }
-        io_init_options.monitor = accepted->subject.monitor;
-        io_init_options.fd      = fd;
-        io_init_options.events  = MEDUSA_IO_EVENT_IN;
-        io_init_options.onevent = tcpsocket_io_onevent;
-        io_init_options.context = accepted;
-        io_init_options.enabled = tcpsocket_has_flag(accepted, MEDUSA_TCPSOCKET_FLAG_ENABLED);
+        io_init_options.monitor    = accepted->subject.monitor;
+        io_init_options.fd         = fd;
+        io_init_options.events     = MEDUSA_IO_EVENT_IN;
+        io_init_options.onevent    = tcpsocket_io_onevent;
+        io_init_options.context    = accepted;
+        io_init_options.clodestroy = 1;
+        io_init_options.enabled    = tcpsocket_has_flag(accepted, MEDUSA_TCPSOCKET_FLAG_ENABLED);
         accepted->io = medusa_io_create_with_options_unlocked(&io_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(accepted->io)) {
                 rc = MEDUSA_PTR_ERR(accepted->io);
@@ -2546,12 +2535,13 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 close(fd);
                 return MEDUSA_ERR_PTR(MEDUSA_PTR_ERR(accepted));
         }
-        io_init_options.monitor = accepted->subject.monitor;
-        io_init_options.fd      = fd;
-        io_init_options.events  = MEDUSA_IO_EVENT_IN;
-        io_init_options.onevent = tcpsocket_io_onevent;
-        io_init_options.context = accepted;
-        io_init_options.enabled = tcpsocket_has_flag(accepted, MEDUSA_TCPSOCKET_FLAG_ENABLED);
+        io_init_options.monitor    = accepted->subject.monitor;
+        io_init_options.fd         = fd;
+        io_init_options.events     = MEDUSA_IO_EVENT_IN;
+        io_init_options.onevent    = tcpsocket_io_onevent;
+        io_init_options.context    = accepted;
+        io_init_options.clodestroy = 1;
+        io_init_options.enabled    = tcpsocket_has_flag(accepted, MEDUSA_TCPSOCKET_FLAG_ENABLED);
         accepted->io = medusa_io_create_with_options_unlocked(&io_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(accepted->io)) {
                 rc = MEDUSA_PTR_ERR(accepted->io);

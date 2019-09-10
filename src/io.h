@@ -31,6 +31,7 @@ struct medusa_io_init_options {
         int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...);
         void *context;
         unsigned int events;
+        int clodestroy;
         int enabled;
 };
 
@@ -54,6 +55,9 @@ unsigned int medusa_io_get_events (const struct medusa_io *io);
 
 int medusa_io_set_enabled (struct medusa_io *io, int enabled);
 int medusa_io_get_enabled (const struct medusa_io *io);
+
+int medusa_io_set_clodestroy (struct medusa_io *io, int clodestroy);
+int medusa_io_get_clodestroy (const struct medusa_io *io);
 
 int medusa_io_enable (struct medusa_io *io);
 int medusa_io_disable (struct medusa_io *io);

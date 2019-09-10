@@ -2,10 +2,8 @@
 #if !defined(MEDUSA_UDPSOCKET_H)
 #define MEDUSA_UDPSOCKET_H
 
-struct iovec;
 struct sockaddr_storage;
 
-struct medusa_buffer;
 struct medusa_monitor;
 struct medusa_udpsocket;
 
