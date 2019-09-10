@@ -3021,7 +3021,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_read_unlocked 
                 if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                         return MEDUSA_PTR_ERR(buffer);
                 }
-                rc = medusa_buffer_write(buffer, data, length);
+                rc = medusa_buffer_read(buffer, data, length);
         } else {
                 int fd;
                 fd = medusa_tcpsocket_get_fd_unlocked(tcpsocket);
