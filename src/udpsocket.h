@@ -97,6 +97,8 @@ struct medusa_udpsocket_connect_options {
 
 struct medusa_udpsocket_attach_options {
         int fd;
+        int bound;
+        int clodestroy;
 };
 
 #ifdef __cplusplus

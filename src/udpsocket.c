@@ -306,11 +306,6 @@ static int udpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                         goto bail;
                 }
         } else if (events & MEDUSA_IO_EVENT_DESTROY) {
-                int fd;
-                fd = medusa_io_get_fd_unlocked(io);
-                if (fd >= 0) {
-                        close(fd);
-                }
         }
         medusa_monitor_unlock(monitor);
         return 0;
@@ -1235,12 +1230,13 @@ ipv6:
                 ret = rc;
                 goto bail;
         }
-        io_init_options.monitor = udpsocket->subject.monitor;
-        io_init_options.fd      = fd;
-        io_init_options.events  = MEDUSA_IO_EVENT_IN;
-        io_init_options.onevent = udpsocket_io_onevent;
-        io_init_options.context = udpsocket;
-        io_init_options.enabled = udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_ENABLED);
+        io_init_options.monitor    = udpsocket->subject.monitor;
+        io_init_options.fd         = fd;
+        io_init_options.events     = MEDUSA_IO_EVENT_IN;
+        io_init_options.onevent    = udpsocket_io_onevent;
+        io_init_options.context    = udpsocket;
+        io_init_options.clodestroy = 1;
+        io_init_options.enabled    = udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_ENABLED);
         udpsocket->io = medusa_io_create_with_options_unlocked(&io_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
                 ret = MEDUSA_PTR_ERR(udpsocket->io);
@@ -1419,12 +1415,13 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_open_with_options_
                 ret = rc;
                 goto bail;
         }
-        io_init_options.monitor = udpsocket->subject.monitor;
-        io_init_options.fd      = fd;
-        io_init_options.events  = MEDUSA_IO_EVENT_IN;
-        io_init_options.onevent = udpsocket_io_onevent;
-        io_init_options.context = udpsocket;
-        io_init_options.enabled = udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_ENABLED);
+        io_init_options.monitor    = udpsocket->subject.monitor;
+        io_init_options.fd         = fd;
+        io_init_options.events     = MEDUSA_IO_EVENT_IN;
+        io_init_options.onevent    = udpsocket_io_onevent;
+        io_init_options.context    = udpsocket;
+        io_init_options.clodestroy = 1;
+        io_init_options.enabled    = udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_ENABLED);
         udpsocket->io = medusa_io_create_with_options_unlocked(&io_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
                 ret = MEDUSA_PTR_ERR(udpsocket->io);
@@ -1643,12 +1640,13 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_connect_with_optio
                         ret = rc;
                         goto bail;
                 }
-                io_init_options.monitor = udpsocket->subject.monitor;
-                io_init_options.fd      = fd;
-                io_init_options.events  = MEDUSA_IO_EVENT_IN;
-                io_init_options.onevent = udpsocket_io_onevent;
-                io_init_options.context = udpsocket;
-                io_init_options.enabled = udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_ENABLED);
+                io_init_options.monitor    = udpsocket->subject.monitor;
+                io_init_options.fd         = fd;
+                io_init_options.events     = MEDUSA_IO_EVENT_IN;
+                io_init_options.onevent    = udpsocket_io_onevent;
+                io_init_options.context    = udpsocket;
+                io_init_options.clodestroy = 1;
+                io_init_options.enabled    = udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_ENABLED);
                 udpsocket->io = medusa_io_create_with_options_unlocked(&io_init_options);
                 if (MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
                         ret = MEDUSA_PTR_ERR(udpsocket->io);
@@ -1782,7 +1780,9 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_attach_options_def
                 return -EINVAL;
         }
         memset(options, 0, sizeof(struct medusa_udpsocket_attach_options));
-        options->fd = -1;
+        options->fd         = -1;
+        options->bound      = 0;
+        options->clodestroy = 0;
         return 0;
 }
 
@@ -1813,12 +1813,13 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_attach_with_option
                 ret = rc;
                 goto bail;
         }
-        io_init_options.monitor = udpsocket->subject.monitor;
-        io_init_options.fd      = fd;
-        io_init_options.events  = MEDUSA_IO_EVENT_IN;
-        io_init_options.onevent = udpsocket_io_onevent;
-        io_init_options.context = udpsocket;
-        io_init_options.enabled = udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_ENABLED);
+        io_init_options.monitor    = udpsocket->subject.monitor;
+        io_init_options.fd         = fd;
+        io_init_options.events     = MEDUSA_IO_EVENT_IN;
+        io_init_options.onevent    = udpsocket_io_onevent;
+        io_init_options.context    = udpsocket;
+        io_init_options.clodestroy = options->clodestroy;
+        io_init_options.enabled    = udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_ENABLED);
         udpsocket->io = medusa_io_create_with_options_unlocked(&io_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
                 ret = MEDUSA_PTR_ERR(udpsocket->io);
@@ -1860,15 +1861,53 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_attach_with_option
                 }
 
         }
-        rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_CONNECTED);
-        if (rc < 0) {
-                ret = rc;
-                goto bail;
-        }
-        rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_CONNECTED);
-        if (rc < 0) {
-                ret = rc;
-                goto bail;
+        if (options->bound == 0) {
+                rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_RESOLVING);
+                if (rc < 0) {
+                        ret = rc;
+                        goto bail;
+                }
+                rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_RESOLVED);
+                if (rc < 0) {
+                        ret = rc;
+                        goto bail;
+                }
+                rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_CONNECTING);
+                if (rc < 0) {
+                        ret = rc;
+                        goto bail;
+                }
+                rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_CONNECTED);
+                if (rc < 0) {
+                        ret = rc;
+                        goto bail;
+                }
+                rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_CONNECTED);
+                if (rc < 0) {
+                        ret = rc;
+                        goto bail;
+                }
+        } else {
+                rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_BINDING);
+                if (rc < 0) {
+                        ret = rc;
+                        goto bail;
+                }
+                rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_BOUND);
+                if (rc < 0) {
+                        ret = rc;
+                        goto bail;
+                }
+                rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_LISTENING);
+                if (rc < 0) {
+                        ret = rc;
+                        goto bail;
+                }
+                rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_LISTENING);
+                if (rc < 0) {
+                        ret = rc;
+                        goto bail;
+                }
         }
         return 0;
 bail:   udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_DISCONNECTED);
