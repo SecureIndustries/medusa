@@ -2984,6 +2984,9 @@ __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_peek_unlocked 
 __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_peek (const struct medusa_tcpsocket *tcpsocket, void *data, int64_t length)
 {
         int64_t rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
         medusa_monitor_lock(tcpsocket->subject.monitor);
         rc = medusa_tcpsocket_peek_unlocked(tcpsocket, data, length);
         medusa_monitor_unlock(tcpsocket->subject.monitor);
@@ -3039,6 +3042,9 @@ __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_read_unlocked 
 __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_read (struct medusa_tcpsocket *tcpsocket, void *data, int64_t length)
 {
         int64_t rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
         medusa_monitor_lock(tcpsocket->subject.monitor);
         rc = medusa_tcpsocket_read_unlocked(tcpsocket, data, length);
         medusa_monitor_unlock(tcpsocket->subject.monitor);
@@ -3094,6 +3100,9 @@ __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_write_unlocked
 __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_write (struct medusa_tcpsocket *tcpsocket, const void *data, int64_t length)
 {
         int64_t rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
         medusa_monitor_lock(tcpsocket->subject.monitor);
         rc = medusa_tcpsocket_write_unlocked(tcpsocket, data, length);
         medusa_monitor_unlock(tcpsocket->subject.monitor);
@@ -3167,6 +3176,9 @@ __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_vprintf_unlock
 __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_vprintf (struct medusa_tcpsocket *tcpsocket, const char *format, va_list va)
 {
         int64_t rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
         medusa_monitor_lock(tcpsocket->subject.monitor);
         rc = medusa_tcpsocket_vprintf_unlocked(tcpsocket, format, va);
         medusa_monitor_unlock(tcpsocket->subject.monitor);
