@@ -11,10 +11,11 @@ static const unsigned int g_types[] = {
         MEDUSA_BUFFER_TYPE_SIMPLE,
 };
 
-static int buffer_onevent (struct medusa_buffer *buffer, unsigned int events, void *context, ...)
+static int buffer_onevent (struct medusa_buffer *buffer, unsigned int events, void *context, void *param)
 {
         unsigned int *bevents = (unsigned int *) context;
         (void) buffer;
+        (void) param;
         *bevents |= events;
         return 0;
 }

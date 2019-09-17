@@ -26,9 +26,10 @@ static const unsigned int g_polls[] = {
 
 #define CONDITIONS_COUNT        10
 
-static int condition_onevent (struct medusa_condition *condition, unsigned int events, void *context, ...)
+static int condition_onevent (struct medusa_condition *condition, unsigned int events, void *context, void *param)
 {
         (void) condition;
+        (void) param;
         fprintf(stderr, "condition: %p, events: 0x%08x, %s\n", condition, events, medusa_condition_event_string(events));
         if (events & MEDUSA_CONDITION_EVENT_SIGNAL) {
                 if (context != NULL) {

@@ -79,7 +79,7 @@ __attribute__ ((visibility ("default"))) int medusa_signal_init_options_default 
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_signal_init_unlocked (struct medusa_signal *signal, struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_signal_init_unlocked (struct medusa_signal *signal, struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         struct medusa_signal_init_options options;
@@ -94,7 +94,7 @@ __attribute__ ((visibility ("default"))) int medusa_signal_init_unlocked (struct
         return medusa_signal_init_with_options_unlocked(signal, &options);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_signal_init (struct medusa_signal *signal, struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_signal_init (struct medusa_signal *signal, struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {
@@ -163,7 +163,7 @@ __attribute__ ((visibility ("default"))) void medusa_signal_uninit_unlocked (str
         if (signal->subject.monitor != NULL) {
                 medusa_monitor_del_unlocked(&signal->subject);
         } else {
-                medusa_signal_onevent_unlocked(signal, MEDUSA_SIGNAL_EVENT_DESTROY);
+                medusa_signal_onevent_unlocked(signal, MEDUSA_SIGNAL_EVENT_DESTROY, NULL);
         }
 }
 
@@ -177,7 +177,7 @@ __attribute__ ((visibility ("default"))) void medusa_signal_uninit (struct medus
         medusa_monitor_unlock(signal->subject.monitor);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_signal_create_singleshot_unlocked (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_signal_create_singleshot_unlocked (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         struct medusa_signal *signal;
@@ -209,7 +209,7 @@ __attribute__ ((visibility ("default"))) int medusa_signal_create_singleshot_unl
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_signal_create_singleshot (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_signal_create_singleshot (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
@@ -221,7 +221,7 @@ __attribute__ ((visibility ("default"))) int medusa_signal_create_singleshot (st
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_signal * medusa_signal_create_unlocked (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_signal * medusa_signal_create_unlocked (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         struct medusa_signal_init_options options;
@@ -236,7 +236,7 @@ __attribute__ ((visibility ("default"))) struct medusa_signal * medusa_signal_cr
         return medusa_signal_create_with_options_unlocked(&options);
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_signal * medusa_signal_create (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_signal * medusa_signal_create (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param), void *context)
 {
         struct medusa_signal *rc;
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
@@ -553,7 +553,7 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_signal_g
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_signal_onevent_unlocked (struct medusa_signal *signal, unsigned int events)
+__attribute__ ((visibility ("default"))) int medusa_signal_onevent_unlocked (struct medusa_signal *signal, unsigned int events, void *param)
 {
         int rc;
         struct medusa_monitor *monitor;
@@ -571,7 +571,7 @@ __attribute__ ((visibility ("default"))) int medusa_signal_onevent_unlocked (str
                 if ((medusa_subject_is_active(&signal->subject)) ||
                     (events & MEDUSA_SIGNAL_EVENT_DESTROY)) {
                         medusa_monitor_unlock(monitor);
-                        rc = signal->onevent(signal, events, signal->context);
+                        rc = signal->onevent(signal, events, signal->context, param);
                         medusa_monitor_lock(monitor);
                 }
         }
@@ -594,14 +594,14 @@ __attribute__ ((visibility ("default"))) int medusa_signal_onevent_unlocked (str
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_signal_onevent (struct medusa_signal *signal, unsigned int events)
+__attribute__ ((visibility ("default"))) int medusa_signal_onevent (struct medusa_signal *signal, unsigned int events, void *param)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {
                 return -EINVAL;
         }
         medusa_monitor_lock(signal->subject.monitor);
-        rc = medusa_signal_onevent_unlocked(signal, events);
+        rc = medusa_signal_onevent_unlocked(signal, events, param);
         medusa_monitor_unlock(signal->subject.monitor);
         return rc;
 }

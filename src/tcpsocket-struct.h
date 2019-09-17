@@ -6,7 +6,7 @@ struct medusa_tcpsocket {
         struct medusa_subject subject;
         unsigned int flags;
         int backlog;
-        int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...);
+        int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param);
         void *context;
         struct medusa_io *io;
         struct medusa_timer *ctimer;
@@ -16,10 +16,10 @@ struct medusa_tcpsocket {
         void *userdata;
 };
 
-int medusa_tcpsocket_init (struct medusa_tcpsocket *tcpsocket, struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
+int medusa_tcpsocket_init (struct medusa_tcpsocket *tcpsocket, struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
 int medusa_tcpsocket_init_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_init_options *options);
 void medusa_tcpsocket_uninit (struct medusa_tcpsocket *tcpsocket);
 
-int medusa_tcpsocket_accept_init (struct medusa_tcpsocket *accepted, struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
+int medusa_tcpsocket_accept_init (struct medusa_tcpsocket *accepted, struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
 
 #endif

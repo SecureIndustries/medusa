@@ -28,10 +28,11 @@ static unsigned int g_ntimers;
 static unsigned int g_ntimeouts;
 static unsigned int g_ndestroys;
 
-static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         (void) timer;
         (void) context;
+        (void) param;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 g_ntimeouts += 1;
         }

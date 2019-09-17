@@ -54,11 +54,12 @@ static void usage (const char *pname)
         fprintf(stdout, "  %s -u http://127.0.0.1/ -m post -h 'a:b' -h 'c:d' -d 'data'\n", pname);
 }
 
-static int httprequest_onevent (struct medusa_httprequest *httprequest, unsigned int events, void *context, ...)
+static int httprequest_onevent (struct medusa_httprequest *httprequest, unsigned int events, void *context, void *param)
 {
         (void) httprequest;
         (void) events;
         (void) context;
+        (void) param;
         fprintf(stderr, "httprequest events: 0x%08x, %s\n", events, medusa_httprequest_event_string(events));
         if (events & MEDUSA_HTTPREQUEST_EVENT_RECEIVED) {
                 const struct medusa_httprequest_reply *httprequest_reply;

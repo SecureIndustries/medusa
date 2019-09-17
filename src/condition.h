@@ -14,7 +14,7 @@ struct medusa_monitor;
 
 struct medusa_condition_init_options {
         struct medusa_monitor *monitor;
-        int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, ...);
+        int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, void *param);
         void *context;
         int enabled;
 };
@@ -26,7 +26,7 @@ extern "C"
 
 int medusa_condition_init_options_default (struct medusa_condition_init_options *options);
 
-struct medusa_condition * medusa_condition_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, ...), void *context);
+struct medusa_condition * medusa_condition_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, void *param), void *context);
 struct medusa_condition * medusa_condition_create_with_options (const struct medusa_condition_init_options *options);
 void medusa_condition_destroy (struct medusa_condition *condition);
 

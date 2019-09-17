@@ -42,7 +42,7 @@ static void usage (const char *pname)
         fprintf(stdout, "  -p. --port   : listening port (values: 0 < port < 65536, default: %d)\n", OPTION_PORT_DEFAULT);
 }
 
-static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         int64_t rlen;
@@ -53,6 +53,7 @@ static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
         int64_t niovecs;
         struct iovec iovecs[16];
         (void) context;
+        (void) param;
         if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ) {
                 rbuffer = medusa_tcpsocket_get_read_buffer(tcpsocket);
                 if (rbuffer == NULL) {
@@ -84,13 +85,14 @@ static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
         return 0;
 }
 
-static int listener_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int listener_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         struct medusa_tcpsocket *medusa_tcpsocket;
         struct medusa_tcpsocket_accept_options medusa_tcpsocket_accept_options;
 
         (void) context;
+        (void) param;
 
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
                 rc = medusa_tcpsocket_accept_options_default(&medusa_tcpsocket_accept_options);
@@ -110,11 +112,12 @@ static int listener_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket
         return 0;
 }
 
-static int sigint_medusa_signal_onevent (struct medusa_signal *signal, unsigned int events, void *context, ...)
+static int sigint_medusa_signal_onevent (struct medusa_signal *signal, unsigned int events, void *context, void *param)
 {
         (void) signal;
         (void) events;
         (void) context;
+        (void) param;
         g_running = 0;
         return medusa_monitor_break(medusa_signal_get_monitor(signal));
 }

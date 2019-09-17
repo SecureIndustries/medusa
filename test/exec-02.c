@@ -23,10 +23,11 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int exec_onevent (struct medusa_exec *exec, unsigned int events, void *context, ...)
+static int exec_onevent (struct medusa_exec *exec, unsigned int events, void *context, void *param)
 {
         unsigned int *cevents = (unsigned int *) context;
         (void) exec;
+        (void) param;
         if (events & MEDUSA_EXEC_EVENT_STARTED) {
                 *cevents |= MEDUSA_EXEC_EVENT_STARTED;
         }

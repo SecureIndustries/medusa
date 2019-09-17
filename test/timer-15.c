@@ -27,11 +27,12 @@ static struct medusa_monitor *g_monitor;
 static int g_timer_singlehot_count;
 static struct medusa_timer *g_timer_singlehot;
 
-static int timer_singleshot_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int timer_singleshot_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         int rc;
         (void) timer;
         (void) context;
+        (void) param;
         fprintf(stderr, "events: 0x%08x\n", events);
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 g_timer_singlehot_count += 1;

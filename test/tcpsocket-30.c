@@ -36,12 +36,13 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         void *buffer;
         int64_t length;
 
         (void) context;
+        (void) param;
 
         fprintf(stderr, "client   events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
 
@@ -72,7 +73,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
 bail:   return -1;
 }
 
-static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         (void) context;
@@ -86,24 +87,21 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE) {
-                va_list ap;
-                int64_t written;
-                va_start(ap, context);
-                written = va_arg(ap, int64_t);
-                va_end(ap);
-                fprintf(stderr, "  written: %"PRIi64"\n", written);
+                struct medusa_tcpsocket_event_buffered_write *event_buffered_write = (struct medusa_tcpsocket_event_buffered_write *) param;
+                fprintf(stderr, "  written: %"PRIi64"\n", event_buffered_write->length);
         }
         return 0;
 bail:   return -1;
 }
 
-static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         struct medusa_tcpsocket *accepted;
         struct medusa_tcpsocket_accept_options accepted_options;
 
         (void) context;
+        (void) param;
 
         fprintf(stderr, "listener events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {

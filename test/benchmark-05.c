@@ -49,11 +49,12 @@ static struct receiver *g_receivers;
 static unsigned int g_active_senders;
 static unsigned int g_active_receivers;
 
-static int receiver_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
+static int receiver_io_onevent (struct medusa_io *io, unsigned int events, void *context, void *param)
 {
         int rc;
         char ch;
         struct receiver *receiver = context;
+        (void) param;
         if (events & MEDUSA_IO_EVENT_IN) {
                 rc = read(receiver->fd, &ch, 1);
                 if (rc != 1) {
@@ -71,10 +72,11 @@ static int receiver_io_onevent (struct medusa_io *io, unsigned int events, void 
         return 0;
 }
 
-static int sender_timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int sender_timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         int rc;
         struct sender *sender = context;
+        (void) param;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 rc = write(sender->fd, "e", 1);
                 if (rc != 1) {

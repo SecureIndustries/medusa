@@ -47,10 +47,12 @@ static void usage (const char *pname)
         fprintf(stdout, "  -i, --iovec  : use iovec read (default: %d)\n", OPTION_IOVEC_DEFAULT);
 }
 
-static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         const char *option_string = context;
+
+        (void) param;
 
         if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
         }

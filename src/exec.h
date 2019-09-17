@@ -21,7 +21,7 @@ struct medusa_exec_init_options {
         const char **argv;
         const char **envv;
         int *iov;
-        int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...);
+        int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, void *param);
         void *context;
         int uid;
         int gid;
@@ -36,7 +36,7 @@ extern "C"
 
 int medusa_exec_init_options_default (struct medusa_exec_init_options *options);
 
-struct medusa_exec * medusa_exec_create (struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...), void *context);
+struct medusa_exec * medusa_exec_create (struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, void *param), void *context);
 struct medusa_exec * medusa_exec_create_with_options (const struct medusa_exec_init_options *options);
 void medusa_exec_destroy (struct medusa_exec *exec);
 

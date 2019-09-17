@@ -46,21 +46,24 @@ static int *g_pipes;
 static struct medusa_io **g_ios;
 static struct medusa_timer **g_timers;
 
-static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         (void) timer;
         (void) events;
         (void) context;
+        (void) param;
         return 0;
 }
 
-static int io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
+static int io_onevent (struct medusa_io *io, unsigned int events, void *context, void *param)
 {
         int rc;
         uintptr_t id;
         unsigned int wid;
         unsigned char ch;
         ssize_t n;
+
+        (void) param;
 
         id = (uintptr_t) context;
         wid = id + 1;

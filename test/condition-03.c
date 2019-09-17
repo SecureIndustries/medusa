@@ -24,20 +24,22 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int condition1_onevent (struct medusa_condition *condition, unsigned int events, void *context, ...)
+static int condition1_onevent (struct medusa_condition *condition, unsigned int events, void *context, void *param)
 {
         unsigned int *signals = (unsigned int *) context;
         (void) condition;
+        (void) param;
         if (events & MEDUSA_CONDITION_EVENT_SIGNAL) {
                 *signals |= 1;
         }
         return 0;
 }
 
-static int condition2_onevent (struct medusa_condition *condition, unsigned int events, void *context, ...)
+static int condition2_onevent (struct medusa_condition *condition, unsigned int events, void *context, void *param)
 {
         unsigned int *signals = (unsigned int *) context;
         (void) context;
+        (void) param;
         if (events & MEDUSA_CONDITION_EVENT_SIGNAL) {
                 *signals |= 2;
                 if (*signals != (1 | 2)) {
@@ -50,20 +52,22 @@ static int condition2_onevent (struct medusa_condition *condition, unsigned int 
         return 0;
 }
 
-static int timer1_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int timer1_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         struct medusa_condition *condition1 = (struct medusa_condition *) context;
         (void) timer;
+        (void) param;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 return medusa_condition_signal(condition1);
         }
         return 0;
 }
 
-static int timer2_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int timer2_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         struct medusa_condition *condition2 = (struct medusa_condition *) context;
         (void) timer;
+        (void) param;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 return medusa_condition_signal(condition2);
         }

@@ -157,7 +157,7 @@ static int internal_run (struct medusa_signal_backend *backend)
         }
         TAILQ_FOREACH_SAFE(entry, &internal->entries, list, nentry) {
                 if (entry->signal->number == (int) signalfd_siginfo.ssi_signo) {
-                        rc = medusa_signal_onevent(entry->signal, MEDUSA_SIGNAL_EVENT_FIRED);
+                        rc = medusa_signal_onevent(entry->signal, MEDUSA_SIGNAL_EVENT_FIRED, NULL);
                         if (rc < 0) {
                                 return rc;
                         }

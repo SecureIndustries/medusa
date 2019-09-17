@@ -4,10 +4,10 @@
 
 struct medusa_udpsocket;
 
-int medusa_udpsocket_init_unlocked (struct medusa_udpsocket *udpsocket, struct medusa_monitor *monitor, int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, ...), void *context);
+int medusa_udpsocket_init_unlocked (struct medusa_udpsocket *udpsocket, struct medusa_monitor *monitor, int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param), void *context);
 int medusa_udpsocket_init_with_options_unlocked (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_init_options *options);
 
-struct medusa_udpsocket * medusa_udpsocket_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, ...), void *context);
+struct medusa_udpsocket * medusa_udpsocket_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param), void *context);
 struct medusa_udpsocket * medusa_udpsocket_create_with_options_unlocked (const struct medusa_udpsocket_init_options *options);
 
 void medusa_udpsocket_uninit_unlocked (struct medusa_udpsocket *udpsocket);
@@ -58,8 +58,9 @@ int medusa_udpsocket_get_peername_unlocked (struct medusa_udpsocket *udpsocket, 
 void * medusa_udpsocket_get_userdata_unlocked (struct medusa_udpsocket *udpsocket);
 int medusa_udpsocket_set_userdata_unlocked (struct medusa_udpsocket *udpsocket, void *userdata);
 
-int medusa_udpsocket_onevent_unlocked (struct medusa_udpsocket *udpsocket, unsigned int events);
-int medusa_udpsocket_onevent (struct medusa_udpsocket *udpsocket, unsigned int events);
+int medusa_udpsocket_onevent_unlocked (struct medusa_udpsocket *udpsocket, unsigned int events, void *param);
+int medusa_udpsocket_onevent (struct medusa_udpsocket *udpsocket, unsigned int events, void *param);
+
 struct medusa_monitor * medusa_udpsocket_get_monitor_unlocked (struct medusa_udpsocket *udpsocket);
 
 #endif

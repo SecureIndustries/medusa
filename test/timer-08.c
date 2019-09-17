@@ -26,10 +26,11 @@ static const unsigned int g_polls[] = {
 static int timer_count;
 static int timer_set_count;
 
-static int timer_set_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int timer_set_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         int rc;
         struct medusa_timer *tm;
+        (void) param;
         tm = (struct medusa_timer *) context;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 timer_set_count += 1;
@@ -51,9 +52,10 @@ static int timer_set_onevent (struct medusa_timer *timer, unsigned int events, v
 bail:   return -1;
 }
 
-static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         (void) context;
+        (void) param;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 timer_count += 1;
                 fprintf(stderr, "timer    : %p callback count: %d\n", timer, timer_count);

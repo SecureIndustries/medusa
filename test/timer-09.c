@@ -29,10 +29,11 @@ static int timer_set_count;
 static struct medusa_timer *timer_tik;
 static struct medusa_timer *timer_set;
 
-static int timer_set_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int timer_set_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         int rc;
         (void) context;
+        (void) param;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 timer_set_count += 1;
                 fprintf(stderr, "timer-set: %p callback tm: %p, count: %d, remaining: %.2f\n", timer, timer_tik, timer_set_count, medusa_timer_get_remaining_time(timer_tik));
@@ -53,9 +54,10 @@ static int timer_set_onevent (struct medusa_timer *timer, unsigned int events, v
 bail:   return -1;
 }
 
-static int timer_tik_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int timer_tik_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         (void) context;
+        (void) param;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 timer_count += 1;
                 fprintf(stderr, "timer-tik: %p callback count: %d, remaining: %.2f\n", timer, timer_count, medusa_timer_get_remaining_time(timer_set));

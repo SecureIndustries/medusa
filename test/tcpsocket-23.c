@@ -47,10 +47,12 @@ struct server {
         struct sessions sessions;
 };
 
-static int client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int64_t length;
         struct client *client = (struct client *) context;
+
+        (void) param;
 
         fprintf(stderr, "client   events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
 
@@ -172,13 +174,14 @@ static void session_destroy (struct session *session)
         free(session);
 }
 
-static int session_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int session_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         struct session *session = (struct session *) context;
 
         (void) tcpsocket;
         (void) session;
+        (void) param;
 
         fprintf(stderr, "server   events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
 
@@ -195,12 +198,14 @@ static int session_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsign
 bail:   return -1;
 }
 
-static int server_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int server_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         struct session *session;
         struct medusa_tcpsocket_accept_options tcpsocket_accept_options;
         struct server *server = (struct server *) context;
+
+        (void) param;
 
         fprintf(stderr, "listener events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {

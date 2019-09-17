@@ -14,7 +14,7 @@ struct medusa_monitor;
 
 struct medusa_signal_init_options {
         struct medusa_monitor *monitor;
-        int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...);
+        int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param);
         void *context;
         int number;
         int singleshot;
@@ -28,9 +28,9 @@ extern "C"
 
 int medusa_signal_init_options_default (struct medusa_signal_init_options *options);
 
-int medusa_signal_create_singleshot (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context);
+int medusa_signal_create_singleshot (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param), void *context);
 
-struct medusa_signal * medusa_signal_create (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context);
+struct medusa_signal * medusa_signal_create (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param), void *context);
 struct medusa_signal * medusa_signal_create_with_options (const struct medusa_signal_init_options *options);
 void medusa_signal_destroy (struct medusa_signal *signal);
 

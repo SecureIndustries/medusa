@@ -25,12 +25,13 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         char c;
         (void) tcpsocket;
         (void) context;
+        (void) param;
         fprintf(stderr, "client events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 unsigned int *connected = context;
@@ -57,12 +58,13 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         return 0;
 }
 
-static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         char c;
         (void) tcpsocket;
         (void) context;
+        (void) param;
         fprintf(stderr, "server events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 unsigned int *connected = context;
@@ -90,13 +92,14 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
 }
 
 
-static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         struct medusa_tcpsocket *accepted;
         (void) tcpsocket;
         (void) events;
         (void) context;
+        (void) param;
         fprintf(stderr, "bind   events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
                 accepted = medusa_tcpsocket_accept(tcpsocket, tcpsocket_server_onevent, context);

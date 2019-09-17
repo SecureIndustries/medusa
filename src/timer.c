@@ -163,7 +163,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_init_options_default (
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_init_unlocked (struct medusa_timer *timer, struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_timer_init_unlocked (struct medusa_timer *timer, struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         struct medusa_timer_init_options options;
@@ -177,7 +177,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_init_unlocked (struct 
         return medusa_timer_init_with_options_unlocked(timer, &options);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_init (struct medusa_timer *timer, struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_timer_init (struct medusa_timer *timer, struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
@@ -227,7 +227,7 @@ __attribute__ ((visibility ("default"))) void medusa_timer_uninit_unlocked (stru
         if (timer->subject.monitor != NULL) {
                 medusa_monitor_del_unlocked(&timer->subject);
         } else {
-                medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_DESTROY);
+                medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_DESTROY, NULL);
         }
 }
 
@@ -241,7 +241,7 @@ __attribute__ ((visibility ("default"))) void medusa_timer_uninit (struct medusa
         medusa_monitor_unlock(timer->subject.monitor);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_unlocked (struct medusa_monitor *monitor, double interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_unlocked (struct medusa_monitor *monitor, double interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context)
 {
         struct timespec timespec;
         if (monitor == NULL) {
@@ -258,7 +258,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_unlo
         return medusa_timer_create_singleshot_timespec_unlocked(monitor, &timespec, onevent, context);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot (struct medusa_monitor *monitor, double interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot (struct medusa_monitor *monitor, double interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
@@ -270,7 +270,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot (str
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_timeval_unlocked (struct medusa_monitor *monitor, const struct timeval *interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_timeval_unlocked (struct medusa_monitor *monitor, const struct timeval *interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context)
 {
         struct timespec timespec;
         if (monitor == NULL) {
@@ -287,7 +287,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_time
         return medusa_timer_create_singleshot_timespec_unlocked(monitor, &timespec, onevent, context);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_timeval (struct medusa_monitor *monitor, const struct timeval *interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_timeval (struct medusa_monitor *monitor, const struct timeval *interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
@@ -299,7 +299,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_time
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_timespec_unlocked (struct medusa_monitor *monitor, const struct timespec *interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_timespec_unlocked (struct medusa_monitor *monitor, const struct timespec *interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         struct medusa_timer *timer;
@@ -335,7 +335,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_time
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_timespec (struct medusa_monitor *monitor, const struct timespec *interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_timespec (struct medusa_monitor *monitor, const struct timespec *interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
@@ -347,7 +347,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_create_singleshot_time
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         struct medusa_timer_init_options options;
@@ -361,7 +361,7 @@ __attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_crea
         return medusa_timer_create_with_options_unlocked(&options);
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_timer * medusa_timer_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context)
 {
         struct medusa_timer *rc;
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
@@ -1072,7 +1072,7 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_timer_ge
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_timer_onevent_unlocked (struct medusa_timer *timer, unsigned int events)
+__attribute__ ((visibility ("default"))) int medusa_timer_onevent_unlocked (struct medusa_timer *timer, unsigned int events, void *param)
 {
         int rc;
         struct medusa_monitor *monitor;
@@ -1092,7 +1092,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_onevent_unlocked (stru
                 if ((medusa_subject_is_active(&timer->subject)) ||
                     (events & MEDUSA_TIMER_EVENT_DESTROY)) {
                         medusa_monitor_unlock(monitor);
-                        rc = timer->onevent(timer, events, timer->context);
+                        rc = timer->onevent(timer, events, timer->context, param);
                         medusa_monitor_lock(monitor);
                 }
         }

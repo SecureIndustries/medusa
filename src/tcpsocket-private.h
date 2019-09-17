@@ -4,13 +4,13 @@
 
 struct medusa_tcpsocket;
 
-int medusa_tcpsocket_init_unlocked (struct medusa_tcpsocket *tcpsocket, struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
+int medusa_tcpsocket_init_unlocked (struct medusa_tcpsocket *tcpsocket, struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
 int medusa_tcpsocket_init_with_options_unlocked (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_init_options *options);
 
-struct medusa_tcpsocket * medusa_tcpsocket_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
+struct medusa_tcpsocket * medusa_tcpsocket_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
 struct medusa_tcpsocket * medusa_tcpsocket_create_with_options_unlocked (const struct medusa_tcpsocket_init_options *options);
 
-int medusa_tcpsocket_accept_init_unlocked (struct medusa_tcpsocket *accepted, struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
+int medusa_tcpsocket_accept_init_unlocked (struct medusa_tcpsocket *accepted, struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
 int medusa_tcpsocket_accept_init_with_options_unlocked (struct medusa_tcpsocket *accepted, struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_accept_options *options);
 
 void medusa_tcpsocket_uninit_unlocked (struct medusa_tcpsocket *tcpsocket);
@@ -64,20 +64,19 @@ int medusa_tcpsocket_connect_with_options_unlocked (struct medusa_tcpsocket *tcp
 int medusa_tcpsocket_attach_unlocked (struct medusa_tcpsocket *tcpsocket, int fd);
 int medusa_tcpsocket_attach_with_options_unlocked (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_attach_options *options);
 
-struct medusa_tcpsocket * medusa_tcpsocket_accept_unlocked (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
+struct medusa_tcpsocket * medusa_tcpsocket_accept_unlocked (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
 struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options_unlocked (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_accept_options *options);
 
 int medusa_tcpsocket_get_sockname_unlocked (struct medusa_tcpsocket *tcpsocket, struct sockaddr_storage *sockaddr);
 int medusa_tcpsocket_get_peername_unlocked (struct medusa_tcpsocket *tcpsocket, struct sockaddr_storage *sockaddr);
 
-int medusa_tcpsocket_set_onevent_unlocked (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...), void *context);
+int medusa_tcpsocket_set_onevent_unlocked (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
 
 void * medusa_tcpsocket_get_userdata_unlocked (struct medusa_tcpsocket *tcpsocket);
 int medusa_tcpsocket_set_userdata_unlocked (struct medusa_tcpsocket *tcpsocket, void *userdata);
 
-int medusa_tcpsocket_onevent_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events, ...);
-int medusa_tcpsocket_oneventv_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events, va_list va);
-int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, ...);
+int medusa_tcpsocket_onevent_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *param);
+int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *param);
 struct medusa_monitor * medusa_tcpsocket_get_monitor_unlocked (struct medusa_tcpsocket *tcpsocket);
 
 int64_t medusa_tcpsocket_peek_unlocked  (const struct medusa_tcpsocket *tcpsocket, void *data, int64_t length);

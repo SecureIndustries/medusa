@@ -23,9 +23,10 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         int rc;
+        (void) param;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 int *count = context;
                 fprintf(stderr, "timeout: %d\n", *count);

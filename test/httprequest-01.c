@@ -23,11 +23,12 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int httprequest_onevent (struct medusa_httprequest *httprequest, unsigned int events, void *context, ...)
+static int httprequest_onevent (struct medusa_httprequest *httprequest, unsigned int events, void *context, void *param)
 {
         (void) httprequest;
         (void) events;
         (void) context;
+        (void) param;
         return 0;
 }
 

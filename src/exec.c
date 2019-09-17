@@ -184,12 +184,13 @@ static int exec_kill (pid_t pid, int sig)
         return kill((pid < 0) ? pid : -pid, sig);
 }
 
-static int exec_timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int exec_timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         int rc;
         pid_t pid;
         int status;
         struct medusa_exec *exec = (struct medusa_exec *) context;
+        (void) param;
         if (events & MEDUSA_TIMER_EVENT_DESTROY) {
                 return 0;
         }
@@ -201,7 +202,7 @@ static int exec_timer_onevent (struct medusa_timer *timer, unsigned int events, 
                                 exec->pid = -1;
                                 exec->timer = NULL;
                                 exec->wstatus = status;
-                                rc = medusa_exec_onevent(exec, MEDUSA_EXEC_EVENT_STOPPED);
+                                rc = medusa_exec_onevent(exec, MEDUSA_EXEC_EVENT_STOPPED, NULL);
                                 if (rc < 0) {
                                         return rc;
                                 }
@@ -216,7 +217,7 @@ static int exec_timer_onevent (struct medusa_timer *timer, unsigned int events, 
                         exec->pid = -1;
                         exec->timer = NULL;
                         exec->wstatus = status;
-                        rc = medusa_exec_onevent(exec, MEDUSA_EXEC_EVENT_STOPPED);
+                        rc = medusa_exec_onevent(exec, MEDUSA_EXEC_EVENT_STOPPED, NULL);
                         if (rc < 0) {
                                 return rc;
                         }
@@ -238,7 +239,7 @@ __attribute__ ((visibility ("default"))) int medusa_exec_init_options_default (s
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_exec_init_unlocked (struct medusa_exec *exec, struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_exec_init_unlocked (struct medusa_exec *exec, struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         struct medusa_exec_init_options options;
@@ -253,7 +254,7 @@ __attribute__ ((visibility ("default"))) int medusa_exec_init_unlocked (struct m
         return medusa_exec_init_with_options_unlocked(exec, &options);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_exec_init (struct medusa_exec *exec, struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_exec_init (struct medusa_exec *exec, struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(exec)) {
@@ -401,7 +402,7 @@ __attribute__ ((visibility ("default"))) void medusa_exec_uninit_unlocked (struc
         if (exec->subject.monitor != NULL) {
                 medusa_monitor_del_unlocked(&exec->subject);
         } else {
-                medusa_exec_onevent_unlocked(exec, MEDUSA_EXEC_EVENT_DESTROY);
+                medusa_exec_onevent_unlocked(exec, MEDUSA_EXEC_EVENT_DESTROY, NULL);
         }
 }
 
@@ -415,7 +416,7 @@ __attribute__ ((visibility ("default"))) void medusa_exec_uninit (struct medusa_
         medusa_monitor_unlock(exec->subject.monitor);
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_exec * medusa_exec_create_unlocked (struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_exec * medusa_exec_create_unlocked (struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         struct medusa_exec_init_options options;
@@ -430,7 +431,7 @@ __attribute__ ((visibility ("default"))) struct medusa_exec * medusa_exec_create
         return medusa_exec_create_with_options_unlocked(&options);
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_exec * medusa_exec_create (struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_exec * medusa_exec_create (struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, void *param), void *context)
 {
         struct medusa_exec *rc;
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
@@ -579,7 +580,7 @@ __attribute__ ((visibility ("default"))) int medusa_exec_set_enabled_unlocked (s
                 if (exec->pid < 0) {
                         return -EIO;
                 }
-                rc = medusa_exec_onevent_unlocked(exec, MEDUSA_EXEC_EVENT_STARTED);
+                rc = medusa_exec_onevent_unlocked(exec, MEDUSA_EXEC_EVENT_STARTED, NULL);
                 if (rc < 0) {
                         return rc;
                 }
@@ -766,7 +767,7 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_exec_get
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_exec_onevent_unlocked (struct medusa_exec *exec, unsigned int events)
+__attribute__ ((visibility ("default"))) int medusa_exec_onevent_unlocked (struct medusa_exec *exec, unsigned int events, void *param)
 {
         int rc;
         struct medusa_monitor *monitor;
@@ -776,7 +777,7 @@ __attribute__ ((visibility ("default"))) int medusa_exec_onevent_unlocked (struc
                 if ((medusa_subject_is_active(&exec->subject)) ||
                     (events & MEDUSA_EXEC_EVENT_DESTROY)) {
                         medusa_monitor_unlock(monitor);
-                        rc = exec->onevent(exec, events, exec->context);
+                        rc = exec->onevent(exec, events, exec->context, param);
                         medusa_monitor_lock(monitor);
                 }
         }
@@ -814,14 +815,14 @@ __attribute__ ((visibility ("default"))) int medusa_exec_onevent_unlocked (struc
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_exec_onevent (struct medusa_exec *exec, unsigned int events)
+__attribute__ ((visibility ("default"))) int medusa_exec_onevent (struct medusa_exec *exec, unsigned int events, void *param)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(exec)) {
                 return -EINVAL;
         }
         medusa_monitor_lock(exec->subject.monitor);
-        rc = medusa_exec_onevent_unlocked(exec, events);
+        rc = medusa_exec_onevent_unlocked(exec, events, param);
         medusa_monitor_unlock(exec->subject.monitor);
         return rc;
 }

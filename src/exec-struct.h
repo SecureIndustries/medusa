@@ -15,7 +15,7 @@ struct medusa_exec {
         int uid;
         int gid;
         double interval;
-        int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...);
+        int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, void *param);
         void *context;
         pid_t pid;
         int wstatus;
@@ -23,7 +23,7 @@ struct medusa_exec {
         void *userdata;
 };
 
-int medusa_exec_init (struct medusa_exec *exec, struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, ...), void *context);
+int medusa_exec_init (struct medusa_exec *exec, struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, void *param), void *context);
 int medusa_exec_init_with_options (struct medusa_exec *exec, const struct medusa_exec_init_options *options);
 void medusa_exec_uninit (struct medusa_exec *exec);
 

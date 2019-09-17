@@ -71,7 +71,7 @@ enum {
 
 struct medusa_udpsocket_init_options {
         struct medusa_monitor *monitor;
-        int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, ...);
+        int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param);
         void *context;
         int nonblocking;
         int reuseaddr;
@@ -108,7 +108,7 @@ extern "C"
 
 int medusa_udpsocket_init_options_default (struct medusa_udpsocket_init_options *options);
 
-struct medusa_udpsocket * medusa_udpsocket_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, ...), void *context);
+struct medusa_udpsocket * medusa_udpsocket_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param), void *context);
 struct medusa_udpsocket * medusa_udpsocket_create_with_options (const struct medusa_udpsocket_init_options *options);
 void medusa_udpsocket_destroy (struct medusa_udpsocket *udpsocket);
 

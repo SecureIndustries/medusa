@@ -10,12 +10,12 @@ struct medusa_io {
         struct medusa_subject subject;
         unsigned int flags;
         int fd;
-        int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...);
+        int (*onevent) (struct medusa_io *io, unsigned int events, void *context, void *param);
         void *context;
         void *userdata;
 };
 
-int medusa_io_init (struct medusa_io *io, struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...), void *context);
+int medusa_io_init (struct medusa_io *io, struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context, void *param), void *context);
 int medusa_io_init_with_options (struct medusa_io *io, const struct medusa_io_init_options *options);
 void medusa_io_uninit (struct medusa_io *io);
 

@@ -128,11 +128,12 @@ static int fd_set_blocking (int fd, int on)
         return 0;
 }
 
-static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
+static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events, void *context, void *param)
 {
         int rc;
         unsigned int reason;
         struct medusa_monitor *monitor = (struct medusa_monitor *) context;
+        (void) param;
         if (events & MEDUSA_IO_EVENT_IN) {
                 while (1) {
                         rc = read(io->fd, &reason, sizeof(reason));
@@ -157,11 +158,12 @@ static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events,
 bail:   return -1;
 }
 
-static int monitor_timer_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
+static int monitor_timer_io_onevent (struct medusa_io *io, unsigned int events, void *context, void *param)
 {
         int rc;
         uint64_t value;
         struct medusa_monitor *monitor = context;
+        (void) param;
         if (events & MEDUSA_IO_EVENT_IN) {
                 while (1) {
                         rc = read(io->fd, &value, sizeof(value));
@@ -186,11 +188,12 @@ static int monitor_timer_io_onevent (struct medusa_io *io, unsigned int events, 
 bail:   return -1;
 }
 
-static int monitor_signal_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
+static int monitor_signal_io_onevent (struct medusa_io *io, unsigned int events, void *context, void *param)
 {
         int rc;
         struct medusa_monitor *monitor = context;
         (void) io;
+        (void) param;
         if (events & MEDUSA_IO_EVENT_IN) {
                 rc = monitor->signal.backend->run(monitor->signal.backend);
                 if (rc < 0) {
@@ -267,7 +270,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                         struct medusa_exec *exec;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         exec = (struct medusa_exec *) subject;
-                        rc = medusa_exec_onevent_unlocked(exec, MEDUSA_EXEC_EVENT_DESTROY);
+                        rc = medusa_exec_onevent_unlocked(exec, MEDUSA_EXEC_EVENT_DESTROY, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -278,7 +281,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                         struct medusa_httprequest *httprequest;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         httprequest = (struct medusa_httprequest *) subject;
-                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DESTROY);
+                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DESTROY, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -289,7 +292,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                         struct medusa_tcpsocket *tcpsocket;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         tcpsocket = (struct medusa_tcpsocket *) subject;
-                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
+                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -300,7 +303,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                         struct medusa_udpsocket *udpsocket;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         udpsocket = (struct medusa_udpsocket *) subject;
-                        rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_DESTROY);
+                        rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_DESTROY, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -318,7 +321,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                                 }
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         }
-                        rc = medusa_io_onevent_unlocked(io, MEDUSA_IO_EVENT_DESTROY);
+                        rc = medusa_io_onevent_unlocked(io, MEDUSA_IO_EVENT_DESTROY, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -334,7 +337,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                                 monitor->timer.dirty = 1;
                         }
-                        rc = medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_DESTROY);
+                        rc = medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_DESTROY, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -349,7 +352,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                                 }
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         }
-                        rc = medusa_signal_onevent_unlocked(signal, MEDUSA_SIGNAL_EVENT_DESTROY);
+                        rc = medusa_signal_onevent_unlocked(signal, MEDUSA_SIGNAL_EVENT_DESTROY, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -365,7 +368,7 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                                 monitor->condition.dirty = 1;
                         }
-                        rc = medusa_condition_onevent_unlocked(condition, MEDUSA_CONDITION_EVENT_DESTROY);
+                        rc = medusa_condition_onevent_unlocked(condition, MEDUSA_CONDITION_EVENT_DESTROY, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -582,7 +585,7 @@ static __attribute__ ((__unused__))  int monitor_hit_timer (void *context, void 
         struct medusa_timer *timer = a;
         struct medusa_monitor *monitor = context;
         (void) monitor;
-        rc = medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_TIMEOUT);
+        rc = medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_TIMEOUT, NULL);
         if (rc != 0) {
                 goto bail;
         }
@@ -667,7 +670,7 @@ static int monitor_check_condition (struct medusa_monitor *monitor)
                         }
                         condition->subject.flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         monitor->condition.dirty = 1;
-                        rc = medusa_condition_onevent_unlocked(condition, MEDUSA_CONDITION_EVENT_SIGNAL);
+                        rc = medusa_condition_onevent_unlocked(condition, MEDUSA_CONDITION_EVENT_SIGNAL, NULL);
                         if (rc != 0) {
                                 goto bail;
                         }
@@ -1152,7 +1155,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                         struct medusa_exec *exec;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         exec = (struct medusa_exec *) subject;
-                        medusa_exec_onevent_unlocked(exec, MEDUSA_EXEC_EVENT_DESTROY);
+                        medusa_exec_onevent_unlocked(exec, MEDUSA_EXEC_EVENT_DESTROY, NULL);
                 }
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
@@ -1160,7 +1163,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                         struct medusa_httprequest *httprequest;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         httprequest = (struct medusa_httprequest *) subject;
-                        medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DESTROY);
+                        medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DESTROY, NULL);
                 }
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
@@ -1168,7 +1171,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                         struct medusa_tcpsocket *tcpsocket;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         tcpsocket = (struct medusa_tcpsocket *) subject;
-                        medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY);
+                        medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY, NULL);
                 }
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
@@ -1176,7 +1179,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                         struct medusa_udpsocket *udpsocket;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         udpsocket = (struct medusa_udpsocket *) subject;
-                        medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_DESTROY);
+                        medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_DESTROY, NULL);
                 }
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
@@ -1188,7 +1191,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                                 monitor->poll.backend->del(monitor->poll.backend, io);
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         }
-                        medusa_io_onevent_unlocked(io, MEDUSA_IO_EVENT_DESTROY);
+                        medusa_io_onevent_unlocked(io, MEDUSA_IO_EVENT_DESTROY, NULL);
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TIMER) {
                         struct medusa_timer *timer;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
@@ -1197,7 +1200,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                                 pqueue_del(monitor->timer.pqueue, timer);
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         }
-                        medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_DESTROY);
+                        medusa_timer_onevent_unlocked(timer, MEDUSA_TIMER_EVENT_DESTROY, NULL);
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_SIGNAL) {
                         struct medusa_signal *signal;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
@@ -1206,7 +1209,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                                 monitor->signal.backend->del(monitor->signal.backend, signal);
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         }
-                        medusa_signal_onevent_unlocked(signal, MEDUSA_SIGNAL_EVENT_DESTROY);
+                        medusa_signal_onevent_unlocked(signal, MEDUSA_SIGNAL_EVENT_DESTROY, NULL);
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_CONDITION) {
                         struct medusa_condition *condition;
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
@@ -1215,7 +1218,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                                 pqueue_del(monitor->condition.pqueue, condition);
                                 subject->flags &= ~MEDUSA_SUBJECT_FLAG_HEAP;
                         }
-                        medusa_condition_onevent_unlocked(condition, MEDUSA_CONDITION_EVENT_DESTROY);
+                        medusa_condition_onevent_unlocked(condition, MEDUSA_CONDITION_EVENT_DESTROY, NULL);
                 }
         }
         if (monitor->poll.backend != NULL) {

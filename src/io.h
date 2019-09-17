@@ -28,7 +28,7 @@ enum {
 struct medusa_io_init_options {
         struct medusa_monitor *monitor;
         int fd;
-        int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...);
+        int (*onevent) (struct medusa_io *io, unsigned int events, void *context, void *param);
         void *context;
         unsigned int events;
         int clodestroy;
@@ -42,7 +42,7 @@ extern "C"
 
 int medusa_io_init_options_default (struct medusa_io_init_options *options);
 
-struct medusa_io * medusa_io_create (struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context, ...), void *context);
+struct medusa_io * medusa_io_create (struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context, void *param), void *context);
 struct medusa_io * medusa_io_create_with_options (const struct medusa_io_init_options *options);
 void medusa_io_destroy (struct medusa_io *io);
 

@@ -40,12 +40,14 @@ static unsigned int g_failures;
 
 static struct medusa_io **g_ios;
 
-static int io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
+static int io_onevent (struct medusa_io *io, unsigned int events, void *context, void *param)
 {
         uintptr_t id;
         unsigned int wid;
         unsigned char ch;
         ssize_t n;
+
+        (void) param;
 
         id = (uintptr_t) context;
         wid = id + 1;

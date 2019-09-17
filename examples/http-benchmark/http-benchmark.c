@@ -175,7 +175,7 @@ static int g_debug_level = DEBUG_LEVEL_ERROR;
         } \
 }
 
-static int client_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...);
+static int client_io_onevent (struct medusa_io *io, unsigned int events, void *context, void *param);
 
 static unsigned long clock_get (void)
 {
@@ -803,10 +803,11 @@ static int http_parser_on_header_value (http_parser *http_parser, const char *at
         return 0;
 }
 
-static int client_io_onevent (struct medusa_io *io, unsigned int events, void *context, ...)
+static int client_io_onevent (struct medusa_io *io, unsigned int events, void *context, void *param)
 {
         int rc;
         struct client *client = (struct client *) context;
+        (void) param;
         if ((events & MEDUSA_IO_EVENT_ERR) ||
             (events & MEDUSA_IO_EVENT_HUP) ||
             (events & MEDUSA_IO_EVENT_NVAL)) {

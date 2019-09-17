@@ -29,7 +29,7 @@ struct medusa_monitor;
 
 struct medusa_timer_init_options {
         struct medusa_monitor *monitor;
-        int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...);
+        int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param);
         void *context;
         double initial;
         double interval;
@@ -45,11 +45,11 @@ extern "C"
 
 int medusa_timer_init_options_default (struct medusa_timer_init_options *options);
 
-int medusa_timer_create_singleshot (struct medusa_monitor *monitor, double interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context);
-int medusa_timer_create_singleshot_timeval (struct medusa_monitor *monitor, const struct timeval *interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context);
-int medusa_timer_create_singleshot_timespec (struct medusa_monitor *monitor, const struct timespec *interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context);
+int medusa_timer_create_singleshot (struct medusa_monitor *monitor, double interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context);
+int medusa_timer_create_singleshot_timeval (struct medusa_monitor *monitor, const struct timeval *interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context);
+int medusa_timer_create_singleshot_timespec (struct medusa_monitor *monitor, const struct timespec *interval, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context);
 
-struct medusa_timer * medusa_timer_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, ...), void *context);
+struct medusa_timer * medusa_timer_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context);
 struct medusa_timer * medusa_timer_create_with_options (const struct medusa_timer_init_options *options);
 void medusa_timer_destroy (struct medusa_timer *timer);
 

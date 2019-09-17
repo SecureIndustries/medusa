@@ -504,7 +504,7 @@ static int httprequest_httpparser_on_message_complete (http_parser *http_parser)
         struct medusa_httprequest *httprequest = http_parser->data;
         (void) httprequest;
         httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_RECEIVED);
-        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RECEIVED);
+        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RECEIVED, NULL);
         if (rc < 0) {
                 return rc;
         }
@@ -531,39 +531,41 @@ static int httprequest_httpparser_on_chunk_complete (http_parser *http_parser)
         return 0;
 }
 
-static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         struct medusa_monitor *monitor;
         struct medusa_httprequest *httprequest = context;
+
+        (void) param;
 
         monitor = medusa_tcpsocket_get_monitor(tcpsocket);
         medusa_monitor_lock(monitor);
 
         if (events & MEDUSA_TCPSOCKET_EVENT_RESOLVING) {
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_RESOLVING);
-                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RESOLVING);
+                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RESOLVING, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_RESOLVED) {
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_RESOLVED);
-                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RESOLVED);
+                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RESOLVED, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTING) {
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_CONNECTING);
-                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_CONNECTING);
+                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_CONNECTING, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_CONNECTED);
-                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_CONNECTED);
+                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_CONNECTED, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
@@ -587,7 +589,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT) {
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
-                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_CONNECT_TIMEOUT);
+                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_CONNECT_TIMEOUT, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
@@ -595,7 +597,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
         if (events & MEDUSA_TCPSOCKET_EVENT_OUT) {
                 if (httprequest_get_state(httprequest) == MEDUSA_HTTPREQUEST_STATE_CONNECTED) {
                         httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_REQUESTING);
-                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_REQUESTING);
+                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_REQUESTING, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -627,7 +629,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                                         break;
                                 } else if (errno == ECONNRESET || errno == ETIMEDOUT) {
                                         httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
-                                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+                                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED, NULL);
                                         if (rc < 0) {
                                                 goto bail;
                                         }
@@ -637,7 +639,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                                 }
                         } else if (wlength == 0) {
                                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
-                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED, NULL);
                                 if (rc < 0) {
                                         goto bail;
                                 }
@@ -656,7 +658,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                 if ((httprequest_get_state(httprequest) == MEDUSA_HTTPREQUEST_STATE_REQUESTING) &&
                     (medusa_buffer_get_length(httprequest->wbuffer) == 0)) {
                         httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_REQUESTED);
-                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_REQUESTED);
+                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_REQUESTED, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -669,7 +671,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
         if (events & MEDUSA_TCPSOCKET_EVENT_IN) {
                 if (httprequest_get_state(httprequest) == MEDUSA_HTTPREQUEST_STATE_REQUESTED) {
                         httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_RECEIVING);
-                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RECEIVING);
+                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RECEIVING, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -703,7 +705,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                         }
                         if (niovecs == 0) {
                                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
-                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED, NULL);
                                 if (rc < 0) {
                                         goto bail;
                                 }
@@ -717,7 +719,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                                         break;
                                 } else if (errno == ECONNRESET || errno == ECONNREFUSED || errno == ETIMEDOUT) {
                                         httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
-                                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+                                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED, NULL);
                                         if (rc < 0) {
                                                 goto bail;
                                         }
@@ -727,7 +729,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                                 }
                         } else if (rlength == 0) {
                                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
-                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED, NULL);
                                 if (rc < 0) {
                                         goto bail;
                                 }
@@ -761,7 +763,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                         nparsed = http_parser_execute(&httprequest->http_parser, &httprequest->http_parser_settings, iovec.iov_base, iovec.iov_len);
                         if (nparsed != iovec.iov_len) {
                                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
-                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED, NULL);
                                 if (rc < 0) {
                                         goto bail;
                                 }
@@ -774,21 +776,21 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_IN_TIMEOUT) {
-                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RECEIVE_TIMEOUT);
+                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RECEIVE_TIMEOUT, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
-                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_ERROR);
+                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_ERROR, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
-                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
@@ -809,7 +811,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_init_options_def
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_init_unlocked (struct medusa_httprequest *httprequest, struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_httprequest_init_unlocked (struct medusa_httprequest *httprequest, struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         struct medusa_httprequest_init_options options;
@@ -823,7 +825,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_init_unlocked (s
         return medusa_httprequest_init_with_options_unlocked(httprequest, &options);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_init (struct medusa_httprequest *httprequest, struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_httprequest_init (struct medusa_httprequest *httprequest, struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
@@ -906,7 +908,7 @@ __attribute__ ((visibility ("default"))) void medusa_httprequest_uninit_unlocked
         if (httprequest->subject.monitor != NULL) {
                 medusa_monitor_del_unlocked(&httprequest->subject);
         } else {
-                medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DESTROY);
+                medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DESTROY, NULL);
         }
 }
 
@@ -920,7 +922,7 @@ __attribute__ ((visibility ("default"))) void medusa_httprequest_uninit (struct 
         medusa_monitor_unlock(httprequest->subject.monitor);
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_httprequest * medusa_httprequest_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_httprequest * medusa_httprequest_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         struct medusa_httprequest_init_options options;
@@ -934,7 +936,7 @@ __attribute__ ((visibility ("default"))) struct medusa_httprequest * medusa_http
         return medusa_httprequest_create_with_options_unlocked(&options);
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_httprequest * medusa_httprequest_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_httprequest * medusa_httprequest_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, void *param), void *context)
 {
         struct medusa_httprequest *rc;
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
@@ -1311,7 +1313,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
         return 0;
 bail:   medusa_url_uninit(&medusa_url);
         httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
-        medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED);
+        medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED, NULL);
         return ret;
 }
 
@@ -1353,7 +1355,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_string
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_onevent_unlocked (struct medusa_httprequest *httprequest, unsigned int events)
+__attribute__ ((visibility ("default"))) int medusa_httprequest_onevent_unlocked (struct medusa_httprequest *httprequest, unsigned int events, void *param)
 {
         int ret;
         struct medusa_monitor *monitor;
@@ -1363,7 +1365,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_onevent_unlocked
                 if ((medusa_subject_is_active(&httprequest->subject)) ||
                     (events & MEDUSA_HTTPREQUEST_EVENT_DESTROY)) {
                         medusa_monitor_unlock(monitor);
-                        ret = httprequest->onevent(httprequest, events, httprequest->context);
+                        ret = httprequest->onevent(httprequest, events, httprequest->context, param);
                         medusa_monitor_lock(monitor);
                 }
         }
@@ -1401,14 +1403,14 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_onevent_unlocked
         return ret;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_onevent (struct medusa_httprequest *httprequest, unsigned int events)
+__attribute__ ((visibility ("default"))) int medusa_httprequest_onevent (struct medusa_httprequest *httprequest, unsigned int events, void *param)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
                 return -EINVAL;
         }
         medusa_monitor_lock(httprequest->subject.monitor);
-        rc = medusa_httprequest_onevent_unlocked(httprequest, events);
+        rc = medusa_httprequest_onevent_unlocked(httprequest, events, param);
         medusa_monitor_unlock(httprequest->subject.monitor);
         return rc;
 }

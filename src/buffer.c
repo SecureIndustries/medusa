@@ -16,7 +16,7 @@
 
 #define MIN(a, b)       (((a) < (b)) ? (a) : (b))
 
-static inline int buffer_onevent (struct medusa_buffer *buffer, unsigned int events)
+static inline int buffer_onevent (struct medusa_buffer *buffer, unsigned int events, void *param)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
@@ -24,7 +24,7 @@ static inline int buffer_onevent (struct medusa_buffer *buffer, unsigned int eve
         if (buffer->onevent == NULL) {
                 return 0;
         }
-        return buffer->onevent(buffer, events, buffer->context);
+        return buffer->onevent(buffer, events, buffer->context, param);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_buffer_reset (struct medusa_buffer *buffer)
@@ -172,7 +172,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertv (struct m
                 return ret;
         }
         if (ret > 0) {
-                rc = buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_WRITE);
+                rc = buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_WRITE, NULL);
                 if (rc != 0) {
                         return rc;
                 }
@@ -259,7 +259,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertfv (struct 
                 return ret;
         }
         if (ret > 0) {
-                rc = buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_WRITE);
+                rc = buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_WRITE, NULL);
                 if (rc != 0) {
                         return rc;
                 }
@@ -524,7 +524,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_commitv (struct m
                 return ret;
         }
         if (ret > 0) {
-                rc = buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_WRITE);
+                rc = buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_WRITE, NULL);
                 if (rc != 0) {
                         return rc;
                 }
@@ -1365,7 +1365,7 @@ __attribute__ ((visibility ("default"))) void medusa_buffer_destroy (struct medu
         if (MEDUSA_IS_ERR_OR_NULL(buffer->backend->destroy)) {
                 return;
         }
-        buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_DESTROY);
+        buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_DESTROY, NULL);
         buffer->backend->destroy(buffer);
 }
 

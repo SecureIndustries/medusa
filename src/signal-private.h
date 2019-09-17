@@ -4,12 +4,12 @@
 
 struct medusa_signal;
 
-int medusa_signal_init_unlocked (struct medusa_signal *signal, struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context);
+int medusa_signal_init_unlocked (struct medusa_signal *signal, struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param), void *context);
 int medusa_signal_init_with_options_unlocked (struct medusa_signal *signal, const struct medusa_signal_init_options *options);
 
-int medusa_signal_create_singleshot_unlocked (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context);
+int medusa_signal_create_singleshot_unlocked (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param), void *context);
 
-struct medusa_signal * medusa_signal_create_unlocked (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, ...), void *context);
+struct medusa_signal * medusa_signal_create_unlocked (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param), void *context);
 struct medusa_signal * medusa_signal_create_with_options_unlocked (const struct medusa_signal_init_options *options);
 
 void medusa_signal_uninit_unlocked (struct medusa_signal *signal);
@@ -31,8 +31,8 @@ int medusa_signal_set_userdata_unlocked (struct medusa_signal *signal, void *use
 
 struct medusa_monitor * medusa_signal_get_monitor_unlocked (const struct medusa_signal *signal);
 
-int medusa_signal_onevent_unlocked (struct medusa_signal *signal, unsigned int events);
-int medusa_signal_onevent (struct medusa_signal *signal, unsigned int events);
+int medusa_signal_onevent_unlocked (struct medusa_signal *signal, unsigned int events, void *param);
+int medusa_signal_onevent (struct medusa_signal *signal, unsigned int events, void *param);
 
 int medusa_signal_is_valid_unlocked (const struct medusa_signal *signal);
 

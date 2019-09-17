@@ -21,11 +21,12 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int exec_onevent (struct medusa_exec *exec, unsigned int events, void *context, ...)
+static int exec_onevent (struct medusa_exec *exec, unsigned int events, void *context, void *param)
 {
         (void) exec;
         (void) events;
         (void) context;
+        (void) param;
         return 0;
 }
 

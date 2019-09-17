@@ -38,7 +38,7 @@ struct medusa_buffer_init_options {
                         unsigned int grow_size;
                 } simple;
         } u;
-        int (*onevent) (struct medusa_buffer *buffer, unsigned int events, void *context, ...);
+        int (*onevent) (struct medusa_buffer *buffer, unsigned int events, void *context, void *param);
         void *context;
 };
 

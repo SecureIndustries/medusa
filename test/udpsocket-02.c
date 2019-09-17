@@ -26,11 +26,12 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int udpsocket_bind_onevent (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, ...)
+static int udpsocket_bind_onevent (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param)
 {
         (void) udpsocket;
         (void) events;
         (void) context;
+        (void) param;
         fprintf(stderr, "bind    events: 0x%08x, %s\n", events, medusa_udpsocket_event_string(events));
         if (events & MEDUSA_UDPSOCKET_EVENT_IN) {
                 return medusa_monitor_break(medusa_udpsocket_get_monitor(udpsocket));
@@ -41,12 +42,13 @@ static int udpsocket_bind_onevent (struct medusa_udpsocket *udpsocket, unsigned 
         return 0;
 }
 
-static int udpsocket_connect_onevent (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, ...)
+static int udpsocket_connect_onevent (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         (void) udpsocket;
         (void) events;
         (void) context;
+        (void) param;
         fprintf(stderr, "connect events: 0x%08x, %s\n", events, medusa_udpsocket_event_string(events));
         if (events & MEDUSA_UDPSOCKET_EVENT_ERROR) {
                 fprintf(stderr, "          error: %d, %s\n", medusa_udpsocket_get_error(udpsocket), strerror(medusa_udpsocket_get_error(udpsocket)));

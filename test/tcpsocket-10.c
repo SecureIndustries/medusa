@@ -25,12 +25,13 @@ static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_SELECT
 };
 
-static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         char c;
         unsigned int *cevents;
         cevents = (unsigned int *) context;
+        (void) param;
         fprintf(stderr, "client   events: 0x%08x / 0x%08x\n", events, *cevents);
         if (events & MEDUSA_TCPSOCKET_EVENT_RESOLVING) {
                 if (*cevents & MEDUSA_TCPSOCKET_EVENT_RESOLVING) {
@@ -145,12 +146,13 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         return 0;
 }
 
-static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         char c;
         unsigned int *levents;
         levents = (unsigned int *) context;
+        (void) param;
         fprintf(stderr, "server   events: 0x%08x / 0x%08x\n", events, *levents);
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 if (*levents & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
@@ -213,12 +215,13 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         return 0;
 }
 
-static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, ...)
+static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
         unsigned int *levents;
         struct medusa_tcpsocket *accepted;
         levents = (unsigned int *) context;
+        (void) param;
         fprintf(stderr, "listener events: 0x%08x\n", events);
         if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
                 if (*levents & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {

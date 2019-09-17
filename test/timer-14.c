@@ -27,10 +27,11 @@ static struct medusa_monitor *g_monitor;
 static struct medusa_timer *g_timer_singlehot;
 static struct medusa_timer *g_timer_setinterval;
 
-static int timer_singleshot_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int timer_singleshot_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         (void) timer;
         (void) context;
+        (void) param;
         fprintf(stderr, "events: 0x%08x\n", events);
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 return medusa_monitor_break(g_monitor);
@@ -38,10 +39,11 @@ static int timer_singleshot_onevent (struct medusa_timer *timer, unsigned int ev
         return 0;
 }
 
-static int timer_setinterval_onevent (struct medusa_timer *timer, unsigned int events, void *context, ...)
+static int timer_setinterval_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         struct medusa_timer *t = context;
         (void) timer;
+        (void) param;
         fprintf(stderr, "events: 0x%08x\n", events);
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
                 medusa_timer_set_interval(t, 0.500);

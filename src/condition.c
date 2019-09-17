@@ -67,7 +67,7 @@ __attribute__ ((visibility ("default"))) int medusa_condition_init_options_defau
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_condition_init_unlocked (struct medusa_condition *condition, struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_condition_init_unlocked (struct medusa_condition *condition, struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         struct medusa_condition_init_options options;
@@ -81,7 +81,7 @@ __attribute__ ((visibility ("default"))) int medusa_condition_init_unlocked (str
         return medusa_condition_init_with_options_unlocked(condition, &options);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_condition_init (struct medusa_condition *condition, struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) int medusa_condition_init (struct medusa_condition *condition, struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(condition)) {
@@ -127,7 +127,7 @@ __attribute__ ((visibility ("default"))) void medusa_condition_uninit_unlocked (
         if (condition->subject.monitor != NULL) {
                 medusa_monitor_del_unlocked(&condition->subject);
         } else {
-                medusa_condition_onevent_unlocked(condition, MEDUSA_CONDITION_EVENT_DESTROY);
+                medusa_condition_onevent_unlocked(condition, MEDUSA_CONDITION_EVENT_DESTROY, NULL);
         }
 }
 
@@ -141,7 +141,7 @@ __attribute__ ((visibility ("default"))) void medusa_condition_uninit (struct me
         medusa_monitor_unlock(condition->subject.monitor);
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_condition * medusa_condition_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_condition * medusa_condition_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
         struct medusa_condition_init_options options;
@@ -155,7 +155,7 @@ __attribute__ ((visibility ("default"))) struct medusa_condition * medusa_condit
         return medusa_condition_create_with_options_unlocked(&options);
 }
 
-__attribute__ ((visibility ("default"))) struct medusa_condition * medusa_condition_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, ...), void *context)
+__attribute__ ((visibility ("default"))) struct medusa_condition * medusa_condition_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, void *param), void *context)
 {
         struct medusa_condition *rc;
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
@@ -477,7 +477,7 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_conditio
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_condition_onevent_unlocked (struct medusa_condition *condition, unsigned int events)
+__attribute__ ((visibility ("default"))) int medusa_condition_onevent_unlocked (struct medusa_condition *condition, unsigned int events, void *param)
 {
         int rc;
         struct medusa_monitor *monitor;
@@ -490,7 +490,7 @@ __attribute__ ((visibility ("default"))) int medusa_condition_onevent_unlocked (
                 if ((medusa_subject_is_active(&condition->subject)) ||
                     (events & MEDUSA_CONDITION_EVENT_DESTROY)) {
                         medusa_monitor_unlock(monitor);
-                        rc = condition->onevent(condition, events, condition->context);
+                        rc = condition->onevent(condition, events, condition->context, param);
                         medusa_monitor_lock(monitor);
                 }
         }
