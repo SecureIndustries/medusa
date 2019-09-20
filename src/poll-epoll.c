@@ -25,6 +25,8 @@ struct internal {
         int fd;
         int maxevents;
         struct epoll_event *events;
+        int (*onevent) (struct medusa_poll_backend *backend, struct medusa_io *io, unsigned int events, void *context, void *param);
+        void *context;
 };
 
 static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *io)
@@ -174,7 +176,7 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
                 if (ev->events & EPOLLERR) {
                         events |= MEDUSA_IO_EVENT_ERR;
                 }
-                rc = medusa_io_onevent(io, events, NULL);
+                rc = internal->onevent(backend, io, events, internal->context, NULL);
                 if (rc < 0) {
                         return rc;
                 }
@@ -214,12 +216,17 @@ static void internal_destroy (struct medusa_poll_backend *backend)
 struct medusa_poll_backend * medusa_monitor_epoll_create (const struct medusa_monitor_epoll_init_options *options)
 {
         struct internal *internal;
-        (void) options;
+        internal = NULL;
+        if (options == NULL) {
+                goto bail;
+        }
         internal = (struct internal *) malloc(sizeof(struct internal));
         if (internal == NULL) {
                 goto bail;
         }
         memset(internal, 0, sizeof(struct internal));
+        internal->onevent = options->onevent;
+        internal->context = options->context;
         internal->fd = epoll_create1(0);
         if (internal->fd < 0) {
                 goto bail;

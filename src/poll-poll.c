@@ -24,6 +24,8 @@ struct internal {
         int spfds;
         struct medusa_io **ios;
         int nios;
+        int (*onevent) (struct medusa_poll_backend *backend, struct medusa_io *io, unsigned int events, void *context, void *param);
+        void *context;
 };
 
 static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *io)
@@ -214,7 +216,7 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
                         events |= MEDUSA_IO_EVENT_NVAL;
                 }
                 io = internal->ios[internal->pfds[i].fd];
-                rc = medusa_io_onevent(io, events, NULL);
+                rc = internal->onevent(backend, io, events, internal->context, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
@@ -241,12 +243,17 @@ static void internal_destroy (struct medusa_poll_backend *backend)
 struct medusa_poll_backend * medusa_monitor_poll_create (const struct medusa_monitor_poll_init_options *options)
 {
         struct internal *internal;
-        (void) options;
+        internal = NULL;
+        if (options == NULL) {
+                goto bail;
+        }
         internal = (struct internal *) malloc(sizeof(struct internal));
         if (internal == NULL) {
                 goto bail;
         }
         memset(internal, 0, sizeof(struct internal));
+        internal->onevent = options->onevent;
+        internal->context = options->context;
         internal->backend.name    = "poll";
         internal->backend.add     = internal_add;
         internal->backend.mod     = internal_mod;

@@ -13,6 +13,8 @@
 
 struct internal {
         struct medusa_poll_backend backend;
+        int (*onevent) (struct medusa_poll_backend *backend, struct medusa_io *io, unsigned int events, void *context, void *param);
+        void *context;
 };
 
 static int internal_add (struct medusa_poll_backend *backend, struct medusa_io *io)
@@ -94,12 +96,17 @@ static void internal_destroy (struct medusa_poll_backend *backend)
 struct medusa_poll_backend * medusa_monitor_kqueue_create (const struct medusa_monitor_kqueue_init_options *options)
 {
         struct internal *internal;
-        (void) options;
+        internal = NULL;
+        if (options == NULL) {
+                goto bail;
+        }
         internal = (struct internal *) malloc(sizeof(struct internal));
         if (internal == NULL) {
                 goto bail;
         }
         memset(internal, 0, sizeof(struct internal));
+        internal->onevent = options->onevent;
+        internal->context = options->context;
         internal->backend.name    = "kqueue";
         internal->backend.add     = internal_add;
         internal->backend.mod     = internal_mod;
