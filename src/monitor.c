@@ -90,6 +90,10 @@ struct medusa_monitor {
                 int fired;
                 struct medusa_io io;
         } wakeup;
+        struct {
+                int (*callback) (struct medusa_monitor *monitor, unsigned int events, void *context, void *param);
+                void *context;
+        } onevent;
         pthread_mutex_t mutex;
 };
 
@@ -1107,6 +1111,8 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         if (rc < 0) {
                 goto bail;
         }
+        monitor->onevent.callback = options->onevent.callback;
+        monitor->onevent.context  = options->onevent.context;
         return monitor;
 bail:   if (monitor != NULL) {
                 medusa_monitor_destroy(monitor);

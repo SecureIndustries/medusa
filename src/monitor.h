@@ -40,6 +40,13 @@ enum {
 #define MEDUSA_MONITOR_FLAG_DEFAULT     MEDUSA_MONITOR_FLAG_DEFAULT
 };
 
+enum {
+        MEDUSA_MONITOR_EVENT_ERROR      = (1 <<  0), /* 0x00000001 */
+        MEDUSA_MONITOR_EVENT_DESTROY    = (1 <<  1), /* 0x00000002 */
+#define MEDUSA_MONITOR_EVENT_ERROR      MEDUSA_MONITOR_EVENT_ERROR
+#define MEDUSA_MONITOR_EVENT_DESTROY    MEDUSA_MONITOR_EVENT_DESTROY
+};
+
 struct medusa_monitor_init_options {
         unsigned int flags;
         struct {
@@ -75,6 +82,10 @@ struct medusa_monitor_init_options {
                         } sigaction;
                 } u;
         } signal;
+        struct {
+                int (*callback) (struct medusa_monitor *monitor, unsigned int events, void *context, void *param);
+                void *context;
+        } onevent;
 };
 
 #ifdef __cplusplus
