@@ -31,6 +31,7 @@
 #include "monitor-private.h"
 
 #define MIN(a, b)                               (((a) < (b)) ? (a) : (b))
+#define MAX(a, b)                               (((a) > (b)) ? (a) : (b))
 
 #define MEDUSA_TCPSOCKET_USE_POOL               1
 
@@ -1987,7 +1988,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_with_optio
         rc = -1;
         for (res = result; res; res = res->ai_next) {
                 void *ptr;
-                char str[INET6_ADDRSTRLEN];
+                char str[MAX(INET_ADDRSTRLEN, INET6_ADDRSTRLEN)];
                 struct sockaddr_in *sockaddr_in;
                 struct sockaddr_in6 *sockaddr_in6;
                 switch (res->ai_family) {
