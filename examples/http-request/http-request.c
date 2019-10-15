@@ -51,6 +51,8 @@ static void usage (const char *pname)
         fprintf(stdout, "  -h, --help  : this text\n");
         fprintf(stdout, "\n");
         fprintf(stdout, "example:\n");
+        fprintf(stdout, "  %s -u http://127.0.0.1/ -m get -h 'a:b' -h 'c:d'\n", pname);
+        fprintf(stdout, "  %s -u http://127.0.0.1/ -m head -h 'a:b' -h 'c:d'\n", pname);
         fprintf(stdout, "  %s -u http://127.0.0.1/ -m post -h 'a:b' -h 'c:d' -d 'data'\n", pname);
 }
 
