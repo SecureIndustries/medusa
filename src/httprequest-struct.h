@@ -7,6 +7,7 @@ struct medusa_httprequest {
         unsigned int state;
         int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, void *param);
         void *context;
+        char *method;
         struct medusa_buffer *headers;
         struct medusa_buffer *wbuffer;
         struct medusa_buffer *rbuffer;

@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <errno.h>
 
 #include <inttypes.h>
@@ -468,8 +469,17 @@ static int httprequest_httpparser_on_header_value (http_parser *http_parser, con
 
 static int httprequest_httpparser_on_headers_complete (http_parser *http_parser)
 {
+        int rc;
         struct medusa_httprequest *httprequest = http_parser->data;
         (void) httprequest;
+        if (httprequest->method != NULL &&
+            strcasecmp(httprequest->method, "head") == 0) {
+                httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_RECEIVED);
+                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RECEIVED, NULL);
+                if (rc < 0) {
+                        return rc;
+                }
+        }
         return 0;
 }
 
@@ -1068,7 +1078,7 @@ __attribute__ ((visibility ("default"))) double medusa_httprequest_get_connect_t
                 return -EINVAL;
         }
         medusa_monitor_lock(httprequest->subject.monitor);
-        rc = medusa_httprequest_get_connect_timeout(httprequest);
+        rc = medusa_httprequest_get_connect_timeout_unlocked(httprequest);
         medusa_monitor_unlock(httprequest->subject.monitor);
         return rc;
 }
@@ -1109,7 +1119,46 @@ __attribute__ ((visibility ("default"))) double medusa_httprequest_get_read_time
                 return -EINVAL;
         }
         medusa_monitor_lock(httprequest->subject.monitor);
-        rc = medusa_httprequest_get_read_timeout(httprequest);
+        rc = medusa_httprequest_get_read_timeout_unlocked(httprequest);
+        medusa_monitor_unlock(httprequest->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_method_unlocked (struct medusa_httprequest *httprequest, const char *method)
+{
+        int i;
+        int l;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(method)) {
+                return -EINVAL;
+        }
+        if (httprequest->method != NULL) {
+                free(httprequest->method);
+        }
+        httprequest->method = strdup(method);
+        if (httprequest->method == NULL) {
+                return -ENOMEM;
+        }
+        l = strlen(httprequest->method);
+        for (i = 0; i < l; i++) {
+                httprequest->method[i] = toupper(httprequest->method[i]);
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_method (struct medusa_httprequest *httprequest, const char *method)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(method)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httprequest->subject.monitor);
+        rc = medusa_httprequest_set_method_unlocked(httprequest, method);
         medusa_monitor_unlock(httprequest->subject.monitor);
         return rc;
 }
@@ -1262,7 +1311,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 goto bail;
         }
 
-        rc = medusa_buffer_printf(httprequest->wbuffer, "POST /%s HTTP/1.1\r\n", medusa_url.path);
+        rc = medusa_buffer_printf(httprequest->wbuffer, "%s /%s HTTP/1.1\r\n", (httprequest->method) ? httprequest->method : "GET", medusa_url.path);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
@@ -1378,6 +1427,10 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_onevent_unlocked
                         medusa_buffer_destroy(httprequest->wbuffer);
                         httprequest->wbuffer = NULL;
                 }
+                if (httprequest->method != NULL) {
+                        free(httprequest->method);
+                        httprequest->method = NULL;
+                }
                 if (!MEDUSA_IS_ERR_OR_NULL(httprequest->headers)) {
                         medusa_buffer_destroy(httprequest->headers);
                         httprequest->headers = NULL;
@@ -1453,6 +1506,21 @@ __attribute__ ((visibility ("default"))) const char * medusa_httprequest_event_s
         if (events == MEDUSA_HTTPREQUEST_EVENT_ERROR)           return "MEDUSA_HTTPREQUEST_EVENT_ERROR";
         if (events == MEDUSA_HTTPREQUEST_EVENT_DESTROY)         return "MEDUSA_HTTPREQUEST_EVENT_DESTROY";
         return "MEDUSA_HTTPREQUEST_EVENT_UNKNOWN";
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_httprequest_state_string (unsigned int state)
+{
+        if (state == MEDUSA_HTTPREQUEST_STATE_UNKNWON)          return "MEDUSA_HTTPREQUEST_STATE_UNKNWON";
+        if (state == MEDUSA_HTTPREQUEST_STATE_DISCONNECTED)     return "MEDUSA_HTTPREQUEST_STATE_DISCONNECTED";
+        if (state == MEDUSA_HTTPREQUEST_STATE_RESOLVING)        return "MEDUSA_HTTPREQUEST_STATE_RESOLVING";
+        if (state == MEDUSA_HTTPREQUEST_STATE_RESOLVED)         return "MEDUSA_HTTPREQUEST_STATE_RESOLVED";
+        if (state == MEDUSA_HTTPREQUEST_STATE_CONNECTING)       return "MEDUSA_HTTPREQUEST_STATE_CONNECTING";
+        if (state == MEDUSA_HTTPREQUEST_STATE_CONNECTED)        return "MEDUSA_HTTPREQUEST_STATE_CONNECTED";
+        if (state == MEDUSA_HTTPREQUEST_STATE_REQUESTING)       return "MEDUSA_HTTPREQUEST_STATE_REQUESTING";
+        if (state == MEDUSA_HTTPREQUEST_STATE_REQUESTED)        return "MEDUSA_HTTPREQUEST_STATE_REQUESTED";
+        if (state == MEDUSA_HTTPREQUEST_STATE_RECEIVING)        return "MEDUSA_HTTPREQUEST_STATE_RECEIVING";
+        if (state == MEDUSA_HTTPREQUEST_STATE_RECEIVED)         return "MEDUSA_HTTPREQUEST_STATE_RECEIVED";
+        return "MEDUSA_HTTPREQUEST_STATE_UNKNWON";
 }
 
 __attribute__ ((constructor)) static void httprequest_constructor (void)

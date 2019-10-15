@@ -60,7 +60,7 @@ static int httprequest_onevent (struct medusa_httprequest *httprequest, unsigned
         (void) events;
         (void) context;
         (void) param;
-        fprintf(stderr, "httprequest events: 0x%08x, %s\n", events, medusa_httprequest_event_string(events));
+        fprintf(stderr, "httprequest state: %d, %s events: 0x%08x, %s\n", medusa_httprequest_get_state(httprequest), medusa_httprequest_state_string(medusa_httprequest_get_state(httprequest)), events, medusa_httprequest_event_string(events));
         if (events & MEDUSA_HTTPREQUEST_EVENT_RECEIVED) {
                 const struct medusa_httprequest_reply *httprequest_reply;
                 const struct medusa_httprequest_reply_status *httprequest_reply_status;
@@ -108,8 +108,13 @@ static int httprequest_onevent (struct medusa_httprequest *httprequest, unsigned
                 fprintf(stderr, "  value : %.*s\n",
                         (int) medusa_httprequest_reply_body_get_length(httprequest_reply_body),
                         (char *) medusa_httprequest_reply_body_get_value(httprequest_reply_body));
+
+                medusa_monitor_break(medusa_httprequest_get_monitor(httprequest));
         }
         if (events & MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED) {
+                medusa_monitor_break(medusa_httprequest_get_monitor(httprequest));
+        }
+        if (events & MEDUSA_HTTPREQUEST_EVENT_ERROR) {
                 medusa_monitor_break(medusa_httprequest_get_monitor(httprequest));
         }
         return 0;
@@ -206,6 +211,11 @@ int main (int argc, char *argv[])
         rc = medusa_httprequest_set_read_timeout(httprequest, option_read_timeout);
         if (rc != 0) {
                 fprintf(stderr, "can not set httprequest read timeout\n");
+                goto bail;
+        }
+        rc = medusa_httprequest_set_method(httprequest, option_method);
+        if (rc != 0) {
+                fprintf(stderr, "can not set httprequest method\n");
                 goto bail;
         }
 

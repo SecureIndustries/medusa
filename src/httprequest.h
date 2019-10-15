@@ -61,7 +61,7 @@ enum {
         MEDUSA_HTTPREQUEST_STATE_REQUESTING             = 6,
         MEDUSA_HTTPREQUEST_STATE_REQUESTED              = 7,
         MEDUSA_HTTPREQUEST_STATE_RECEIVING              = 8,
-        MEDUSA_HTTPREQUEST_STATE_RECEIVED               = 0,
+        MEDUSA_HTTPREQUEST_STATE_RECEIVED               = 9,
 #define MEDUSA_HTTPREQUEST_STATE_UNKNWON                MEDUSA_HTTPREQUEST_STATE_UNKNWON
 #define MEDUSA_HTTPREQUEST_STATE_DISCONNECTED           MEDUSA_HTTPREQUEST_STATE_DISCONNECTED
 #define MEDUSA_HTTPREQUEST_STATE_RESOLVING              MEDUSA_HTTPREQUEST_STATE_RESOLVING
@@ -99,6 +99,8 @@ double medusa_httprequest_get_connect_timeout (const struct medusa_httprequest *
 int medusa_httprequest_set_read_timeout (struct medusa_httprequest *httprequest, double timeout);
 double medusa_httprequest_get_read_timeout (const struct medusa_httprequest *httprequest);
 
+int medusa_httprequest_set_method (struct medusa_httprequest *httprequest, const char *method);
+
 int medusa_httprequest_add_header (struct medusa_httprequest *httprequest, const char *key, const char *value, ...) __attribute__((format(printf, 3, 4)));
 int medusa_httprequest_add_vheader (struct medusa_httprequest *httprequest, const char *key, const char *value, va_list va);
 
@@ -127,6 +129,7 @@ int64_t medusa_httprequest_reply_body_get_length (const struct medusa_httpreques
 const void * medusa_httprequest_reply_body_get_value (const struct medusa_httprequest_reply_body *body);
 
 const char * medusa_httprequest_event_string (unsigned int events);
+const char * medusa_httprequest_state_string (unsigned int state);
 
 #ifdef __cplusplus
 }
