@@ -194,21 +194,23 @@ static int tcpsocket_ctimer_onevent(struct medusa_timer *timer, unsigned int eve
         (void) timer;
         (void) param;
 
-        monitor = medusa_tcpsocket_get_monitor(tcpsocket);
-        medusa_monitor_lock(monitor);
-
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
+                monitor = medusa_tcpsocket_get_monitor(tcpsocket);
+                medusa_monitor_lock(monitor);
+
                 rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
                 if (rc < 0) {
+                        medusa_monitor_unlock(monitor);
                         goto bail;
                 }
-                return medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT, NULL);
+                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT, NULL);
+
+                medusa_monitor_unlock(monitor);
+                return rc;
         }
 
-        medusa_monitor_unlock(monitor);
         return 0;
-bail:   medusa_monitor_unlock(monitor);
-        return -1;
+bail:   return -1;
 }
 
 static int tcpsocket_rtimer_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
@@ -220,17 +222,20 @@ static int tcpsocket_rtimer_onevent (struct medusa_timer *timer, unsigned int ev
         (void) timer;
         (void) param;
 
-        monitor = medusa_tcpsocket_get_monitor(tcpsocket);
-        medusa_monitor_lock(monitor);
-
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
+                monitor = medusa_tcpsocket_get_monitor(tcpsocket);
+                medusa_monitor_lock(monitor);
+
                 rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, tcpsocket_get_buffered(tcpsocket) ? MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ_TIMEOUT : MEDUSA_TCPSOCKET_EVENT_IN_TIMEOUT, NULL);
                 if (rc < 0) {
+                        medusa_monitor_unlock(monitor);
                         goto bail;
                 }
+
+                medusa_monitor_unlock(monitor);
+                return rc;
         }
 
-        medusa_monitor_unlock(monitor);
         return 0;
 bail:   medusa_monitor_unlock(monitor);
         return -1;
