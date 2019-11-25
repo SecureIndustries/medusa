@@ -1378,6 +1378,10 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
         if (rc < 0) {
                 goto bail;
         }
+        rc = monitor_check_condition(monitor);
+        if (rc < 0) {
+                goto bail;
+        }
 
         medusa_monitor_unlock(monitor);
 
@@ -1389,10 +1393,6 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
                 goto bail;
         }
         rc = monitor_check_timer(monitor);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = monitor_check_condition(monitor);
         if (rc < 0) {
                 goto bail;
         }
