@@ -841,6 +841,15 @@ __attribute__ ((visibility ("default"))) int medusa_exec_is_valid_unlocked (cons
         return 1;
 }
 
+__attribute__ ((visibility ("default"))) const char * medusa_exec_event_string (unsigned int events)
+{
+        if (events == MEDUSA_EXEC_EVENT_NONE)     return "MEDUSA_EXEC_EVENT_NONE";
+        if (events == MEDUSA_EXEC_EVENT_STARTED)  return "MEDUSA_EXEC_EVENT_STARTED";
+        if (events == MEDUSA_EXEC_EVENT_STOPPED)  return "MEDUSA_EXEC_EVENT_STOPPED";
+        if (events == MEDUSA_EXEC_EVENT_DESTROY)  return "MEDUSA_EXEC_EVENT_DESTROY";
+        return "MEDUSA_IO_EVENT_UNKNOWN";
+}
+
 __attribute__ ((constructor)) static void exec_constructor (void)
 {
 #if defined(MEDUSA_EXEC_USE_POOL) && (MEDUSA_EXEC_USE_POOL == 1)

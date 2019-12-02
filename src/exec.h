@@ -66,6 +66,8 @@ unsigned int medusa_exec_get_userdata_uint (struct medusa_exec *exec);
 
 struct medusa_monitor * medusa_exec_get_monitor (const struct medusa_exec *exec);
 
+const char * medusa_exec_event_string (unsigned int events);
+
 #ifdef __cplusplus
 }
 #endif
