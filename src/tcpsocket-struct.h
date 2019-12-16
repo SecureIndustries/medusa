@@ -6,6 +6,7 @@ struct medusa_tcpsocket {
         struct medusa_subject subject;
         unsigned int flags;
         int backlog;
+        char *interface;
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param);
         void *context;
         struct medusa_io *io;

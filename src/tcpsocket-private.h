@@ -25,6 +25,9 @@ int medusa_tcpsocket_get_enabled_unlocked (const struct medusa_tcpsocket *tcpsoc
 int medusa_tcpsocket_set_buffered_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_buffered_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_set_interface_unlocked (struct medusa_tcpsocket *tcpsocket, const char *interface);
+const char * medusa_tcpsocket_get_interface_unlocked (const struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_set_nonblocking_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_nonblocking_unlocked (const struct medusa_tcpsocket *tcpsocket);
 

@@ -88,6 +88,7 @@ struct medusa_tcpsocket_init_options {
         struct medusa_monitor *monitor;
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param);
         void *context;
+        char *interface;
         int nonblocking;
         int reuseaddr;
         int reuseport;
@@ -100,6 +101,7 @@ struct medusa_tcpsocket_init_options {
 struct medusa_tcpsocket_accept_options {
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param);
         void *context;
+        char *interface;
         int nonblocking;
         int nodelay;
         int buffered;
@@ -151,6 +153,9 @@ int medusa_tcpsocket_disable (struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_buffered (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_buffered (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_interface (struct medusa_tcpsocket *tcpsocket, const char *interface);
+const char * medusa_tcpsocket_get_interface (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_nonblocking (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_nonblocking (const struct medusa_tcpsocket *tcpsocket);
