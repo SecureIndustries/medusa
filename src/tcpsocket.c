@@ -1019,6 +1019,11 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_interface_unlo
                 return -EINVAL;
         }
         if (tcpsocket->interface != NULL) {
+                int rc;
+                rc = setsockopt(medusa_io_get_fd_unlocked(tcpsocket->io), SOL_SOCKET, SO_BINDTODEVICE, NULL, 0);
+                if (rc != 0) {
+                        return -errno;
+                }
                 free(tcpsocket->interface);
                 tcpsocket->interface = NULL;
         }
@@ -1029,10 +1034,12 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_interface_unlo
                 }
         }
         if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
-                int rc;
-                rc = setsockopt(medusa_io_get_fd_unlocked(tcpsocket->io), SOL_SOCKET, SO_BINDTODEVICE, tcpsocket->interface, (tcpsocket->interface) ? strlen(tcpsocket->interface) : 0);
-                if (rc != 0) {
-                        return -errno;
+                if (tcpsocket->interface != NULL) {
+                        int rc;
+                        rc = setsockopt(medusa_io_get_fd_unlocked(tcpsocket->io), SOL_SOCKET, SO_BINDTODEVICE, tcpsocket->interface, strlen(tcpsocket->interface));
+                        if (rc != 0) {
+                                return -errno;
+                        }
                 }
         }
         return 0;
@@ -1833,8 +1840,8 @@ ipv6:
                 ret = MEDUSA_PTR_ERR(tcpsocket->io);
                 goto bail;
         }
-        {
-                rc = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, tcpsocket->interface, (tcpsocket->interface) ? strlen(tcpsocket->interface) : 0);
+        if (tcpsocket->interface != NULL) {
+                rc = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, tcpsocket->interface, strlen(tcpsocket->interface));
                 if (rc != 0) {
                         fprintf(stderr, "a %d, %s\n", errno, strerror(errno));
                         ret = -errno;
@@ -2106,8 +2113,8 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_with_optio
                         ret = MEDUSA_PTR_ERR(tcpsocket->io);
                         goto bail;
                 }
-                {
-                        rc = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, tcpsocket->interface, (tcpsocket->interface) ? strlen(tcpsocket->interface) : 0);
+                if (tcpsocket->interface != NULL) {
+                        rc = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, tcpsocket->interface, strlen(tcpsocket->interface));
                         if (rc != 0) {
                                 ret = -errno;
                                 goto bail;
@@ -2303,8 +2310,8 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach_with_option
                 ret = MEDUSA_PTR_ERR(tcpsocket->io);
                 goto bail;
         }
-        {
-                rc = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, tcpsocket->interface, (tcpsocket->interface) ? strlen(tcpsocket->interface) : 0);
+        if (tcpsocket->interface != NULL) {
+                rc = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, tcpsocket->interface, strlen(tcpsocket->interface));
                 if (rc != 0) {
                         ret = -errno;
                         goto bail;
@@ -2545,8 +2552,8 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_accept_init_with_o
                 medusa_tcpsocket_destroy_unlocked(accepted);
                 return rc;
         }
-        {
-                rc = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, tcpsocket->interface, (tcpsocket->interface) ? strlen(tcpsocket->interface) : 0);
+        if (tcpsocket->interface != NULL) {
+                rc = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, tcpsocket->interface, strlen(tcpsocket->interface));
                 if (rc != 0) {
                         medusa_tcpsocket_destroy_unlocked(accepted);
                         return -errno;
@@ -2671,8 +2678,8 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 medusa_tcpsocket_destroy_unlocked(accepted);
                 return MEDUSA_ERR_PTR(rc);
         }
-        {
-                rc = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, tcpsocket->interface, (tcpsocket->interface) ? strlen(tcpsocket->interface) : 0);
+        if (tcpsocket->interface != NULL) {
+                rc = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, tcpsocket->interface, strlen(tcpsocket->interface));
                 if (rc != 0) {
                         medusa_tcpsocket_destroy_unlocked(accepted);
                         return MEDUSA_ERR_PTR(-errno);
