@@ -1843,7 +1843,6 @@ ipv6:
         if (tcpsocket->interface != NULL) {
                 rc = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, tcpsocket->interface, strlen(tcpsocket->interface));
                 if (rc != 0) {
-                        fprintf(stderr, "a %d, %s\n", errno, strerror(errno));
                         ret = -errno;
                         goto bail;
                 }
