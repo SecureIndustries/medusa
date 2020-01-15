@@ -4,6 +4,19 @@
 
 #include "error.h"
 
+__attribute__ ((visibility ("default"))) int medusa_clock_realtime (struct timespec *timespec)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(timespec)) {
+                return -EINVAL;
+        }
+        rc = clock_gettime(CLOCK_REALTIME, timespec);
+        if (rc < 0) {
+                return errno;
+        }
+        return 0;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_clock_monotonic (struct timespec *timespec)
 {
         int rc;
