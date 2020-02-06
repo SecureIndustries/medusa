@@ -85,6 +85,9 @@ libmedusa.a_files-y += \
 	httprequest.c \
 	../3rdparty/http-parser/http_parser.c
 
+libmedusa.a_files-y += \
+	dnsrequest.c
+
 libmedusa.o_cflags-y = \
 	${libmedusa.a_cflags-y}
 
