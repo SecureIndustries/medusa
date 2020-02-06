@@ -27,6 +27,8 @@
 #include "udpsocket-private.h"
 #include "httprequest.h"
 #include "httprequest-private.h"
+#include "dnsrequest.h"
+#include "dnsrequest-private.h"
 #include "exec.h"
 #include "exec-private.h"
 #include "monitor.h"
