@@ -1385,6 +1385,30 @@ __attribute__ ((visibility ("default"))) const struct medusa_dnsrequest_reply_he
         return &reply->header;
 }
 
+__attribute__ ((visibility ("default"))) const struct medusa_dnsrequest_reply_answers * medusa_dnsrequest_reply_get_answers (const struct medusa_dnsrequest_reply *reply)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(reply)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return &reply->answers;
+}
+
+__attribute__ ((visibility ("default"))) const struct medusa_dnsrequest_reply_answer * medusa_dnsrequest_reply_answers_get_first (const struct medusa_dnsrequest_reply_answers *answers)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(answers)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return TAILQ_FIRST(answers);
+}
+
+__attribute__ ((visibility ("default"))) const struct medusa_dnsrequest_reply_answer * medusa_dnsrequest_reply_answer_get_next (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(answer)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return TAILQ_NEXT(answer, list);
+}
+
 __attribute__ ((visibility ("default"))) int medusa_dnsrequest_reply_header_get_questions_count (const struct medusa_dnsrequest_reply_header *header)
 {
         if (MEDUSA_IS_ERR_OR_NULL(header)) {
@@ -1455,6 +1479,180 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_reply_header_get_
                 return -EINVAL;
         }
         return header->result;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_header_get_result_code_string (const struct medusa_dnsrequest_reply_header *header)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(header)) {
+                return NULL;
+        }
+        switch (header->result) {
+                case 0: return "OKAY";
+                case 1: return "FORMAT_ERROR";
+                case 2: return "SERVER_FAILURE";
+                case 3: return "NAME_ERROR";
+                case 4: return "NOT_IMPLEMENTED";
+                case 5: return "REFUSED";
+                case 6: return "YXDOMAIN";
+                case 7: return "YXRRSET";
+                case 8: return "NXRRSET";
+                case 9: return "NOTAUTH";
+                case 10: return "NOTZONE";
+        }
+        return "ERROR";
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_get_name (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return answer->u.generic.name;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_reply_answer_get_class (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return -EINVAL;
+        }
+        return answer->u.generic.class;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_reply_answer_get_type (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return -EINVAL;
+        }
+        return answer->u.generic.type;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_reply_answer_get_ttl (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return -EINVAL;
+        }
+        return answer->u.generic.ttl;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_a_get_address (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_A) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return answer->u.a.address;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_ns_get_nsdname (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_NS) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return answer->u.ns.nsdname;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_cname_get_cname (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return answer->u.cname.cname;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_ptr_get_ptr (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_PTR) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return answer->u.ptr.ptr;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_reply_answer_mx_get_preference (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return -EINVAL;
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_MX) {
+                return -EINVAL;
+        }
+        return answer->u.mx.preference;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_mx_get_exchange (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_MX) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return answer->u.mx.exchange;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_aaaa_get_address (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return answer->u.aaaa.address;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_reply_answer_srv_get_priority (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return -EINVAL;
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_SRV) {
+                return -EINVAL;
+        }
+        return answer->u.srv.priority;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_reply_answer_srv_get_weight (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return -EINVAL;
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_SRV) {
+                return -EINVAL;
+        }
+        return answer->u.srv.weight;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_reply_answer_srv_get_port (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return -EINVAL;
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_SRV) {
+                return -EINVAL;
+        }
+        return answer->u.srv.port;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_srv_get_target (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_SRV) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return answer->u.srv.target;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_dnsrequest_onevent_unlocked (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *param)
