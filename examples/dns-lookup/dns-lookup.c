@@ -152,7 +152,6 @@ int main (int argc, char *argv[])
         const char *option_name;
 
         struct medusa_dnsrequest *medusa_dnsrequest;
-        struct medusa_dnsrequest_init_options medusa_dnsrequest_init_options;
 
         struct medusa_signal *medusa_signal;
         struct medusa_signal_init_options medusa_signal_init_options;
@@ -237,25 +236,9 @@ int main (int argc, char *argv[])
                 goto out;
         }
 
-        rc = medusa_dnsrequest_init_options_default(&medusa_dnsrequest_init_options);
-        if (rc < 0) {
-                err = rc;
-                goto out;
-        }
-        medusa_dnsrequest_init_options.monitor     = medusa_monitor;
-        medusa_dnsrequest_init_options.onevent     = dnsrequest_onevent;
-        medusa_dnsrequest_init_options.context     = NULL;
-        medusa_dnsrequest_init_options.nameserver  = option_nameserver;
-        medusa_dnsrequest_init_options.type        = medusa_dnsrequest_record_type_value(option_type);
-        medusa_dnsrequest_init_options.name        = option_name;
-        medusa_dnsrequest = medusa_dnsrequest_create_with_options(&medusa_dnsrequest_init_options);
+        medusa_dnsrequest = medusa_dnsrequest_create_lookup(medusa_monitor, option_nameserver, medusa_dnsrequest_record_type_value(option_type), option_name, dnsrequest_onevent, NULL);
         if (MEDUSA_IS_ERR_OR_NULL(medusa_dnsrequest)) {
                 err = MEDUSA_PTR_ERR(medusa_dnsrequest);
-                goto out;
-        }
-        rc = medusa_dnsrequest_lookup(medusa_dnsrequest);
-        if (rc < 0) {
-                err = rc;
                 goto out;
         }
 

@@ -788,21 +788,27 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_init_with_options
         dnsrequest->context = options->context;
         dnsrequest->connect_timeout = -1;
         dnsrequest->read_timeout    = -1;
-        rc = medusa_dnsrequest_set_nameserver_unlocked(dnsrequest, options->nameserver);
-        if (rc != 0) {
-                return rc;
-        }
-        rc = medusa_dnsrequest_set_type_unlocked(dnsrequest, options->type);
-        if (rc != 0) {
-                return rc;
-        }
-        rc = medusa_dnsrequest_set_name_unlocked(dnsrequest, options->name);
-        if (rc != 0) {
-                return rc;
-        }
         rc = medusa_monitor_add_unlocked(options->monitor, &dnsrequest->subject);
         if (rc < 0) {
                 return rc;
+        }
+        if (options->nameserver != NULL) {
+                rc = medusa_dnsrequest_set_nameserver_unlocked(dnsrequest, options->nameserver);
+                if (rc != 0) {
+                        return rc;
+                }
+        }
+        if (options->type != 0) {
+                rc = medusa_dnsrequest_set_type_unlocked(dnsrequest, options->type);
+                if (rc != 0) {
+                        return rc;
+                }
+        }
+        if (options->name != NULL) {
+                rc = medusa_dnsrequest_set_name_unlocked(dnsrequest, options->name);
+                if (rc != 0) {
+                        return rc;
+                }
         }
         return 0;
 }
@@ -1112,7 +1118,7 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_nameserver_un
         if (dnsrequest->nameserver == NULL) {
                 return -ENOMEM;
         }
-        return 0;
+        return medusa_monitor_mod_unlocked(&dnsrequest->subject);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_nameserver (struct medusa_dnsrequest *dnsrequest, const char *nameserver)
@@ -1159,7 +1165,7 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_type_unlocked
                 return -EINPROGRESS;
         }
         dnsrequest->type = type;
-        return 0;
+        return medusa_monitor_mod_unlocked(&dnsrequest->subject);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_type (struct medusa_dnsrequest *dnsrequest, unsigned int type)
@@ -1222,7 +1228,7 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_name_unlocked
                 }
                 snprintf(dnsrequest->name, l + 1 + 1, "%s.", name);
         }
-        return 0;
+        return medusa_monitor_mod_unlocked(&dnsrequest->subject);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_name (struct medusa_dnsrequest *dnsrequest, const char *name)
