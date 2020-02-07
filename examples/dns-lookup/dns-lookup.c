@@ -124,6 +124,8 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
                                         break;
                         }
                 }
+
+                medusa_monitor_break(medusa_dnsrequest_get_monitor(dnsrequest));
         }
 
         return 0;

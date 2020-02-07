@@ -701,7 +701,7 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
                         }
                 }
 
-                dns_print_result((dns_query_t *)bufresult);
+                //dns_print_result((dns_query_t *)bufresult);
 
                 dnsrequest->reply = medusa_dnsrequest_reply_create((dns_query_t *) bufresult);
                 if (dnsrequest->reply == NULL) {
@@ -788,19 +788,18 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_init_with_options
         dnsrequest->context = options->context;
         dnsrequest->connect_timeout = -1;
         dnsrequest->read_timeout    = -1;
-        if (options->nameserver != NULL) {
-                dnsrequest->nameserver = strdup(options->nameserver);
-                if (dnsrequest->nameserver == NULL) {
-                        return -ENOMEM;
-                }
+        rc = medusa_dnsrequest_set_nameserver_unlocked(dnsrequest, options->nameserver);
+        if (rc != 0) {
+                return rc;
         }
-        if (options->name != NULL) {
-                dnsrequest->name = strdup(options->name);
-                if (dnsrequest->name == NULL) {
-                        return -ENOMEM;
-                }
+        rc = medusa_dnsrequest_set_type_unlocked(dnsrequest, options->type);
+        if (rc != 0) {
+                return rc;
         }
-        dnsrequest->type = options->type;
+        rc = medusa_dnsrequest_set_name_unlocked(dnsrequest, options->name);
+        if (rc != 0) {
+                return rc;
+        }
         rc = medusa_monitor_add_unlocked(options->monitor, &dnsrequest->subject);
         if (rc < 0) {
                 return rc;
@@ -1197,6 +1196,7 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_get_type (struct 
 
 __attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_name_unlocked (struct medusa_dnsrequest *dnsrequest, const char *name)
 {
+        int l;
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
                 return -EINVAL;
         }
@@ -1209,9 +1209,18 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_name_unlocked
         if (dnsrequest->name != NULL) {
                 free(dnsrequest->name);
         }
-        dnsrequest->name = strdup(name);
-        if (dnsrequest->name == NULL) {
-                return -ENOMEM;
+        l = strlen(name);
+        if (name[l - 1] == '.') {
+                dnsrequest->name = strdup(name);
+                if (dnsrequest->name == NULL) {
+                        return -ENOMEM;
+                }
+        } else {
+                dnsrequest->name = malloc(l + 1 + 1);
+                if (dnsrequest->name == NULL) {
+                        return -ENOMEM;
+                }
+                snprintf(dnsrequest->name, l + 1 + 1, "%s.", name);
         }
         return 0;
 }
