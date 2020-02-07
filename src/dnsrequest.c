@@ -46,21 +46,17 @@ static inline int dnsrequest_set_state (struct medusa_dnsrequest *dnsrequest, un
 
 static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param)
 {
+        int rc;
+
         struct medusa_monitor *monitor;
         struct medusa_dnsrequest *dnsrequest = (struct medusa_dnsrequest *) context;
 
-        (void) udpsocket;
-        (void) events;
         (void) param;
-        (void) dnsrequest;
-
-        fprintf(stderr, "dnsrequest_udpsocket_onevent: 0x%08x, %s\n", events, medusa_udpsocket_event_string(events));
 
         monitor = medusa_udpsocket_get_monitor(udpsocket);
         medusa_monitor_lock(monitor);
 
         if (events & MEDUSA_UDPSOCKET_EVENT_RESOLVING) {
-                int rc;
                 dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RESOLVING);
                 rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RESOLVING, NULL);
                 if (rc < 0) {
@@ -68,16 +64,21 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
                 }
         }
         if (events & MEDUSA_UDPSOCKET_EVENT_RESOLVED) {
-                int rc;
                 dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RESOLVED);
                 rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RESOLVED, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
         }
+        if (events & MEDUSA_UDPSOCKET_EVENT_CONNECTING) {
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_CONNECTING);
+                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_CONNECTING, NULL);
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
         if (events & MEDUSA_UDPSOCKET_EVENT_CONNECTED) {
                 int fd;
-                int rc;
 
                 dns_question_t domain;
                 dns_query_t    query;
@@ -86,6 +87,12 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
 
                 dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_CONNECTED);
                 rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_CONNECTED, NULL);
+                if (rc < 0) {
+                        goto bail;
+                }
+
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_REQUESTING);
+                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_REQUESTING, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
@@ -140,10 +147,15 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
                                 goto bail;
                         }
                 }
+
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_REQUESTED);
+                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_REQUESTED, NULL);
+                if (rc < 0) {
+                        goto bail;
+                }
         }
         if (events & MEDUSA_UDPSOCKET_EVENT_IN) {
                 int fd;
-                int rc;
 
                 dns_packet_t reply[DNS_BUFFER_UDP];
                 size_t       replysize;
@@ -152,6 +164,12 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
                 size_t         bufsize;
 
                 replysize = sizeof(reply);
+
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RECEIVING);
+                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RECEIVING, NULL);
+                if (rc < 0) {
+                        goto bail;
+                }
 
                 fd = medusa_udpsocket_get_fd_unlocked(udpsocket);
                 if (fd < 0) {
@@ -181,6 +199,18 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
                 }
 
                 dns_print_result((dns_query_t *)bufresult);
+
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RECEIVED);
+                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RECEIVED, NULL);
+                if (rc < 0) {
+                        goto bail;
+                }
+
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
+                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_DISCONNECTED, NULL);
+                if (rc < 0) {
+                        goto bail;
+                }
         }
 
         medusa_monitor_unlock(monitor);
@@ -510,6 +540,9 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_nameserver_un
         if (MEDUSA_IS_ERR_OR_NULL(nameserver)) {
                 return -EINVAL;
         }
+        if (!MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
+                return -EINPROGRESS;
+        }
         if (dnsrequest->nameserver != NULL) {
                 free(dnsrequest->nameserver);
         }
@@ -560,6 +593,9 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_type_unlocked
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
                 return -EINVAL;
         }
+        if (!MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
+                return -EINPROGRESS;
+        }
         dnsrequest->type = type;
         return 0;
 }
@@ -603,6 +639,9 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_name_unlocked
         }
         if (MEDUSA_IS_ERR_OR_NULL(name)) {
                 return -EINVAL;
+        }
+        if (!MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
+                return -EINPROGRESS;
         }
         if (dnsrequest->name != NULL) {
                 free(dnsrequest->name);
@@ -661,8 +700,7 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_lookup_unlocked (
         }
 
         if (!MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
-             medusa_udpsocket_destroy_unlocked(dnsrequest->udpsocket);
-             dnsrequest->udpsocket = NULL;
+                return -EALREADY;
         }
 
         if (dnsrequest->name == NULL) {
@@ -719,8 +757,17 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_lookup (struct me
 
 __attribute__ ((visibility ("default"))) int medusa_dnsrequest_cancel_unlocked (struct medusa_dnsrequest *dnsrequest)
 {
+        int rc;
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
                 return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
+                return -EALREADY;
+        }
+        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
+        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_CANCELED, NULL);
+        if (rc < 0) {
+                return -EIO;
         }
         return 0;
 }
@@ -853,15 +900,35 @@ const char * medusa_dnsrequest_record_type_string (unsigned int type)
 
 __attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_event_string (unsigned int events)
 {
-        if (events == MEDUSA_DNSREQUEST_EVENT_ERROR)           return "MEDUSA_DNSREQUEST_EVENT_ERROR";
-        if (events == MEDUSA_DNSREQUEST_EVENT_DESTROY)         return "MEDUSA_DNSREQUEST_EVENT_DESTROY";
+        if (events == MEDUSA_DNSREQUEST_EVENT_RESOLVING)        return "MEDUSA_DNSREQUEST_EVENT_RESOLVING";
+        if (events == MEDUSA_DNSREQUEST_EVENT_RESOLVE_TIMEOUT)  return "MEDUSA_DNSREQUEST_EVENT_RESOLVE_TIMEOUT";
+        if (events == MEDUSA_DNSREQUEST_EVENT_RESOLVED)         return "MEDUSA_DNSREQUEST_EVENT_RESOLVED";
+        if (events == MEDUSA_DNSREQUEST_EVENT_CONNECTING)       return "MEDUSA_DNSREQUEST_EVENT_CONNECTING";
+        if (events == MEDUSA_DNSREQUEST_EVENT_CONNECT_TIMEOUT)  return "MEDUSA_DNSREQUEST_EVENT_CONNECT_TIMEOUT";
+        if (events == MEDUSA_DNSREQUEST_EVENT_CONNECTED)        return "MEDUSA_DNSREQUEST_EVENT_CONNECTED";
+        if (events == MEDUSA_DNSREQUEST_EVENT_REQUESTING)       return "MEDUSA_DNSREQUEST_EVENT_REQUESTING";
+        if (events == MEDUSA_DNSREQUEST_EVENT_REQUESTED)        return "MEDUSA_DNSREQUEST_EVENT_REQUESTED";
+        if (events == MEDUSA_DNSREQUEST_EVENT_RECEIVING)        return "MEDUSA_DNSREQUEST_EVENT_RECEIVING";
+        if (events == MEDUSA_DNSREQUEST_EVENT_RECEIVED)         return "MEDUSA_DNSREQUEST_EVENT_RECEIVED";
+        if (events == MEDUSA_DNSREQUEST_EVENT_CANCELED)         return "MEDUSA_DNSREQUEST_EVENT_CANCELED";
+        if (events == MEDUSA_DNSREQUEST_EVENT_ERROR)            return "MEDUSA_DNSREQUEST_EVENT_ERROR";
+        if (events == MEDUSA_DNSREQUEST_EVENT_DISCONNECTED)     return "MEDUSA_DNSREQUEST_EVENT_DISCONNECTED";
+        if (events == MEDUSA_DNSREQUEST_EVENT_DESTROY)          return "MEDUSA_DNSREQUEST_EVENT_DESTROY";
         return "MEDUSA_DNSREQUEST_EVENT_UNKNOWN";
 }
 
 __attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_state_string (unsigned int state)
 {
-        if (state == MEDUSA_DNSREQUEST_STATE_UNKNOWN)          return "MEDUSA_DNSREQUEST_STATE_UNKNOWN";
-        if (state == MEDUSA_DNSREQUEST_STATE_DISCONNECTED)     return "MEDUSA_DNSREQUEST_STATE_DISCONNECTED";
+        if (state == MEDUSA_DNSREQUEST_STATE_UNKNOWN)           return "MEDUSA_DNSREQUEST_STATE_UNKNOWN";
+        if (state == MEDUSA_DNSREQUEST_STATE_DISCONNECTED)      return "MEDUSA_DNSREQUEST_STATE_DISCONNECTED";
+        if (state == MEDUSA_DNSREQUEST_STATE_RESOLVING)         return "MEDUSA_DNSREQUEST_STATE_RESOLVING";
+        if (state == MEDUSA_DNSREQUEST_STATE_RESOLVED)          return "MEDUSA_DNSREQUEST_STATE_RESOLVED";
+        if (state == MEDUSA_DNSREQUEST_STATE_CONNECTING)        return "MEDUSA_DNSREQUEST_STATE_CONNECTING";
+        if (state == MEDUSA_DNSREQUEST_STATE_CONNECTED)         return "MEDUSA_DNSREQUEST_STATE_CONNECTED";
+        if (state == MEDUSA_DNSREQUEST_STATE_REQUESTING)        return "MEDUSA_DNSREQUEST_STATE_REQUESTING";
+        if (state == MEDUSA_DNSREQUEST_STATE_REQUESTED)         return "MEDUSA_DNSREQUEST_STATE_REQUESTED";
+        if (state == MEDUSA_DNSREQUEST_STATE_RECEIVING)         return "MEDUSA_DNSREQUEST_STATE_RECEIVING";
+        if (state == MEDUSA_DNSREQUEST_STATE_RECEIVED)          return "MEDUSA_DNSREQUEST_STATE_RECEIVED";
         return "MEDUSA_DNSREQUEST_STATE_UNKNOWN";
 }
 

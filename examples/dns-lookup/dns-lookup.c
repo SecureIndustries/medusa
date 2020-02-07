@@ -48,6 +48,11 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
         (void) events;
         (void) context;
         (void) param;
+
+        fprintf(stderr, "dnsrequest onevent: 0x%08x, %-36s, state: %2d, %s\n",
+                events, medusa_dnsrequest_event_string(events),
+                medusa_dnsrequest_get_state(dnsrequest), medusa_dnsrequest_state_string(medusa_dnsrequest_get_state(dnsrequest)));
+
         return 0;
 }
 
