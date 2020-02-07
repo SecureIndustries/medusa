@@ -13,6 +13,7 @@ struct medusa_dnsrequest {
         unsigned int type;
         char *name;
         struct medusa_udpsocket *udpsocket;
+        struct medusa_dnsrequest_reply *reply;
 };
 
 int medusa_dnsrequest_init (struct medusa_dnsrequest *dnsrequest, struct medusa_monitor *monitor, int (*onevent) (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *context, void *param), void *context);

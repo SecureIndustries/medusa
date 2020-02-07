@@ -33,6 +33,12 @@ int medusa_dnsrequest_set_name_unlocked (struct medusa_dnsrequest *dnsrequest, c
 const char * medusa_dnsrequest_get_name_unlocked (struct medusa_dnsrequest *dnsrequest);
 
 int medusa_dnsrequest_lookup_unlocked (struct medusa_dnsrequest *dnsrequest);
+int medusa_dnsrequest_cancel_unlocked (struct medusa_dnsrequest *dnsrequest);
+int medusa_dnsrequest_abort_unlocked (struct medusa_dnsrequest *dnsrequest);
+
+const struct medusa_dnsrequest_reply * medusa_dnsrequest_get_reply_unlocked (struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_lookup_unlocked (struct medusa_dnsrequest *dnsrequest);
 
 int medusa_dnsrequest_onevent_unlocked (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *param);
 struct medusa_monitor * medusa_dnsrequest_get_monitor_unlocked (struct medusa_dnsrequest *dnsrequest);

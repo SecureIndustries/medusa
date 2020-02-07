@@ -5,6 +5,7 @@
 struct medusa_monitor;
 struct medusa_dnsrequest;
 struct medusa_dnsrequest_reply;
+struct medusa_dnsrequest_reply_header;
 struct medusa_dnsrequest_reply_answer;
 struct medusa_dnsrequest_reply_answers;
 
@@ -69,7 +70,6 @@ enum {
         MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME             = 5,
         MEDUSA_DNSREQUEST_RECORD_TYPE_PTR               = 12,
         MEDUSA_DNSREQUEST_RECORD_TYPE_MX                = 15,
-        MEDUSA_DNSREQUEST_RECORD_TYPE_TXT               = 16,
         MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA              = 28,
         MEDUSA_DNSREQUEST_RECORD_TYPE_SRV               = 33,
         MEDUSA_DNSREQUEST_RECORD_TYPE_ANY               = 255,
@@ -80,7 +80,6 @@ enum {
 #define MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME             MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME
 #define MEDUSA_DNSREQUEST_RECORD_TYPE_PTR               MEDUSA_DNSREQUEST_RECORD_TYPE_PTR
 #define MEDUSA_DNSREQUEST_RECORD_TYPE_MX                MEDUSA_DNSREQUEST_RECORD_TYPE_MX
-#define MEDUSA_DNSREQUEST_RECORD_TYPE_TXT               MEDUSA_DNSREQUEST_RECORD_TYPE_TXT
 #define MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA              MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA
 #define MEDUSA_DNSREQUEST_RECORD_TYPE_SRV               MEDUSA_DNSREQUEST_RECORD_TYPE_SRV
 #define MEDUSA_DNSREQUEST_RECORD_TYPE_ANY               MEDUSA_DNSREQUEST_RECORD_TYPE_ANY
@@ -129,6 +128,19 @@ const char * medusa_dnsrequest_get_name (struct medusa_dnsrequest *dnsrequest);
 int medusa_dnsrequest_lookup (struct medusa_dnsrequest *dnsrequest);
 int medusa_dnsrequest_cancel (struct medusa_dnsrequest *dnsrequest);
 int medusa_dnsrequest_abort (struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_reply_header_get_questions_count (const struct medusa_dnsrequest_reply_header *header);
+int medusa_dnsrequest_reply_header_get_answers_count (const struct medusa_dnsrequest_reply_header *header);
+int medusa_dnsrequest_reply_header_get_nameservers_count (const struct medusa_dnsrequest_reply_header *header);
+int medusa_dnsrequest_reply_header_get_additional_records (const struct medusa_dnsrequest_reply_header *header);
+int medusa_dnsrequest_reply_header_get_authoritative_result (const struct medusa_dnsrequest_reply_header *header);
+int medusa_dnsrequest_reply_header_get_truncated_result (const struct medusa_dnsrequest_reply_header *header);
+int medusa_dnsrequest_reply_header_get_recursion_desired (const struct medusa_dnsrequest_reply_header *header);
+int medusa_dnsrequest_reply_header_get_recursion_available (const struct medusa_dnsrequest_reply_header *header);
+int medusa_dnsrequest_reply_header_get_result_code (const struct medusa_dnsrequest_reply_header *header);
+
+const struct medusa_dnsrequest_reply * medusa_dnsrequest_get_reply (struct medusa_dnsrequest *dnsrequest);
+const struct medusa_dnsrequest_reply_header * medusa_dnsrequest_reply_get_header (const struct medusa_dnsrequest_reply *reply);
 
 int medusa_dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *param);
 struct medusa_monitor * medusa_dnsrequest_get_monitor (struct medusa_dnsrequest *dnsrequest);
