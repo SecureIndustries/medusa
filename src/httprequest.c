@@ -1025,7 +1025,7 @@ __attribute__ ((visibility ("default"))) void medusa_httprequest_destroy (struct
 __attribute__ ((visibility ("default"))) unsigned int medusa_httprequest_get_state_unlocked (const struct medusa_httprequest *httprequest)
 {
         if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
-                return MEDUSA_HTTPREQUEST_STATE_UNKNWON;
+                return MEDUSA_HTTPREQUEST_STATE_UNKNOWN;
         }
         return httprequest_get_state(httprequest);
 }
@@ -1034,7 +1034,7 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_httprequest_get_sta
 {
         unsigned int rc;
         if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
-                return MEDUSA_HTTPREQUEST_STATE_UNKNWON;
+                return MEDUSA_HTTPREQUEST_STATE_UNKNOWN;
         }
         medusa_monitor_lock(httprequest->subject.monitor);
         rc = medusa_httprequest_get_state_unlocked(httprequest);
@@ -1510,7 +1510,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_httprequest_event_s
 
 __attribute__ ((visibility ("default"))) const char * medusa_httprequest_state_string (unsigned int state)
 {
-        if (state == MEDUSA_HTTPREQUEST_STATE_UNKNWON)          return "MEDUSA_HTTPREQUEST_STATE_UNKNWON";
+        if (state == MEDUSA_HTTPREQUEST_STATE_UNKNOWN)          return "MEDUSA_HTTPREQUEST_STATE_UNKNOWN";
         if (state == MEDUSA_HTTPREQUEST_STATE_DISCONNECTED)     return "MEDUSA_HTTPREQUEST_STATE_DISCONNECTED";
         if (state == MEDUSA_HTTPREQUEST_STATE_RESOLVING)        return "MEDUSA_HTTPREQUEST_STATE_RESOLVING";
         if (state == MEDUSA_HTTPREQUEST_STATE_RESOLVED)         return "MEDUSA_HTTPREQUEST_STATE_RESOLVED";
@@ -1520,7 +1520,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_httprequest_state_s
         if (state == MEDUSA_HTTPREQUEST_STATE_REQUESTED)        return "MEDUSA_HTTPREQUEST_STATE_REQUESTED";
         if (state == MEDUSA_HTTPREQUEST_STATE_RECEIVING)        return "MEDUSA_HTTPREQUEST_STATE_RECEIVING";
         if (state == MEDUSA_HTTPREQUEST_STATE_RECEIVED)         return "MEDUSA_HTTPREQUEST_STATE_RECEIVED";
-        return "MEDUSA_HTTPREQUEST_STATE_UNKNWON";
+        return "MEDUSA_HTTPREQUEST_STATE_UNKNOWN";
 }
 
 __attribute__ ((constructor)) static void httprequest_constructor (void)

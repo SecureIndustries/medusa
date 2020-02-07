@@ -85,6 +85,12 @@ libmedusa.a_files-y += \
 	httprequest.c \
 	../3rdparty/http-parser/http_parser.c
 
+libmedusa.a_files-y += \
+	dnsrequest.c \
+	../3rdparty/SPCDNS/src/codec.c \
+	../3rdparty/SPCDNS/src/mappings.c \
+	../3rdparty/SPCDNS/src/output.c
+
 libmedusa.o_cflags-y = \
 	${libmedusa.a_cflags-y}
 
@@ -119,6 +125,7 @@ dist.include-y = \
 	tcpsocket.h \
 	udpsocket.h \
 	httprequest.h \
+	dnsrequest.h \
 	exec.h \
 	queue.h
 

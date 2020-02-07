@@ -23,7 +23,8 @@ define test-defaults
 
 	$1_ldflags-y = \
 		../dist/lib/libmedusa.a \
-		-lpthread
+		-lpthread \
+		-lm
 
 	$1_ldflags-$(__LINUX__) += \
 		-lrt
