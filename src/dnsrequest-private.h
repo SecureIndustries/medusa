@@ -18,11 +18,19 @@ unsigned int medusa_dnsrequest_get_state_unlocked (const struct medusa_dnsreques
 int medusa_dnsrequest_set_connect_timeout_unlocked (struct medusa_dnsrequest *dnsrequest, double timeout);
 double medusa_dnsrequest_get_connect_timeout_unlocked (const struct medusa_dnsrequest *dnsrequest);
 
-int medusa_dnsrequest_set_method_unlocked (struct medusa_dnsrequest *dnsrequest, const char *method);
-int medusa_dnsrequest_add_header_unlocked (struct medusa_dnsrequest *dnsrequest, const char *key, const char *value, ...);
-int medusa_dnsrequest_add_vheader_unlocked (struct medusa_dnsrequest *dnsrequest, const char *key, const char *value, va_list va);
+int medusa_dnsrequest_set_read_timeout_unlocked (struct medusa_dnsrequest *dnsrequest, double timeout);
+double medusa_dnsrequest_get_read_timeout_unlocked (const struct medusa_dnsrequest *dnsrequest);
 
-int medusa_dnsrequest_make_post_unlocked (struct medusa_dnsrequest *dnsrequest, const char *url, const void *data, int64_t length);
+int medusa_dnsrequest_set_nameserver_unlocked (struct medusa_dnsrequest *dnsrequest, const char *nameserver);
+const char * medusa_dnsrequest_get_nameserver_unlocked (struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_set_type_unlocked (struct medusa_dnsrequest *dnsrequest, unsigned int type);
+int medusa_dnsrequest_get_type_unlocked (struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_set_name_unlocked (struct medusa_dnsrequest *dnsrequest, const char *name);
+const char * medusa_dnsrequest_get_name_unlocked (struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_lookup_unlocked (struct medusa_dnsrequest *dnsrequest);
 
 int medusa_dnsrequest_onevent_unlocked (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *param);
 struct medusa_monitor * medusa_dnsrequest_get_monitor_unlocked (struct medusa_dnsrequest *dnsrequest);
