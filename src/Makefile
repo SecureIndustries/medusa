@@ -123,6 +123,7 @@ dist.include-y = \
 	tcpsocket.h \
 	udpsocket.h \
 	httprequest.h \
+	dnsrequest.h \
 	exec.h \
 	queue.h
 

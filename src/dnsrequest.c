@@ -535,6 +535,36 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_lookup (struct me
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_cancel_unlocked (struct medusa_dnsrequest *dnsrequest)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return -EINVAL;
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_cancel (struct medusa_dnsrequest *dnsrequest)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(dnsrequest->subject.monitor);
+        rc = medusa_dnsrequest_cancel_unlocked(dnsrequest);
+        medusa_monitor_unlock(dnsrequest->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_abort_unlocked (struct medusa_dnsrequest *dnsrequest)
+{
+        return medusa_dnsrequest_cancel_unlocked(dnsrequest);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_abort (struct medusa_dnsrequest *dnsrequest)
+{
+        return medusa_dnsrequest_cancel(dnsrequest);
+}
+
 __attribute__ ((visibility ("default"))) int medusa_dnsrequest_onevent_unlocked (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *param)
 {
         int ret;
@@ -605,6 +635,38 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_dnsreque
         rc = medusa_dnsrequest_get_monitor_unlocked(dnsrequest);
         medusa_monitor_unlock(dnsrequest->subject.monitor);
         return rc;
+}
+
+unsigned int medusa_dnsrequest_record_type_value (const char *type)
+{
+        if (strcasecmp(type, "INVALID") == 0)       return MEDUSA_DNSREQUEST_RECORD_TYPE_INVALID;
+        if (strcasecmp(type, "A") == 0)             return MEDUSA_DNSREQUEST_RECORD_TYPE_A;
+        if (strcasecmp(type, "NS") == 0)            return MEDUSA_DNSREQUEST_RECORD_TYPE_NS;
+        if (strcasecmp(type, "CNAME") == 0)         return MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME;
+        if (strcasecmp(type, "PTR") == 0)           return MEDUSA_DNSREQUEST_RECORD_TYPE_PTR;
+        if (strcasecmp(type, "MX") == 0)            return MEDUSA_DNSREQUEST_RECORD_TYPE_MX;
+        if (strcasecmp(type, "TXT") == 0)           return MEDUSA_DNSREQUEST_RECORD_TYPE_TXT;
+        if (strcasecmp(type, "AAAA") == 0)          return MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA;
+        if (strcasecmp(type, "SRV") == 0)           return MEDUSA_DNSREQUEST_RECORD_TYPE_SRV;
+        if (strcasecmp(type, "ANY") == 0)           return MEDUSA_DNSREQUEST_RECORD_TYPE_ANY;
+        if (strcasecmp(type, "UNKNOWN") == 0)       return MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN;
+        return MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN;
+}
+
+const char * medusa_dnsrequest_record_type_string (unsigned int type)
+{
+        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_INVALID)      return "MEDUSA_DNSREQUEST_RECORD_TYPE_INVALID";
+        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_A)            return "MEDUSA_DNSREQUEST_RECORD_TYPE_A";
+        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_NS)           return "MEDUSA_DNSREQUEST_RECORD_TYPE_NS";
+        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME)        return "MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME";
+        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_PTR)          return "MEDUSA_DNSREQUEST_RECORD_TYPE_PTR";
+        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_MX)           return "MEDUSA_DNSREQUEST_RECORD_TYPE_MX";
+        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_TXT)          return "MEDUSA_DNSREQUEST_RECORD_TYPE_TXT";
+        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA)         return "MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA";
+        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_SRV)          return "MEDUSA_DNSREQUEST_RECORD_TYPE_SRV";
+        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_ANY)          return "MEDUSA_DNSREQUEST_RECORD_TYPE_ANY";
+        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN)      return "MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN";
+        return "MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN";
 }
 
 __attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_event_string (unsigned int events)

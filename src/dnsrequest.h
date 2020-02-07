@@ -82,9 +82,14 @@ int medusa_dnsrequest_set_name (struct medusa_dnsrequest *dnsrequest, const char
 const char * medusa_dnsrequest_get_name (struct medusa_dnsrequest *dnsrequest);
 
 int medusa_dnsrequest_lookup (struct medusa_dnsrequest *dnsrequest);
+int medusa_dnsrequest_cancel (struct medusa_dnsrequest *dnsrequest);
+int medusa_dnsrequest_abort (struct medusa_dnsrequest *dnsrequest);
 
 int medusa_dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *param);
 struct medusa_monitor * medusa_dnsrequest_get_monitor (struct medusa_dnsrequest *dnsrequest);
+
+unsigned int medusa_dnsrequest_record_type_value (const char *type);
+const char * medusa_dnsrequest_record_type_string (unsigned int type);
 
 const char * medusa_dnsrequest_event_string (unsigned int events);
 const char * medusa_dnsrequest_state_string (unsigned int state);
