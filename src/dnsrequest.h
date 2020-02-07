@@ -103,6 +103,8 @@ extern "C"
 
 int medusa_dnsrequest_init_options_default (struct medusa_dnsrequest_init_options *options);
 
+struct medusa_dnsrequest * medusa_dnsrequest_create_lookup (struct medusa_monitor *monitor, const char *nameserver, unsigned int type, const char *name, int (*onevent) (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *context, void *param), void *context);
+
 struct medusa_dnsrequest * medusa_dnsrequest_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *context, void *param), void *context);
 struct medusa_dnsrequest * medusa_dnsrequest_create_with_options (const struct medusa_dnsrequest_init_options *options);
 void medusa_dnsrequest_destroy (struct medusa_dnsrequest *dnsrequest);

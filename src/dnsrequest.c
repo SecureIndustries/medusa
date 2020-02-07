@@ -340,6 +340,61 @@ __attribute__ ((visibility ("default"))) void medusa_dnsrequest_uninit (struct m
         medusa_monitor_unlock(dnsrequest->subject.monitor);
 }
 
+__attribute__ ((visibility ("default"))) struct medusa_dnsrequest * medusa_dnsrequest_create_lookup_unlocked (struct medusa_monitor *monitor, const char *nameserver, unsigned int type, const char *name, int (*onevent) (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *context, void *param), void *context)
+{
+        int rc;
+        struct medusa_dnsrequest *dnsrequest;
+
+        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (nameserver == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (name == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (onevent == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+
+        dnsrequest = medusa_dnsrequest_create_unlocked(monitor, onevent, context);
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return dnsrequest;
+        }
+        rc = medusa_dnsrequest_set_nameserver_unlocked(dnsrequest, nameserver);
+        if (rc != 0) {
+                return MEDUSA_ERR_PTR(rc);
+        }
+        rc = medusa_dnsrequest_set_type_unlocked(dnsrequest, type);
+        if (rc != 0) {
+                return MEDUSA_ERR_PTR(rc);
+        }
+        rc = medusa_dnsrequest_set_name_unlocked(dnsrequest, name);
+        if (rc != 0) {
+                return MEDUSA_ERR_PTR(rc);
+        }
+        rc = medusa_dnsrequest_lookup_unlocked(dnsrequest);
+        if (rc != 0) {
+                return MEDUSA_ERR_PTR(rc);
+        }
+
+        return dnsrequest;
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_dnsrequest * medusa_dnsrequest_create_lookup (struct medusa_monitor *monitor, const char *nameserver, unsigned int type, const char *name, int (*onevent) (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *context, void *param), void *context)
+{
+        struct medusa_dnsrequest *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(monitor);
+        rc = medusa_dnsrequest_create_lookup_unlocked(monitor, nameserver, type, name, onevent, context);
+        medusa_monitor_unlock(monitor);
+        return rc;
+}
+
+
 __attribute__ ((visibility ("default"))) struct medusa_dnsrequest * medusa_dnsrequest_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *context, void *param), void *context)
 {
         int rc;
