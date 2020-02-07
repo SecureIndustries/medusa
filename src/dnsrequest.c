@@ -2,24 +2,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
-#include <ctype.h>
 #include <errno.h>
 
-#include <inttypes.h>
-#include <sys/uio.h>
-
-#include <sys/types.h>
-#include <sys/socket.h>
-
-#include <sys/ioctl.h>
+#include "../3rdparty/SPCDNS/src/dns.h"
+#include "../3rdparty/SPCDNS/src/mappings.h"
+#include "../3rdparty/SPCDNS/src/output.h"
 
 #include "error.h"
 #include "pool.h"
 #include "queue.h"
-#include "buffer.h"
 #include "subject-struct.h"
 #include "udpsocket.h"
 #include "udpsocket-private.h"
@@ -27,10 +20,6 @@
 #include "dnsrequest-private.h"
 #include "dnsrequest-struct.h"
 #include "monitor-private.h"
-
-#if !defined(MIN)
-#define MIN(a, b)                               (((a) < (b)) ? (a) : (b))
-#endif
 
 #define MEDUSA_DNSREQUEST_USE_POOL             1
 
@@ -53,6 +42,151 @@ static inline int dnsrequest_set_state (struct medusa_dnsrequest *dnsrequest, un
         }
         dnsrequest->state = state;
         return 0;
+}
+
+static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param)
+{
+        struct medusa_monitor *monitor;
+        struct medusa_dnsrequest *dnsrequest = (struct medusa_dnsrequest *) context;
+
+        (void) udpsocket;
+        (void) events;
+        (void) param;
+        (void) dnsrequest;
+
+        fprintf(stderr, "dnsrequest_udpsocket_onevent: 0x%08x, %s\n", events, medusa_udpsocket_event_string(events));
+
+        monitor = medusa_udpsocket_get_monitor(udpsocket);
+        medusa_monitor_lock(monitor);
+
+        if (events & MEDUSA_UDPSOCKET_EVENT_RESOLVING) {
+                int rc;
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RESOLVING);
+                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RESOLVING, NULL);
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
+        if (events & MEDUSA_UDPSOCKET_EVENT_RESOLVED) {
+                int rc;
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RESOLVED);
+                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RESOLVED, NULL);
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
+        if (events & MEDUSA_UDPSOCKET_EVENT_CONNECTED) {
+                int fd;
+                int rc;
+
+                dns_question_t domain;
+                dns_query_t    query;
+                dns_packet_t   request[DNS_BUFFER_UDP];
+                size_t         reqsize;
+
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_CONNECTED);
+                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_CONNECTED, NULL);
+                if (rc < 0) {
+                        goto bail;
+                }
+
+                domain.name  = dnsrequest->name;
+                domain.type  = dns_type_value(medusa_dnsrequest_record_type_string(dnsrequest->type) + 30);
+                domain.class = CLASS_IN;
+
+                query.id          = rand() & 0xffff;
+                query.query       = true;
+                query.opcode      = OP_QUERY;
+                query.aa          = false;
+                query.tc          = false;
+                query.rd          = true;
+                query.ra          = false;
+                query.z           = false;
+                query.ad          = false;
+                query.cd          = false;
+                query.rcode       = RCODE_OKAY;
+                query.qdcount     = 1;
+                query.questions   = &domain;
+                query.ancount     = 0;
+                query.answers     = NULL;
+                query.nscount     = 0;
+                query.nameservers = NULL;
+                query.arcount     = 0;
+                query.additional  = NULL;
+
+                reqsize = sizeof(request);
+                rc      = dns_encode(request, &reqsize, &query);
+                if (rc != RCODE_OKAY) {
+                        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
+                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                }
+
+                fd = medusa_udpsocket_get_fd_unlocked(udpsocket);
+                if (fd < 0) {
+                        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
+                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                }
+                rc = sendto(fd, request, reqsize, MSG_NOSIGNAL, NULL, 0);
+                if (rc != (int) reqsize) {
+                        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
+                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                }
+        }
+        if (events & MEDUSA_UDPSOCKET_EVENT_IN) {
+                int fd;
+                int rc;
+
+                dns_packet_t reply[DNS_BUFFER_UDP];
+                size_t       replysize;
+
+                dns_decoded_t  bufresult[DNS_DECODEBUF_8K];
+                size_t         bufsize;
+
+                replysize = sizeof(reply);
+
+                fd = medusa_udpsocket_get_fd_unlocked(udpsocket);
+                if (fd < 0) {
+                        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
+                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                }
+                rc = recvfrom(fd, reply, replysize, MSG_NOSIGNAL, NULL, 0);
+                if (rc <= 0) {
+                        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
+                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                }
+
+                bufsize = sizeof(bufresult);
+                rc = dns_decode(bufresult, &bufsize, reply, replysize);
+                if (rc != RCODE_OKAY) {
+                        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
+                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                }
+
+                dns_print_result((dns_query_t *)bufresult);
+        }
+
+        medusa_monitor_unlock(monitor);
+        return 0;
+bail:   medusa_monitor_unlock(monitor);
+        return -EIO;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_dnsrequest_init_options_default (struct medusa_dnsrequest_init_options *options)
@@ -517,8 +651,56 @@ __attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_get_name
 
 __attribute__ ((visibility ("default"))) int medusa_dnsrequest_lookup_unlocked (struct medusa_dnsrequest *dnsrequest)
 {
+        int rc;
+
+        struct medusa_udpsocket_init_options medusa_udpsocket_init_options;
+        struct medusa_udpsocket_connect_options medusa_udpsocket_connect_options;
+
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
                 return -EINVAL;
+        }
+
+        if (!MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
+             medusa_udpsocket_destroy_unlocked(dnsrequest->udpsocket);
+             dnsrequest->udpsocket = NULL;
+        }
+
+        if (dnsrequest->name == NULL) {
+                return -EINVAL;
+        }
+        if (dnsrequest->type == MEDUSA_DNSREQUEST_RECORD_TYPE_INVALID) {
+                return -EINVAL;
+        }
+        if (dnsrequest->type == MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN) {
+                return -EINVAL;
+        }
+
+        rc = medusa_udpsocket_init_options_default(&medusa_udpsocket_init_options);
+        if (rc != 0) {
+                return rc;
+        }
+        medusa_udpsocket_init_options.monitor     = medusa_dnsrequest_get_monitor_unlocked(dnsrequest);
+        medusa_udpsocket_init_options.onevent     = dnsrequest_udpsocket_onevent;
+        medusa_udpsocket_init_options.context     = dnsrequest;
+        medusa_udpsocket_init_options.enabled     = 1;
+        medusa_udpsocket_init_options.nonblocking = 1;
+        medusa_udpsocket_init_options.reuseaddr   = 1;
+        medusa_udpsocket_init_options.reuseport   = 1;
+        dnsrequest->udpsocket = medusa_udpsocket_create_with_options_unlocked(&medusa_udpsocket_init_options);
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
+                return MEDUSA_PTR_ERR(dnsrequest->udpsocket);
+        }
+
+        rc = medusa_udpsocket_connect_options_default(&medusa_udpsocket_connect_options);
+        if (rc != 0) {
+                return rc;
+        }
+        medusa_udpsocket_connect_options.address = dnsrequest->nameserver;
+        medusa_udpsocket_connect_options.port    = 53;
+        medusa_udpsocket_connect_options.protocol= MEDUSA_UDPSOCKET_PROTOCOL_ANY;
+        rc = medusa_udpsocket_connect_with_options_unlocked(dnsrequest->udpsocket, &medusa_udpsocket_connect_options);
+        if (rc != 0) {
+                return rc;
         }
         return 0;
 }

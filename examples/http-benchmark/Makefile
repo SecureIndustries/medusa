@@ -16,6 +16,10 @@ medusa-http-benchmark_files-y = \
 medusa-http-benchmark_ldflags-y = \
 	../../dist/lib/libmedusa.a
 
+medusa-http-benchmark_ldflags-y += \
+	-lpthread \
+	-lm
+
 medusa-http-benchmark_ldflags-$(__LINUX__) += \
 	-lrt
 

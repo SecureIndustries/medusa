@@ -16,6 +16,10 @@ medusa-http-request_files-y = \
 medusa-http-request_ldflags-y = \
 	../../dist/lib/libmedusa.a
 
+medusa-http-request_ldflags-y += \
+	-lpthread \
+	-lm
+
 medusa-http-request_ldflags-$(__LINUX__) += \
 	-lrt
 

@@ -13,6 +13,10 @@ medusa-echo-client_files-y = \
 medusa-echo-client_ldflags-y = \
 	../../dist/lib/libmedusa.a
 
+medusa-echo-client_ldflags-y += \
+	-lpthread \
+	-lm
+
 medusa-echo-client_ldflags-$(__LINUX__) += \
 	-lrt
 

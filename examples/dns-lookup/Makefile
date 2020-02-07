@@ -13,6 +13,10 @@ medusa-dns-lookup_files-y = \
 medusa-dns-lookup_ldflags-y = \
 	../../dist/lib/libmedusa.a
 
+medusa-dns-lookup_ldflags-y += \
+	-lpthread \
+	-lm
+
 medusa-dns-lookup_ldflags-$(__LINUX__) += \
 	-lrt
 
