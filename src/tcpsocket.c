@@ -1756,6 +1756,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind_with_options_
         }
         if (protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV4) {
 ipv4:
+                memset(&sockaddr_in, 0, sizeof(sockaddr_in));
                 sockaddr_in.sin_family = AF_INET;
                 if (address == NULL) {
                         address = "0.0.0.0";
@@ -1777,13 +1778,14 @@ ipv4:
                 length = sizeof(struct sockaddr_in);
         } else if (protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV6) {
 ipv6:
-                sockaddr_in6.sin6_family = AF_INET;
+                memset(&sockaddr_in6, 0, sizeof(sockaddr_in6));
+                sockaddr_in6.sin6_family = AF_INET6;
                 if (address == NULL) {
                         address = "0.0.0.0";
                 } else if (strcmp(address, "localhost") == 0) {
-                        address = "127.0.0.1";
+                        address = "::1";
                 } else if (strcmp(address, "loopback") == 0) {
-                        address = "127.0.0.1";
+                        address = "::1";
                 }
                 rc = inet_pton(AF_INET6, address, &sockaddr_in6.sin6_addr);
                 if (rc == 0) {
