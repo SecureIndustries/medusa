@@ -6,6 +6,8 @@ struct medusa_monitor;
 struct medusa_dnsrequest;
 struct medusa_dnsrequest_reply;
 struct medusa_dnsrequest_reply_header;
+struct medusa_dnsrequest_reply_question;
+struct medusa_dnsrequest_reply_questions;
 struct medusa_dnsrequest_reply_answer;
 struct medusa_dnsrequest_reply_answers;
 
@@ -140,6 +142,10 @@ int medusa_dnsrequest_reply_header_get_recursion_available (const struct medusa_
 int medusa_dnsrequest_reply_header_get_result_code (const struct medusa_dnsrequest_reply_header *header);
 const char * medusa_dnsrequest_reply_header_get_result_code_string (const struct medusa_dnsrequest_reply_header *header);
 
+const char * medusa_dnsrequest_reply_question_get_name (const struct medusa_dnsrequest_reply_question *question);
+int medusa_dnsrequest_reply_question_get_class (const struct medusa_dnsrequest_reply_question *question);
+int medusa_dnsrequest_reply_question_get_type (const struct medusa_dnsrequest_reply_question *question);
+
 const char * medusa_dnsrequest_reply_answer_get_name (const struct medusa_dnsrequest_reply_answer *answer);
 int medusa_dnsrequest_reply_answer_get_class (const struct medusa_dnsrequest_reply_answer *answer);
 int medusa_dnsrequest_reply_answer_get_type (const struct medusa_dnsrequest_reply_answer *answer);
@@ -157,11 +163,15 @@ int medusa_dnsrequest_reply_answer_srv_get_weight (const struct medusa_dnsreques
 int medusa_dnsrequest_reply_answer_srv_get_port (const struct medusa_dnsrequest_reply_answer *answer);
 const char * medusa_dnsrequest_reply_answer_srv_get_target (const struct medusa_dnsrequest_reply_answer *answer);
 
+const struct medusa_dnsrequest_reply_question * medusa_dnsrequest_reply_questions_get_first (const struct medusa_dnsrequest_reply_questions *questions);
+const struct medusa_dnsrequest_reply_question * medusa_dnsrequest_reply_question_get_next (const struct medusa_dnsrequest_reply_question *question);
+
 const struct medusa_dnsrequest_reply_answer * medusa_dnsrequest_reply_answers_get_first (const struct medusa_dnsrequest_reply_answers *answers);
 const struct medusa_dnsrequest_reply_answer * medusa_dnsrequest_reply_answer_get_next (const struct medusa_dnsrequest_reply_answer *answer);
 
 const struct medusa_dnsrequest_reply * medusa_dnsrequest_get_reply (struct medusa_dnsrequest *dnsrequest);
 const struct medusa_dnsrequest_reply_header * medusa_dnsrequest_reply_get_header (const struct medusa_dnsrequest_reply *reply);
+const struct medusa_dnsrequest_reply_questions * medusa_dnsrequest_reply_get_questions (const struct medusa_dnsrequest_reply *reply);
 const struct medusa_dnsrequest_reply_answers * medusa_dnsrequest_reply_get_answers (const struct medusa_dnsrequest_reply *reply);
 
 int medusa_dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *param);

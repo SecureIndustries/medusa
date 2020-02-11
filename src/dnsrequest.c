@@ -113,6 +113,14 @@ struct medusa_dnsrequest_record_srv {
         char *target;
 };
 
+TAILQ_HEAD(medusa_dnsrequest_reply_questions, medusa_dnsrequest_reply_question);
+struct medusa_dnsrequest_reply_question {
+        TAILQ_ENTRY(medusa_dnsrequest_reply_question) list;
+        char *name;
+        unsigned int type;
+        unsigned int class;
+};
+
 TAILQ_HEAD(medusa_dnsrequest_reply_answers, medusa_dnsrequest_reply_answer);
 struct medusa_dnsrequest_reply_answer {
         TAILQ_ENTRY(medusa_dnsrequest_reply_answer) list;
@@ -130,6 +138,7 @@ struct medusa_dnsrequest_reply_answer {
 
 struct medusa_dnsrequest_reply {
         struct medusa_dnsrequest_reply_header header;
+        struct medusa_dnsrequest_reply_questions questions;
         struct medusa_dnsrequest_reply_answers answers;
 };
 
@@ -409,6 +418,49 @@ bail:   if (answer != NULL) {
         return NULL;
 }
 
+static void medusa_dnsrequest_reply_question_destroy (struct medusa_dnsrequest_reply_question *question)
+{
+        if (question == NULL) {
+                return;
+        }
+        if (question->name != NULL) {
+                free(question->name);
+        }
+        free(question);
+}
+
+static struct medusa_dnsrequest_reply_question * medusa_dnsrequest_reply_question_create (dns_question_t *dquestion)
+{
+        struct medusa_dnsrequest_reply_question *question;
+
+        question = NULL;
+
+        if (dquestion == NULL) {
+                goto bail;
+        }
+
+        question = malloc(sizeof(struct medusa_dnsrequest_reply_question));
+        if (question == NULL) {
+                goto bail;
+        }
+        memset(question, 0, sizeof(struct medusa_dnsrequest_reply_question));
+
+        if (dquestion->name != NULL) {
+                question->name = strdup(dquestion->name);
+                if (question->name == NULL) {
+                        goto bail;
+                }
+        }
+        question->type  = dquestion->type;
+        question->class = dquestion->class;
+
+        return question;
+bail:   if (question != NULL) {
+                medusa_dnsrequest_reply_question_destroy(question);
+        }
+        return NULL;
+}
+
 static void medusa_dnsrequest_reply_answers_uninit (struct medusa_dnsrequest_reply_answers *answers)
 {
         struct medusa_dnsrequest_reply_answer *answer;
@@ -446,6 +498,47 @@ static int medusa_dnsrequest_reply_answers_init (struct medusa_dnsrequest_reply_
         return 0;
 bail:   if (answers != NULL) {
                 medusa_dnsrequest_reply_answers_uninit(answers);
+        }
+        return -1;
+}
+
+static void medusa_dnsrequest_reply_questions_uninit (struct medusa_dnsrequest_reply_questions *questions)
+{
+        struct medusa_dnsrequest_reply_question *question;
+        struct medusa_dnsrequest_reply_question *nquestion;
+        if (questions == NULL) {
+                return;
+        }
+        TAILQ_FOREACH_SAFE(question, questions, list, nquestion) {
+                TAILQ_REMOVE(questions, question, list);
+                medusa_dnsrequest_reply_question_destroy(question);
+        }
+        memset(questions, 0, sizeof(struct medusa_dnsrequest_reply_questions));
+}
+
+static int medusa_dnsrequest_reply_questions_init (struct medusa_dnsrequest_reply_questions *questions, dns_question_t *dquestions, int dnquestions)
+{
+        int i;
+        struct medusa_dnsrequest_reply_question *question;
+
+        if (questions == NULL) {
+                goto bail;
+        }
+
+        memset(questions, 0, sizeof(struct medusa_dnsrequest_reply_questions));
+        TAILQ_INIT(questions);
+
+        for (i = 0; i < dnquestions; i++) {
+                question = medusa_dnsrequest_reply_question_create(&dquestions[i]);
+                if (question == NULL) {
+                        goto bail;
+                }
+                TAILQ_INSERT_TAIL(questions, question, list);
+        }
+
+        return 0;
+bail:   if (questions != NULL) {
+                medusa_dnsrequest_reply_questions_uninit(questions);
         }
         return -1;
 }
@@ -492,6 +585,7 @@ static void medusa_dnsrequest_reply_destroy (struct medusa_dnsrequest_reply *rep
                 return;
         }
         medusa_dnsrequest_reply_header_uninit(&reply->header);
+        medusa_dnsrequest_reply_questions_uninit(&reply->questions);
         medusa_dnsrequest_reply_answers_uninit(&reply->answers);
         free(reply);
 
@@ -515,6 +609,10 @@ static struct medusa_dnsrequest_reply * medusa_dnsrequest_reply_create (dns_quer
         memset(reply, 0, sizeof(struct medusa_dnsrequest_reply));
 
         rc = medusa_dnsrequest_reply_header_init(&reply->header, query);
+        if (rc != 0) {
+                goto bail;
+        }
+        rc = medusa_dnsrequest_reply_questions_init(&reply->questions, query->questions, query->qdcount);
         if (rc != 0) {
                 goto bail;
         }
@@ -1408,6 +1506,14 @@ __attribute__ ((visibility ("default"))) const struct medusa_dnsrequest_reply_an
         return &reply->answers;
 }
 
+__attribute__ ((visibility ("default"))) const struct medusa_dnsrequest_reply_questions * medusa_dnsrequest_reply_get_questions (const struct medusa_dnsrequest_reply *reply)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(reply)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return &reply->questions;
+}
+
 __attribute__ ((visibility ("default"))) const struct medusa_dnsrequest_reply_answer * medusa_dnsrequest_reply_answers_get_first (const struct medusa_dnsrequest_reply_answers *answers)
 {
         if (MEDUSA_IS_ERR_OR_NULL(answers)) {
@@ -1422,6 +1528,22 @@ __attribute__ ((visibility ("default"))) const struct medusa_dnsrequest_reply_an
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
         return TAILQ_NEXT(answer, list);
+}
+
+__attribute__ ((visibility ("default"))) const struct medusa_dnsrequest_reply_question * medusa_dnsrequest_reply_questions_get_first (const struct medusa_dnsrequest_reply_questions *questions)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(questions)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return TAILQ_FIRST(questions);
+}
+
+__attribute__ ((visibility ("default"))) const struct medusa_dnsrequest_reply_question * medusa_dnsrequest_reply_question_get_next (const struct medusa_dnsrequest_reply_question *question)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(question)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return TAILQ_NEXT(question, list);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_dnsrequest_reply_header_get_questions_count (const struct medusa_dnsrequest_reply_header *header)
@@ -1515,6 +1637,30 @@ __attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_he
                 case 10: return "NOTZONE";
         }
         return "ERROR";
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_question_get_name (const struct medusa_dnsrequest_reply_question *question)
+{
+        if (question == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return question->name;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_reply_question_get_class (const struct medusa_dnsrequest_reply_question *question)
+{
+        if (question == NULL) {
+                return -EINVAL;
+        }
+        return question->class;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_reply_question_get_type (const struct medusa_dnsrequest_reply_question *question)
+{
+        if (question == NULL) {
+                return -EINVAL;
+        }
+        return question->type;
 }
 
 __attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_get_name (const struct medusa_dnsrequest_reply_answer *answer)

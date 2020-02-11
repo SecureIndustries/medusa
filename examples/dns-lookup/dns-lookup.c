@@ -46,6 +46,8 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
 {
         const struct medusa_dnsrequest_reply *dnsrequest_reply;
         const struct medusa_dnsrequest_reply_header *dnsrequest_reply_header;
+        const struct medusa_dnsrequest_reply_questions *dnsrequest_reply_questions;
+        const struct medusa_dnsrequest_reply_question *dnsrequest_reply_question;
         const struct medusa_dnsrequest_reply_answers *dnsrequest_reply_answers;
         const struct medusa_dnsrequest_reply_answer *dnsrequest_reply_answer;
 
@@ -80,6 +82,21 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
                 fprintf(stderr, "      recursion_desired    : %d\n", medusa_dnsrequest_reply_header_get_recursion_desired(dnsrequest_reply_header));
                 fprintf(stderr, "      recursion_available  : %d\n", medusa_dnsrequest_reply_header_get_recursion_available(dnsrequest_reply_header));
                 fprintf(stderr, "      result_code          : %d, %s\n", medusa_dnsrequest_reply_header_get_result_code(dnsrequest_reply_header), medusa_dnsrequest_reply_header_get_result_code_string(dnsrequest_reply_header));
+
+                dnsrequest_reply_questions = medusa_dnsrequest_reply_get_questions(dnsrequest_reply);
+                if (dnsrequest_reply_questions == NULL) {
+                        fprintf(stderr, "dnsrequest_reply_questions is invalid\n");
+                        goto bail;
+                }
+                fprintf(stderr, "  dnsrequest_reply_questions: %p\n", dnsrequest_reply_questions);
+
+                for (dnsrequest_reply_question = medusa_dnsrequest_reply_questions_get_first(dnsrequest_reply_questions);
+                     dnsrequest_reply_question != NULL;
+                     dnsrequest_reply_question = medusa_dnsrequest_reply_question_get_next(dnsrequest_reply_question)) {
+                        fprintf(stderr, "    - name : %s\n", medusa_dnsrequest_reply_question_get_name(dnsrequest_reply_question));
+                        fprintf(stderr, "      class: %d\n", medusa_dnsrequest_reply_question_get_class(dnsrequest_reply_question));
+                        fprintf(stderr, "      type : %d, %s\n", medusa_dnsrequest_reply_question_get_type(dnsrequest_reply_question), medusa_dnsrequest_record_type_string(medusa_dnsrequest_reply_question_get_type(dnsrequest_reply_question)));
+                }
 
                 dnsrequest_reply_answers = medusa_dnsrequest_reply_get_answers(dnsrequest_reply);
                 if (dnsrequest_reply_answers == NULL) {
