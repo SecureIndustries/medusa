@@ -72,8 +72,10 @@ enum {
         MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME             = 5,
         MEDUSA_DNSREQUEST_RECORD_TYPE_PTR               = 12,
         MEDUSA_DNSREQUEST_RECORD_TYPE_MX                = 15,
+        MEDUSA_DNSREQUEST_RECORD_TYPE_TXT               = 16,
         MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA              = 28,
         MEDUSA_DNSREQUEST_RECORD_TYPE_SRV               = 33,
+        MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR             = 35,
         MEDUSA_DNSREQUEST_RECORD_TYPE_ANY               = 255,
         MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN           = 65280
 #define MEDUSA_DNSREQUEST_RECORD_TYPE_INVALID           MEDUSA_DNSREQUEST_RECORD_TYPE_INVALID
@@ -82,8 +84,10 @@ enum {
 #define MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME             MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME
 #define MEDUSA_DNSREQUEST_RECORD_TYPE_PTR               MEDUSA_DNSREQUEST_RECORD_TYPE_PTR
 #define MEDUSA_DNSREQUEST_RECORD_TYPE_MX                MEDUSA_DNSREQUEST_RECORD_TYPE_MX
+#define MEDUSA_DNSREQUEST_RECORD_TYPE_TXT               MEDUSA_DNSREQUEST_RECORD_TYPE_TXT
 #define MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA              MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA
 #define MEDUSA_DNSREQUEST_RECORD_TYPE_SRV               MEDUSA_DNSREQUEST_RECORD_TYPE_SRV
+#define MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR             MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR
 #define MEDUSA_DNSREQUEST_RECORD_TYPE_ANY               MEDUSA_DNSREQUEST_RECORD_TYPE_ANY
 #define MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN           MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN
 };
@@ -157,11 +161,18 @@ const char * medusa_dnsrequest_reply_answer_cname_get_cname (const struct medusa
 const char * medusa_dnsrequest_reply_answer_ptr_get_ptr (const struct medusa_dnsrequest_reply_answer *answer);
 int medusa_dnsrequest_reply_answer_mx_get_preference (const struct medusa_dnsrequest_reply_answer *answer);
 const char * medusa_dnsrequest_reply_answer_mx_get_exchange (const struct medusa_dnsrequest_reply_answer *answer);
+const char * medusa_dnsrequest_reply_answer_txt_get_text (const struct medusa_dnsrequest_reply_answer *answer);
 const char * medusa_dnsrequest_reply_answer_aaaa_get_address (const struct medusa_dnsrequest_reply_answer *answer);
 int medusa_dnsrequest_reply_answer_srv_get_priority (const struct medusa_dnsrequest_reply_answer *answer);
 int medusa_dnsrequest_reply_answer_srv_get_weight (const struct medusa_dnsrequest_reply_answer *answer);
 int medusa_dnsrequest_reply_answer_srv_get_port (const struct medusa_dnsrequest_reply_answer *answer);
 const char * medusa_dnsrequest_reply_answer_srv_get_target (const struct medusa_dnsrequest_reply_answer *answer);
+unsigned short medusa_dnsrequest_reply_answer_naptr_get_order (const struct medusa_dnsrequest_reply_answer *answer);
+unsigned short medusa_dnsrequest_reply_answer_naptr_get_preference (const struct medusa_dnsrequest_reply_answer *answer);
+const char * medusa_dnsrequest_reply_answer_naptr_get_flags (const struct medusa_dnsrequest_reply_answer *answer);
+const char * medusa_dnsrequest_reply_answer_naptr_get_services (const struct medusa_dnsrequest_reply_answer *answer);
+const char * medusa_dnsrequest_reply_answer_naptr_get_regexp (const struct medusa_dnsrequest_reply_answer *answer);
+const char * medusa_dnsrequest_reply_answer_naptr_get_replacement (const struct medusa_dnsrequest_reply_answer *answer);
 
 const struct medusa_dnsrequest_reply_question * medusa_dnsrequest_reply_questions_get_first (const struct medusa_dnsrequest_reply_questions *questions);
 const struct medusa_dnsrequest_reply_question * medusa_dnsrequest_reply_question_get_next (const struct medusa_dnsrequest_reply_question *question);

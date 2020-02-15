@@ -92,6 +92,15 @@ struct medusa_dnsrequest_record_mx {
         char *exchange;
 };
 
+struct medusa_dnsrequest_record_txt {
+        char *name;
+        unsigned int type;
+        unsigned int class;
+        unsigned int ttl;
+
+        char *text;
+};
+
 struct medusa_dnsrequest_record_aaaa {
         char *name;
         unsigned int type;
@@ -113,6 +122,20 @@ struct medusa_dnsrequest_record_srv {
         char *target;
 };
 
+struct medusa_dnsrequest_record_naptr {
+        char *name;
+        unsigned int type;
+        unsigned int class;
+        unsigned int ttl;
+
+        unsigned short order;
+        unsigned short preference;
+        char *flags;
+        char *services;
+        char *regexp;
+        char *replacement;
+};
+
 TAILQ_HEAD(medusa_dnsrequest_reply_questions, medusa_dnsrequest_reply_question);
 struct medusa_dnsrequest_reply_question {
         TAILQ_ENTRY(medusa_dnsrequest_reply_question) list;
@@ -131,8 +154,10 @@ struct medusa_dnsrequest_reply_answer {
                 struct medusa_dnsrequest_record_cname   cname;
                 struct medusa_dnsrequest_record_ptr     ptr;
                 struct medusa_dnsrequest_record_mx      mx;
+                struct medusa_dnsrequest_record_txt     txt;
                 struct medusa_dnsrequest_record_aaaa    aaaa;
                 struct medusa_dnsrequest_record_srv     srv;
+                struct medusa_dnsrequest_record_naptr   naptr;
         } u;
 };
 
@@ -295,6 +320,38 @@ static int medusa_dnsrequest_record_mx_init (struct medusa_dnsrequest_record_mx 
 bail:   return -1;
 }
 
+static void medusa_dnsrequest_record_txt_uninit (struct medusa_dnsrequest_record_txt *txt)
+{
+        if (txt == NULL) {
+                return;
+        }
+        if (txt->text) {
+                free(txt->text);
+                txt->text = NULL;
+        }
+}
+
+static int medusa_dnsrequest_record_txt_init (struct medusa_dnsrequest_record_txt *txt, dns_txt_t *dtxt)
+{
+        if (txt == NULL) {
+                goto bail;
+        }
+        if (dtxt == NULL) {
+                goto bail;
+        }
+        txt->class    = dtxt->class;
+        txt->ttl      = dtxt->ttl;
+        txt->type     = dtxt->type;
+        if (dtxt->text) {
+                txt->text = strdup(dtxt->text);
+                if (txt->text == NULL) {
+                        goto bail;
+                }
+        }
+        return 0;
+bail:   return -1;
+}
+
 static void medusa_dnsrequest_record_aaaa_uninit (struct medusa_dnsrequest_record_aaaa *aaaa)
 {
         if (aaaa == NULL) {
@@ -352,6 +409,70 @@ static int medusa_dnsrequest_record_srv_init (struct medusa_dnsrequest_record_sr
 bail:   return -1;
 }
 
+static void medusa_dnsrequest_record_naptr_uninit (struct medusa_dnsrequest_record_naptr *naptr)
+{
+        if (naptr == NULL) {
+                return;
+        }
+        if (naptr->flags) {
+                free(naptr->flags);
+                naptr->flags = NULL;
+        }
+        if (naptr->services) {
+                free(naptr->services);
+                naptr->services = NULL;
+        }
+        if (naptr->regexp) {
+                free(naptr->regexp);
+                naptr->regexp = NULL;
+        }
+        if (naptr->replacement) {
+                free(naptr->replacement);
+                naptr->replacement = NULL;
+        }
+}
+
+static int medusa_dnsrequest_record_naptr_init (struct medusa_dnsrequest_record_naptr *naptr, dns_naptr_t *dnaptr)
+{
+        if (naptr == NULL) {
+                goto bail;
+        }
+        if (dnaptr == NULL) {
+                goto bail;
+        }
+        naptr->class    = dnaptr->class;
+        naptr->ttl      = dnaptr->ttl;
+        naptr->type     = dnaptr->type;
+        naptr->order    = dnaptr->order;
+        naptr->preference       = dnaptr->preference;
+        if (dnaptr->flags) {
+                naptr->flags = strdup(dnaptr->flags);
+                if (naptr->flags == NULL) {
+                        goto bail;
+                }
+        }
+        if (dnaptr->services) {
+                naptr->services = strdup(dnaptr->services);
+                if (naptr->services == NULL) {
+                        goto bail;
+                }
+        }
+        if (dnaptr->regexp) {
+                naptr->regexp = strdup(dnaptr->regexp);
+                if (naptr->regexp == NULL) {
+                        goto bail;
+                }
+        }
+        if (dnaptr->replacement) {
+                naptr->replacement = strdup(dnaptr->replacement);
+                if (naptr->replacement == NULL) {
+                        goto bail;
+                }
+        }
+        return 0;
+bail:   return -1;
+}
+
 static void medusa_dnsrequest_reply_answer_destroy (struct medusa_dnsrequest_reply_answer *answer)
 {
         if (answer == NULL) {
@@ -364,8 +485,10 @@ static void medusa_dnsrequest_reply_answer_destroy (struct medusa_dnsrequest_rep
                 case MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME:       medusa_dnsrequest_record_cname_uninit(&answer->u.cname);        break;
                 case MEDUSA_DNSREQUEST_RECORD_TYPE_PTR:         medusa_dnsrequest_record_ptr_uninit(&answer->u.ptr);            break;
                 case MEDUSA_DNSREQUEST_RECORD_TYPE_MX:          medusa_dnsrequest_record_mx_uninit(&answer->u.mx);              break;
+                case MEDUSA_DNSREQUEST_RECORD_TYPE_TXT:         medusa_dnsrequest_record_txt_uninit(&answer->u.txt);            break;
                 case MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA:        medusa_dnsrequest_record_aaaa_uninit(&answer->u.aaaa);          break;
                 case MEDUSA_DNSREQUEST_RECORD_TYPE_SRV:         medusa_dnsrequest_record_srv_uninit(&answer->u.srv);            break;
+                case MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR:       medusa_dnsrequest_record_naptr_uninit(&answer->u.naptr);        break;
         }
         free(answer);
 }
@@ -404,8 +527,10 @@ static struct medusa_dnsrequest_reply_answer * medusa_dnsrequest_reply_answer_cr
                 case MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME:       rc = medusa_dnsrequest_record_cname_init(&answer->u.cname, &danswer->cname); break;
                 case MEDUSA_DNSREQUEST_RECORD_TYPE_PTR:         rc = medusa_dnsrequest_record_ptr_init(&answer->u.ptr, &danswer->ptr);       break;
                 case MEDUSA_DNSREQUEST_RECORD_TYPE_MX:          rc = medusa_dnsrequest_record_mx_init(&answer->u.mx, &danswer->mx);          break;
+                case MEDUSA_DNSREQUEST_RECORD_TYPE_TXT:         rc = medusa_dnsrequest_record_txt_init(&answer->u.txt, &danswer->txt);       break;
                 case MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA:        rc = medusa_dnsrequest_record_aaaa_init(&answer->u.aaaa, &danswer->aaaa);    break;
                 case MEDUSA_DNSREQUEST_RECORD_TYPE_SRV:         rc = medusa_dnsrequest_record_srv_init(&answer->u.srv, &danswer->srv);       break;
+                case MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR:       rc = medusa_dnsrequest_record_naptr_init(&answer->u.naptr, &danswer->naptr); break;
         }
         if (rc != 0) {
                 goto bail;
@@ -1761,6 +1886,17 @@ __attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_an
         return answer->u.mx.exchange;
 }
 
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_txt_get_text (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_TXT) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return answer->u.txt.text;
+}
+
 __attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_aaaa_get_address (const struct medusa_dnsrequest_reply_answer *answer)
 {
         if (answer == NULL) {
@@ -1814,6 +1950,72 @@ __attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_an
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
         return answer->u.srv.target;
+}
+
+__attribute__ ((visibility ("default"))) unsigned short medusa_dnsrequest_reply_answer_naptr_get_order (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return -EINVAL;
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR) {
+                return -EINVAL;
+        }
+        return answer->u.naptr.order;
+}
+
+__attribute__ ((visibility ("default"))) unsigned short medusa_dnsrequest_reply_answer_naptr_get_preference (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return -EINVAL;
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR) {
+                return -EINVAL;
+        }
+        return answer->u.naptr.preference;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_naptr_get_flags (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return answer->u.naptr.flags;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_naptr_get_services (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return answer->u.naptr.services;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_naptr_get_regexp (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return answer->u.naptr.regexp;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_reply_answer_naptr_get_replacement (const struct medusa_dnsrequest_reply_answer *answer)
+{
+        if (answer == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (answer->u.generic.type != MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return answer->u.naptr.replacement;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_dnsrequest_onevent_unlocked (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *param)
@@ -1900,8 +2102,10 @@ unsigned int medusa_dnsrequest_record_type_value (const char *type)
         if (strcasecmp(type, "CNAME") == 0)         return MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME;
         if (strcasecmp(type, "PTR") == 0)           return MEDUSA_DNSREQUEST_RECORD_TYPE_PTR;
         if (strcasecmp(type, "MX") == 0)            return MEDUSA_DNSREQUEST_RECORD_TYPE_MX;
+        if (strcasecmp(type, "TXT") == 0)           return MEDUSA_DNSREQUEST_RECORD_TYPE_TXT;
         if (strcasecmp(type, "AAAA") == 0)          return MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA;
         if (strcasecmp(type, "SRV") == 0)           return MEDUSA_DNSREQUEST_RECORD_TYPE_SRV;
+        if (strcasecmp(type, "NAPTR") == 0)         return MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR;
         if (strcasecmp(type, "ANY") == 0)           return MEDUSA_DNSREQUEST_RECORD_TYPE_ANY;
         if (strcasecmp(type, "UNKNOWN") == 0)       return MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN;
         return MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN;
@@ -1909,17 +2113,22 @@ unsigned int medusa_dnsrequest_record_type_value (const char *type)
 
 const char * medusa_dnsrequest_record_type_string (unsigned int type)
 {
-        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_INVALID)      return "MEDUSA_DNSREQUEST_RECORD_TYPE_INVALID";
-        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_A)            return "MEDUSA_DNSREQUEST_RECORD_TYPE_A";
-        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_NS)           return "MEDUSA_DNSREQUEST_RECORD_TYPE_NS";
-        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME)        return "MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME";
-        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_PTR)          return "MEDUSA_DNSREQUEST_RECORD_TYPE_PTR";
-        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_MX)           return "MEDUSA_DNSREQUEST_RECORD_TYPE_MX";
-        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA)         return "MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA";
-        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_SRV)          return "MEDUSA_DNSREQUEST_RECORD_TYPE_SRV";
-        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_ANY)          return "MEDUSA_DNSREQUEST_RECORD_TYPE_ANY";
-        if (type == MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN)      return "MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN";
-        return "MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN";
+        switch (type) {
+        case MEDUSA_DNSREQUEST_RECORD_TYPE_INVALID:     return "MEDUSA_DNSREQUEST_RECORD_TYPE_INVALID";
+        case MEDUSA_DNSREQUEST_RECORD_TYPE_A:           return "MEDUSA_DNSREQUEST_RECORD_TYPE_A";
+        case MEDUSA_DNSREQUEST_RECORD_TYPE_NS:          return "MEDUSA_DNSREQUEST_RECORD_TYPE_NS";
+        case MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME:       return "MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME";
+        case MEDUSA_DNSREQUEST_RECORD_TYPE_PTR:         return "MEDUSA_DNSREQUEST_RECORD_TYPE_PTR";
+        case MEDUSA_DNSREQUEST_RECORD_TYPE_MX:          return "MEDUSA_DNSREQUEST_RECORD_TYPE_MX";
+        case MEDUSA_DNSREQUEST_RECORD_TYPE_TXT:         return "MEDUSA_DNSREQUEST_RECORD_TYPE_TXT";
+        case MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA:        return "MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA";
+        case MEDUSA_DNSREQUEST_RECORD_TYPE_SRV:         return "MEDUSA_DNSREQUEST_RECORD_TYPE_SRV";
+        case MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR:       return "MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR";
+        case MEDUSA_DNSREQUEST_RECORD_TYPE_ANY:         return "MEDUSA_DNSREQUEST_RECORD_TYPE_ANY";
+        case MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN:     return "MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN";
+        default:
+                return "MEDUSA_DNSREQUEST_RECORD_TYPE_UNKNOWN";
+        }
 }
 
 __attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_event_string (unsigned int events)

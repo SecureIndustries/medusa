@@ -130,6 +130,9 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
                                         fprintf(stderr, "      preference: %d\n", medusa_dnsrequest_reply_answer_mx_get_preference(dnsrequest_reply_answer));
                                         fprintf(stderr, "      exchange  : %s\n", medusa_dnsrequest_reply_answer_mx_get_exchange(dnsrequest_reply_answer));
                                         break;
+                                case MEDUSA_DNSREQUEST_RECORD_TYPE_TXT:
+                                        fprintf(stderr, "      text: %s\n", medusa_dnsrequest_reply_answer_txt_get_text(dnsrequest_reply_answer));
+                                        break;
                                 case MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA:
                                         fprintf(stderr, "      address: %s\n", medusa_dnsrequest_reply_answer_aaaa_get_address(dnsrequest_reply_answer));
                                         break;
@@ -138,6 +141,14 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
                                         fprintf(stderr, "      weight  : %d\n", medusa_dnsrequest_reply_answer_srv_get_weight(dnsrequest_reply_answer));
                                         fprintf(stderr, "      port    : %d\n", medusa_dnsrequest_reply_answer_srv_get_port(dnsrequest_reply_answer));
                                         fprintf(stderr, "      target  : %s\n", medusa_dnsrequest_reply_answer_srv_get_target(dnsrequest_reply_answer));
+                                        break;
+                                case MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR:
+                                        fprintf(stderr, "      order      : %hu\n", medusa_dnsrequest_reply_answer_naptr_get_order(dnsrequest_reply_answer));
+                                        fprintf(stderr, "      preference : %hu\n", medusa_dnsrequest_reply_answer_naptr_get_preference(dnsrequest_reply_answer));
+                                        fprintf(stderr, "      flags      : %s\n", medusa_dnsrequest_reply_answer_naptr_get_flags(dnsrequest_reply_answer));
+                                        fprintf(stderr, "      services   : %s\n", medusa_dnsrequest_reply_answer_naptr_get_services(dnsrequest_reply_answer));
+                                        fprintf(stderr, "      regexp     : %s\n", medusa_dnsrequest_reply_answer_naptr_get_regexp(dnsrequest_reply_answer));
+                                        fprintf(stderr, "      replacement: %s\n", medusa_dnsrequest_reply_answer_naptr_get_replacement(dnsrequest_reply_answer));
                                         break;
                         }
                 }
