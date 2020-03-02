@@ -49,7 +49,7 @@ int medusa_tcpsocket_set_read_timeout_unlocked (struct medusa_tcpsocket *tcpsock
 double medusa_tcpsocket_get_read_timeout_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_ssl_unlocked (struct medusa_tcpsocket *tcpsocket, int enable);
-int medusa_tcpsocket_get_ssl_unlocked (struct medusa_tcpsocket *tcpsocket);
+int medusa_tcpsocket_get_ssl_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_ssl_certificate_unlocked (struct medusa_tcpsocket *tcpsocket, const char *certificate);
 const char * medusa_tcpsocket_get_ssl_certificate_unlocked (const struct medusa_tcpsocket *tcpsocket);

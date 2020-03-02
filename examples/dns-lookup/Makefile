@@ -17,6 +17,10 @@ medusa-dns-lookup_ldflags-y += \
 	-lpthread \
 	-lm
 
+medusa-dns-lookup_ldflags-y += \
+	-lssl \
+	-lcrypto
+
 medusa-dns-lookup_ldflags-$(__LINUX__) += \
 	-lrt
 

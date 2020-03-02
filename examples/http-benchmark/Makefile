@@ -20,6 +20,10 @@ medusa-http-benchmark_ldflags-y += \
 	-lpthread \
 	-lm
 
+medusa-http-benchmark_ldflags-y += \
+	-lssl \
+	-lcrypto
+
 medusa-http-benchmark_ldflags-$(__LINUX__) += \
 	-lrt
 

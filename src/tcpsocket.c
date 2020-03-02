@@ -16,6 +16,9 @@
 #include <netdb.h>
 #include <errno.h>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
 #include "error.h"
 #include "pool.h"
 #include "queue.h"
@@ -1403,7 +1406,7 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 ret = MEDUSA_PTR_ERR(tcpsocket);
                 goto bail;
         }
-        tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ATTACH);
+        tcpsocket_add_flag(tcpsocket, (options->bound) ? MEDUSA_TCPSOCKET_FLAG_BIND | MEDUSA_TCPSOCKET_FLAG_ATTACH : MEDUSA_TCPSOCKET_FLAG_ATTACH);
 
         rc = medusa_io_init_options_default(&io_init_options);
         if (rc < 0) {
@@ -1445,7 +1448,28 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 goto bail;
         }
 
-        if (options->bound == 0) {
+        if (tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_BIND)) {
+                rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_BINDING);
+                if (rc < 0) {
+                        ret = rc;
+                        goto bail;
+                }
+                rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_BOUND);
+                if (rc < 0) {
+                        ret = rc;
+                        goto bail;
+                }
+                rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_LISTENING);
+                if (rc < 0) {
+                        ret = rc;
+                        goto bail;
+                }
+                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_LISTENING, NULL);
+                if (rc < 0) {
+                        ret = rc;
+                        goto bail;
+                }
+        } else {
                 rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_RESOLVING);
                 if (rc < 0) {
                         ret = rc;
@@ -1467,27 +1491,6 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                         goto bail;
                 }
                 rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTED, NULL);
-                if (rc < 0) {
-                        ret = rc;
-                        goto bail;
-                }
-        } else {
-                rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_BINDING);
-                if (rc < 0) {
-                        ret = rc;
-                        goto bail;
-                }
-                rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_BOUND);
-                if (rc < 0) {
-                        ret = rc;
-                        goto bail;
-                }
-                rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_LISTENING);
-                if (rc < 0) {
-                        ret = rc;
-                        goto bail;
-                }
-                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_LISTENING, NULL);
                 if (rc < 0) {
                         ret = rc;
                         goto bail;
@@ -2190,36 +2193,48 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                 return -EINVAL;
         }
         if (tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_BIND)) {
-                if (MEDUSA_IS_ERR_OR_NULL(medusa_tcpsocket_get_ssl_certificate_unlocked(tcpsocket)) ||
-                    MEDUSA_IS_ERR_OR_NULL(medusa_tcpsocket_get_ssl_privatekey_unlocked(tcpsocket))) {
+                if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_certificate) ||
+                    MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_privatekey)) {
                         return -EINVAL;
                 }
         }
         if (enabled) {
                 if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_context)) {
-                        tcpsocket->ssl_context = SSL_context_new();
+                        int rc;
+                        SSL_METHOD *method;
+                        if (tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_BIND)) {
+                                method = (SSL_METHOD *) SSLv23_server_method();
+                        } else {
+                                method = (SSL_METHOD *) SSLv23_method();
+                        }
+                        if (method == NULL) {
+                                return -EIO;
+                        }
+                        tcpsocket->ssl_context = SSL_CTX_new(method);
                         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_context)) {
-
+                                return -EIO;
+                        }
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && (OPENSSL_API_COMPAT >= 0x10100000L)
+                        SSL_CTX_set_ecdh_auto(tcpsocket->ssl_context, 1);
+#endif
+                        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_certificate)) {
+                                rc = SSL_CTX_use_certificate_file(tcpsocket->ssl_context, tcpsocket->ssl_certificate, SSL_FILETYPE_PEM);
+                                if (rc <= 0) {
+                                        return -EIO;
+                                }
+                        }
+                        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_privatekey)) {
+                                rc = SSL_CTX_use_PrivateKey_file(tcpsocket->ssl_context, tcpsocket->ssl_privatekey, SSL_FILETYPE_PEM);
+                                if (rc <= 0) {
+                                        return -EIO;
+                                }
                         }
                 }
         } else {
-                if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_context)) {
-
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_context)) {
+                        SSL_CTX_free(tcpsocket->ssl_context);
                 }
-        }
-        if (enabled) {
-                tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_REUSEADDR);
-        } else {
-                tcpsocket_del_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_REUSEADDR);
-        }
-        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
-                int rc;
-                int on;
-                on = !!enabled;
-                rc = setsockopt(medusa_io_get_fd_unlocked(tcpsocket->io), SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-                if (rc < 0) {
-                        return -errno;
-                }
+                tcpsocket->ssl_context = NULL;
         }
         return 0;
 }

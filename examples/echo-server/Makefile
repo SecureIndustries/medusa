@@ -1,3 +1,4 @@
+
 target-y = \
 	medusa-echo-server
 
@@ -16,6 +17,10 @@ medusa-echo-server_ldflags-y = \
 medusa-echo-server_ldflags-y += \
 	-lpthread \
 	-lm
+
+medusa-echo-server_ldflags-y += \
+	-lssl \
+	-lcrypto
 
 medusa-echo-server_ldflags-$(__LINUX__) += \
 	-lrt

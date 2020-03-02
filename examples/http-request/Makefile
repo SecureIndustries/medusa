@@ -20,6 +20,10 @@ medusa-http-request_ldflags-y += \
 	-lpthread \
 	-lm
 
+medusa-http-request_ldflags-y += \
+	-lssl \
+	-lcrypto
+
 medusa-http-request_ldflags-$(__LINUX__) += \
 	-lrt
 

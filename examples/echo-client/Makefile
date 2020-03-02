@@ -17,6 +17,10 @@ medusa-echo-client_ldflags-y += \
 	-lpthread \
 	-lm
 
+medusa-echo-client_ldflags-y += \
+	-lssl \
+	-lcrypto
+
 medusa-echo-client_ldflags-$(__LINUX__) += \
 	-lrt
 

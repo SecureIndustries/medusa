@@ -45,7 +45,7 @@ static struct option longopts[] = {
 
 static void usage (const char *pname)
 {
-        fprintf(stdout, "usage: %s [-a address] [-p port]\n", pname);
+        fprintf(stdout, "usage: %s [-a address] [-p port] [-s ssl] [-c certificate.crt] [-k privatekey.key]\n", pname);
         fprintf(stdout, "  -h. --help   : this text\n");
         fprintf(stdout, "  -a, --address: listening address (values: interface ip address, default: %s)\n", OPTION_ADDRESS_DEFAULT);
         fprintf(stdout, "  -p. --port   : listening port (values: 0 < port < 65536, default: %d)\n", OPTION_PORT_DEFAULT);
@@ -89,6 +89,10 @@ static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
                 if (wlen != rlen) {
                         return -EIO;
                 }
+                char *wdata;
+                wdata = medusa_buffer_linearize(rbuffer, 0, wlen);
+                fprintf(stdout, "%.*s", (int) wlen, wdata);
+                fflush(stdout);
                 rc = medusa_buffer_choke(rbuffer, 0, wlen);
                 if (rc < 0) {
                         return rc;
@@ -171,7 +175,7 @@ int main (int argc, char *argv[])
 
         g_running = 1;
 
-        while ((c = getopt_long(argc, argv, "ha:p:", longopts, NULL)) != -1) {
+        while ((c = getopt_long(argc, argv, "ha:p:s:c:k:", longopts, NULL)) != -1) {
                 switch (c) {
                         case OPTION_HELP:
                                 usage(argv[0]);
@@ -245,6 +249,22 @@ int main (int argc, char *argv[])
         medusa_tcpsocket = medusa_tcpsocket_bind_with_options(&medusa_tcpsocket_bind_options);
         if (MEDUSA_IS_ERR_OR_NULL(medusa_tcpsocket)) {
                 err = MEDUSA_PTR_ERR(medusa_tcpsocket);
+                goto out;
+        }
+
+        rc = medusa_tcpsocket_set_ssl_certificate(medusa_tcpsocket, option_ssl_certificate);
+        if (rc < 0) {
+                err = rc;
+                goto out;
+        }
+        rc = medusa_tcpsocket_set_ssl_privatekey(medusa_tcpsocket, option_ssl_privatekey);
+        if (rc < 0) {
+                err = rc;
+                goto out;
+        }
+        rc = medusa_tcpsocket_set_ssl(medusa_tcpsocket, option_ssl);
+        if (rc < 0) {
+                err = rc;
                 goto out;
         }
 
