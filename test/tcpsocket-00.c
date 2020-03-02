@@ -11,7 +11,19 @@ int main (int argc, char *argv[])
         (void) argc;
         (void) argv;
         fprintf(stderr, "start\n");
-        tcpsocket = medusa_tcpsocket_create(NULL, NULL, NULL);
+        tcpsocket = medusa_tcpsocket_bind(NULL, 0, NULL, 0, NULL, NULL);
+        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -1;
+        }
+        tcpsocket = medusa_tcpsocket_accept(NULL, NULL, NULL);
+        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -1;
+        }
+        tcpsocket = medusa_tcpsocket_connect(NULL, 0, NULL, 0, NULL, NULL);
+        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -1;
+        }
+        tcpsocket = medusa_tcpsocket_attach(NULL, -1, NULL, NULL);
         if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -1;
         }
