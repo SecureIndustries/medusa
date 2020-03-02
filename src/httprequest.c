@@ -1245,7 +1245,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
         int rc;
         int ret;
         struct medusa_url medusa_url;
-        struct medusa_tcpsocket_init_options medusa_tcpsocket_init_options;
+        struct medusa_tcpsocket_connect_options medusa_tcpsocket_connect_options;
 
         int64_t i;
         int64_t olen;
@@ -1280,32 +1280,27 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
 
         ret = 0;
 
-        rc = medusa_tcpsocket_init_options_default(&medusa_tcpsocket_init_options);
+        rc = medusa_tcpsocket_connect_options_default(&medusa_tcpsocket_connect_options);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
         }
-        medusa_tcpsocket_init_options.monitor     = httprequest->subject.monitor;
-        medusa_tcpsocket_init_options.onevent     = httprequest_tcpsocket_onevent;
-        medusa_tcpsocket_init_options.context     = httprequest;
-        medusa_tcpsocket_init_options.nonblocking = 1;
-        medusa_tcpsocket_init_options.enabled     = 1;
-        httprequest->tcpsocket = medusa_tcpsocket_create_with_options_unlocked(&medusa_tcpsocket_init_options);
+        medusa_tcpsocket_connect_options.monitor     = httprequest->subject.monitor;
+        medusa_tcpsocket_connect_options.onevent     = httprequest_tcpsocket_onevent;
+        medusa_tcpsocket_connect_options.context     = httprequest;
+        medusa_tcpsocket_connect_options.protocol    = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
+        medusa_tcpsocket_connect_options.address     = medusa_url.host;
+        medusa_tcpsocket_connect_options.port        = medusa_url.port;
+        medusa_tcpsocket_connect_options.timeout     = httprequest->connect_timeout;
+        medusa_tcpsocket_connect_options.nonblocking = 1;
+        medusa_tcpsocket_connect_options.buffered    = 0;
+        medusa_tcpsocket_connect_options.enabled     = 1;
+        httprequest->tcpsocket = medusa_tcpsocket_connect_with_options_unlocked(&medusa_tcpsocket_connect_options);
         if (MEDUSA_IS_ERR_OR_NULL(httprequest->tcpsocket)) {
                 ret = MEDUSA_PTR_ERR(httprequest->tcpsocket);
                 goto bail;
         }
-        rc = medusa_tcpsocket_set_connect_timeout_unlocked(httprequest->tcpsocket, httprequest->connect_timeout);
-        if (rc < 0) {
-                ret = rc;
-                goto bail;
-        }
         rc = medusa_tcpsocket_set_read_timeout_unlocked(httprequest->tcpsocket, httprequest->read_timeout);
-        if (rc < 0) {
-                ret = rc;
-                goto bail;
-        }
-        rc = medusa_tcpsocket_connect_unlocked(httprequest->tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, medusa_url.host, medusa_url.port);
         if (rc < 0) {
                 ret = rc;
                 goto bail;

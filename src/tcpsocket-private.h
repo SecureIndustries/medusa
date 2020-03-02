@@ -13,8 +13,8 @@ struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options_unlocked (struct 
 struct medusa_tcpsocket * medusa_tcpsocket_connect_unlocked (struct medusa_monitor *monitor, unsigned int protocol, const char *address, unsigned short port, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
 struct medusa_tcpsocket * medusa_tcpsocket_connect_with_options_unlocked (const struct medusa_tcpsocket_connect_options *options);
 
-struct medusa_tcpsocket * medusa_tcpsocket_attach_unlocked (struct medusa_tcpsocket *tcpsocket, int fd);
-struct medusa_tcpsocket * medusa_tcpsocket_attach_with_options_unlocked (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_attach_options *options);
+struct medusa_tcpsocket * medusa_tcpsocket_attach_unlocked (struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
+struct medusa_tcpsocket * medusa_tcpsocket_attach_with_options_unlocked (const struct medusa_tcpsocket_attach_options *options);
 
 void medusa_tcpsocket_destroy_unlocked (struct medusa_tcpsocket *tcpsocket);
 
