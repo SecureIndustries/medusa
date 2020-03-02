@@ -144,21 +144,14 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
                         if (rlength > (int) strlen(option_string) + 1) {
                                 return -EIO;
                         }
-                        data = malloc(rlength);
+                        data = medusa_buffer_linearize(rbuffer, 0, rlength);
                         if (data == NULL) {
                                 return -ENOMEM;
                         }
-                        rc = medusa_buffer_read_data(rbuffer, 0, data, rlength);
-                        if (rc < 0) {
-                                free(data);
-                                return rc;
-                        }
                         rc = strcmp(data, option_string);
                         if (rc != 0) {
-                                free(data);
                                 return -EIO;
                         }
-                        free(data);
                 }
                 g_running = 0;
         }

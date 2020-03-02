@@ -20,18 +20,27 @@
 
 static int g_running;
 
-#define OPTION_ADDRESS_DEFAULT  "0.0.0.0"
-#define OPTION_PORT_DEFAULT     12345
+#define OPTION_ADDRESS_DEFAULT          "0.0.0.0"
+#define OPTION_PORT_DEFAULT             12345
+#define OPTION_SSL_DEFAULT              0
+#define OPTION_SSL_CERTIFICATE_DEFAULT  "certificate.crt"
+#define OPTION_SSL_PRIVATEKEY_DEFAULT   "privatekey.key"
 
-#define OPTION_HELP             'h'
-#define OPTION_ADDRESS          'a'
-#define OPTION_PORT             'p'
+#define OPTION_HELP                     'h'
+#define OPTION_ADDRESS                  'a'
+#define OPTION_PORT                     'p'
+#define OPTION_SSL                      's'
+#define OPTION_SSL_CERTIFICATE          'c'
+#define OPTION_SSL_PRIVATEKEY           'k'
 
 static struct option longopts[] = {
-        { "help",               no_argument,            NULL,   OPTION_HELP     },
-        { "address",            required_argument,      NULL,   OPTION_ADDRESS  },
-        { "port",               required_argument,      NULL,   OPTION_PORT     },
-        { NULL,                 0,                      NULL,   0               }
+        { "help",               no_argument,            NULL,   OPTION_HELP             },
+        { "address",            required_argument,      NULL,   OPTION_ADDRESS          },
+        { "port",               required_argument,      NULL,   OPTION_PORT             },
+        { "ssl",                required_argument,      NULL,   OPTION_SSL              },
+        { "ssl_certificate",    required_argument,      NULL,   OPTION_SSL_CERTIFICATE  },
+        { "ssl_privatekey",     required_argument,      NULL,   OPTION_SSL_PRIVATEKEY   },
+        { NULL,                 0,                      NULL,   0                       }
 };
 
 static void usage (const char *pname)
@@ -40,6 +49,9 @@ static void usage (const char *pname)
         fprintf(stdout, "  -h. --help   : this text\n");
         fprintf(stdout, "  -a, --address: listening address (values: interface ip address, default: %s)\n", OPTION_ADDRESS_DEFAULT);
         fprintf(stdout, "  -p. --port   : listening port (values: 0 < port < 65536, default: %d)\n", OPTION_PORT_DEFAULT);
+        fprintf(stdout, "  -s, --ssl            : enable ssl (default: %d)\n", OPTION_SSL_DEFAULT);
+        fprintf(stdout, "  -c, --ssl_certificate: ssl certificate (default: %s)\n", OPTION_SSL_CERTIFICATE_DEFAULT);
+        fprintf(stdout, "  -k, --ssl_privatekey : ssl privatekey (default: %s)\n", OPTION_SSL_PRIVATEKEY_DEFAULT);
 }
 
 static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
@@ -131,6 +143,10 @@ int main (int argc, char *argv[])
         int option_port;
         const char *option_address;
 
+        int option_ssl;
+        const char *option_ssl_certificate;
+        const char *option_ssl_privatekey;
+
         struct medusa_tcpsocket *medusa_tcpsocket;
         struct medusa_tcpsocket_bind_options medusa_tcpsocket_bind_options;
 
@@ -149,6 +165,10 @@ int main (int argc, char *argv[])
         option_port     = OPTION_PORT_DEFAULT;
         option_address  = OPTION_ADDRESS_DEFAULT;
 
+        option_ssl              = OPTION_SSL;
+        option_ssl_certificate  = OPTION_SSL_CERTIFICATE_DEFAULT;
+        option_ssl_privatekey   = OPTION_SSL_PRIVATEKEY_DEFAULT;
+
         g_running = 1;
 
         while ((c = getopt_long(argc, argv, "ha:p:", longopts, NULL)) != -1) {
@@ -161,6 +181,15 @@ int main (int argc, char *argv[])
                                 break;
                         case OPTION_PORT:
                                 option_port = atoi(optarg);
+                                break;
+                        case OPTION_SSL:
+                                option_ssl = !!atoi(optarg);
+                                break;
+                        case OPTION_SSL_CERTIFICATE:
+                                option_ssl_certificate = optarg;
+                                break;
+                        case OPTION_SSL_PRIVATEKEY:
+                                option_ssl_privatekey = optarg;
                                 break;
                         default:
                                 fprintf(stderr, "unknown option: %d\n", optopt);
