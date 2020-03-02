@@ -2116,6 +2116,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_connect_timeou
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
+        if (!tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_CONNECT)) {
+                return -EINVAL;
+        }
         if (timeout < 0) {
                 if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ctimer)) {
                         medusa_timer_destroy(tcpsocket->ctimer);
