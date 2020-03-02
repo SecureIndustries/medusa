@@ -175,6 +175,10 @@ static int test_poll (unsigned int poll)
         if (rc < 0) {
                 goto bail;
         }
+        rc = medusa_tcpsocket_set_ssl(tcpsocket, 1);
+        if (rc < 0) {
+                goto bail;
+        }
         for (port = 12345; port < 65535; port++) {
                 rc = medusa_tcpsocket_bind(tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, "127.0.0.1", port);
                 if (rc == 0) {
@@ -201,6 +205,10 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
         rc = medusa_tcpsocket_set_nonblocking(tcpsocket, 1);
+        if (rc < 0) {
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_ssl(tcpsocket, 1);
         if (rc < 0) {
                 goto bail;
         }
