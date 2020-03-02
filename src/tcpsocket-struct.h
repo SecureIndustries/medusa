@@ -15,6 +15,8 @@ struct medusa_tcpsocket {
         struct medusa_timer *rtimer;
         struct medusa_buffer *wbuffer;
         struct medusa_buffer *rbuffer;
+        char *ssl_certificate;
+        char *ssl_privatekey;
         void *userdata;
 };
 
