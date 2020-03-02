@@ -180,7 +180,7 @@ int main (int argc, char *argv[])
         const char *option_string;
 
         struct medusa_tcpsocket *medusa_tcpsocket;
-        struct medusa_tcpsocket_init_options medusa_tcpsocket_init_options;
+        struct medusa_tcpsocket_connect_options medusa_tcpsocket_connect_options;
 
         struct medusa_buffer *medusa_tcpsocket_wbuffer;
 
@@ -235,25 +235,23 @@ int main (int argc, char *argv[])
                 goto out;
         }
 
-        rc = medusa_tcpsocket_init_options_default(&medusa_tcpsocket_init_options);
+        rc = medusa_tcpsocket_connect_options_default(&medusa_tcpsocket_connect_options);
         if (rc < 0) {
                 err = rc;
                 goto out;
         }
-        medusa_tcpsocket_init_options.monitor     = medusa_monitor;
-        medusa_tcpsocket_init_options.onevent     = sender_medusa_tcpsocket_onevent;
-        medusa_tcpsocket_init_options.context     = (void *) option_string;
-        medusa_tcpsocket_init_options.nonblocking = 1;
-        medusa_tcpsocket_init_options.enabled     = 1;
-        medusa_tcpsocket_init_options.buffered    = 1;
-        medusa_tcpsocket = medusa_tcpsocket_create_with_options(&medusa_tcpsocket_init_options);
+        medusa_tcpsocket_connect_options.monitor     = medusa_monitor;
+        medusa_tcpsocket_connect_options.onevent     = sender_medusa_tcpsocket_onevent;
+        medusa_tcpsocket_connect_options.context     = (void *) option_string;
+        medusa_tcpsocket_connect_options.protocol    = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
+        medusa_tcpsocket_connect_options.address     = option_address;
+        medusa_tcpsocket_connect_options.port        = option_port;
+        medusa_tcpsocket_connect_options.nonblocking = 1;
+        medusa_tcpsocket_connect_options.buffered    = 1;
+        medusa_tcpsocket_connect_options.enabled     = 1;
+        medusa_tcpsocket = medusa_tcpsocket_connect_with_options(&medusa_tcpsocket_connect_options);
         if (MEDUSA_IS_ERR_OR_NULL(medusa_tcpsocket)) {
                 err = MEDUSA_PTR_ERR(medusa_tcpsocket);
-                goto out;
-        }
-        rc = medusa_tcpsocket_connect(medusa_tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, option_address, option_port);
-        if (rc < 0) {
-                err = rc;
                 goto out;
         }
 

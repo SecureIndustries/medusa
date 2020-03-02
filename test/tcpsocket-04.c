@@ -130,7 +130,7 @@ static int test_poll (unsigned int poll)
         int rc;
 
         struct medusa_monitor *monitor;
-        struct medusa_monitor_init_options options;
+        struct medusa_monitor_init_options monitor_init_options;
 
         unsigned short port;
         unsigned int connected;
@@ -141,10 +141,10 @@ static int test_poll (unsigned int poll)
         monitor = NULL;
         connected = 0;
 
-        medusa_monitor_init_options_default(&options);
-        options.poll.type = poll;
+        medusa_monitor_init_options_default(&monitor_init_options);
+        monitor_init_options.poll.type = poll;
 
-        monitor = medusa_monitor_create_with_options(&options);
+        monitor = medusa_monitor_create_with_options(&monitor_init_options);
         if (monitor == NULL) {
                 goto bail;
         }
