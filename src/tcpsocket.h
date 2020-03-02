@@ -126,6 +126,9 @@ struct medusa_tcpsocket_connect_options {
 };
 
 struct medusa_tcpsocket_attach_options {
+        struct medusa_monitor *monitor;
+        int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param);
+        void *context;
         int fd;
         int bound;
         int clodestroy;
@@ -157,7 +160,7 @@ struct medusa_tcpsocket * medusa_tcpsocket_connect (struct medusa_monitor *monit
 struct medusa_tcpsocket * medusa_tcpsocket_connect_with_options (const struct medusa_tcpsocket_connect_options *options);
 
 int medusa_tcpsocket_attach_options_default (struct medusa_tcpsocket_attach_options *options);
-struct medusa_tcpsocket * medusa_tcpsocket_attach (struct medusa_monitor *monitor, int fd);
+struct medusa_tcpsocket * medusa_tcpsocket_attach (struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
 struct medusa_tcpsocket * medusa_tcpsocket_attach_with_options (const struct medusa_tcpsocket_attach_options *options);
 
 void medusa_tcpsocket_destroy (struct medusa_tcpsocket *tcpsocket);
