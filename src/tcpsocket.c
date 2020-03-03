@@ -16,8 +16,10 @@
 #include <netdb.h>
 #include <errno.h>
 
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#endif
 
 #include "error.h"
 #include "pool.h"
@@ -54,6 +56,7 @@ enum {
         MEDUSA_TCPSOCKET_FLAG_REUSEADDR         = (1 <<  9),
         MEDUSA_TCPSOCKET_FLAG_REUSEPORT         = (1 << 10),
         MEDUSA_TCPSOCKET_FLAG_BACKLOG           = (1 << 11),
+        MEDUSA_TCPSOCKET_FLAG_SSL               = (1 << 12),
 #define MEDUSA_TCPSOCKET_FLAG_NONE              MEDUSA_TCPSOCKET_FLAG_NONE
 #define MEDUSA_TCPSOCKET_FLAG_BIND              MEDUSA_TCPSOCKET_FLAG_BIND
 #define MEDUSA_TCPSOCKET_FLAG_ACCEPT            MEDUSA_TCPSOCKET_FLAG_ACCEPT
@@ -66,6 +69,7 @@ enum {
 #define MEDUSA_TCPSOCKET_FLAG_REUSEADDR         MEDUSA_TCPSOCKET_FLAG_REUSEADDR
 #define MEDUSA_TCPSOCKET_FLAG_REUSEPORT         MEDUSA_TCPSOCKET_FLAG_REUSEPORT
 #define MEDUSA_TCPSOCKET_FLAG_BACKLOG           MEDUSA_TCPSOCKET_FLAG_BACKLOG
+#define MEDUSA_TCPSOCKET_FLAG_SSL               MEDUSA_TCPSOCKET_FLAG_SSL
 };
 
 #if defined(MEDUSA_TCPSOCKET_USE_POOL) && (MEDUSA_TCPSOCKET_USE_POOL == 1)
@@ -331,6 +335,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                         if (niovecs == 0) {
                                                 break;
                                         }
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
                                         if (tcpsocket->ssl != NULL) {
                                                 wlength = SSL_write(tcpsocket->ssl, iovec.iov_base, iovec.iov_len);
                                                 if (wlength <= 0) {
@@ -360,7 +365,9 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                                 errno = EIO;
                                                         }
                                                 }
-                                        } else {
+                                        } else
+#endif
+                                        {
                                                 wlength = send(medusa_io_get_fd_unlocked(io), iovec.iov_base, iovec.iov_len, 0);
                                         }
                                         if (wlength < 0) {
@@ -499,6 +506,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                 }
                                                 break;
                                         }
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
                                         if (tcpsocket->ssl != NULL) {
                                                 if (tcpsocket->ssl_wantread ||
                                                     tcpsocket->ssl_wantwrite) {
@@ -533,7 +541,9 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                                 errno = EIO;
                                                         }
                                                 }
-                                        } else {
+                                        } else
+#endif
+                                        {
                                                 rc = recv(medusa_io_get_fd_unlocked(io), iovec.iov_base, iovec.iov_len, 0);
                                         }
                                         if (rc < 0) {
@@ -2281,6 +2291,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
         if (tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_BIND) ||
             tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ACCEPT)) {
                 if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_certificate) ||
@@ -2359,6 +2370,12 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                 }
                 tcpsocket->ssl_context = NULL;
         }
+#endif
+        if (enabled) {
+                tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL);
+        } else {
+                tcpsocket_del_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL);
+        }
         return 0;
 }
 
@@ -2379,7 +2396,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_ssl_unlocked (
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
-        return tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_REUSEADDR);
+        return tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_ssl (const struct medusa_tcpsocket *tcpsocket)
@@ -2399,6 +2416,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_certificat
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
         if (tcpsocket->ssl_certificate != NULL) {
                 free(tcpsocket->ssl_certificate);
                 tcpsocket->ssl_certificate = NULL;
@@ -2409,6 +2427,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_certificat
                         return -ENOMEM;
                 }
         }
+#else
+        (void) certificate;
+#endif
         return 0;
 }
 
@@ -2429,7 +2450,11 @@ __attribute__ ((visibility ("default"))) const char * medusa_tcpsocket_get_ssl_c
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
         return tcpsocket->ssl_certificate;
+#else
+        return NULL;
+#endif
 }
 
 __attribute__ ((visibility ("default"))) const char * medusa_tcpsocket_get_ssl_certificate (const struct medusa_tcpsocket *tcpsocket)
@@ -2449,6 +2474,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_privatekey
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
         if (tcpsocket->ssl_privatekey != NULL) {
                 free(tcpsocket->ssl_privatekey);
                 tcpsocket->ssl_privatekey = NULL;
@@ -2459,6 +2485,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_privatekey
                         return -ENOMEM;
                 }
         }
+#else
+        (void) privatekey;
+#endif
         return 0;
 }
 
@@ -2479,7 +2508,10 @@ __attribute__ ((visibility ("default"))) const char * medusa_tcpsocket_get_ssl_p
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
         return tcpsocket->ssl_privatekey;
+#endif
+        return NULL;
 }
 
 __attribute__ ((visibility ("default"))) const char * medusa_tcpsocket_get_ssl_privatekey (const struct medusa_tcpsocket *tcpsocket)
@@ -2737,6 +2769,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent_unlocked (
                         medusa_buffer_destroy(tcpsocket->rbuffer);
                         tcpsocket->rbuffer = NULL;
                 }
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
                 if (tcpsocket->ssl_certificate != NULL) {
                         free(tcpsocket->ssl_certificate);
                         tcpsocket->ssl_certificate = NULL;
@@ -2753,6 +2786,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent_unlocked (
                         SSL_CTX_free(tcpsocket->ssl_context);
                         tcpsocket->ssl_context = NULL;
                 }
+#endif
                 if (tcpsocket->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
 #if defined(MEDUSA_TCPSOCKET_USE_POOL) && (MEDUSA_TCPSOCKET_USE_POOL == 1)
                         medusa_pool_free(tcpsocket);

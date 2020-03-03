@@ -11,8 +11,10 @@
 
 #include <sys/uio.h>
 
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#endif
 
 #include "medusa/error.h"
 #include "medusa/buffer.h"
@@ -166,8 +168,10 @@ int main (int argc, char *argv[])
         (void) argc;
         (void) argv;
 
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
         SSL_library_init();
         SSL_load_error_strings();
+#endif
 
         err             = 0;
         medusa_monitor  = NULL;

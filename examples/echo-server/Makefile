@@ -18,7 +18,7 @@ medusa-echo-server_ldflags-y += \
 	-lpthread \
 	-lm
 
-medusa-echo-server_ldflags-y += \
+medusa-echo-server_ldflags-${MEDUSA_TCPSOCKET_OPENSSL_ENABLE} += \
 	-lssl \
 	-lcrypto
 
