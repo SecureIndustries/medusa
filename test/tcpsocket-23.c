@@ -9,6 +9,11 @@
 #include <errno.h>
 #include <sys/queue.h>
 
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#endif
+
 #include "medusa/error.h"
 #include "medusa/buffer.h"
 #include "medusa/tcpsocket.h"
@@ -319,6 +324,24 @@ static struct server * server_create (struct medusa_monitor *monitor, const char
         }
         server->port = port;
 
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+        rc = medusa_tcpsocket_set_ssl_certificate(server->tcpsocket, "tcpsocket-ssl.crt");
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl_certificate failed\n");
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_ssl_privatekey(server->tcpsocket, "tcpsocket-ssl.key");
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl_privatekey failed\n");
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_ssl(server->tcpsocket, 1);
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl failed\n");
+                goto bail;
+        }
+#endif
+
         return server;
 bail:   if (server != NULL) {
                 server_destroy(server);
@@ -340,6 +363,11 @@ static int test_poll (unsigned int poll)
         monitor = NULL;
         client  = NULL;
         server  = NULL;
+
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+        SSL_library_init();
+        SSL_load_error_strings();
+#endif
 
         rc = medusa_monitor_init_options_default(&monitor_init_options);
         if (rc != 0) {

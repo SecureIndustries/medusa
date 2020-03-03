@@ -15,6 +15,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#endif
+
 #include "medusa/error.h"
 #include "medusa/buffer.h"
 #include "medusa/tcpsocket.h"
@@ -146,6 +151,11 @@ static int test_poll (unsigned int poll)
 
         fd = -1;
         monitor = NULL;
+
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+        SSL_library_init();
+        SSL_load_error_strings();
+#endif
 
         rc = medusa_monitor_init_options_default(&monitor_init_options);
         if (rc != 0) {

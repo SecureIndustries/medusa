@@ -7,6 +7,11 @@
 #include <signal.h>
 #include <errno.h>
 
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#endif
+
 #include "medusa/error.h"
 #include "medusa/tcpsocket.h"
 #include "medusa/monitor.h"
@@ -45,6 +50,11 @@ static int test_poll (unsigned int poll)
         struct medusa_tcpsocket_bind_options tcpsocket_bind_options;
 
         monitor = NULL;
+
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+        SSL_library_init();
+        SSL_load_error_strings();
+#endif
 
         medusa_monitor_init_options_default(&monitor_init_options);
         monitor_init_options.poll.type = poll;
@@ -95,6 +105,24 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
         fprintf(stderr, "port: %d\n", port);
+
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+        rc = medusa_tcpsocket_set_ssl_certificate(tcpsocket, "tcpsocket-ssl.crt");
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl_certificate failed\n");
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_ssl_privatekey(tcpsocket, "tcpsocket-ssl.key");
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl_privatekey failed\n");
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_ssl(tcpsocket, 1);
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl failed\n");
+                goto bail;
+        }
+#endif
 
         medusa_monitor_destroy(monitor);
         monitor = NULL;
