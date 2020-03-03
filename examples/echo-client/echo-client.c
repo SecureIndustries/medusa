@@ -5,14 +5,19 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <signal.h>
 #include <errno.h>
 
 #include <sys/uio.h>
+
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #include "medusa/error.h"
 #include "medusa/buffer.h"
 #include "medusa/io.h"
 #include "medusa/tcpsocket.h"
+#include "medusa/signal.h"
 #include "medusa/monitor.h"
 
 static int g_running;
@@ -55,6 +60,14 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
         (void) param;
 
         if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
+        }
+
+        if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
+                rc = medusa_tcpsocket_set_ssl(tcpsocket, 1);
+                if (rc < 0) {
+                        fprintf(stderr, "can not set ssl\n");
+                        return rc;
+                }
         }
 
         if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE) {
@@ -162,6 +175,15 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
         return 0;
 }
 
+static int sigpipe_medusa_signal_onevent (struct medusa_signal *signal, unsigned int events, void *context, void *param)
+{
+        (void) signal;
+        (void) events;
+        (void) context;
+        (void) param;
+        return 0;
+}
+
 int main (int argc, char *argv[])
 {
         int rc;
@@ -171,6 +193,9 @@ int main (int argc, char *argv[])
         int option_port;
         const char *option_address;
         const char *option_string;
+
+        struct medusa_signal *medusa_signal;
+        struct medusa_signal_init_options medusa_signal_init_options;
 
         struct medusa_tcpsocket *medusa_tcpsocket;
         struct medusa_tcpsocket_connect_options medusa_tcpsocket_connect_options;
@@ -182,6 +207,9 @@ int main (int argc, char *argv[])
 
         (void) argc;
         (void) argv;
+
+        SSL_library_init();
+        SSL_load_error_strings();
 
         err = 0;
         medusa_monitor = NULL;
@@ -225,6 +253,23 @@ int main (int argc, char *argv[])
         medusa_monitor = medusa_monitor_create_with_options(&medusa_monitor_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(medusa_monitor)) {
                 err = MEDUSA_PTR_ERR(medusa_monitor);
+                goto out;
+        }
+
+        rc = medusa_signal_init_options_default(&medusa_signal_init_options);
+        if (rc < 0) {
+                err = rc;
+                goto out;
+        }
+        medusa_signal_init_options.number     = SIGPIPE;
+        medusa_signal_init_options.onevent    = sigpipe_medusa_signal_onevent;
+        medusa_signal_init_options.context    = NULL;
+        medusa_signal_init_options.singleshot = 0;
+        medusa_signal_init_options.enabled    = 1;
+        medusa_signal_init_options.monitor    = medusa_monitor;
+        medusa_signal = medusa_signal_create_with_options(&medusa_signal_init_options);
+        if (MEDUSA_IS_ERR_OR_NULL(medusa_signal)) {
+                err = MEDUSA_PTR_ERR(medusa_signal);
                 goto out;
         }
 

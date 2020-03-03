@@ -11,6 +11,9 @@
 
 #include <sys/uio.h>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
 #include "medusa/error.h"
 #include "medusa/buffer.h"
 #include "medusa/io.h"
@@ -162,6 +165,9 @@ int main (int argc, char *argv[])
 
         (void) argc;
         (void) argv;
+
+        SSL_library_init();
+        SSL_load_error_strings();
 
         err             = 0;
         medusa_monitor  = NULL;
