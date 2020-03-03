@@ -156,10 +156,18 @@ static struct client * client_create (struct medusa_monitor *monitor, const char
                 fprintf(stderr, "medusa_tcpsocket_connect_with_options failed\n");
                 goto bail;
         }
-        if (medusa_tcpsocket_get_state(client->tcpsocket) == MEDUSA_TCPSOCKET_STATE_ERROR) {
+        if (medusa_tcpsocket_get_state(client->tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
                 fprintf(stderr, "medusa_tcpsocket_connect_with_options error: %d, %s\n", medusa_tcpsocket_get_error(client->tcpsocket), strerror(medusa_tcpsocket_get_error(client->tcpsocket)));
                 goto bail;
         }
+
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+        rc = medusa_tcpsocket_set_ssl(client->tcpsocket, 1);
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl failed\n");
+                goto bail;
+        }
+#endif
 
         return client;
 bail:   if (client != NULL) {
@@ -304,7 +312,7 @@ static struct server * server_create (struct medusa_monitor *monitor, const char
                         fprintf(stderr, "medusa_tcpsocket_bind_with_options failed\n");
                         goto bail;
                 }
-                if (medusa_tcpsocket_get_state(server->tcpsocket) == MEDUSA_TCPSOCKET_STATE_ERROR) {
+                if (medusa_tcpsocket_get_state(server->tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
                         fprintf(stderr, "medusa_tcpsocket_bind_with_options error: %d, %s\n", medusa_tcpsocket_get_error(server->tcpsocket), strerror(medusa_tcpsocket_get_error(server->tcpsocket)));
                         medusa_tcpsocket_destroy(server->tcpsocket);
                 } else {

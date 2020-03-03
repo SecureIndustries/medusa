@@ -365,7 +365,7 @@ static int test_poll (unsigned int poll)
                         fprintf(stderr, "medusa_tcpsocket_bind_with_options failed\n");
                         goto bail;
                 }
-                if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_ERROR) {
+                if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
                         fprintf(stderr, "medusa_tcpsocket_bind_with_options error: %d, %s\n", medusa_tcpsocket_get_error(tcpsocket), strerror(medusa_tcpsocket_get_error(tcpsocket)));
                         medusa_tcpsocket_destroy(tcpsocket);
                 } else {
@@ -419,10 +419,18 @@ static int test_poll (unsigned int poll)
                 fprintf(stderr, "medusa_tcpsocket_connect_with_options failed\n");
                 goto bail;
         }
-        if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_ERROR) {
+        if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
                 fprintf(stderr, "medusa_tcpsocket_connect_with_options error: %d, %s\n", medusa_tcpsocket_get_error(tcpsocket), strerror(medusa_tcpsocket_get_error(tcpsocket)));
                 goto bail;
         }
+
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+        rc = medusa_tcpsocket_set_ssl(tcpsocket, 1);
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl failed\n");
+                goto bail;
+        }
+#endif
 
         rc = medusa_monitor_run(monitor);
         if (rc != 0) {

@@ -85,7 +85,7 @@ static int test_poll (unsigned int poll)
                 tcpsocket_bind_options.backlog     = 128;
                 tcpsocket_bind_options.nonblocking = 1;
                 tcpsocket_bind_options.nodelay     = 0;
-                tcpsocket_bind_options.buffered    = 0;
+                tcpsocket_bind_options.buffered    = 1;
                 tcpsocket_bind_options.enabled     = 1;
 
                 tcpsocket = medusa_tcpsocket_bind_with_options(&tcpsocket_bind_options);
@@ -93,7 +93,7 @@ static int test_poll (unsigned int poll)
                         fprintf(stderr, "medusa_tcpsocket_bind failed\n");
                         goto bail;
                 }
-                if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_ERROR) {
+                if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
                         fprintf(stderr, "medusa_tcpsocket_bind error: %d, %s\n", medusa_tcpsocket_get_error(tcpsocket), strerror(medusa_tcpsocket_get_error(tcpsocket)));
                         medusa_tcpsocket_destroy(tcpsocket);
                 } else {
