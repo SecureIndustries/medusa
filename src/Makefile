@@ -17,6 +17,8 @@ ifeq ($(__LINUX__), y)
 MEDUSA_SIGNAL_SIGNALFD_ENABLE	?= y
 endif
 
+MEDUSA_TCPSOCKET_OPENSSL_ENABLE ?= y
+
 target.a-y = \
 	libmedusa.a \
 
@@ -76,6 +78,9 @@ libmedusa.a_cflags-${MEDUSA_SIGNAL_SIGNALFD_ENABLE} += \
 	-DMEDUSA_SIGNAL_SIGNALFD_ENABLE=1
 libmedusa.a_files-${MEDUSA_SIGNAL_SIGNALFD_ENABLE} += \
 	signal-signalfd.c
+
+libmedusa.a_cflags-${MEDUSA_TCPSOCKET_OPENSSL_ENABLE} += \
+	-DMEDUSA_TCPSOCKET_OPENSSL_ENABLE=1
 
 libmedusa.a_files-y += \
 	tcpsocket.c \

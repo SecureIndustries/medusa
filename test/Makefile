@@ -26,6 +26,10 @@ define test-defaults
 		-lpthread \
 		-lm
 
+	$1_ldflags-${MEDUSA_TCPSOCKET_OPENSSL_ENABLE} += \
+		-lssl \
+		-lcrypto
+
 	$1_ldflags-$(__LINUX__) += \
 		-lrt
 

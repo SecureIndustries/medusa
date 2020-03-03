@@ -20,6 +20,10 @@ medusa-http-benchmark_ldflags-y += \
 	-lpthread \
 	-lm
 
+medusa-http-benchmark_ldflags-${MEDUSA_TCPSOCKET_OPENSSL_ENABLE} += \
+	-lssl \
+	-lcrypto
+
 medusa-http-benchmark_ldflags-$(__LINUX__) += \
 	-lrt
 

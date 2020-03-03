@@ -9,6 +9,11 @@
 #include <errno.h>
 #include <sys/queue.h>
 
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#endif
+
 #include "medusa/error.h"
 #include "medusa/buffer.h"
 #include "medusa/tcpsocket.h"
@@ -117,7 +122,7 @@ static struct client * client_create (struct medusa_monitor *monitor, const char
 {
         int rc;
         struct client *client;
-        struct medusa_tcpsocket_init_options tcpsocket_init_options;
+        struct medusa_tcpsocket_connect_options tcpsocket_connect_options;
 
         client = malloc(sizeof(struct client));
         if (client == NULL) {
@@ -130,31 +135,39 @@ static struct client * client_create (struct medusa_monitor *monitor, const char
         client->buffer_size   = 0;
         client->buffer_length = 0;
 
-        rc = medusa_tcpsocket_init_options_default(&tcpsocket_init_options);
-        if (rc != 0) {
-                fprintf(stderr, "can not init tcpsocket init options\n");
-                goto bail;
-        }
-        tcpsocket_init_options.monitor     = monitor;
-        tcpsocket_init_options.backlog     = 10;
-        tcpsocket_init_options.buffered    = 1;
-        tcpsocket_init_options.nodelay     = 1;
-        tcpsocket_init_options.nonblocking = 1;
-        tcpsocket_init_options.reuseaddr   = 1;
-        tcpsocket_init_options.reuseport   = 1;
-        tcpsocket_init_options.enabled     = 1;
-        tcpsocket_init_options.onevent     = client_tcpsocket_onevent;
-        tcpsocket_init_options.context     = client;
-        client->tcpsocket = medusa_tcpsocket_create_with_options(&tcpsocket_init_options);
-        if (MEDUSA_IS_ERR_OR_NULL(client->tcpsocket)) {
-                fprintf(stderr, "can not create tcpsocket\n");
-                goto bail;
-        }
-        rc = medusa_tcpsocket_connect(client->tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, host, port);
+        rc = medusa_tcpsocket_connect_options_default(&tcpsocket_connect_options);
         if (rc < 0) {
-                fprintf(stderr, "medusa_tcpsocket_connect failed\n");
+                fprintf(stderr, "medusa_tcpsocket_connect_options_default failed\n");
                 goto bail;
         }
+        tcpsocket_connect_options.monitor     = monitor;
+        tcpsocket_connect_options.onevent     = client_tcpsocket_onevent;
+        tcpsocket_connect_options.context     = client;
+        tcpsocket_connect_options.protocol    = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
+        tcpsocket_connect_options.address     = host;
+        tcpsocket_connect_options.port        = port;
+        tcpsocket_connect_options.nonblocking = 1;
+        tcpsocket_connect_options.nodelay     = 1;
+        tcpsocket_connect_options.buffered    = 1;
+        tcpsocket_connect_options.enabled     = 1;
+
+        client->tcpsocket = medusa_tcpsocket_connect_with_options(&tcpsocket_connect_options);
+        if (MEDUSA_IS_ERR_OR_NULL(client->tcpsocket)) {
+                fprintf(stderr, "medusa_tcpsocket_connect_with_options failed\n");
+                goto bail;
+        }
+        if (medusa_tcpsocket_get_state(client->tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+                fprintf(stderr, "medusa_tcpsocket_connect_with_options error: %d, %s\n", medusa_tcpsocket_get_error(client->tcpsocket), strerror(medusa_tcpsocket_get_error(client->tcpsocket)));
+                goto bail;
+        }
+
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+        rc = medusa_tcpsocket_set_ssl(client->tcpsocket, 1);
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl failed\n");
+                goto bail;
+        }
+#endif
 
         return client;
 bail:   if (client != NULL) {
@@ -263,7 +276,7 @@ static struct server * server_create (struct medusa_monitor *monitor, const char
         int rc;
         int port;
         struct server *server;
-        struct medusa_tcpsocket_init_options tcpsocket_init_options;
+        struct medusa_tcpsocket_bind_options tcpsocket_bind_options;
 
         server = malloc(sizeof(struct server));
         if (server == NULL) {
@@ -274,29 +287,35 @@ static struct server * server_create (struct medusa_monitor *monitor, const char
         TAILQ_INIT(&server->sessions);
         server->port = -1;
 
-        rc = medusa_tcpsocket_init_options_default(&tcpsocket_init_options);
-        if (rc != 0) {
-                fprintf(stderr, "can not init tcpsocket init options\n");
-                goto bail;
-        }
-        tcpsocket_init_options.monitor     = monitor;
-        tcpsocket_init_options.backlog     = 10;
-        tcpsocket_init_options.buffered    = 1;
-        tcpsocket_init_options.nodelay     = 1;
-        tcpsocket_init_options.nonblocking = 1;
-        tcpsocket_init_options.reuseaddr   = 1;
-        tcpsocket_init_options.reuseport   = 1;
-        tcpsocket_init_options.enabled     = 1;
-        tcpsocket_init_options.onevent     = server_tcpsocket_onevent;
-        tcpsocket_init_options.context     = server;
-        server->tcpsocket = medusa_tcpsocket_create_with_options(&tcpsocket_init_options);
-        if (MEDUSA_IS_ERR_OR_NULL(server->tcpsocket)) {
-                fprintf(stderr, "can not create tcpsocket\n");
-                goto bail;
-        }
         for (port = 12345; port < 65535; port++) {
-                rc = medusa_tcpsocket_bind(server->tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, host, port);
-                if (rc == 0) {
+                rc = medusa_tcpsocket_bind_options_default(&tcpsocket_bind_options);
+                if (rc < 0) {
+                        fprintf(stderr, "medusa_tcpsocket_bind_options_default failed\n");
+                        goto bail;
+                }
+                tcpsocket_bind_options.monitor     = monitor;
+                tcpsocket_bind_options.onevent     = server_tcpsocket_onevent;
+                tcpsocket_bind_options.context     = server;
+                tcpsocket_bind_options.protocol    = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
+                tcpsocket_bind_options.address     = host;
+                tcpsocket_bind_options.port        = port;
+                tcpsocket_bind_options.reuseaddr   = 1;
+                tcpsocket_bind_options.reuseport   = 1;
+                tcpsocket_bind_options.backlog     = 10;
+                tcpsocket_bind_options.nonblocking = 1;
+                tcpsocket_bind_options.nodelay     = 1;
+                tcpsocket_bind_options.buffered    = 1;
+                tcpsocket_bind_options.enabled     = 1;
+
+                server->tcpsocket = medusa_tcpsocket_bind_with_options(&tcpsocket_bind_options);
+                if (MEDUSA_IS_ERR_OR_NULL(server->tcpsocket)) {
+                        fprintf(stderr, "medusa_tcpsocket_bind_with_options failed\n");
+                        goto bail;
+                }
+                if (medusa_tcpsocket_get_state(server->tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+                        fprintf(stderr, "medusa_tcpsocket_bind_with_options error: %d, %s\n", medusa_tcpsocket_get_error(server->tcpsocket), strerror(medusa_tcpsocket_get_error(server->tcpsocket)));
+                        medusa_tcpsocket_destroy(server->tcpsocket);
+                } else {
                         break;
                 }
         }
@@ -305,6 +324,24 @@ static struct server * server_create (struct medusa_monitor *monitor, const char
                 goto bail;
         }
         server->port = port;
+
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+        rc = medusa_tcpsocket_set_ssl_certificate(server->tcpsocket, "tcpsocket-ssl.crt");
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl_certificate failed\n");
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_ssl_privatekey(server->tcpsocket, "tcpsocket-ssl.key");
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl_privatekey failed\n");
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_ssl(server->tcpsocket, 1);
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl failed\n");
+                goto bail;
+        }
+#endif
 
         return server;
 bail:   if (server != NULL) {
@@ -327,6 +364,11 @@ static int test_poll (unsigned int poll)
         monitor = NULL;
         client  = NULL;
         server  = NULL;
+
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+        SSL_library_init();
+        SSL_load_error_strings();
+#endif
 
         rc = medusa_monitor_init_options_default(&monitor_init_options);
         if (rc != 0) {

@@ -72,7 +72,7 @@ enum {
         MEDUSA_TCPSOCKET_STATE_RESOLVING                = 5,
         MEDUSA_TCPSOCKET_STATE_RESOLVED                 = 6,
         MEDUSA_TCPSOCKET_STATE_CONNECTING               = 7,
-        MEDUSA_TCPSOCKET_STATE_CONNECTED                = 8
+        MEDUSA_TCPSOCKET_STATE_CONNECTED                = 8,
 #define MEDUSA_TCPSOCKET_STATE_UNKNOWN                  MEDUSA_TCPSOCKET_STATE_UNKNOWN
 #define MEDUSA_TCPSOCKET_STATE_BINDING                  MEDUSA_TCPSOCKET_STATE_BINDING
 #define MEDUSA_TCPSOCKET_STATE_BOUND                    MEDUSA_TCPSOCKET_STATE_BOUND
@@ -84,16 +84,18 @@ enum {
 #define MEDUSA_TCPSOCKET_STATE_CONNECTED                MEDUSA_TCPSOCKET_STATE_CONNECTED
 };
 
-struct medusa_tcpsocket_init_options {
+struct medusa_tcpsocket_bind_options {
         struct medusa_monitor *monitor;
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param);
         void *context;
-        char *interface;
-        int nonblocking;
+        unsigned int protocol;
+        const char *address;
+        unsigned short port;
         int reuseaddr;
         int reuseport;
-        int backlog;
+        int nonblocking;
         int nodelay;
+        int backlog;
         int buffered;
         int enabled;
 };
@@ -101,30 +103,37 @@ struct medusa_tcpsocket_init_options {
 struct medusa_tcpsocket_accept_options {
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param);
         void *context;
-        char *interface;
         int nonblocking;
         int nodelay;
         int buffered;
         int enabled;
 };
 
-struct medusa_tcpsocket_bind_options {
-        unsigned int protocol;
-        const char *address;
-        unsigned short port;
-};
-
 struct medusa_tcpsocket_connect_options {
+        struct medusa_monitor *monitor;
+        int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param);
+        void *context;
         unsigned int protocol;
         const char *address;
         unsigned short port;
         double timeout;
+        int nonblocking;
+        int nodelay;
+        int buffered;
+        int enabled;
 };
 
 struct medusa_tcpsocket_attach_options {
+        struct medusa_monitor *monitor;
+        int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param);
+        void *context;
         int fd;
         int bound;
         int clodestroy;
+        int nonblocking;
+        int nodelay;
+        int buffered;
+        int enabled;
 };
 
 struct medusa_tcpsocket_event_buffered_write {
@@ -136,10 +145,22 @@ extern "C"
 {
 #endif
 
-int medusa_tcpsocket_init_options_default (struct medusa_tcpsocket_init_options *options);
+int medusa_tcpsocket_bind_options_default (struct medusa_tcpsocket_bind_options *options);
+struct medusa_tcpsocket * medusa_tcpsocket_bind (struct medusa_monitor *monitor, unsigned int protocol, const char *address, unsigned short port, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
+struct medusa_tcpsocket * medusa_tcpsocket_bind_with_options (const struct medusa_tcpsocket_bind_options *options);
 
-struct medusa_tcpsocket * medusa_tcpsocket_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
-struct medusa_tcpsocket * medusa_tcpsocket_create_with_options (const struct medusa_tcpsocket_init_options *options);
+int medusa_tcpsocket_accept_options_default (struct medusa_tcpsocket_accept_options *options);
+struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
+struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_accept_options *options);
+
+int medusa_tcpsocket_connect_options_default (struct medusa_tcpsocket_connect_options *options);
+struct medusa_tcpsocket * medusa_tcpsocket_connect (struct medusa_monitor *monitor, unsigned int protocol, const char *address, unsigned short port, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
+struct medusa_tcpsocket * medusa_tcpsocket_connect_with_options (const struct medusa_tcpsocket_connect_options *options);
+
+int medusa_tcpsocket_attach_options_default (struct medusa_tcpsocket_attach_options *options);
+struct medusa_tcpsocket * medusa_tcpsocket_attach (struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
+struct medusa_tcpsocket * medusa_tcpsocket_attach_with_options (const struct medusa_tcpsocket_attach_options *options);
+
 void medusa_tcpsocket_destroy (struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_get_state (const struct medusa_tcpsocket *tcpsocket);
@@ -153,9 +174,6 @@ int medusa_tcpsocket_disable (struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_buffered (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_buffered (const struct medusa_tcpsocket *tcpsocket);
-
-int medusa_tcpsocket_set_interface (struct medusa_tcpsocket *tcpsocket, const char *interface);
-const char * medusa_tcpsocket_get_interface (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_nonblocking (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_nonblocking (const struct medusa_tcpsocket *tcpsocket);
@@ -178,6 +196,15 @@ double medusa_tcpsocket_get_connect_timeout (const struct medusa_tcpsocket *tcps
 int medusa_tcpsocket_set_read_timeout (struct medusa_tcpsocket *tcpsocket, double timeout);
 double medusa_tcpsocket_get_read_timeout (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_set_ssl (struct medusa_tcpsocket *tcpsocket, int enable);
+int medusa_tcpsocket_get_ssl (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_ssl_certificate (struct medusa_tcpsocket *tcpsocket, const char *certificate);
+const char * medusa_tcpsocket_get_ssl_certificate (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_ssl_privatekey (struct medusa_tcpsocket *tcpsocket, const char *privatekey);
+const char * medusa_tcpsocket_get_ssl_privatekey (const struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_get_fd (const struct medusa_tcpsocket *tcpsocket);
 struct medusa_buffer * medusa_tcpsocket_get_read_buffer (const struct medusa_tcpsocket *tcpsocket);
 struct medusa_buffer * medusa_tcpsocket_get_write_buffer (const struct medusa_tcpsocket *tcpsocket);
@@ -186,22 +213,6 @@ int medusa_tcpsocket_set_events (struct medusa_tcpsocket *tcpsocket, unsigned in
 int medusa_tcpsocket_add_events (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 int medusa_tcpsocket_del_events (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 unsigned int medusa_tcpsocket_get_events (const struct medusa_tcpsocket *io);
-
-int medusa_tcpsocket_bind_options_default (struct medusa_tcpsocket_bind_options *options);
-int medusa_tcpsocket_bind (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
-int medusa_tcpsocket_bind_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_bind_options *options);
-;
-int medusa_tcpsocket_connect_options_default (struct medusa_tcpsocket_connect_options *options);
-int medusa_tcpsocket_connect (struct medusa_tcpsocket *tcpsocket, unsigned int protocol, const char *address, unsigned short port);
-int medusa_tcpsocket_connect_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_connect_options *options);
-
-int medusa_tcpsocket_attach_options_default (struct medusa_tcpsocket_attach_options *options);
-int medusa_tcpsocket_attach (struct medusa_tcpsocket *tcpsocket, int fd);
-int medusa_tcpsocket_attach_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_attach_options *options);
-
-int medusa_tcpsocket_accept_options_default (struct medusa_tcpsocket_accept_options *options);
-struct medusa_tcpsocket * medusa_tcpsocket_accept (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
-struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_accept_options *options);
 
 int medusa_tcpsocket_get_sockname (struct medusa_tcpsocket *tcpsocket, struct sockaddr_storage *sockaddr);
 int medusa_tcpsocket_get_peername (struct medusa_tcpsocket *tcpsocket, struct sockaddr_storage *sockaddr);

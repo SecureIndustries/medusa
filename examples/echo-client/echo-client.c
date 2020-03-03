@@ -5,14 +5,21 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <signal.h>
 #include <errno.h>
 
 #include <sys/uio.h>
+
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#endif
 
 #include "medusa/error.h"
 #include "medusa/buffer.h"
 #include "medusa/io.h"
 #include "medusa/tcpsocket.h"
+#include "medusa/signal.h"
 #include "medusa/monitor.h"
 
 static int g_running;
@@ -55,6 +62,14 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
         (void) param;
 
         if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
+        }
+
+        if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
+                rc = medusa_tcpsocket_set_ssl(tcpsocket, 1);
+                if (rc < 0) {
+                        fprintf(stderr, "can not set ssl\n");
+                        return rc;
+                }
         }
 
         if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE) {
@@ -144,21 +159,14 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
                         if (rlength > (int) strlen(option_string) + 1) {
                                 return -EIO;
                         }
-                        data = malloc(rlength);
+                        data = medusa_buffer_linearize(rbuffer, 0, rlength);
                         if (data == NULL) {
                                 return -ENOMEM;
                         }
-                        rc = medusa_buffer_read_data(rbuffer, 0, data, rlength);
-                        if (rc < 0) {
-                                free(data);
-                                return rc;
-                        }
                         rc = strcmp(data, option_string);
                         if (rc != 0) {
-                                free(data);
                                 return -EIO;
                         }
-                        free(data);
                 }
                 g_running = 0;
         }
@@ -166,6 +174,15 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
         if (events & MEDUSA_TCPSOCKET_EVENT_DESTROY) {
         }
 
+        return 0;
+}
+
+static int sigpipe_medusa_signal_onevent (struct medusa_signal *signal, unsigned int events, void *context, void *param)
+{
+        (void) signal;
+        (void) events;
+        (void) context;
+        (void) param;
         return 0;
 }
 
@@ -179,8 +196,11 @@ int main (int argc, char *argv[])
         const char *option_address;
         const char *option_string;
 
+        struct medusa_signal *medusa_signal;
+        struct medusa_signal_init_options medusa_signal_init_options;
+
         struct medusa_tcpsocket *medusa_tcpsocket;
-        struct medusa_tcpsocket_init_options medusa_tcpsocket_init_options;
+        struct medusa_tcpsocket_connect_options medusa_tcpsocket_connect_options;
 
         struct medusa_buffer *medusa_tcpsocket_wbuffer;
 
@@ -189,6 +209,11 @@ int main (int argc, char *argv[])
 
         (void) argc;
         (void) argv;
+
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
+        SSL_library_init();
+        SSL_load_error_strings();
+#endif
 
         err = 0;
         medusa_monitor = NULL;
@@ -235,25 +260,40 @@ int main (int argc, char *argv[])
                 goto out;
         }
 
-        rc = medusa_tcpsocket_init_options_default(&medusa_tcpsocket_init_options);
+        rc = medusa_signal_init_options_default(&medusa_signal_init_options);
         if (rc < 0) {
                 err = rc;
                 goto out;
         }
-        medusa_tcpsocket_init_options.monitor     = medusa_monitor;
-        medusa_tcpsocket_init_options.onevent     = sender_medusa_tcpsocket_onevent;
-        medusa_tcpsocket_init_options.context     = (void *) option_string;
-        medusa_tcpsocket_init_options.nonblocking = 1;
-        medusa_tcpsocket_init_options.enabled     = 1;
-        medusa_tcpsocket_init_options.buffered    = 1;
-        medusa_tcpsocket = medusa_tcpsocket_create_with_options(&medusa_tcpsocket_init_options);
+        medusa_signal_init_options.number     = SIGPIPE;
+        medusa_signal_init_options.onevent    = sigpipe_medusa_signal_onevent;
+        medusa_signal_init_options.context    = NULL;
+        medusa_signal_init_options.singleshot = 0;
+        medusa_signal_init_options.enabled    = 1;
+        medusa_signal_init_options.monitor    = medusa_monitor;
+        medusa_signal = medusa_signal_create_with_options(&medusa_signal_init_options);
+        if (MEDUSA_IS_ERR_OR_NULL(medusa_signal)) {
+                err = MEDUSA_PTR_ERR(medusa_signal);
+                goto out;
+        }
+
+        rc = medusa_tcpsocket_connect_options_default(&medusa_tcpsocket_connect_options);
+        if (rc < 0) {
+                err = rc;
+                goto out;
+        }
+        medusa_tcpsocket_connect_options.monitor     = medusa_monitor;
+        medusa_tcpsocket_connect_options.onevent     = sender_medusa_tcpsocket_onevent;
+        medusa_tcpsocket_connect_options.context     = (void *) option_string;
+        medusa_tcpsocket_connect_options.protocol    = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
+        medusa_tcpsocket_connect_options.address     = option_address;
+        medusa_tcpsocket_connect_options.port        = option_port;
+        medusa_tcpsocket_connect_options.nonblocking = 1;
+        medusa_tcpsocket_connect_options.buffered    = 1;
+        medusa_tcpsocket_connect_options.enabled     = 1;
+        medusa_tcpsocket = medusa_tcpsocket_connect_with_options(&medusa_tcpsocket_connect_options);
         if (MEDUSA_IS_ERR_OR_NULL(medusa_tcpsocket)) {
                 err = MEDUSA_PTR_ERR(medusa_tcpsocket);
-                goto out;
-        }
-        rc = medusa_tcpsocket_connect(medusa_tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, option_address, option_port);
-        if (rc < 0) {
-                err = rc;
                 goto out;
         }
 

@@ -15,6 +15,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#endif
+
 #include "medusa/error.h"
 #include "medusa/buffer.h"
 #include "medusa/tcpsocket.h"
@@ -141,11 +146,16 @@ static int test_poll (unsigned int poll)
         unsigned short port;
 
         struct medusa_tcpsocket *tcpsocket;
-        struct medusa_tcpsocket_init_options tcpsocket_init_options;
         struct medusa_tcpsocket_attach_options tcpsocket_attach_options;
+        struct medusa_tcpsocket_connect_options tcpsocket_connect_options;
 
         fd = -1;
         monitor = NULL;
+
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+        SSL_library_init();
+        SSL_load_error_strings();
+#endif
 
         rc = medusa_monitor_init_options_default(&monitor_init_options);
         if (rc != 0) {
@@ -209,10 +219,15 @@ static int test_poll (unsigned int poll)
                 sockaddr_in.sin_family = AF_INET;
                 sockaddr_in.sin_port = htons(port);
                 sockaddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
+                fprintf(stderr, "bind to: %d\n", port);
                 rc = bind(fd, (struct sockaddr *) &sockaddr_in, sizeof(sockaddr_in));
                 if (rc == 0) {
                         break;
                 }
+        }
+        rc = listen(fd, 128);
+        if (rc < 0) {
+                fprintf(stderr, "listen failed\n");
         }
         if (port >= 65535) {
                 fprintf(stderr, "can not bind tcp socket\n");
@@ -252,68 +267,80 @@ static int test_poll (unsigned int poll)
                 fprintf(stderr, "sockaddr: %s:%d\n", sockaddr_address, sockaddr_port);
         }
 
-        rc = medusa_tcpsocket_init_options_default(&tcpsocket_init_options);
-        if (rc != 0) {
-                fprintf(stderr, "can not init tcpsocket init options\n");
-                goto bail;
-        }
-        tcpsocket_init_options.monitor     = monitor;
-        tcpsocket_init_options.backlog     = 10;
-        tcpsocket_init_options.buffered    = 1;
-        tcpsocket_init_options.nodelay     = 1;
-        tcpsocket_init_options.nonblocking = 1;
-        tcpsocket_init_options.reuseaddr   = 1;
-        tcpsocket_init_options.reuseport   = 1;
-        tcpsocket_init_options.enabled     = 1;
-        tcpsocket_init_options.onevent     = tcpsocket_listener_onevent;
-        tcpsocket_init_options.context     = NULL;
-        tcpsocket = medusa_tcpsocket_create_with_options(&tcpsocket_init_options);
-        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
-                fprintf(stderr, "can not create tcpsocket\n");
-                goto bail;
-        }
-
         rc = medusa_tcpsocket_attach_options_default(&tcpsocket_attach_options);
         if (rc != 0) {
                 fprintf(stderr, "can not init tcpsocket attach options\n");
                 goto bail;
         }
-        tcpsocket_attach_options.fd         = fd;
-        tcpsocket_attach_options.bound      = 1;
-        tcpsocket_attach_options.clodestroy = 1;
-        rc = medusa_tcpsocket_attach_with_options(tcpsocket, &tcpsocket_attach_options);
-        if (rc != 0) {
-                fprintf(stderr, "medusa_tcpsocket_attach failed\n");
+        tcpsocket_attach_options.monitor     = monitor;
+        tcpsocket_attach_options.onevent     = tcpsocket_listener_onevent;
+        tcpsocket_attach_options.context     = NULL;
+        tcpsocket_attach_options.fd          = fd;
+        tcpsocket_attach_options.bound       = 1;
+        tcpsocket_attach_options.clodestroy  = 1;
+        tcpsocket_attach_options.nonblocking = 1;
+        tcpsocket_attach_options.nodelay     = 1;
+        tcpsocket_attach_options.buffered    = 1;
+        tcpsocket_attach_options.enabled     = 1;
+        tcpsocket = medusa_tcpsocket_attach_with_options(&tcpsocket_attach_options);
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                fprintf(stderr, "medusa_tcpsocket_attach_with_options failed\n");
                 goto bail;
         }
 
         fprintf(stderr, "fd: %d, port: %d\n", fd, port);
 
-        rc = medusa_tcpsocket_init_options_default(&tcpsocket_init_options);
-        if (rc != 0) {
-                fprintf(stderr, "can not init tcpsocket init options\n");
-                goto bail;
-        }
-        tcpsocket_init_options.monitor     = monitor;
-        tcpsocket_init_options.backlog     = 10;
-        tcpsocket_init_options.buffered    = 1;
-        tcpsocket_init_options.nodelay     = 1;
-        tcpsocket_init_options.nonblocking = 1;
-        tcpsocket_init_options.reuseaddr   = 1;
-        tcpsocket_init_options.reuseport   = 1;
-        tcpsocket_init_options.enabled     = 1;
-        tcpsocket_init_options.onevent     = tcpsocket_client_onevent;
-        tcpsocket_init_options.context     = NULL;
-        tcpsocket = medusa_tcpsocket_create_with_options(&tcpsocket_init_options);
-        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
-                fprintf(stderr, "can not create tcpsocket\n");
-                goto bail;
-        }
-        rc = medusa_tcpsocket_connect(tcpsocket, MEDUSA_TCPSOCKET_PROTOCOL_ANY, "127.0.0.1", port);
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+        rc = medusa_tcpsocket_set_ssl_certificate(tcpsocket, "tcpsocket-ssl.crt");
         if (rc < 0) {
-                fprintf(stderr, "medusa_tcpsocket_connect failed\n");
+                fprintf(stderr, "medusa_tcpsocket_set_ssl_certificate failed\n");
                 goto bail;
         }
+        rc = medusa_tcpsocket_set_ssl_privatekey(tcpsocket, "tcpsocket-ssl.key");
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl_privatekey failed\n");
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_ssl(tcpsocket, 1);
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl failed\n");
+                goto bail;
+        }
+#endif
+
+        rc = medusa_tcpsocket_connect_options_default(&tcpsocket_connect_options);
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_connect_options_default failed\n");
+                goto bail;
+        }
+        tcpsocket_connect_options.monitor     = monitor;
+        tcpsocket_connect_options.onevent     = tcpsocket_client_onevent;
+        tcpsocket_connect_options.context     = NULL;
+        tcpsocket_connect_options.protocol    = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
+        tcpsocket_connect_options.address     = "127.0.0.1";
+        tcpsocket_connect_options.port        = port;
+        tcpsocket_connect_options.nonblocking = 1;
+        tcpsocket_connect_options.nodelay     = 1;
+        tcpsocket_connect_options.buffered    = 1;
+        tcpsocket_connect_options.enabled     = 1;
+
+        tcpsocket = medusa_tcpsocket_connect_with_options(&tcpsocket_connect_options);
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                fprintf(stderr, "medusa_tcpsocket_connect_with_options failed\n");
+                goto bail;
+        }
+        if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+                fprintf(stderr, "medusa_tcpsocket_connect_with_options error: %d, %s\n", medusa_tcpsocket_get_error(tcpsocket), strerror(medusa_tcpsocket_get_error(tcpsocket)));
+                goto bail;
+        }
+
+#if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
+        rc = medusa_tcpsocket_set_ssl(tcpsocket, 1);
+        if (rc < 0) {
+                fprintf(stderr, "medusa_tcpsocket_set_ssl failed\n");
+                goto bail;
+        }
+#endif
 
         rc = medusa_monitor_run(monitor);
         if (rc != 0) {

@@ -2,23 +2,31 @@
 MEDUSA_BUILD_TEST     ?= n
 MEDUSA_BUILD_EXAMPLES ?= n
 
-subdir-y = \
-	src
+MEDUSA_TCPSOCKET_OPENSSL_ENABLE ?= y
 
-app_depends-y = \
+subdir-y = \
 	src
 
 subdir-${MEDUSA_BUILD_TEST} += \
 	test
 
-test_depends-y = \
-	src
-
 subdir-${MEDUSA_BUILD_EXAMPLES} += \
 	examples
 
+src_makeflags-y = \
+	MEDUSA_TCPSOCKET_OPENSSL_ENABLE=${MEDUSA_TCPSOCKET_OPENSSL_ENABLE}
+
+test_depends-y = \
+	src
+
+test_makeflags-y = \
+	MEDUSA_TCPSOCKET_OPENSSL_ENABLE=${MEDUSA_TCPSOCKET_OPENSSL_ENABLE}
+
 examples_depends-y = \
 	src
+
+examples_makeflags-y = \
+	MEDUSA_TCPSOCKET_OPENSSL_ENABLE=${MEDUSA_TCPSOCKET_OPENSSL_ENABLE}
 
 include Makefile.lib
 
