@@ -21,6 +21,9 @@ define test-defaults
 	$1_libraries-y = \
 		../dist/lib
 
+	$1_cflags-${MEDUSA_TCPSOCKET_OPENSSL_ENABLE} += \
+		-DMEDUSA_TCPSOCKET_OPENSSL_ENABLE=1
+
 	$1_ldflags-y = \
 		../dist/lib/libmedusa.a \
 		-lpthread \

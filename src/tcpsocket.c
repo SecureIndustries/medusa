@@ -131,6 +131,7 @@ static inline int tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsig
                                 return rc;
                         }
                 }
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
                 if (tcpsocket->ssl_context != NULL &&
                     tcpsocket->ssl == NULL) {
                         tcpsocket->ssl = SSL_new(tcpsocket->ssl_context);
@@ -160,6 +161,7 @@ static inline int tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsig
                                 }
                         }
                 }
+#endif
         } else if (state == MEDUSA_TCPSOCKET_STATE_LISTENING) {
                 if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ctimer)) {
                         rc = medusa_timer_set_enabled_unlocked(tcpsocket->ctimer, 0);
