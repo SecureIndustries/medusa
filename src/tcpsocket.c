@@ -2292,14 +2292,14 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                 return -EINVAL;
         }
 #if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
-        if (tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_BIND) ||
-            tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ACCEPT)) {
-                if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_certificate) ||
-                    MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_privatekey)) {
-                        return -EINVAL;
-                }
-        }
         if (enabled) {
+                if (tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_BIND) ||
+                    tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ACCEPT)) {
+                        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_certificate) ||
+                            MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_privatekey)) {
+                                return -EINVAL;
+                        }
+                }
                 if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_context) &&
                     !tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_BIND)) {
                         int rc;
