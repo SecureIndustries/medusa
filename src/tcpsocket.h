@@ -102,6 +102,11 @@ struct medusa_tcpsocket_bind_options {
         int nodelay;
         int backlog;
         int buffered;
+        int ssl_enabled;
+        struct ssl_ctx_st *ssl_SSL_CTX;
+        struct ssl_st *ssl_SSL;
+        const char *ssl_certificate;
+        const char *ssl_privatekey;
         int enabled;
 };
 
@@ -111,6 +116,11 @@ struct medusa_tcpsocket_accept_options {
         int nonblocking;
         int nodelay;
         int buffered;
+        int ssl_enabled;
+        struct ssl_ctx_st *ssl_SSL_CTX;
+        struct ssl_st *ssl_SSL;
+        const char *ssl_certificate;
+        const char *ssl_privatekey;
         int enabled;
 };
 
@@ -125,6 +135,11 @@ struct medusa_tcpsocket_connect_options {
         int nonblocking;
         int nodelay;
         int buffered;
+        int ssl_enabled;
+        struct ssl_ctx_st *ssl_SSL_CTX;
+        struct ssl_st *ssl_SSL;
+        const char *ssl_certificate;
+        const char *ssl_privatekey;
         int enabled;
 };
 
@@ -138,6 +153,11 @@ struct medusa_tcpsocket_attach_options {
         int nonblocking;
         int nodelay;
         int buffered;
+        int ssl_enabled;
+        struct ssl_ctx_st *ssl_SSL_CTX;
+        struct ssl_st *ssl_SSL;
+        const char *ssl_certificate;
+        const char *ssl_privatekey;
         int enabled;
 };
 
