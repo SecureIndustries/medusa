@@ -57,6 +57,9 @@ const char * medusa_tcpsocket_get_ssl_certificate_unlocked (const struct medusa_
 int medusa_tcpsocket_set_ssl_privatekey_unlocked (struct medusa_tcpsocket *tcpsocket, const char *privatekey);
 const char * medusa_tcpsocket_get_ssl_privatekey_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
+struct ssl_st * medusa_tcpsocket_ssl_get_SSL_unlocked (const struct medusa_tcpsocket *tcpsocket);
+struct ssl_ctx_st * medusa_tcpsocket_ssl_get_SSL_CTX_unlocked (const struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_get_fd_unlocked (const struct medusa_tcpsocket *tcpsocket);
 struct medusa_buffer * medusa_tcpsocket_get_read_buffer_unlocked (const struct medusa_tcpsocket *tcpsocket);
 struct medusa_buffer * medusa_tcpsocket_get_write_buffer_unlocked (const struct medusa_tcpsocket *tcpsocket);

@@ -132,9 +132,9 @@ static inline int tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsig
                         }
                 }
 #if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
-                if (tcpsocket->ssl_context != NULL &&
+                if (tcpsocket->ssl_ctx != NULL &&
                     tcpsocket->ssl == NULL) {
-                        tcpsocket->ssl = SSL_new(tcpsocket->ssl_context);
+                        tcpsocket->ssl = SSL_new(tcpsocket->ssl_ctx);
                         if (tcpsocket->ssl == NULL) {
                                 return -EIO;
                         }
@@ -2331,7 +2331,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                                 return -EINVAL;
                         }
                 }
-                if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_context) &&
+                if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_ctx) &&
                     !tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_BIND)) {
                         int rc;
                         SSL_METHOD *method;
@@ -2343,27 +2343,27 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                         if (method == NULL) {
                                 return -EIO;
                         }
-                        tcpsocket->ssl_context = SSL_CTX_new(method);
-                        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_context)) {
+                        tcpsocket->ssl_ctx = SSL_CTX_new(method);
+                        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_ctx)) {
                                 return -EIO;
                         }
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && (OPENSSL_API_COMPAT >= 0x10100000L)
-                        SSL_CTX_set_ecdh_auto(tcpsocket->ssl_context, 1);
+                        SSL_CTX_set_ecdh_auto(tcpsocket->ssl_ctx, 1);
 #endif
                         if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_certificate)) {
-                                rc = SSL_CTX_use_certificate_file(tcpsocket->ssl_context, tcpsocket->ssl_certificate, SSL_FILETYPE_PEM);
+                                rc = SSL_CTX_use_certificate_file(tcpsocket->ssl_ctx, tcpsocket->ssl_certificate, SSL_FILETYPE_PEM);
                                 if (rc <= 0) {
                                         return -EIO;
                                 }
                         }
                         if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_privatekey)) {
-                                rc = SSL_CTX_use_PrivateKey_file(tcpsocket->ssl_context, tcpsocket->ssl_privatekey, SSL_FILETYPE_PEM);
+                                rc = SSL_CTX_use_PrivateKey_file(tcpsocket->ssl_ctx, tcpsocket->ssl_privatekey, SSL_FILETYPE_PEM);
                                 if (rc <= 0) {
                                         return -EIO;
                                 }
                         }
                         if (tcpsocket->state == MEDUSA_TCPSOCKET_STATE_CONNECTED) {
-                                tcpsocket->ssl = SSL_new(tcpsocket->ssl_context);
+                                tcpsocket->ssl = SSL_new(tcpsocket->ssl_ctx);
                                 if (tcpsocket->ssl == NULL) {
                                         return -EIO;
                                 }
@@ -2396,10 +2396,10 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                         SSL_free(tcpsocket->ssl);
                 }
                 tcpsocket->ssl = NULL;
-                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_context)) {
-                        SSL_CTX_free(tcpsocket->ssl_context);
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_ctx)) {
+                        SSL_CTX_free(tcpsocket->ssl_ctx);
                 }
-                tcpsocket->ssl_context = NULL;
+                tcpsocket->ssl_ctx = NULL;
         }
 #endif
         if (enabled) {
@@ -2553,6 +2553,52 @@ __attribute__ ((visibility ("default"))) const char * medusa_tcpsocket_get_ssl_p
         }
         medusa_monitor_lock(tcpsocket->subject.monitor);
         rc = medusa_tcpsocket_get_ssl_privatekey_unlocked(tcpsocket);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) SSL * medusa_tcpsocket_ssl_get_SSL_unlocked (const struct medusa_tcpsocket *tcpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
+        return tcpsocket->ssl;
+#endif
+        return NULL;
+}
+
+__attribute__ ((visibility ("default"))) SSL * medusa_tcpsocket_ssl_get_SSL (const struct medusa_tcpsocket *tcpsocket)
+{
+        SSL *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_ssl_get_SSL_unlocked(tcpsocket);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) SSL_CTX * medusa_tcpsocket_ssl_get_SSL_CTX_unlocked (const struct medusa_tcpsocket *tcpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
+        return tcpsocket->ssl_ctx;
+#endif
+        return NULL;
+}
+
+__attribute__ ((visibility ("default"))) SSL_CTX * medusa_tcpsocket_ssl_get_SSL_CTX (const struct medusa_tcpsocket *tcpsocket)
+{
+        SSL_CTX *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_ssl_get_SSL_CTX_unlocked(tcpsocket);
         medusa_monitor_unlock(tcpsocket->subject.monitor);
         return rc;
 }
@@ -2813,9 +2859,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent_unlocked (
                         SSL_free(tcpsocket->ssl);
                         tcpsocket->ssl = NULL;
                 }
-                if (tcpsocket->ssl_context != NULL) {
-                        SSL_CTX_free(tcpsocket->ssl_context);
-                        tcpsocket->ssl_context = NULL;
+                if (tcpsocket->ssl_ctx != NULL) {
+                        SSL_CTX_free(tcpsocket->ssl_ctx);
+                        tcpsocket->ssl_ctx = NULL;
                 }
 #endif
 #if defined(MEDUSA_TCPSOCKET_USE_POOL) && (MEDUSA_TCPSOCKET_USE_POOL == 1)
