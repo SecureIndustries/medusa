@@ -2,8 +2,6 @@
 #if !defined(MEDUSA_TCPSOCKET_PRIVATE_H)
 #define MEDUSA_TCPSOCKET_PRIVATE_H
 
-struct medusa_tcpsocket;
-
 struct medusa_tcpsocket * medusa_tcpsocket_bind_unlocked (struct medusa_monitor *monitor, unsigned int protocol, const char *address, unsigned short port, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
 struct medusa_tcpsocket * medusa_tcpsocket_bind_with_options_unlocked (const struct medusa_tcpsocket_bind_options *options);
 
@@ -57,7 +55,10 @@ const char * medusa_tcpsocket_get_ssl_certificate_unlocked (const struct medusa_
 int medusa_tcpsocket_set_ssl_privatekey_unlocked (struct medusa_tcpsocket *tcpsocket, const char *privatekey);
 const char * medusa_tcpsocket_get_ssl_privatekey_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_ssl_set_SSL_unlocked (struct medusa_tcpsocket *tcpsocket, struct ssl_st *ssl);
 struct ssl_st * medusa_tcpsocket_ssl_get_SSL_unlocked (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_ssl_set_SSL_CTX_unlocked (struct medusa_tcpsocket *tcpsocket, struct ssl_ctx_st *ssl_ctx);
 struct ssl_ctx_st * medusa_tcpsocket_ssl_get_SSL_CTX_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_get_fd_unlocked (const struct medusa_tcpsocket *tcpsocket);

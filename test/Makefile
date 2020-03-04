@@ -61,9 +61,9 @@ include ../Makefile.lib
 
 tests: all
 	${Q}echo "running tests";
-	${Q}for T in ${tests} ${tests_event}; do \
+	for T in ${tests} ${tests_event}; do \
 		printf "  $${T} ..."; \
-		./$${T} 2>/dev/null 1>/dev/null; \
+		./$${T} 2>$${T}.log 1>$${T}.log; \
 		retval=$$?; \
 		if [ $$retval != 0 ]; then \
 			printf " fail (rc: $$retval)"; \
@@ -76,3 +76,4 @@ tests: all
 clean:
 	${Q}${RM} *.out
 	${Q}${RM} *.png
+	${Q}${RM} *.log

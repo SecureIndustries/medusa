@@ -208,7 +208,10 @@ const char * medusa_tcpsocket_get_ssl_certificate (const struct medusa_tcpsocket
 int medusa_tcpsocket_set_ssl_privatekey (struct medusa_tcpsocket *tcpsocket, const char *privatekey);
 const char * medusa_tcpsocket_get_ssl_privatekey (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_ssl_set_SSL (struct medusa_tcpsocket *tcpsocket, struct ssl_st *ssl);
 struct ssl_st * medusa_tcpsocket_ssl_get_SSL (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_ssl_set_SSL_CTX (struct medusa_tcpsocket *tcpsocket, struct ssl_ctx_st *ssl_ctx);
 struct ssl_ctx_st * medusa_tcpsocket_ssl_get_SSL_CTX (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_get_fd (const struct medusa_tcpsocket *tcpsocket);
