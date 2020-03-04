@@ -360,17 +360,6 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                 int64_t niovecs;
                                 struct iovec iovec;
                                 while (1) {
-#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
-                                        if (tcpsocket->ssl != NULL &&
-                                            !tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK) &&
-                                            SSL_get_state(tcpsocket->ssl) == TLS_ST_OK) {
-                                                tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK);
-                                                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTED_SSL, NULL);
-                                                if (rc < 0) {
-                                                        goto bail;
-                                                }
-                                        }
-#endif
                                         niovecs = medusa_buffer_peekv(tcpsocket->wbuffer, 0, -1, &iovec, 1);
                                         if (niovecs < 0) {
                                                 goto bail;
@@ -406,6 +395,14 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                         } else {
                                                                 wlength = -1;
                                                                 errno = EIO;
+                                                        }
+                                                }
+                                                if (!tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK) &&
+                                                    SSL_get_state(tcpsocket->ssl) == TLS_ST_OK) {
+                                                        tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK);
+                                                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTED_SSL, NULL);
+                                                        if (rc < 0) {
+                                                                goto bail;
                                                         }
                                                 }
                                         } else
@@ -497,6 +494,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                         } else {
                                 int n;
                                 int64_t clength;
+                                int64_t rlength;
                                 int64_t niovecs;
                                 struct iovec iovec;
                                 n = 4096;
@@ -508,17 +506,6 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                         goto bail;
                                 }
                                 while (1) {
-#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
-                                        if (tcpsocket->ssl != NULL &&
-                                            !tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK) &&
-                                            SSL_get_state(tcpsocket->ssl) == TLS_ST_OK) {
-                                                tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK);
-                                                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTED_SSL, NULL);
-                                                if (rc < 0) {
-                                                        goto bail;
-                                                }
-                                        }
-#endif
                                         niovecs = medusa_buffer_reservev(tcpsocket->rbuffer, n, &iovec, 1);
                                         if (niovecs < 0) {
                                                 goto bail;
@@ -567,32 +554,41 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                         tcpsocket->ssl_wantread  = 0;
                                                         tcpsocket->ssl_wantwrite = 0;
                                                 }
-                                                rc = SSL_read(tcpsocket->ssl, iovec.iov_base, iovec.iov_len);
-                                                if (rc <= 0) {
+                                                rlength = SSL_read(tcpsocket->ssl, iovec.iov_base, iovec.iov_len);
+                                                if (rlength <= 0) {
                                                         int error;
-                                                        error = SSL_get_error(tcpsocket->ssl, rc);
-                                                        if (error == SSL_ERROR_WANT_READ) {
-                                                                rc = -1;
+                                                        error = SSL_get_error(tcpsocket->ssl, rlength);
+                                                        if (iovec.iov_len == 0) {
+                                                                rlength = -1;
                                                                 errno = EAGAIN;
-                                                                tcpsocket->ssl_wantread = 0;
+                                                        } else if (error == SSL_ERROR_WANT_READ) {
+                                                                rlength = -1;
+                                                                errno = EAGAIN;
                                                         } else if (error == SSL_ERROR_WANT_WRITE) {
-                                                                rc = -1;
+                                                                rlength = -1;
                                                                 errno = EAGAIN;
-                                                                tcpsocket->ssl_wantwrite = 0;
                                                         } else if (error == SSL_ERROR_SYSCALL) {
-                                                                rc = -1;
+                                                                rlength = -1;
                                                                 errno = EIO;
                                                         } else {
-                                                                rc = -1;
+                                                                rlength = -1;
                                                                 errno = EIO;
+                                                        }
+                                                }
+                                                if (!tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK) &&
+                                                    SSL_get_state(tcpsocket->ssl) == TLS_ST_OK) {
+                                                        tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK);
+                                                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTED_SSL, NULL);
+                                                        if (rc < 0) {
+                                                                goto bail;
                                                         }
                                                 }
                                         } else
 #endif
                                         {
-                                                rc = recv(medusa_io_get_fd_unlocked(io), iovec.iov_base, iovec.iov_len, 0);
+                                                rlength = recv(medusa_io_get_fd_unlocked(io), iovec.iov_base, iovec.iov_len, 0);
                                         }
-                                        if (rc < 0) {
+                                        if (rlength < 0) {
                                                 if (errno == EINTR ||
                                                     errno == EAGAIN ||
                                                     errno == EWOULDBLOCK) {
@@ -611,7 +607,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                                 goto bail;
                                                         }
                                                 }
-                                        } else if (rc == 0) {
+                                        } else if (rlength == 0) {
                                                 rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
                                                 if (rc < 0) {
                                                         goto bail;
@@ -622,7 +618,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                 }
                                                 break;
                                         } else {
-                                                iovec.iov_len = rc;
+                                                iovec.iov_len = rlength;
                                                 clength = medusa_buffer_commitv(tcpsocket->rbuffer, &iovec, 1);
                                                 if (clength < 0) {
                                                         goto bail;
@@ -1122,17 +1118,6 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 goto bail;
         }
 
-        rc = tcpsocket_set_state(accepted, MEDUSA_TCPSOCKET_STATE_CONNECTED);
-        if (rc < 0) {
-                ret = rc;
-                goto bail;
-        }
-        rc = medusa_tcpsocket_onevent_unlocked(accepted, MEDUSA_TCPSOCKET_EVENT_CONNECTED, NULL);
-        if (rc < 0) {
-                ret = rc;
-                goto bail;
-        }
-
         rc = medusa_tcpsocket_set_ssl_certificate_unlocked(accepted, medusa_tcpsocket_get_ssl_certificate_unlocked(tcpsocket));
         if (rc < 0) {
                 ret = rc;
@@ -1144,6 +1129,17 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 goto bail;
         }
         rc = medusa_tcpsocket_set_ssl_unlocked(accepted, medusa_tcpsocket_get_ssl_unlocked(tcpsocket));
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
+
+        rc = tcpsocket_set_state(accepted, MEDUSA_TCPSOCKET_STATE_CONNECTED);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
+        rc = medusa_tcpsocket_onevent_unlocked(accepted, MEDUSA_TCPSOCKET_EVENT_CONNECTED, NULL);
         if (rc < 0) {
                 ret = rc;
                 goto bail;

@@ -61,7 +61,7 @@ include ../Makefile.lib
 
 tests: all
 	${Q}echo "running tests";
-	for T in ${tests} ${tests_event}; do \
+	${Q}for T in ${tests} ${tests_event}; do \
 		printf "  $${T} ..."; \
 		./$${T} 2>$${T}.log 1>$${T}.log; \
 		retval=$$?; \
