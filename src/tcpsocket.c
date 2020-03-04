@@ -59,6 +59,7 @@ enum {
         MEDUSA_TCPSOCKET_FLAG_SSL               = (1 << 12),
         MEDUSA_TCPSOCKET_FLAG_SSL_CTX_EXTERNAL  = (1 << 13),
         MEDUSA_TCPSOCKET_FLAG_SSL_EXTERNAL      = (1 << 14),
+        MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK      = (1 << 15),
 #define MEDUSA_TCPSOCKET_FLAG_NONE              MEDUSA_TCPSOCKET_FLAG_NONE
 #define MEDUSA_TCPSOCKET_FLAG_BIND              MEDUSA_TCPSOCKET_FLAG_BIND
 #define MEDUSA_TCPSOCKET_FLAG_ACCEPT            MEDUSA_TCPSOCKET_FLAG_ACCEPT
@@ -74,6 +75,7 @@ enum {
 #define MEDUSA_TCPSOCKET_FLAG_SSL               MEDUSA_TCPSOCKET_FLAG_SSL
 #define MEDUSA_TCPSOCKET_FLAG_SSL_CTX_EXTERNAL  MEDUSA_TCPSOCKET_FLAG_SSL_CTX_EXTERNAL
 #define MEDUSA_TCPSOCKET_FLAG_SSL_EXTERNAL      MEDUSA_TCPSOCKET_FLAG_SSL_EXTERNAL
+#define MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK      MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK
 };
 
 #if defined(MEDUSA_TCPSOCKET_USE_POOL) && (MEDUSA_TCPSOCKET_USE_POOL == 1)
@@ -367,6 +369,14 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                         }
 #if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
                                         if (tcpsocket->ssl != NULL) {
+                                                if (!tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK) &&
+                                                    SSL_get_state(tcpsocket->ssl) == TLS_ST_OK) {
+                                                        tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK);
+                                                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTED_SSL, NULL);
+                                                        if (rc < 0) {
+                                                                goto bail;
+                                                        }
+                                                }
                                                 wlength = SSL_write(tcpsocket->ssl, iovec.iov_base, iovec.iov_len);
                                                 if (wlength <= 0) {
                                                         int error;
@@ -542,6 +552,14 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                         }
                                                         tcpsocket->ssl_wantread  = 0;
                                                         tcpsocket->ssl_wantwrite = 0;
+                                                }
+                                                if (!tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK) &&
+                                                    SSL_get_state(tcpsocket->ssl) == TLS_ST_OK) {
+                                                        tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK);
+                                                        rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTED_SSL, NULL);
+                                                        if (rc < 0) {
+                                                                goto bail;
+                                                        }
                                                 }
                                                 rc = SSL_read(tcpsocket->ssl, iovec.iov_base, iovec.iov_len);
                                                 if (rc <= 0) {
@@ -2317,7 +2335,6 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
         if (enabled) {
                 if (!tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NONBLOCKING) ||
                     !tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_BUFFERED)) {
-                        fprintf(stderr, "here @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                         return -EINVAL;
                 }
                 if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_ctx) &&
@@ -2326,7 +2343,6 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                             tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ACCEPT)) {
                                 if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_certificate) ||
                                     MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_privatekey)) {
-                                        fprintf(stderr, "here @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                                         return -EINVAL;
                                 }
                         }
@@ -2340,12 +2356,10 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                                 method = (SSL_METHOD *) SSLv23_method();
                         }
                         if (method == NULL) {
-                                fprintf(stderr, "here @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                                 return -EIO;
                         }
                         tcpsocket->ssl_ctx = SSL_CTX_new(method);
                         if (tcpsocket->ssl_ctx == NULL) {
-                                fprintf(stderr, "here @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                                 return -EIO;
                         }
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && (OPENSSL_API_COMPAT >= 0x10100000L)
@@ -2357,14 +2371,12 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                         if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_certificate)) {
                                 rc = SSL_CTX_use_certificate_file(tcpsocket->ssl_ctx, tcpsocket->ssl_certificate, SSL_FILETYPE_PEM);
                                 if (rc <= 0) {
-                                        fprintf(stderr, "here @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                                         return -EIO;
                                 }
                         }
                         if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_privatekey)) {
                                 rc = SSL_CTX_use_PrivateKey_file(tcpsocket->ssl_ctx, tcpsocket->ssl_privatekey, SSL_FILETYPE_PEM);
                                 if (rc <= 0) {
-                                        fprintf(stderr, "here @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                                         return -EIO;
                                 }
                         }
@@ -2374,12 +2386,10 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                         int rc;
                         tcpsocket->ssl = SSL_new(tcpsocket->ssl_ctx);
                         if (tcpsocket->ssl == NULL) {
-                                fprintf(stderr, "here @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                                 return -EIO;
                         }
                         rc = SSL_set_fd(tcpsocket->ssl, medusa_tcpsocket_get_fd_unlocked(tcpsocket));
                         if (rc <= 0) {
-                                fprintf(stderr, "here @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                                 return -EIO;
                         }
                 }
@@ -2387,7 +2397,6 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                         int rc;
                         rc = SSL_set_fd(tcpsocket->ssl, medusa_tcpsocket_get_fd_unlocked(tcpsocket));
                         if (rc <= 0) {
-                                fprintf(stderr, "here @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                                 return -EIO;
                         }
                 }
@@ -2409,7 +2418,6 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                                 } else if (error == SSL_ERROR_SYSCALL) {
                                         tcpsocket->ssl_wantread = 1;
                                 } else {
-                                        fprintf(stderr, "here @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                                         return -EIO;
                                 }
                         }
@@ -3518,6 +3526,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_tcpsocket_event_str
         if (events == MEDUSA_TCPSOCKET_EVENT_CONNECTING)                return "MEDUSA_TCPSOCKET_EVENT_CONNECTING";
         if (events == MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT)           return "MEDUSA_TCPSOCKET_EVENT_CONNECT_TIMEOUT";
         if (events == MEDUSA_TCPSOCKET_EVENT_CONNECTED)                 return "MEDUSA_TCPSOCKET_EVENT_CONNECTED";
+        if (events == MEDUSA_TCPSOCKET_EVENT_CONNECTED_SSL)             return "MEDUSA_TCPSOCKET_EVENT_CONNECTED_SSL";
         if (events == MEDUSA_TCPSOCKET_EVENT_IN)                        return "MEDUSA_TCPSOCKET_EVENT_IN";
         if (events == MEDUSA_TCPSOCKET_EVENT_IN_TIMEOUT)                return "MEDUSA_TCPSOCKET_EVENT_IN_TIMEOUT";
         if (events == MEDUSA_TCPSOCKET_EVENT_OUT)                       return "MEDUSA_TCPSOCKET_EVENT_OUT";
