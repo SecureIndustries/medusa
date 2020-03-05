@@ -878,6 +878,26 @@ ipv6:
                 ret = -errno;
                 goto bail;
         }
+        {
+                int rc;
+                int on;
+                on = !!options->reuseaddr;
+                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+                if (rc < 0) {
+                        ret = -errno;
+                        goto bail;
+                }
+        }
+        {
+                int rc;
+                int on;
+                on = !!options->reuseport;
+                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+                if (rc < 0) {
+                        ret = -errno;
+                        goto bail;
+                }
+        }
         rc = bind(fd, sockaddr , length);
         if (rc != 0) {
                 close(fd);
