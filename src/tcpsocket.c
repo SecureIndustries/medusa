@@ -884,6 +884,7 @@ ipv6:
                 on = !!options->reuseaddr;
                 rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
                 if (rc < 0) {
+                        close(fd);
                         ret = -errno;
                         goto bail;
                 }
@@ -894,6 +895,7 @@ ipv6:
                 on = !!options->reuseport;
                 rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
                 if (rc < 0) {
+                        close(fd);
                         ret = -errno;
                         goto bail;
                 }
