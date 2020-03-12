@@ -1493,7 +1493,6 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_lookup_unlocked (
 {
         int rc;
 
-        struct medusa_udpsocket_init_options medusa_udpsocket_init_options;
         struct medusa_udpsocket_connect_options medusa_udpsocket_connect_options;
 
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
@@ -1514,33 +1513,23 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_lookup_unlocked (
                 return -EINVAL;
         }
 
-        rc = medusa_udpsocket_init_options_default(&medusa_udpsocket_init_options);
-        if (rc != 0) {
-                return rc;
-        }
-        medusa_udpsocket_init_options.monitor     = medusa_dnsrequest_get_monitor_unlocked(dnsrequest);
-        medusa_udpsocket_init_options.onevent     = dnsrequest_udpsocket_onevent;
-        medusa_udpsocket_init_options.context     = dnsrequest;
-        medusa_udpsocket_init_options.enabled     = 1;
-        medusa_udpsocket_init_options.nonblocking = 1;
-        medusa_udpsocket_init_options.reuseaddr   = 1;
-        medusa_udpsocket_init_options.reuseport   = 1;
-        dnsrequest->udpsocket = medusa_udpsocket_create_with_options_unlocked(&medusa_udpsocket_init_options);
-        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
-                return MEDUSA_PTR_ERR(dnsrequest->udpsocket);
-        }
-
         rc = medusa_udpsocket_connect_options_default(&medusa_udpsocket_connect_options);
         if (rc != 0) {
                 return rc;
         }
-        medusa_udpsocket_connect_options.address = dnsrequest->nameserver;
-        medusa_udpsocket_connect_options.port    = 53;
-        medusa_udpsocket_connect_options.protocol= MEDUSA_UDPSOCKET_PROTOCOL_ANY;
-        rc = medusa_udpsocket_connect_with_options_unlocked(dnsrequest->udpsocket, &medusa_udpsocket_connect_options);
-        if (rc != 0) {
-                return rc;
+        medusa_udpsocket_connect_options.monitor     = medusa_dnsrequest_get_monitor_unlocked(dnsrequest);
+        medusa_udpsocket_connect_options.onevent     = dnsrequest_udpsocket_onevent;
+        medusa_udpsocket_connect_options.context     = dnsrequest;
+        medusa_udpsocket_connect_options.address     = dnsrequest->nameserver;
+        medusa_udpsocket_connect_options.port        = 53;
+        medusa_udpsocket_connect_options.protocol    = MEDUSA_UDPSOCKET_PROTOCOL_ANY;
+        medusa_udpsocket_connect_options.enabled     = 1;
+        medusa_udpsocket_connect_options.nonblocking = 1;
+        dnsrequest->udpsocket = medusa_udpsocket_connect_with_options_unlocked(&medusa_udpsocket_connect_options);
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
+                return MEDUSA_PTR_ERR(dnsrequest->udpsocket);
         }
+
         return 0;
 }
 

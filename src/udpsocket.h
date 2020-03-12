@@ -69,36 +69,48 @@ enum {
 #define MEDUSA_UDPSOCKET_STATE_CONNECTED                MEDUSA_UDPSOCKET_STATE_CONNECTED
 };
 
-struct medusa_udpsocket_init_options {
+struct medusa_udpsocket_bind_options {
         struct medusa_monitor *monitor;
         int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param);
         void *context;
+        unsigned int protocol;
+        const char *address;
+        unsigned short port;
         int nonblocking;
         int reuseaddr;
         int reuseport;
         int enabled;
 };
 
-struct medusa_udpsocket_bind_options {
-        unsigned int protocol;
-        const char *address;
-        unsigned short port;
-};
-
 struct medusa_udpsocket_open_options {
+        struct medusa_monitor *monitor;
+        int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param);
+        void *context;
         unsigned int protocol;
+        int nonblocking;
+        int enabled;
 };
 
 struct medusa_udpsocket_connect_options {
+        struct medusa_monitor *monitor;
+        int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param);
+        void *context;
         unsigned int protocol;
         const char *address;
         unsigned short port;
+        int nonblocking;
+        int enabled;
 };
 
 struct medusa_udpsocket_attach_options {
+        struct medusa_monitor *monitor;
+        int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param);
+        void *context;
         int fd;
         int bound;
         int clodestroy;
+        int nonblocking;
+        int enabled;
 };
 
 #ifdef __cplusplus
@@ -106,10 +118,22 @@ extern "C"
 {
 #endif
 
-int medusa_udpsocket_init_options_default (struct medusa_udpsocket_init_options *options);
+int medusa_udpsocket_bind_options_default (struct medusa_udpsocket_bind_options *options);
+struct medusa_udpsocket * medusa_udpsocket_bind (struct medusa_monitor *monitor, unsigned int protocol, const char *address, unsigned short port, int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param), void *context);
+struct medusa_udpsocket * medusa_udpsocket_bind_with_options (const struct medusa_udpsocket_bind_options *options);
 
-struct medusa_udpsocket * medusa_udpsocket_create (struct medusa_monitor *monitor, int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param), void *context);
-struct medusa_udpsocket * medusa_udpsocket_create_with_options (const struct medusa_udpsocket_init_options *options);
+int medusa_udpsocket_open_options_default (struct medusa_udpsocket_open_options *options);
+struct medusa_udpsocket * medusa_udpsocket_open (struct medusa_monitor *monitor, unsigned int protocol, int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param), void *context);
+struct medusa_udpsocket * medusa_udpsocket_open_with_options (const struct medusa_udpsocket_open_options *options);
+
+int medusa_udpsocket_connect_options_default (struct medusa_udpsocket_connect_options *options);
+struct medusa_udpsocket * medusa_udpsocket_connect (struct medusa_monitor *monitor, unsigned int protocol, const char *address, unsigned short port, int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param), void *context);
+struct medusa_udpsocket * medusa_udpsocket_connect_with_options (const struct medusa_udpsocket_connect_options *options);
+
+int medusa_udpsocket_attach_options_default (struct medusa_udpsocket_attach_options *options);
+struct medusa_udpsocket * medusa_udpsocket_attach (struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param), void *context);
+struct medusa_udpsocket * medusa_udpsocket_attach_with_options (const struct medusa_udpsocket_attach_options *options);
+
 void medusa_udpsocket_destroy (struct medusa_udpsocket *udpsocket);
 
 int medusa_udpsocket_get_state (const struct medusa_udpsocket *udpsocket);
@@ -130,9 +154,6 @@ int medusa_udpsocket_get_reuseaddr (const struct medusa_udpsocket *udpsocket);
 int medusa_udpsocket_set_reuseport (struct medusa_udpsocket *udpsocket, int enabled);
 int medusa_udpsocket_get_reuseport (const struct medusa_udpsocket *udpsocket);
 
-int medusa_udpsocket_set_connect_timeout (struct medusa_udpsocket *udpsocket, double timeout);
-double medusa_udpsocket_get_connect_timeout (const struct medusa_udpsocket *udpsocket);
-
 int medusa_udpsocket_set_read_timeout (struct medusa_udpsocket *udpsocket, double timeout);
 double medusa_udpsocket_get_read_timeout (const struct medusa_udpsocket *udpsocket);
 
@@ -142,22 +163,6 @@ int medusa_udpsocket_set_events (struct medusa_udpsocket *udpsocket, unsigned in
 int medusa_udpsocket_add_events (struct medusa_udpsocket *udpsocket, unsigned int events);
 int medusa_udpsocket_del_events (struct medusa_udpsocket *udpsocket, unsigned int events);
 unsigned int medusa_udpsocket_get_events (const struct medusa_udpsocket *io);
-
-int medusa_udpsocket_bind_options_default (struct medusa_udpsocket_bind_options *options);
-int medusa_udpsocket_bind (struct medusa_udpsocket *udpsocket, unsigned int protocol, const char *address, unsigned short port);
-int medusa_udpsocket_bind_with_options (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_bind_options *options);
-
-int medusa_udpsocket_open_options_default (struct medusa_udpsocket_open_options *options);
-int medusa_udpsocket_open (struct medusa_udpsocket *udpsocket, unsigned int protocol);
-int medusa_udpsocket_open_with_options (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_open_options *options);
-
-int medusa_udpsocket_connect_options_default (struct medusa_udpsocket_connect_options *options);
-int medusa_udpsocket_connect (struct medusa_udpsocket *udpsocket, unsigned int protocol, const char *address, unsigned short port);
-int medusa_udpsocket_connect_with_options (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_connect_options *options);
-
-int medusa_udpsocket_attach_options_default (struct medusa_udpsocket_attach_options *options);
-int medusa_udpsocket_attach (struct medusa_udpsocket *udpsocket, int fd);
-int medusa_udpsocket_attach_with_options (struct medusa_udpsocket *udpsocket, const struct medusa_udpsocket_attach_options *options);
 
 int medusa_udpsocket_get_sockname (struct medusa_udpsocket *udpsocket, struct sockaddr_storage *sockaddr);
 int medusa_udpsocket_get_peername (struct medusa_udpsocket *udpsocket, struct sockaddr_storage *sockaddr);
