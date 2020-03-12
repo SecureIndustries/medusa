@@ -71,6 +71,8 @@ static int test_poll (unsigned int poll)
 
         int port;
         struct medusa_udpsocket *udpsocket;
+        struct medusa_udpsocket_bind_options udpsocket_bind_options;
+        struct medusa_udpsocket_connect_options udpsocket_connect_options;
 
         monitor = NULL;
 
@@ -82,25 +84,34 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        udpsocket = medusa_udpsocket_create(monitor, udpsocket_bind_onevent, NULL);
-        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
-                goto bail;
-        }
-        rc = medusa_udpsocket_set_nonblocking(udpsocket, 1);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_udpsocket_set_reuseaddr(udpsocket, 0);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_udpsocket_set_reuseport(udpsocket, 0);
-        if (rc < 0) {
-                goto bail;
-        }
         for (port = 12345; port < 65535; port++) {
-                rc = medusa_udpsocket_bind(udpsocket, MEDUSA_UDPSOCKET_PROTOCOL_ANY, "127.0.0.1", port);
-                if (rc == 0) {
+                fprintf(stderr, "trying port: %d\n", port);
+
+                rc = medusa_udpsocket_bind_options_default(&udpsocket_bind_options);
+                if (rc < 0) {
+                        fprintf(stderr, "medusa_udpsocket_bind_options_default failed\n");
+                        goto bail;
+                }
+                udpsocket_bind_options.monitor     = monitor;
+                udpsocket_bind_options.onevent     = udpsocket_bind_onevent;
+                udpsocket_bind_options.context     = NULL;
+                udpsocket_bind_options.protocol    = MEDUSA_UDPSOCKET_PROTOCOL_ANY;
+                udpsocket_bind_options.address     = "127.0.0.1";
+                udpsocket_bind_options.port        = port;
+                udpsocket_bind_options.reuseaddr   = 1;
+                udpsocket_bind_options.reuseport   = 1;
+                udpsocket_bind_options.nonblocking = 1;
+                udpsocket_bind_options.enabled     = 1;
+
+                udpsocket = medusa_udpsocket_bind_with_options(&udpsocket_bind_options);
+                if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                        fprintf(stderr, "medusa_udpsocket_bind_with_options failed\n");
+                        goto bail;
+                }
+                if (medusa_udpsocket_get_state(udpsocket) == MEDUSA_UDPSOCKET_STATE_DISCONNECTED) {
+                        fprintf(stderr, "medusa_udpsocket_bind_with_options error: %d, %s\n", medusa_udpsocket_get_error(udpsocket), strerror(medusa_udpsocket_get_error(udpsocket)));
+                        medusa_udpsocket_destroy(udpsocket);
+                } else {
                         break;
                 }
         }
@@ -109,26 +120,28 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
         fprintf(stderr, "port: %d\n", port);
-        rc = medusa_udpsocket_set_enabled(udpsocket, 1);
-        if (rc < 0) {
-                goto bail;
-        }
 
-        udpsocket = medusa_udpsocket_create(monitor, udpsocket_connect_onevent, NULL);
+        rc = medusa_udpsocket_connect_options_default(&udpsocket_connect_options);
+        if (rc < 0) {
+                fprintf(stderr, "medusa_udpsocket_connect_options_default failed\n");
+                goto bail;
+        }
+        udpsocket_connect_options.monitor     = monitor;
+        udpsocket_connect_options.onevent     = udpsocket_connect_onevent;
+        udpsocket_connect_options.context     = NULL;
+        udpsocket_connect_options.protocol    = MEDUSA_UDPSOCKET_PROTOCOL_ANY;
+        udpsocket_connect_options.address     = "127.0.0.1";
+        udpsocket_connect_options.port        = port;
+        udpsocket_connect_options.nonblocking = 1;
+        udpsocket_connect_options.enabled     = 1;
+
+        udpsocket = medusa_udpsocket_connect_with_options(&udpsocket_connect_options);
         if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                fprintf(stderr, "medusa_udpsocket_connect_with_options failed\n");
                 goto bail;
         }
-        rc = medusa_udpsocket_set_nonblocking(udpsocket, 1);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_udpsocket_connect(udpsocket, MEDUSA_UDPSOCKET_PROTOCOL_ANY, "127.0.0.1", port);
-        if (rc < 0) {
-                fprintf(stderr, "medusa_udpsocket_connect failed\n");
-                goto bail;
-        }
-        rc = medusa_udpsocket_set_enabled(udpsocket, 1);
-        if (rc < 0) {
+        if (medusa_udpsocket_get_state(udpsocket) == MEDUSA_UDPSOCKET_STATE_DISCONNECTED) {
+                fprintf(stderr, "medusa_udpsocket_connect_with_options error: %d, %s\n", medusa_udpsocket_get_error(udpsocket), strerror(medusa_udpsocket_get_error(udpsocket)));
                 goto bail;
         }
 
