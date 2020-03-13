@@ -20,18 +20,18 @@ enum {
         MEDUSA_UDPSOCKET_EVENT_BINDING                  = (1 <<  0), /* 0x00000001 */
         MEDUSA_UDPSOCKET_EVENT_BOUND                    = (1 <<  1), /* 0x00000002 */
         MEDUSA_UDPSOCKET_EVENT_LISTENING                = (1 <<  2), /* 0x00000004 */
-        MEDUSA_UDPSOCKET_EVENT_RESOLVING                = (1 <<  4), /* 0x00000010 */
-        MEDUSA_UDPSOCKET_EVENT_RESOLVE_TIMEOUT          = (1 <<  5), /* 0x00000020 */
-        MEDUSA_UDPSOCKET_EVENT_RESOLVED                 = (1 <<  6), /* 0x00000040 */
-        MEDUSA_UDPSOCKET_EVENT_CONNECTING               = (1 <<  7), /* 0x00000080 */
-        MEDUSA_UDPSOCKET_EVENT_CONNECT_TIMEOUT          = (1 <<  8), /* 0x00000100 */
-        MEDUSA_UDPSOCKET_EVENT_CONNECTED                = (1 <<  9), /* 0x00000200 */
-        MEDUSA_UDPSOCKET_EVENT_IN                       = (1 << 10), /* 0x00000400 */
-        MEDUSA_UDPSOCKET_EVENT_IN_TIMEOUT               = (1 << 11), /* 0x00000800 */
-        MEDUSA_UDPSOCKET_EVENT_OUT                      = (1 << 12), /* 0x00001000 */
-        MEDUSA_UDPSOCKET_EVENT_DISCONNECTED             = (1 << 13), /* 0x00002000 */
-        MEDUSA_UDPSOCKET_EVENT_ERROR                    = (1 << 14), /* 0x00004000 */
-        MEDUSA_UDPSOCKET_EVENT_DESTROY                  = (1 << 15)  /* 0x00080000 */
+        MEDUSA_UDPSOCKET_EVENT_RESOLVING                = (1 <<  3), /* 0x00000008 */
+        MEDUSA_UDPSOCKET_EVENT_RESOLVE_TIMEOUT          = (1 <<  4), /* 0x00000010 */
+        MEDUSA_UDPSOCKET_EVENT_RESOLVED                 = (1 <<  5), /* 0x00000020 */
+        MEDUSA_UDPSOCKET_EVENT_CONNECTING               = (1 <<  6), /* 0x00000040 */
+        MEDUSA_UDPSOCKET_EVENT_CONNECT_TIMEOUT          = (1 <<  7), /* 0x00000080 */
+        MEDUSA_UDPSOCKET_EVENT_CONNECTED                = (1 <<  8), /* 0x00000100 */
+        MEDUSA_UDPSOCKET_EVENT_IN                       = (1 <<  9), /* 0x00000200 */
+        MEDUSA_UDPSOCKET_EVENT_IN_TIMEOUT               = (1 << 10), /* 0x00000400 */
+        MEDUSA_UDPSOCKET_EVENT_OUT                      = (1 << 11), /* 0x00000800 */
+        MEDUSA_UDPSOCKET_EVENT_DISCONNECTED             = (1 << 12), /* 0x00001000 */
+        MEDUSA_UDPSOCKET_EVENT_ERROR                    = (1 << 13), /* 0x00002000 */
+        MEDUSA_UDPSOCKET_EVENT_DESTROY                  = (1 << 14)  /* 0x00004000 */
 #define MEDUSA_UDPSOCKET_EVENT_BINDING                  MEDUSA_UDPSOCKET_EVENT_BINDING
 #define MEDUSA_UDPSOCKET_EVENT_BOUND                    MEDUSA_UDPSOCKET_EVENT_BOUND
 #define MEDUSA_UDPSOCKET_EVENT_LISTENING                MEDUSA_UDPSOCKET_EVENT_LISTENING
