@@ -19,6 +19,11 @@
 #if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#define TLS_ST_OK SSL_ST_OK
+#endif
+
 #endif
 
 #include "error.h"
