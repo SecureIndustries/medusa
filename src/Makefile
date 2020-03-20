@@ -26,7 +26,7 @@ target.o-y = \
 	libmedusa.o \
 
 target.so-y = \
-	libmedusa.so \
+	libmedusa.so.${MEDUSA_SONAME} \
 
 libmedusa.a_cflags-y = \
 	-fvisibility=hidden
@@ -102,17 +102,21 @@ libmedusa.o_cflags-y = \
 libmedusa.o_files-y = \
 	${libmedusa.a_files-y}
 
-libmedusa.so_cflags-y = \
+libmedusa.so.${MEDUSA_SONAME}_cflags-y = \
 	${libmedusa.a_cflags-y}
 
-libmedusa.so_files-y = \
+libmedusa.so.${MEDUSA_SONAME}_files-y = \
 	${libmedusa.a_files-y}
 
-libmedusa.so_ldflags-y = \
-	-lpthread
+libmedusa.so.${MEDUSA_SONAME}_ldflags-y = \
+	-lpthread \
+	-lm
 
-libmedusa.so_ldflags-$(__LINUX__) += \
+libmedusa.so.${MEDUSA_SONAME}_ldflags-$(__LINUX__) += \
 	-lrt
+
+libmedusa.so.${MEDUSA_SONAME}_ldflags-$(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) += \
+	-lssl
 
 dist.dir = ../dist
 dist.base = medusa
@@ -136,6 +140,6 @@ dist.include-y = \
 
 dist.lib-y = \
 	libmedusa.a \
-	libmedusa.so \
+	libmedusa.so.${MEDUSA_SONAME} \
 
 include ../Makefile.lib

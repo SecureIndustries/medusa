@@ -1,0 +1,38 @@
+Source: medusa
+Section: net
+Priority: optional
+Maintainer: Murat Demirten <murat@isoolate.com>
+Standards-Version: 4.2.1
+Build-Depends: debhelper ( >= 11), make, gcc, pkg-config, libssl-dev
+Homepage: https://github.com/SecureIndustries/medusa
+
+Package: libmedusa1
+Section: libs
+Priority: optional
+Architecture: linux-any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Asynchronous event notification library
+ Medusa is a software library that provides asynchronous event notification. 
+ .
+ The medusa API provides a mechanism to execute a callback function when a 
+ specific event occurs on a file descriptor or after a timeout has been reached. 
+ .
+ Medusa also supports callbacks triggered by signals and regular timeouts.
+
+Package: libmedusa-dev
+Section: libdevel
+Priority: optional
+Architecture: linux-any
+Multi-Arch: same
+Depends: libmedusa1 (= ${binary:Version}), libc6-dev | libc-dev
+Description: libmedusa1 event notification library - development files
+ Medusa is a software library that provides asynchronous event notification. 
+ .
+ The medusa API provides a mechanism to execute a callback function when a 
+ specific event occurs on a file descriptor or after a timeout has been reached. 
+ .
+ Medusa also supports callbacks triggered by signals and regular timeouts.
+ .
+ This package is part of the medusa project, providing all necessary
+ files for developing applications with medusa event loop: header files, 
+ static libraries, symlinks to dynamic libraries, and examples.
