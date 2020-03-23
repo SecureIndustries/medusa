@@ -6,4 +6,4 @@
 	url = https://github.com/SecureIndustries/http-parser.git
 [submodule "3rdparty/SPCDNS"]
 	path = 3rdparty/SPCDNS
-	url = git@github.com:SecureIndustries/SPCDNS.git
+	url = https://github.com/SecureIndustries/SPCDNS.git
