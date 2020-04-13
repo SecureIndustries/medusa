@@ -1,3 +1,9 @@
+medusa (1.0.1-1) unstable; urgency=low
+
+  * dnsrequest.h header included in package.
+
+ -- Murat Demirten <mdemirten@yh.com.tr>  Mon, 13 Apr 2020 16:51:20 +0300
+
 medusa (1.0.0-1) unstable; urgency=low
 
   * Initial Release.
