@@ -122,6 +122,8 @@ struct medusa_tcpsocket_connect_options {
         const char *address;
         unsigned short port;
         double timeout;
+        int fd;
+        int clodestroy;
         int nonblocking;
         int nodelay;
         int buffered;

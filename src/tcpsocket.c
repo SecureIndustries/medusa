@@ -64,7 +64,7 @@ enum {
         MEDUSA_TCPSOCKET_FLAG_SSL               = (1 << 12),
         MEDUSA_TCPSOCKET_FLAG_SSL_CTX_EXTERNAL  = (1 << 13),
         MEDUSA_TCPSOCKET_FLAG_SSL_EXTERNAL      = (1 << 14),
-        MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK      = (1 << 15),
+        MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK      = (1 << 15)
 #define MEDUSA_TCPSOCKET_FLAG_NONE              MEDUSA_TCPSOCKET_FLAG_NONE
 #define MEDUSA_TCPSOCKET_FLAG_BIND              MEDUSA_TCPSOCKET_FLAG_BIND
 #define MEDUSA_TCPSOCKET_FLAG_ACCEPT            MEDUSA_TCPSOCKET_FLAG_ACCEPT
@@ -1240,8 +1240,10 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_options_de
                 return -EINVAL;
         }
         memset(options, 0, sizeof(struct medusa_tcpsocket_connect_options));
-        options->protocol = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
-        options->timeout  = -1;
+        options->protocol   = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
+        options->timeout    = -1;
+        options->fd         = -1;
+        options->clodestroy = 1;
         return 0;
 }
 
@@ -1289,6 +1291,9 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 goto bail;
         }
         tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_CONNECT);
+        if (options->fd >= 0) {
+                tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ATTACH);
+        }
 
         rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_RESOLVING);
         if (rc < 0) {
@@ -1366,7 +1371,11 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                         continue;
                 }
 
-                fd = socket(res->ai_family, SOCK_STREAM, 0);
+                if (options->fd >= 0) {
+                        fd = options->fd;
+                } else {
+                        fd = socket(res->ai_family, SOCK_STREAM, 0);
+                }
                 if (fd < 0) {
                         ret = -errno;
                         goto bail;
@@ -1377,12 +1386,20 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                         flags = fcntl(fd, F_GETFL, 0);
                         if (flags < 0) {
                                 ret = -errno;
+                                if (options->fd < 0 ||
+                                    options->clodestroy == 1) {
+                                        close(fd);
+                                }
                                 goto bail;
                         }
                         flags = (options->nonblocking) ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
                         rc = fcntl(fd, F_SETFL, flags);
                         if (rc != 0) {
                                 ret = -errno;
+                                if (options->fd < 0 ||
+                                    options->clodestroy == 1) {
+                                        close(fd);
+                                }
                                 goto bail;
                         }
                 }
@@ -1390,7 +1407,9 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 if (rc != 0) {
                         if (errno != EINPROGRESS &&
                             errno != EALREADY) {
-                                close(fd);
+                                if (options->fd < 0) {
+                                        close(fd);
+                                }
                                 fd = -1;
                                 continue;
                         } else {
@@ -1405,6 +1424,10 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
              rc != -EINPROGRESS &&
              rc != -EALREADY)) {
                 ret = rc;
+                if (options->fd < 0 ||
+                    options->clodestroy == 1) {
+                        close(fd);
+                }
                 goto bail;
         }
         connected = (rc == 0);
@@ -1420,11 +1443,15 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
         io_init_options.events     = MEDUSA_IO_EVENT_IN;
         io_init_options.onevent    = tcpsocket_io_onevent;
         io_init_options.context    = tcpsocket;
-        io_init_options.clodestroy = 1;
+        io_init_options.clodestroy = options->clodestroy;
         io_init_options.enabled    = 0;
         tcpsocket->io = medusa_io_create_with_options_unlocked(&io_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
                 ret = MEDUSA_PTR_ERR(tcpsocket->io);
+                if (options->fd < 0 ||
+                    options->clodestroy == 1) {
+                        close(fd);
+                }
                 goto bail;
         }
 
