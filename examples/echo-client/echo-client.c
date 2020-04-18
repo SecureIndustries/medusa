@@ -24,23 +24,30 @@
 
 static int g_running;
 static int g_use_iovec;
+static int g_use_ssl;
 
 #define OPTION_ADDRESS_DEFAULT  "0.0.0.0"
-#define OPTION_PORT_DEFAULT     12345
+#define OPTION_DPORT_DEFAULT     12345
+#define OPTION_SPORT_DEFAULT    0
 #define OPTION_STRING_DEFAULT   "hello from medusa echo client"
 #define OPTION_IOVEC_DEFAULT    0
+#define OPTION_SSL_DEFAULT      0
 
 #define OPTION_HELP             'h'
 #define OPTION_ADDRESS          'a'
-#define OPTION_PORT             'p'
+#define OPTION_DPORT            'p'
+#define OPTION_SPORT            'P'
 #define OPTION_STRING           's'
 #define OPTION_IOVEC            'i'
+#define OPTION_SSL              'S'
 static struct option longopts[] = {
         { "help",               no_argument,            NULL,   OPTION_HELP     },
         { "address",            required_argument,      NULL,   OPTION_ADDRESS  },
-        { "port",               required_argument,      NULL,   OPTION_PORT     },
+        { "dport",              required_argument,      NULL,   OPTION_DPORT    },
+        { "sport",              required_argument,      NULL,   OPTION_SPORT    },
         { "string",             required_argument,      NULL,   OPTION_STRING   },
         { "iovec",              required_argument,      NULL,   OPTION_IOVEC    },
+        { "ssl",                required_argument,      NULL,   OPTION_SSL      },
         { NULL,                 0,                      NULL,   0               },
 };
 
@@ -49,9 +56,11 @@ static void usage (const char *pname)
         fprintf(stdout, "usage: %s [option] [text]:\n", pname);
         fprintf(stdout, "  -h. --help   : this text\n");
         fprintf(stdout, "  -a, --address: server address (default: %s)\n", OPTION_ADDRESS_DEFAULT);
-        fprintf(stdout, "  -p. --port   : server port (default: %d)\n", OPTION_PORT_DEFAULT);
+        fprintf(stdout, "  -p. --dport  : destination port (default: %d)\n", OPTION_DPORT_DEFAULT);
+        fprintf(stdout, "  -P. --sport  : source port (default: %d)\n", OPTION_SPORT_DEFAULT);
         fprintf(stdout, "  -s. --string : string to send (default: %s)\n", OPTION_STRING_DEFAULT);
         fprintf(stdout, "  -i, --iovec  : use iovec read (default: %d)\n", OPTION_IOVEC_DEFAULT);
+        fprintf(stdout, "  -S, --ssl    : enable ssl (default: %d)\n", OPTION_SSL_DEFAULT);
 }
 
 static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
@@ -61,11 +70,15 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
 
         (void) param;
 
+        fprintf(stderr, "tcpsocket events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
+
         if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
+                fprintf(stderr, "tcpsocket error: %d, %s\n", medusa_tcpsocket_get_error(tcpsocket), strerror(medusa_tcpsocket_get_error(tcpsocket)));
+                return medusa_tcpsocket_get_error(tcpsocket);
         }
 
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
-                rc = medusa_tcpsocket_set_ssl(tcpsocket, 1);
+                rc = medusa_tcpsocket_set_ssl(tcpsocket, g_use_ssl);
                 if (rc < 0) {
                         fprintf(stderr, "can not set ssl\n");
                         return rc;
@@ -192,7 +205,8 @@ int main (int argc, char *argv[])
         int err;
 
         int c;
-        int option_port;
+        int option_dport;
+        int option_sport;
         const char *option_address;
         const char *option_string;
 
@@ -218,14 +232,17 @@ int main (int argc, char *argv[])
         err = 0;
         medusa_monitor = NULL;
 
-        option_port     = OPTION_PORT_DEFAULT;
+        option_dport    = OPTION_DPORT_DEFAULT;
+        option_sport    = OPTION_SPORT_DEFAULT;
         option_address  = OPTION_ADDRESS_DEFAULT;
         option_string   = OPTION_STRING_DEFAULT;
 
-        g_running = 1;
-        g_use_iovec = 1;
+        g_use_iovec     = OPTION_IOVEC_DEFAULT;
+        g_use_ssl       = OPTION_SSL_DEFAULT;
 
-        while ((c = getopt_long(argc, argv, "ha:p:s:i:", longopts, NULL)) != -1) {
+        g_running = 1;
+
+        while ((c = getopt_long(argc, argv, "ha:p:P:s:i:S:", longopts, NULL)) != -1) {
                 switch (c) {
                         case OPTION_HELP:
                                 usage(argv[0]);
@@ -233,14 +250,20 @@ int main (int argc, char *argv[])
                         case OPTION_ADDRESS:
                                 option_address = optarg;
                                 break;
-                        case OPTION_PORT:
-                                option_port = atoi(optarg);
+                        case OPTION_DPORT:
+                                option_dport = atoi(optarg);
+                                break;
+                        case OPTION_SPORT:
+                                option_sport = atoi(optarg);
                                 break;
                         case OPTION_STRING:
                                 option_string = optarg;
                                 break;
                         case OPTION_IOVEC:
                                 g_use_iovec = !!atoi(optarg);
+                                break;
+                        case OPTION_SSL:
+                                g_use_ssl = !!atoi(optarg);
                                 break;
                         default:
                                 fprintf(stderr, "unknown option: %d\n", optopt);
@@ -287,7 +310,8 @@ int main (int argc, char *argv[])
         medusa_tcpsocket_connect_options.context     = (void *) option_string;
         medusa_tcpsocket_connect_options.protocol    = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
         medusa_tcpsocket_connect_options.address     = option_address;
-        medusa_tcpsocket_connect_options.port        = option_port;
+        medusa_tcpsocket_connect_options.port        = option_dport;
+        medusa_tcpsocket_connect_options.sport       = option_sport;
         medusa_tcpsocket_connect_options.nonblocking = 1;
         medusa_tcpsocket_connect_options.buffered    = 1;
         medusa_tcpsocket_connect_options.enabled     = 1;

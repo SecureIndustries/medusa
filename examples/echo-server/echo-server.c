@@ -34,9 +34,9 @@ static int g_running;
 #define OPTION_HELP                     'h'
 #define OPTION_ADDRESS                  'a'
 #define OPTION_PORT                     'p'
-#define OPTION_SSL                      's'
-#define OPTION_SSL_CERTIFICATE          'c'
-#define OPTION_SSL_PRIVATEKEY           'k'
+#define OPTION_SSL                      'S'
+#define OPTION_SSL_CERTIFICATE          'C'
+#define OPTION_SSL_PRIVATEKEY           'K'
 
 static struct option longopts[] = {
         { "help",               no_argument,            NULL,   OPTION_HELP             },
@@ -54,9 +54,9 @@ static void usage (const char *pname)
         fprintf(stdout, "  -h. --help   : this text\n");
         fprintf(stdout, "  -a, --address: listening address (values: interface ip address, default: %s)\n", OPTION_ADDRESS_DEFAULT);
         fprintf(stdout, "  -p. --port   : listening port (values: 0 < port < 65536, default: %d)\n", OPTION_PORT_DEFAULT);
-        fprintf(stdout, "  -s, --ssl            : enable ssl (default: %d)\n", OPTION_SSL_DEFAULT);
-        fprintf(stdout, "  -c, --ssl_certificate: ssl certificate (default: %s)\n", OPTION_SSL_CERTIFICATE_DEFAULT);
-        fprintf(stdout, "  -k, --ssl_privatekey : ssl privatekey (default: %s)\n", OPTION_SSL_PRIVATEKEY_DEFAULT);
+        fprintf(stdout, "  -S, --ssl            : enable ssl (default: %d)\n", OPTION_SSL_DEFAULT);
+        fprintf(stdout, "  -C, --ssl_certificate: ssl certificate (default: %s)\n", OPTION_SSL_CERTIFICATE_DEFAULT);
+        fprintf(stdout, "  -K, --ssl_privatekey : ssl privatekey (default: %s)\n", OPTION_SSL_PRIVATEKEY_DEFAULT);
 }
 
 static int client_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
@@ -179,13 +179,13 @@ int main (int argc, char *argv[])
         option_port     = OPTION_PORT_DEFAULT;
         option_address  = OPTION_ADDRESS_DEFAULT;
 
-        option_ssl              = OPTION_SSL;
+        option_ssl              = OPTION_SSL_DEFAULT;
         option_ssl_certificate  = OPTION_SSL_CERTIFICATE_DEFAULT;
         option_ssl_privatekey   = OPTION_SSL_PRIVATEKEY_DEFAULT;
 
         g_running = 1;
 
-        while ((c = getopt_long(argc, argv, "ha:p:s:c:k:", longopts, NULL)) != -1) {
+        while ((c = getopt_long(argc, argv, "ha:p:S:C:K:", longopts, NULL)) != -1) {
                 switch (c) {
                         case OPTION_HELP:
                                 usage(argv[0]);

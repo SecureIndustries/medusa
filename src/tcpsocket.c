@@ -1421,6 +1421,52 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                                 goto bail;
                         }
                 }
+                if (options->sport > 0) {
+                        struct sockaddr_storage bind_sockaddr;
+                        if (res->ai_family == AF_INET) {
+                                struct sockaddr_in *bind_sockaddr_in;
+                                bind_sockaddr_in = (struct sockaddr_in *) &bind_sockaddr;
+                                bind_sockaddr_in->sin_family      = AF_INET;
+                                bind_sockaddr_in->sin_addr.s_addr = INADDR_ANY;
+                                bind_sockaddr_in->sin_port        = htons(options->sport);
+                        } else if (res->ai_family == AF_INET6) {
+                                struct sockaddr_in6 *bind_sockaddr_in6;
+                                bind_sockaddr_in6 = (struct sockaddr_in6 *) &bind_sockaddr;
+                                bind_sockaddr_in6->sin6_family = AF_INET6;
+                                bind_sockaddr_in6->sin6_addr   = in6addr_any;
+                                bind_sockaddr_in6->sin6_port   = htons(options->sport);
+                        } else {
+                                ret = -EINVAL;
+                                if (options->fd < 0 ||
+                                    options->clodestroy == 1) {
+                                        close(fd);
+                                }
+                                goto bail;
+                        }
+                        {
+                                int rc;
+                                int on;
+                                on = 1;
+                                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+                                if (rc < 0) {
+                                        ret = -errno;
+                                        if (options->fd < 0 ||
+                                            options->clodestroy == 1) {
+                                                close(fd);
+                                        }
+                                        goto bail;
+                                }
+                        }
+                        rc = bind(fd, (struct sockaddr *) &bind_sockaddr, sizeof(struct sockaddr_storage));
+                        if (rc != 0) {
+                                ret = -errno;
+                                if (options->fd < 0 ||
+                                    options->clodestroy == 1) {
+                                        close(fd);
+                                }
+                                goto bail;
+                        }
+                }
                 rc = connect(fd, res->ai_addr, res->ai_addrlen);
                 if (rc != 0) {
                         if (errno != EINPROGRESS &&
