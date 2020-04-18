@@ -749,7 +749,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind_options_defau
                 return -EINVAL;
         }
         memset(options, 0, sizeof(struct medusa_tcpsocket_bind_options));
-        options->protocol = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
+        options->protocol   = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
+        options->fd         = -1;
+        options->clodestroy = 1;
         return 0;
 }
 
@@ -878,7 +880,11 @@ ipv6:
                 goto bail;
         }
 
-        fd = socket(sockaddr->sa_family, SOCK_STREAM, 0);
+        if (options->fd >= 0) {
+                fd = options->fd;
+        } else {
+                fd = socket(sockaddr->sa_family, SOCK_STREAM, 0);
+        }
         if (fd < 0) {
                 ret = -errno;
                 goto bail;
@@ -889,7 +895,10 @@ ipv6:
                 on = !!options->reuseaddr;
                 rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
                 if (rc < 0) {
-                        close(fd);
+                        if (options->fd < 0 ||
+                            options->clodestroy == 1) {
+                                close(fd);
+                        }
                         ret = -errno;
                         goto bail;
                 }
@@ -900,21 +909,30 @@ ipv6:
                 on = !!options->reuseport;
                 rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
                 if (rc < 0) {
-                        close(fd);
+                        if (options->fd < 0 ||
+                            options->clodestroy == 1) {
+                                close(fd);
+                        }
                         ret = -errno;
                         goto bail;
                 }
         }
         rc = bind(fd, sockaddr , length);
         if (rc != 0) {
-                close(fd);
+                if (options->fd < 0 ||
+                    options->clodestroy == 1) {
+                        close(fd);
+                }
                 ret = -errno;
                 goto bail;
         }
 
         rc = medusa_io_init_options_default(&io_init_options);
         if (rc < 0) {
-                close(fd);
+                if (options->fd < 0 ||
+                    options->clodestroy == 1) {
+                        close(fd);
+                }
                 ret = rc;
                 goto bail;
         }
@@ -923,7 +941,7 @@ ipv6:
         io_init_options.events     = MEDUSA_IO_EVENT_IN;
         io_init_options.onevent    = tcpsocket_io_onevent;
         io_init_options.context    = tcpsocket;
-        io_init_options.clodestroy = 1;
+        io_init_options.clodestroy = options->clodestroy;
         io_init_options.enabled    = 0;
         tcpsocket->io = medusa_io_create_with_options_unlocked(&io_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
@@ -1411,10 +1429,10 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                                         close(fd);
                                 }
                                 fd = -1;
-                                continue;
-                        } else {
                                 rc = -errno;
+                                continue;
                         }
+                        rc = -errno;
                 }
                 break;
         }
@@ -1569,7 +1587,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_attach_options_def
         memset(options, 0, sizeof(struct medusa_tcpsocket_attach_options));
         options->fd         = -1;
         options->bound      = 0;
-        options->clodestroy = 0;
+        options->clodestroy = 1;
         return 0;
 }
 

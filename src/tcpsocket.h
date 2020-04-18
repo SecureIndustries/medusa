@@ -96,6 +96,8 @@ struct medusa_tcpsocket_bind_options {
         unsigned int protocol;
         const char *address;
         unsigned short port;
+        int fd;
+        int clodestroy;
         int reuseaddr;
         int reuseport;
         int nonblocking;
