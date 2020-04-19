@@ -1,3 +1,9 @@
+medusa (1.0.2-1) unstable; urgency=low
+
+  * reuse addr and reuse port options for tcpsockets.
+
+ -- Murat Demirten <mdemirten@yh.com.tr>  Sun, 19 Apr 2020 16:50:14 +0300
+
 medusa (1.0.1-1) unstable; urgency=low
 
   * dnsrequest.h header included in package.
