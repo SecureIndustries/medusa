@@ -127,6 +127,8 @@ struct medusa_tcpsocket_connect_options {
         double timeout;
         int fd;
         int clodestroy;
+        int reuseaddr;
+        int reuseport;
         int nonblocking;
         int nodelay;
         int buffered;

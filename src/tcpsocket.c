@@ -1261,6 +1261,8 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_options_de
         options->protocol   = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
         options->timeout    = -1;
         options->fd         = -1;
+        options->reuseaddr  = 1;
+        options->reuseport  = 1;
         options->clodestroy = 1;
         return 0;
 }
@@ -1443,11 +1445,23 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                                 }
                                 goto bail;
                         }
-                        {
-                                int rc;
+                        if (options->reuseaddr != 0) {
                                 int on;
                                 on = 1;
                                 rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+                                if (rc < 0) {
+                                        ret = -errno;
+                                        if (options->fd < 0 ||
+                                            options->clodestroy == 1) {
+                                                close(fd);
+                                        }
+                                        goto bail;
+                                }
+                        }
+                        if (options->reuseport != 0) {
+                                int on;
+                                on = 1;
+                                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
                                 if (rc < 0) {
                                         ret = -errno;
                                         if (options->fd < 0 ||
