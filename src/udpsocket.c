@@ -373,10 +373,6 @@ __attribute__ ((visibility ("default"))) struct medusa_udpsocket * medusa_udpsoc
         protocol = options->protocol;
         address  = options->address;
         port     = options->port;
-        if (port == 0) {
-                ret = -EINVAL;
-                goto bail;
-        }
 
         if (protocol == MEDUSA_UDPSOCKET_PROTOCOL_IPV4) {
 ipv4:
