@@ -1080,6 +1080,8 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_accept_options_def
                 return -EINVAL;
         }
         memset(options, 0, sizeof(struct medusa_tcpsocket_accept_options));
+        options->fd         = -1;
+        options->clodestroy = 1;
         return 0;
 }
 
@@ -1117,7 +1119,11 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
         }
         tcpsocket_add_flag(accepted, MEDUSA_TCPSOCKET_FLAG_ACCEPT);
 
-        fd = accept(medusa_io_get_fd_unlocked(tcpsocket->io), NULL, NULL);
+        if (options->fd >= 0) {
+                fd = options->fd;
+        } else {
+                fd = accept(medusa_io_get_fd_unlocked(tcpsocket->io), NULL, NULL);
+        }
         if (fd < 0) {
                 ret = -errno;
                 goto bail;
@@ -1125,7 +1131,10 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
 
         rc = medusa_io_init_options_default(&io_init_options);
         if (rc < 0) {
-                close(fd);
+                if (options->fd < 0 ||
+                    options->clodestroy == 1) {
+                        close(fd);
+                }
                 ret = rc;
                 goto bail;
         }
@@ -1134,7 +1143,7 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
         io_init_options.events     = MEDUSA_IO_EVENT_IN;
         io_init_options.onevent    = tcpsocket_io_onevent;
         io_init_options.context    = accepted;
-        io_init_options.clodestroy = 1;
+        io_init_options.clodestroy = options->clodestroy;
         io_init_options.enabled    = 0;
         accepted->io = medusa_io_create_with_options_unlocked(&io_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(accepted->io)) {

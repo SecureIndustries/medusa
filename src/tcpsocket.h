@@ -110,6 +110,8 @@ struct medusa_tcpsocket_bind_options {
 struct medusa_tcpsocket_accept_options {
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param);
         void *context;
+        int fd;
+        int clodestroy;
         int nonblocking;
         int nodelay;
         int buffered;
