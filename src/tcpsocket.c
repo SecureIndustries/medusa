@@ -791,10 +791,6 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
         protocol = options->protocol;
         address  = options->address;
         port     = options->port;
-        if (port == 0) {
-                ret = -EINVAL;
-                goto bail;
-        }
 
         if (protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV4) {
 ipv4:
