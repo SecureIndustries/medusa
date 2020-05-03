@@ -2728,7 +2728,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_tcpsocket_get_ssl_p
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_ssl_set_SSL_unlocked (struct medusa_tcpsocket *tcpsocket, SSL *ssl)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_ssl_set_SSL_unlocked (struct medusa_tcpsocket *tcpsocket, struct ssl_st *ssl)
 {
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
@@ -2746,7 +2746,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_ssl_set_SSL_unlock
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_ssl_set_SSL (struct medusa_tcpsocket *tcpsocket, SSL *ssl)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_ssl_set_SSL (struct medusa_tcpsocket *tcpsocket, struct ssl_st *ssl)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
@@ -2758,7 +2758,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_ssl_set_SSL (struc
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) SSL * medusa_tcpsocket_ssl_get_SSL_unlocked (const struct medusa_tcpsocket *tcpsocket)
+__attribute__ ((visibility ("default"))) struct ssl_st * medusa_tcpsocket_ssl_get_SSL_unlocked (const struct medusa_tcpsocket *tcpsocket)
 {
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
@@ -2769,9 +2769,9 @@ __attribute__ ((visibility ("default"))) SSL * medusa_tcpsocket_ssl_get_SSL_unlo
         return NULL;
 }
 
-__attribute__ ((visibility ("default"))) SSL * medusa_tcpsocket_ssl_get_SSL (const struct medusa_tcpsocket *tcpsocket)
+__attribute__ ((visibility ("default"))) struct ssl_st * medusa_tcpsocket_ssl_get_SSL (const struct medusa_tcpsocket *tcpsocket)
 {
-        SSL *rc;
+        struct ssl_st *rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
@@ -2781,7 +2781,7 @@ __attribute__ ((visibility ("default"))) SSL * medusa_tcpsocket_ssl_get_SSL (con
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_ssl_set_SSL_CTX_unlocked (struct medusa_tcpsocket *tcpsocket, SSL_CTX *ssl_ctx)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_ssl_set_SSL_CTX_unlocked (struct medusa_tcpsocket *tcpsocket, struct ssl_ctx_st *ssl_ctx)
 {
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
@@ -2799,7 +2799,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_ssl_set_SSL_CTX_un
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_ssl_set_SSL_CTX (struct medusa_tcpsocket *tcpsocket, SSL_CTX *ssl_ctx)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_ssl_set_SSL_CTX (struct medusa_tcpsocket *tcpsocket, struct ssl_ctx_st *ssl_ctx)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
@@ -2811,7 +2811,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_ssl_set_SSL_CTX (s
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) SSL_CTX * medusa_tcpsocket_ssl_get_SSL_CTX_unlocked (const struct medusa_tcpsocket *tcpsocket)
+__attribute__ ((visibility ("default"))) struct ssl_ctx_st * medusa_tcpsocket_ssl_get_SSL_CTX_unlocked (const struct medusa_tcpsocket *tcpsocket)
 {
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
@@ -2822,9 +2822,9 @@ __attribute__ ((visibility ("default"))) SSL_CTX * medusa_tcpsocket_ssl_get_SSL_
         return NULL;
 }
 
-__attribute__ ((visibility ("default"))) SSL_CTX * medusa_tcpsocket_ssl_get_SSL_CTX (const struct medusa_tcpsocket *tcpsocket)
+__attribute__ ((visibility ("default"))) struct ssl_ctx_st * medusa_tcpsocket_ssl_get_SSL_CTX (const struct medusa_tcpsocket *tcpsocket)
 {
-        SSL_CTX *rc;
+        struct ssl_ctx_st *rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
