@@ -205,19 +205,21 @@ static int64_t simple_buffer_commitv (struct medusa_buffer *buffer, const struct
         if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
                 return -EINVAL;
         }
+        if (niovecs < 0) {
+                return -EINVAL;
+        }
         if (niovecs == 0) {
                 return 0;
         }
         if (niovecs != 1) {
                 return -EINVAL;
         }
-        if ((simple->data > iovecs[0].iov_base) ||
-            (simple->data + simple->length > iovecs[0].iov_base) ||
+        if ((simple->data + simple->length != iovecs[0].iov_base) ||
             (simple->data + simple->size < iovecs[0].iov_base + iovecs[0].iov_len)) {
                 return -EINVAL;
         }
         simple->length += iovecs[0].iov_len;
-        return niovecs;
+        return 1;
 }
 
 static int64_t simple_buffer_peekv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
@@ -381,7 +383,6 @@ struct medusa_buffer * medusa_buffer_simple_create (unsigned int flags, unsigned
         options.flags = flags;
         options.grow = grow;
         return medusa_buffer_simple_create_with_options(&options);
-
 }
 
 struct medusa_buffer * medusa_buffer_simple_create_with_options (const struct medusa_buffer_simple_init_options *options)

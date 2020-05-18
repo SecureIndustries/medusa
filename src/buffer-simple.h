@@ -9,7 +9,7 @@ enum {
         MEDUSA_BUFFER_SIMPLE_FLAG_DEFAULT       = MEDUSA_BUFFER_SIMPLE_FLAG_NONE,
 };
 
-#define MEDUSA_BUFFER_SIMPLE_DEFAULT_GROW       1024
+#define MEDUSA_BUFFER_SIMPLE_DEFAULT_GROW       4096
 
 struct medusa_buffer_simple_init_options {
         unsigned int flags;
