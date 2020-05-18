@@ -1311,7 +1311,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_init_options_default 
         memset(options, 0, sizeof(struct medusa_buffer_init_options));
         options->type = MEDUSA_BUFFER_TYPE_DEFAULT;
         options->flags = MEDUSA_BUFFER_FLAG_DEFAULT;
-        options->u.simple.grow_size = MEDUSA_BUFFER_DEFAULT_GROW_SIZE;
+        options->grow_size = MEDUSA_BUFFER_DEFAULT_GROW_SIZE;
         return 0;
 }
 
@@ -1341,7 +1341,7 @@ __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_cr
                         return MEDUSA_ERR_PTR(rc);
                 }
                 simple_options.flags   = MEDUSA_BUFFER_SIMPLE_FLAG_DEFAULT;
-                simple_options.grow    = options->u.simple.grow_size;
+                simple_options.grow    = options->grow_size;
                 buffer = medusa_buffer_simple_create_with_options(&simple_options);
         } else {
                 return MEDUSA_ERR_PTR(-ENOENT);
