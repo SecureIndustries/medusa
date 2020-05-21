@@ -381,7 +381,7 @@ struct medusa_buffer * medusa_buffer_simple_create (unsigned int flags, unsigned
                 return MEDUSA_ERR_PTR(rc);
         }
         options.flags = flags;
-        options.grow = grow;
+        options.grow  = grow;
         return medusa_buffer_simple_create_with_options(&options);
 }
 

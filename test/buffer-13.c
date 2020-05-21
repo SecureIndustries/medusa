@@ -9,6 +9,7 @@
 static const unsigned int g_types[] = {
         MEDUSA_BUFFER_TYPE_DEFAULT,
         MEDUSA_BUFFER_TYPE_SIMPLE,
+        MEDUSA_BUFFER_TYPE_RING
 };
 
 static int buffer_onevent (struct medusa_buffer *buffer, unsigned int events, void *context, void *param)

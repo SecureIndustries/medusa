@@ -36,6 +36,7 @@ libmedusa.a_files-y = \
 	pool.c \
 	buffer.c \
 	buffer-simple.c \
+	buffer-ring.c \
 	pqueue.c \
 	condition.c \
 	exec.c \
