@@ -287,8 +287,10 @@ static int64_t simple_buffer_choke (struct medusa_buffer *buffer, int64_t offset
         if (length == 0) {
                 return 0;
         }
-        memmove(simple->data + offset, simple->data + offset + length, simple->length - offset - length);
         simple->length -= length;
+        if (simple->length > 0) {
+                memmove(simple->data + offset, simple->data + offset + length, simple->length - offset);
+        }
         return length;
 }
 

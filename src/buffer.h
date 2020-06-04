@@ -124,7 +124,9 @@ int medusa_buffer_memcmp (const struct medusa_buffer *buffer, int64_t offset, co
 int64_t medusa_buffer_memmem (const struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length);
 
 int medusa_buffer_strcmp (const struct medusa_buffer *buffer, int64_t offset, const char *str);
+int medusa_buffer_strncmp (const struct medusa_buffer *buffer, int64_t offset, const char *str, int64_t n);
 int medusa_buffer_strcasecmp (const struct medusa_buffer *buffer, int64_t offset, const char *str);
+int medusa_buffer_strncasecmp (const struct medusa_buffer *buffer, int64_t offset, const char *str, int64_t n);
 int64_t medusa_buffer_strchr (const struct medusa_buffer *buffer, int64_t offset, const char chr);
 int64_t medusa_buffer_strcasechr (const struct medusa_buffer *buffer, int64_t offset, const char chr);
 int64_t medusa_buffer_strstr (const struct medusa_buffer *buffer, int64_t offset, const char *str);

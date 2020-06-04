@@ -728,6 +728,66 @@ out:    if (iovecs != NULL &&
         return ret;
 }
 
+int medusa_buffer_strncmp (const struct medusa_buffer *buffer, int64_t offset, const char *str, int64_t n)
+{
+        int ret;
+        int64_t i;
+        int64_t l;
+        int64_t length;
+        int64_t niovecs;
+        struct iovec *iovecs;
+        struct iovec _iovecs[16];
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(str)) {
+                return -EINVAL;
+        }
+        length = n;
+        l = medusa_buffer_get_length(buffer);
+        if (length == 0 &&
+            l == 0) {
+                return 0;
+        }
+        if (l < length) {
+                return -1;
+        }
+        niovecs = medusa_buffer_peekv(buffer, offset, length, NULL, 0);
+        if (niovecs < 0) {
+                return niovecs;
+        }
+        if (niovecs > (int64_t) (sizeof(_iovecs) / sizeof(_iovecs[0]))) {
+                iovecs = malloc(sizeof(struct iovec) * niovecs);
+                if (iovecs == NULL) {
+                        return -ENOMEM;
+                }
+        } else {
+                iovecs = _iovecs;
+        }
+        niovecs = medusa_buffer_peekv(buffer, offset, length, iovecs, niovecs);
+        if (niovecs < 0) {
+                ret = niovecs;
+                goto out;
+        }
+        for (i = 0; l > 0 && i < niovecs; i++) {
+                l = MIN(length, (int64_t) iovecs[i].iov_len);
+                ret = strncmp(str, iovecs[i].iov_base, l);
+                if (ret != 0) {
+                        break;
+                }
+                length -= l;
+                str    += l;
+        }
+        if (length > 0) {
+                ret = -1;
+        }
+out:    if (iovecs != NULL &&
+            iovecs != _iovecs) {
+                free(iovecs);
+        }
+        return ret;
+}
+
 int medusa_buffer_strcasecmp (const struct medusa_buffer *buffer, int64_t offset, const char *str)
 {
         int ret;
@@ -744,6 +804,66 @@ int medusa_buffer_strcasecmp (const struct medusa_buffer *buffer, int64_t offset
                 return -EINVAL;
         }
         length = strlen(str);
+        l = medusa_buffer_get_length(buffer);
+        if (length == 0 &&
+            l == 0) {
+                return 0;
+        }
+        if (l < length) {
+                return -1;
+        }
+        niovecs = medusa_buffer_peekv(buffer, offset, length, NULL, 0);
+        if (niovecs < 0) {
+                return niovecs;
+        }
+        if (niovecs > (int64_t) (sizeof(_iovecs) / sizeof(_iovecs[0]))) {
+                iovecs = malloc(sizeof(struct iovec) * niovecs);
+                if (iovecs == NULL) {
+                        return -ENOMEM;
+                }
+        } else {
+                iovecs = _iovecs;
+        }
+        niovecs = medusa_buffer_peekv(buffer, offset, length, iovecs, niovecs);
+        if (niovecs < 0) {
+                ret = niovecs;
+                goto out;
+        }
+        for (i = 0; l > 0 && i < niovecs; i++) {
+                l = MIN(length, (int64_t) iovecs[i].iov_len);
+                ret = strncasecmp(str, iovecs[i].iov_base, l);
+                if (ret != 0) {
+                        break;
+                }
+                length -= l;
+                str    += l;
+        }
+        if (length > 0) {
+                ret = -1;
+        }
+out:    if (iovecs != NULL &&
+            iovecs != _iovecs) {
+                free(iovecs);
+        }
+        return ret;
+}
+
+int medusa_buffer_strncasecmp (const struct medusa_buffer *buffer, int64_t offset, const char *str, int64_t n)
+{
+        int ret;
+        int64_t i;
+        int64_t l;
+        int64_t length;
+        int64_t niovecs;
+        struct iovec *iovecs;
+        struct iovec _iovecs[16];
+        if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(str)) {
+                return -EINVAL;
+        }
+        length = n;
         l = medusa_buffer_get_length(buffer);
         if (length == 0 &&
             l == 0) {
