@@ -7,8 +7,7 @@ struct medusa_buffer_ring {
         int64_t grow;
         int64_t length;
         int64_t size;
-        int64_t rpos;
-        int64_t wpos;
+        int64_t head;
         void *data;
 };
 

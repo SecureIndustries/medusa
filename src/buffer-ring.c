@@ -62,6 +62,29 @@ static int ring_buffer_resize (struct medusa_buffer *buffer, int64_t size)
         return 0;
 }
 
+static int ring_buffer_headify (struct medusa_buffer_ring *ring)
+{
+        void *data;
+        if (ring->length == 0) {
+                ring->head = 0;
+                return 0;
+        }
+        if (ring->head + ring->length <= ring->size) {
+                memmove(ring->data, ring->data + ring->head, ring->length);
+                return 0;
+        }
+        data = malloc(ring->size);
+        if (data == NULL) {
+                return -ENOMEM;
+        }
+        memcpy(data, ring->data + ring->head, ring->size - ring->head);
+        memcpy(data + ring->size - ring->head, ring->data, ring->length - (ring->size - ring->head));
+        free(ring->data);
+        ring->data = data;
+        ring->head = 0;
+        return 0;
+}
+
 static int64_t ring_buffer_get_size (const struct medusa_buffer *buffer)
 {
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
@@ -294,6 +317,7 @@ static int64_t ring_buffer_choke (struct medusa_buffer *buffer, int64_t offset, 
 
 static void * ring_buffer_linearize (struct medusa_buffer *buffer, int64_t offset, int64_t length)
 {
+        int rc;
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
@@ -313,7 +337,14 @@ static void * ring_buffer_linearize (struct medusa_buffer *buffer, int64_t offse
         if (offset + length > ring->length) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
-        return ring->data + offset;
+        if (ring->head + offset + length <= ring->size) {
+                return ring->data + ring->head + offset;
+        }
+        rc = ring_buffer_headify(ring);
+        if (rc < 0) {
+                return MEDUSA_ERR_PTR(-EIO);
+        }
+        return ring_buffer_linearize(buffer, offset, length);
 }
 
 static int ring_buffer_reset (struct medusa_buffer *buffer)
@@ -323,8 +354,7 @@ static int ring_buffer_reset (struct medusa_buffer *buffer)
                 return -EINVAL;
         }
         ring->length = 0;
-        ring->rpos   = 0;
-        ring->wpos   = 0;
+        ring->head   = 0;
         return 0;
 }
 
@@ -405,8 +435,7 @@ struct medusa_buffer * medusa_buffer_ring_create_with_options (const struct medu
         ring->grow   = options->grow;
         ring->length = 0;
         ring->size   = 0;
-        ring->rpos   = 0;
-        ring->wpos   = 0;
+        ring->head   = 0;
         ring->data   = NULL;
         if (ring->grow <= 0) {
                 ring->grow = MEDUSA_BUFFER_RING_DEFAULT_GROW;
