@@ -285,6 +285,14 @@ static int64_t ring_buffer_peekv (const struct medusa_buffer *buffer, int64_t of
 
 static int64_t ring_buffer_choke (struct medusa_buffer *buffer, int64_t offset, int64_t length)
 {
+        int rc;
+        void *d;
+        int64_t b;
+        int64_t e;
+        int64_t h;
+        int64_t t;
+        int64_t s;
+        int64_t l;
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
@@ -296,28 +304,57 @@ static int64_t ring_buffer_choke (struct medusa_buffer *buffer, int64_t offset, 
                 return -EINVAL;
         }
         if (offset > ring->length) {
-                offset = ring->length;
-        }
-        if (length < 0) {
-                length = ring->length - offset;
-        }
-        if (length < 0) {
                 return -EINVAL;
         }
-        if (length > ring->length - offset) {
+        if (length < 0) {
                 length = ring->length - offset;
+        }
+        if (offset + length > ring->length) {
+                return MEDUSA_ERR_PTR(-EINVAL);
         }
         if (length == 0) {
                 return 0;
         }
-        memmove(ring->data + offset, ring->data + offset + length, ring->length - offset - length);
-        ring->length -= length;
-        return length;
+        d = ring->data;
+        s = ring->size;
+        l = ring->length;
+        h = ring->head;
+        t = (h + l) % s;
+        b = (h + offset) % s;
+        e = (h + offset + length) % s;
+        if (b < e) {
+                if (b > h) {
+                        if (t > h) {
+                                // d    h++++b++++e++++t    s
+                                memmove(d + b, d + e, t - e);
+                        } else {
+                                // d++++t    h++++b++++e++++s
+                                memmove(d + b, d + e, s - e);
+                                if (t > s - e) {
+                                        memmove(d + e, d + 0, s - e);
+                                        memmove(d + 0, d + (s - e), t - (s - e));
+                                } else {
+                                        memmove(d + e, d + 0, s - e);
+                                }
+                        }
+                }
+        } else if (b < e && b < h) {
+                /*
+                 * ++++b++++e++++t    h++++s
+                 */
+        }
+        rc = ring_buffer_headify(ring);
+        if (rc < 0) {
+                return MEDUSA_ERR_PTR(-EIO);
+        }
+        return ring_buffer_choke(buffer, offset, length);
 }
 
 static void * ring_buffer_linearize (struct medusa_buffer *buffer, int64_t offset, int64_t length)
 {
         int rc;
+        int64_t b;
+        int64_t e;
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
@@ -332,13 +369,15 @@ static void * ring_buffer_linearize (struct medusa_buffer *buffer, int64_t offse
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
         if (length < 0) {
-                return MEDUSA_ERR_PTR(-EINVAL);
+                length = ring->length - offset;
         }
         if (offset + length > ring->length) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
-        if (ring->head + offset + length <= ring->size) {
-                return ring->data + ring->head + offset;
+        b = (ring->head + offset) % ring->size;
+        e = (ring->head + offset + length) % ring->size;
+        if (b < e) {
+                return ring->data + b;
         }
         rc = ring_buffer_headify(ring);
         if (rc < 0) {
