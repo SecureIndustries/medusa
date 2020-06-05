@@ -22,11 +22,38 @@
 static struct medusa_pool *g_pool_buffer_ring;
 #endif
 
-static int ring_buffer_resize (struct medusa_buffer *buffer, int64_t size)
+static int ring_buffer_headify (struct medusa_buffer_ring *ring)
 {
         void *data;
+        if (ring->length == 0) {
+                ring->head = 0;
+                return 0;
+        }
+        if (ring->head == 0) {
+                return 0;
+        }
+        if (ring->head + ring->length <= ring->size) {
+                memmove(ring->data, ring->data + ring->head, ring->length);
+                ring->head = 0;
+                return 0;
+        }
+        data = malloc(ring->size);
+        if (data == NULL) {
+                return -ENOMEM;
+        }
+        memcpy(data, ring->data + ring->head, ring->size - ring->head);
+        memcpy(data + ring->size - ring->head, ring->data, ring->length - (ring->size - ring->head));
+        free(ring->data);
+        ring->data = data;
+        ring->head = 0;
+        return 0;
+}
+
+static int ring_buffer_resize (struct medusa_buffer_ring *ring, int64_t size)
+{
+        int rc;
+        void *data;
         unsigned int s;
-        struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
         }
@@ -36,9 +63,12 @@ static int ring_buffer_resize (struct medusa_buffer *buffer, int64_t size)
         if (ring->size >= size) {
                 return 0;
         }
-        s = ring->grow;
-        while (s < size) {
-                s += ring->grow;
+        s  = size / ring->grow;
+        s += (size % ring->grow) ? 1 : 0;
+        s *= ring->grow;
+        rc = ring_buffer_headify(ring);
+        if (rc != 0) {
+                return -EIO;
         }
 #if 1
         data = realloc(ring->data, size);
@@ -59,29 +89,6 @@ static int ring_buffer_resize (struct medusa_buffer *buffer, int64_t size)
                 ring->data = data;
         }
         ring->size = size;
-        return 0;
-}
-
-static int ring_buffer_headify (struct medusa_buffer_ring *ring)
-{
-        void *data;
-        if (ring->length == 0) {
-                ring->head = 0;
-                return 0;
-        }
-        if (ring->head + ring->length <= ring->size) {
-                memmove(ring->data, ring->data + ring->head, ring->length);
-                return 0;
-        }
-        data = malloc(ring->size);
-        if (data == NULL) {
-                return -ENOMEM;
-        }
-        memcpy(data, ring->data + ring->head, ring->size - ring->head);
-        memcpy(data + ring->size - ring->head, ring->data, ring->length - (ring->size - ring->head));
-        free(ring->data);
-        ring->data = data;
-        ring->head = 0;
         return 0;
 }
 
@@ -106,9 +113,21 @@ static int64_t ring_buffer_get_length (const struct medusa_buffer *buffer)
 static int64_t ring_buffer_insertv (struct medusa_buffer *buffer, int64_t offset, const struct iovec *iovecs, int64_t niovecs)
 {
         int rc;
+
         int64_t i;
         int64_t length;
+
+        int64_t len;
+        int64_t src;
+        int64_t dst;
+        
+        int64_t srcbeg;
+        int64_t srcend;
+        int64_t dstbeg;
+        int64_t dstend;
+
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
+
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
         }
@@ -130,22 +149,118 @@ static int64_t ring_buffer_insertv (struct medusa_buffer *buffer, int64_t offset
         if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
                 return -EINVAL;
         }
+
         length = 0;
         for (i = 0; i < niovecs; i++) {
                 length += iovecs[i].iov_len;
         }
-        rc = ring_buffer_resize(buffer, ring->length + length);
+        if (length == 0) {
+                return 0;
+        }
+
+        rc = ring_buffer_resize(ring, ring->length + length);
         if (rc < 0) {
                 return rc;
         }
+
         if (offset != ring->length) {
-                memmove(ring->data + offset + length, ring->data + offset, ring->length - offset);
+                srcbeg = ring->head + offset;
+                srcend = ring->head + ring->length;
+                dstbeg = srcbeg + length;
+                dstend = srcend + length;
+
+                /*
+                 *  H      SrcBeg      DstBeg      SrcEnd      DstEnd
+                 *  |         |           |           |           |
+                 *  |         *************************           |
+                 *  |                     |                       |
+                 *  |                     +++++++++++++++++++++++++
+                 *  ------------------------------------------------------
+                 *      S1         S2          S3          S4           S5
+                 */
+                if (srcbeg > ring->size) {
+                        len = srcend - srcbeg;
+                        src = srcbeg - ring->size;
+                        dst = dstbeg - ring->size;
+                        memmove(ring->data + dst, ring->data + src, len);
+                } else if (dstbeg > ring->size) {
+                        len = srcend - ring->size;
+                        src = 0;
+                        dst = src + length;
+                        memmove(ring->data + dst, ring->data + src, len);
+
+                        len = ring->size - srcbeg;
+                        src = srcbeg;
+                        dst = dstbeg - ring->size;
+                        memmove(ring->data + dst, ring->data + src, len);
+                } else if (srcend > ring->size) {
+                        len = srcend - ring->size;
+                        src = 0;
+                        dst = src + length;
+                        memmove(ring->data + dst, ring->data + src, len);
+
+                        len = length;
+                        src = ring->size - len;
+                        dst = 0;
+                        memmove(ring->data + dst, ring->data + src, len);
+
+                        len = ring->size - dstbeg;
+                        src = srcbeg;
+                        dst = dstbeg;
+                        memmove(ring->data + dst, ring->data + src, len);
+                } else if (dstend > ring->size) {
+                        len = dstend - ring->size;
+                        src = srcend - len;
+                        dst = 0;
+                        memmove(ring->data + dst, ring->data + src, len);
+
+                        len = ring->size - (dstend - ring->size);
+                        src = srcbeg;
+                        dst = dstbeg;
+                        memmove(ring->data + dst, ring->data + src, len);
+                } else {
+                        len = srcend - srcbeg;
+                        src = srcbeg;
+                        dst = dstbeg;
+                        memmove(ring->data + dst, ring->data + src, len);
+                }
         }
+
         length = 0;
         for (i = 0; i < niovecs; i++) {
-                memcpy(ring->data + offset + length, iovecs[i].iov_base, iovecs[i].iov_len);
+                dstbeg = ring->head + offset + length;
+                dstend = dstbeg + iovecs[i].iov_len;
+                /*
+                 *  H      DstBeg    DstEnd
+                 *  |         |         |
+                 *  |         ***********
+                 *  ----------------------------
+                 *      S1         S2          S3      
+                 */
+                if (dstbeg > ring->size) {
+                        len = dstend - dstbeg;
+                        src = 0;
+                        dst = dstbeg - ring->size;
+                        memcpy(ring->data + dst, iovecs[i].iov_base + src, len);
+                } else if (dstend > ring->size) {
+                        len = ring->size - dstbeg;
+                        src = 0;
+                        dst = dstbeg;
+                        memcpy(ring->data + dst, iovecs[i].iov_base + src, len);
+
+                        len = dstend - ring->size;
+                        src = ring->size - dstbeg;
+                        dst = 0;
+                        memcpy(ring->data + dst, iovecs[i].iov_base + src, len);
+                } else {
+                        len = dstend - dstbeg;
+                        src = 0;
+                        dst = dstbeg;
+                        memcpy(ring->data + dst, iovecs[i].iov_base + src, len);
+                }
                 length += iovecs[i].iov_len;
         }
+
         ring->length += length;
         return length;
 }
@@ -153,9 +268,21 @@ static int64_t ring_buffer_insertv (struct medusa_buffer *buffer, int64_t offset
 static int64_t ring_buffer_insertfv (struct medusa_buffer *buffer, int64_t offset, const char *format, va_list va)
 {
         int rc;
-        int length;
         va_list vs;
+
+        int length;
+
+        int64_t len;
+        int64_t src;
+        int64_t dst;
+        
+        int64_t srcbeg;
+        int64_t srcend;
+        int64_t dstbeg;
+        int64_t dstend;
+
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
+
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
         }
@@ -168,21 +295,84 @@ static int64_t ring_buffer_insertfv (struct medusa_buffer *buffer, int64_t offse
         if (offset > ring->length) {
                 return -EINVAL;
         }
+
         va_copy(vs, va);
         length = vsnprintf(NULL, 0, format, vs);
         va_end(vs);
         if (length < 0) {
                 return -EIO;
         }
-        rc = ring_buffer_resize(buffer, ring->length + length + 1);
+        
+        rc = ring_buffer_resize(ring, ring->length + length + 1);
         if (rc < 0) {
                 return rc;
         }
+
+again:
         if (offset != ring->length) {
-                memmove(ring->data + offset + length, ring->data + offset, ring->length - offset);
+                srcbeg = ring->head + offset;
+                srcend = ring->head + ring->length;
+                dstbeg = srcbeg + length;
+                dstend = srcend + length;
+
+                /*
+                 *  H      SrcBeg      DstBeg      SrcEnd      DstEnd
+                 *  |         |           |           |           |
+                 *  |         *************************           |
+                 *  |                     |                       |
+                 *  |                     +++++++++++++++++++++++++
+                 *  ------------------------------------------------------
+                 *      S1         S2          S3          S4           S5
+                 */
+                if (srcbeg > ring->size) {
+                        len = srcend - srcbeg;
+                        src = srcbeg - ring->size;
+                        dst = dstbeg - ring->size;
+                        memmove(ring->data + dst, ring->data + src, len);
+                } else if (dstbeg > ring->size) {
+                        rc = ring_buffer_headify(ring);
+                        if (rc < 0) {
+                                return -EIO;
+                        }
+                        goto again;
+                } else if (srcend > ring->size) {
+                        len = srcend - ring->size;
+                        src = 0;
+                        dst = src + length;
+                        memmove(ring->data + dst, ring->data + src, len);
+
+                        len = length;
+                        src = ring->size - len;
+                        dst = 0;
+                        memmove(ring->data + dst, ring->data + src, len);
+
+                        len = ring->size - dstbeg;
+                        src = srcbeg;
+                        dst = dstbeg;
+                        memmove(ring->data + dst, ring->data + src, len);
+                } else if (dstend > ring->size) {
+                        len = dstend - ring->size;
+                        src = srcend - len;
+                        dst = 0;
+                        memmove(ring->data + dst, ring->data + src, len);
+
+                        len = ring->size - (dstend - ring->size);
+                        src = srcbeg;
+                        dst = dstbeg;
+                        memmove(ring->data + dst, ring->data + src, len);
+                } else {
+                        len = srcend - srcbeg;
+                        src = srcbeg;
+                        dst = dstbeg;
+                        memmove(ring->data + dst, ring->data + src, len);
+                }
         }
+
+        len = length + 1;
+        dst = (ring->head + offset) % ring->size;
+
         va_copy(vs, va);
-        rc = vsnprintf(ring->data + ring->length, length + 1, format, vs);
+        rc = vsnprintf(ring->data + dst, length + 1, format, vs);
         va_end(vs);
         if (rc < 0) {
                 return -EIO;
@@ -194,6 +384,7 @@ static int64_t ring_buffer_insertfv (struct medusa_buffer *buffer, int64_t offse
 static int64_t ring_buffer_reservev (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs)
 {
         int rc;
+        int64_t riovecs;
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
@@ -207,20 +398,41 @@ static int64_t ring_buffer_reservev (struct medusa_buffer *buffer, int64_t lengt
         if (niovecs < 0) {
                 return -EINVAL;
         }
-        if (niovecs == 0) {
-                return 1;
+        if (ring->size - ring->length < length) {
+                riovecs = 1;
+        } else if (ring->head + ring->length < ring->size &&
+                   ring->head + ring->length + length > ring->size) {
+                riovecs = 2;
+        } else {
+                riovecs = 1;
         }
-        rc = ring_buffer_resize(buffer, ring->length + length);
+        if (niovecs == 0) {
+                return riovecs;
+        }
+        if (niovecs < riovecs) {
+                return -ENOSPC;
+        }
+        rc = ring_buffer_resize(ring, ring->length + length);
         if (rc < 0) {
                 return rc;
         }
-        iovecs[0].iov_base = ring->data + ring->length;
-        iovecs[0].iov_len  = ring->size - ring->length;
+        if (ring->head + ring->length < ring->size &&
+            ring->head + ring->length + length > ring->size) {
+                iovecs[0].iov_base = ring->data + ring->head + ring->length;
+                iovecs[0].iov_len  = ring->size - (ring->head + ring->length);
+                iovecs[1].iov_base = ring->data + 0;
+                iovecs[1].iov_len  = (ring->head + ring->length + length) - ring->size;
+                return 2;
+        }
+        iovecs[0].iov_base = ring->data + ring->head + ring->length;
+        iovecs[0].iov_len  = length;
         return 1;
 }
 
 static int64_t ring_buffer_commitv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
 {
+        int64_t i;
+        int64_t l;
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
@@ -234,19 +446,24 @@ static int64_t ring_buffer_commitv (struct medusa_buffer *buffer, const struct i
         if (niovecs == 0) {
                 return 0;
         }
-        if (niovecs != 1) {
-                return -EINVAL;
+        for (i = 0, l = 0; i < niovecs; i++) {
+                if (ring->data + (ring->head + ring->length + l) % ring->size != iovecs[i].iov_base) {
+                        return -EINVAL;
+                }
+                if (ring->length + l > ring->size) {
+                        return -EINVAL;
+                }
+                l += iovecs[0].iov_len;
         }
-        if ((ring->data + ring->length != iovecs[0].iov_base) ||
-            (ring->data + ring->size < iovecs[0].iov_base + iovecs[0].iov_len)) {
-                return -EINVAL;
-        }
-        ring->length += iovecs[0].iov_len;
-        return 1;
+        ring->length += l;
+        return niovecs;
 }
 
 static int64_t ring_buffer_peekv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
 {
+        int64_t srcbeg;
+        int64_t srcend;
+        int64_t riovecs;
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
@@ -261,38 +478,60 @@ static int64_t ring_buffer_peekv (const struct medusa_buffer *buffer, int64_t of
                 return -EINVAL;
         }
         if (offset > ring->length) {
-                offset = ring->length;
-        }
-        if (length < 0) {
-                length = ring->length - offset;
-        }
-        if (length < 0) {
                 return -EINVAL;
         }
-        if (length > ring->length - offset) {
+        if (length < 0) {
                 length = ring->length - offset;
+        }
+        if (offset + length > ring->length) {
+                return -EINVAL;
         }
         if (length == 0) {
                 return 0;
         }
-        if (niovecs == 0) {
-                return 1;
+        srcbeg = ring->head + offset;
+        srcend = ring->head + offset + length;
+        /*
+         *  H      SrcBeg    SrcEnd
+         *  |         |         |
+         *  |         ***********
+         *  ----------------------------
+         *      S1         S2          S3      
+         */
+        if (srcbeg > ring->size) {
+                riovecs = 1;
+        } else if (srcend > ring->size) {
+                riovecs = 2;
+        } else {
+                riovecs = 1;
         }
-        iovecs[0].iov_base = ring->data + offset;
-        iovecs[0].iov_len  = length;
-        return 1;
+        if (niovecs == 0) {
+                return riovecs;
+        }
+        if (niovecs < riovecs) {
+                return -ENOSPC;
+        }
+        if (srcbeg > ring->size) {
+                riovecs = 1;
+                iovecs[0].iov_base = ring->data + srcbeg - ring->size;
+                iovecs[0].iov_len  = srcend - srcbeg;
+        } else if (srcend > ring->size) {
+                riovecs = 2;
+                iovecs[0].iov_base = ring->data + srcbeg;
+                iovecs[0].iov_len  = ring->size - srcbeg;
+                iovecs[1].iov_base = ring->data + 0;
+                iovecs[1].iov_len  = srcend - ring->size;
+        } else {
+                riovecs = 1;
+                iovecs[0].iov_base = ring->data + srcbeg;
+                iovecs[0].iov_len  = srcend - srcbeg;
+        }
+        return riovecs;
 }
 
 static int64_t ring_buffer_choke (struct medusa_buffer *buffer, int64_t offset, int64_t length)
 {
         int rc;
-        void *d;
-        int64_t b;
-        int64_t e;
-        int64_t h;
-        int64_t t;
-        int64_t s;
-        int64_t l;
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
@@ -310,51 +549,27 @@ static int64_t ring_buffer_choke (struct medusa_buffer *buffer, int64_t offset, 
                 length = ring->length - offset;
         }
         if (offset + length > ring->length) {
-                return MEDUSA_ERR_PTR(-EINVAL);
+                return -EINVAL;
         }
         if (length == 0) {
                 return 0;
         }
-        d = ring->data;
-        s = ring->size;
-        l = ring->length;
-        h = ring->head;
-        t = (h + l) % s;
-        b = (h + offset) % s;
-        e = (h + offset + length) % s;
-        if (b < e) {
-                if (b > h) {
-                        if (t > h) {
-                                // d    h++++b++++e++++t    s
-                                memmove(d + b, d + e, t - e);
-                        } else {
-                                // d++++t    h++++b++++e++++s
-                                memmove(d + b, d + e, s - e);
-                                if (t > s - e) {
-                                        memmove(d + e, d + 0, s - e);
-                                        memmove(d + 0, d + (s - e), t - (s - e));
-                                } else {
-                                        memmove(d + e, d + 0, s - e);
-                                }
-                        }
+        if (ring->head + ring->length > ring->size) {
+                rc = ring_buffer_headify(ring);
+                if (rc < 0) {
+                        return -EIO;
                 }
-        } else if (b < e && b < h) {
-                /*
-                 * ++++b++++e++++t    h++++s
-                 */
         }
-        rc = ring_buffer_headify(ring);
-        if (rc < 0) {
-                return MEDUSA_ERR_PTR(-EIO);
+        ring->length -= length;
+        if (ring->length > 0) {
+                memmove(ring->data + ring->head + offset, ring->data + ring->head + offset + length, ring->length - offset);
         }
-        return ring_buffer_choke(buffer, offset, length);
+        return length;
 }
 
 static void * ring_buffer_linearize (struct medusa_buffer *buffer, int64_t offset, int64_t length)
 {
         int rc;
-        int64_t b;
-        int64_t e;
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
@@ -374,16 +589,13 @@ static void * ring_buffer_linearize (struct medusa_buffer *buffer, int64_t offse
         if (offset + length > ring->length) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
-        b = (ring->head + offset) % ring->size;
-        e = (ring->head + offset + length) % ring->size;
-        if (b < e) {
-                return ring->data + b;
+        if (ring->head + ring->length > ring->size) {
+                rc = ring_buffer_headify(ring);
+                if (rc < 0) {
+                        return MEDUSA_ERR_PTR(-EIO);
+                }
         }
-        rc = ring_buffer_headify(ring);
-        if (rc < 0) {
-                return MEDUSA_ERR_PTR(-EIO);
-        }
-        return ring_buffer_linearize(buffer, offset, length);
+        return ring->data + offset;
 }
 
 static int ring_buffer_reset (struct medusa_buffer *buffer)
