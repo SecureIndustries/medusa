@@ -424,7 +424,7 @@ static int64_t ring_buffer_reservev (struct medusa_buffer *buffer, int64_t lengt
                 iovecs[1].iov_len  = (ring->head + ring->length + length) - ring->size;
                 return 2;
         }
-        iovecs[0].iov_base = ring->data + ring->head + ring->length;
+        iovecs[0].iov_base = ring->data + (ring->head + ring->length) % ring->size;
         iovecs[0].iov_len  = length;
         return 1;
 }
@@ -508,23 +508,29 @@ static int64_t ring_buffer_peekv (const struct medusa_buffer *buffer, int64_t of
         if (niovecs == 0) {
                 return riovecs;
         }
-        if (niovecs < riovecs) {
-                return -ENOSPC;
-        }
         if (srcbeg > ring->size) {
-                riovecs = 1;
-                iovecs[0].iov_base = ring->data + srcbeg - ring->size;
-                iovecs[0].iov_len  = srcend - srcbeg;
+                if (niovecs > 0) {
+                        iovecs[0].iov_base = ring->data + srcbeg - ring->size;
+                        iovecs[0].iov_len  = srcend - srcbeg;
+                        riovecs = 1;
+                }
         } else if (srcend > ring->size) {
-                riovecs = 2;
-                iovecs[0].iov_base = ring->data + srcbeg;
-                iovecs[0].iov_len  = ring->size - srcbeg;
-                iovecs[1].iov_base = ring->data + 0;
-                iovecs[1].iov_len  = srcend - ring->size;
+                if (niovecs > 0) {
+                        iovecs[0].iov_base = ring->data + srcbeg;
+                        iovecs[0].iov_len  = ring->size - srcbeg;
+                        riovecs = 1;
+                }
+                if (niovecs > 1) {
+                        iovecs[1].iov_base = ring->data + 0;
+                        iovecs[1].iov_len  = srcend - ring->size;
+                        riovecs = 2;
+                }
         } else {
-                riovecs = 1;
-                iovecs[0].iov_base = ring->data + srcbeg;
-                iovecs[0].iov_len  = srcend - srcbeg;
+                if (niovecs > 0) {
+                        iovecs[0].iov_base = ring->data + srcbeg;
+                        iovecs[0].iov_len  = srcend - srcbeg;
+                        riovecs = 1;
+                }
         }
         return riovecs;
 }
@@ -566,10 +572,16 @@ static int64_t ring_buffer_choke (struct medusa_buffer *buffer, int64_t offset, 
         if (offset == 0) {
                 ring->head   += length;
                 ring->length -= length;
+                if (ring->length == 0) {
+                        ring->head = 0;
+                }
                 return length;
         }
         if (ring->head + offset + length == ring->length) {
                 ring->length -= length;
+                if (ring->length == 0) {
+                        ring->head = 0;
+                }
                 return length;
         }
 
@@ -634,6 +646,9 @@ static int64_t ring_buffer_choke (struct medusa_buffer *buffer, int64_t offset, 
                 memmove(ring->data + dst, ring->data + src, len);
         }
         ring->length -= length;
+        if (ring->length == 0) {
+                ring->head = 0;
+        }
         return length;
 }
 
