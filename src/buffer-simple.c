@@ -36,10 +36,9 @@ static int simple_buffer_resize (struct medusa_buffer *buffer, int64_t size)
         if (simple->size >= size) {
                 return 0;
         }
-        s = simple->grow;
-        while (s < size) {
-                s += simple->grow;
-        }
+        s  = size / simple->grow;
+        s += (size % simple->grow) ? 1 : 0;
+        s *= simple->grow;
 #if 1
         data = realloc(simple->data, size);
         if (data == NULL) {
@@ -111,6 +110,9 @@ static int64_t simple_buffer_insertv (struct medusa_buffer *buffer, int64_t offs
         for (i = 0; i < niovecs; i++) {
                 length += iovecs[i].iov_len;
         }
+        if (length == 0) {
+                return 0;
+        }
         rc = simple_buffer_resize(buffer, simple->length + length);
         if (rc < 0) {
                 return rc;
@@ -156,10 +158,10 @@ static int64_t simple_buffer_insertfv (struct medusa_buffer *buffer, int64_t off
                 return rc;
         }
         if (offset != simple->length) {
-                memmove(simple->data + offset + length, simple->data + offset, simple->length - offset);
+                memmove(simple->data + offset + length + 1, simple->data + offset, simple->length - offset);
         }
         va_copy(vs, va);
-        rc = vsnprintf(simple->data + simple->length, length + 1, format, vs);
+        rc = vsnprintf(simple->data + offset, length + 1, format, vs);
         va_end(vs);
         if (rc < 0) {
                 return -EIO;
@@ -192,7 +194,7 @@ static int64_t simple_buffer_reservev (struct medusa_buffer *buffer, int64_t len
                 return rc;
         }
         iovecs[0].iov_base = simple->data + simple->length;
-        iovecs[0].iov_len  = simple->size - simple->length;
+        iovecs[0].iov_len  = length;
         return 1;
 }
 
@@ -238,16 +240,13 @@ static int64_t simple_buffer_peekv (const struct medusa_buffer *buffer, int64_t 
                 return -EINVAL;
         }
         if (offset > simple->length) {
-                offset = simple->length;
-        }
-        if (length < 0) {
-                length = simple->length - offset;
-        }
-        if (length < 0) {
                 return -EINVAL;
         }
-        if (length > simple->length - offset) {
+        if (length < 0) {
                 length = simple->length - offset;
+        }
+        if (offset + length > simple->length) {
+                return -EINVAL;
         }
         if (length == 0) {
                 return 0;
@@ -279,7 +278,7 @@ static int64_t simple_buffer_choke (struct medusa_buffer *buffer, int64_t offset
                 length = simple->length - offset;
         }
         if (offset + length > simple->length) {
-                return MEDUSA_ERR_PTR(-EINVAL);
+                return -EINVAL;
         }
         if (length == 0) {
                 return 0;
