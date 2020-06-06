@@ -49,23 +49,23 @@ static int ring_buffer_headify (struct medusa_buffer_ring *ring)
         return 0;
 }
 
-static int ring_buffer_resize (struct medusa_buffer_ring *ring, int64_t size)
+static int ring_buffer_resize (struct medusa_buffer_ring *ring, int64_t nsize)
 {
         int rc;
         void *data;
-        unsigned int s;
+        unsigned int size;
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
         }
-        if (size < 0) {
+        if (nsize < 0) {
                 return -EINVAL;
         }
-        if (ring->size >= size) {
+        if (ring->size >= nsize) {
                 return 0;
         }
-        s  = size / ring->grow;
-        s += (size % ring->grow) ? 1 : 0;
-        s *= ring->grow;
+        size  = nsize / ring->grow;
+        size += (nsize % ring->grow) ? 1 : 0;
+        size *= ring->grow;
         rc = ring_buffer_headify(ring);
         if (rc != 0) {
                 return -EIO;
