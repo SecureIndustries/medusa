@@ -22,23 +22,22 @@
 static struct medusa_pool *g_pool_buffer_simple;
 #endif
 
-static int simple_buffer_resize (struct medusa_buffer *buffer, int64_t size)
+static int simple_buffer_resize (struct medusa_buffer_simple *simple, int64_t nsize)
 {
         void *data;
-        unsigned int s;
-        struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
+        unsigned int size;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
                 return -EINVAL;
         }
-        if (size < 0) {
+        if (nsize < 0) {
                 return -EINVAL;
         }
-        if (simple->size >= size) {
+        if (simple->size >= nsize) {
                 return 0;
         }
-        s  = size / simple->grow;
-        s += (size % simple->grow) ? 1 : 0;
-        s *= simple->grow;
+        size  = nsize / simple->grow;
+        size += (nsize % simple->grow) ? 1 : 0;
+        size *= simple->grow;
 #if 1
         data = realloc(simple->data, size);
         if (data == NULL) {
@@ -107,13 +106,7 @@ static int64_t simple_buffer_insertv (struct medusa_buffer *buffer, int64_t offs
                 return -EINVAL;
         }
         length = 0;
-        for (i = 0; i < niovecs; i++) {
-                length += iovecs[i].iov_len;
-        }
-        if (length == 0) {
-                return 0;
-        }
-        rc = simple_buffer_resize(buffer, simple->length + length);
+        rc = simple_buffer_resize(simple, simple->length + length);
         if (rc < 0) {
                 return rc;
         }
@@ -153,7 +146,7 @@ static int64_t simple_buffer_insertfv (struct medusa_buffer *buffer, int64_t off
         if (length < 0) {
                 return -EIO;
         }
-        rc = simple_buffer_resize(buffer, simple->length + length + 1);
+        rc = simple_buffer_resize(simple, simple->length + length + 1);
         if (rc < 0) {
                 return rc;
         }
@@ -189,7 +182,7 @@ static int64_t simple_buffer_reservev (struct medusa_buffer *buffer, int64_t len
         if (niovecs == 0) {
                 return 1;
         }
-        rc = simple_buffer_resize(buffer, simple->length + length);
+        rc = simple_buffer_resize(simple, simple->length + length);
         if (rc < 0) {
                 return rc;
         }
