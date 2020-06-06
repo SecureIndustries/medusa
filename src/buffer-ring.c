@@ -131,6 +131,7 @@ static int64_t ring_buffer_insertv (struct medusa_buffer *buffer, int64_t offset
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
         }
+
         if (offset < 0) {
                 offset = ring->length + offset;
         }
@@ -178,15 +179,15 @@ static int64_t ring_buffer_insertv (struct medusa_buffer *buffer, int64_t offset
                  *  ------------------------------------------------------
                  *      S1         S2          S3          S4           S5
                  */
-                if (srcbeg > ring->size) {
+                if (srcbeg >= ring->size) {
                         len = srcend - srcbeg;
                         src = srcbeg - ring->size;
                         dst = dstbeg - ring->size;
                         memmove(ring->data + dst, ring->data + src, len);
-                } else if (dstbeg > ring->size) {
+                } else if (dstbeg >= ring->size) {
                         len = srcend - ring->size;
                         src = 0;
-                        dst = src + length;
+                        dst = length;
                         memmove(ring->data + dst, ring->data + src, len);
 
                         len = ring->size - srcbeg;
@@ -237,7 +238,7 @@ static int64_t ring_buffer_insertv (struct medusa_buffer *buffer, int64_t offset
                  *  ----------------------------
                  *      S1         S2          S3      
                  */
-                if (dstbeg > ring->size) {
+                if (dstbeg >= ring->size) {
                         len = dstend - dstbeg;
                         src = 0;
                         dst = dstbeg - ring->size;
@@ -286,6 +287,7 @@ static int64_t ring_buffer_insertfv (struct medusa_buffer *buffer, int64_t offse
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
         }
+
         if (offset < 0) {
                 offset = ring->length + offset;
         }
@@ -324,7 +326,7 @@ again:
                  *  ------------------------------------------------------
                  *      S1         S2          S3          S4           S5
                  */
-                if (srcbeg > ring->size) {
+                if (srcbeg >= ring->size) {
                         len = srcend - srcbeg;
                         src = srcbeg - ring->size;
                         dst = dstbeg - ring->size;
@@ -388,9 +390,11 @@ static int64_t ring_buffer_reservev (struct medusa_buffer *buffer, int64_t lengt
         int64_t dstend;
         int64_t riovecs;
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
+        
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
         }
+        
         if (length < 0) {
                 return -EINVAL;
         }
@@ -400,6 +404,7 @@ static int64_t ring_buffer_reservev (struct medusa_buffer *buffer, int64_t lengt
         if (niovecs < 0) {
                 return -EINVAL;
         }
+
         if (ring->size - ring->length < length) {
                 riovecs = 1;
         } else if (ring->head + ring->length < ring->size &&
@@ -408,15 +413,19 @@ static int64_t ring_buffer_reservev (struct medusa_buffer *buffer, int64_t lengt
         } else {
                 riovecs = 1;
         }
+
         if (niovecs == 0) {
                 return riovecs;
         }
+        
         rc = ring_buffer_resize(ring, ring->length + length);
         if (rc < 0) {
                 return rc;
         }
+        
         dstbeg = ring->head + ring->length;
         dstend = ring->head + ring->length + length;
+
         /*
          *  H      DstBeg    DstEnd
          *  |         |         |
@@ -424,6 +433,7 @@ static int64_t ring_buffer_reservev (struct medusa_buffer *buffer, int64_t lengt
          *  ----------------------------
          *      S1         S2          S3      
          */
+
         if (dstbeg >= ring->size) {
                 iovecs[0].iov_base = ring->data + dstbeg - ring->size;
                 iovecs[0].iov_len  = length;
@@ -450,9 +460,11 @@ static int64_t ring_buffer_commitv (struct medusa_buffer *buffer, const struct i
         int64_t i;
         int64_t l;
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
+
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
         }
+
         if (MEDUSA_IS_ERR_OR_NULL(iovecs)) {
                 return -EINVAL;
         }
@@ -462,6 +474,7 @@ static int64_t ring_buffer_commitv (struct medusa_buffer *buffer, const struct i
         if (niovecs == 0) {
                 return 0;
         }
+
         for (i = 0, l = 0; i < niovecs; i++) {
                 if (ring->data + (ring->head + ring->length + l) % ring->size != iovecs[i].iov_base) {
                         return -EINVAL;
@@ -471,6 +484,7 @@ static int64_t ring_buffer_commitv (struct medusa_buffer *buffer, const struct i
                 }
                 l += iovecs[0].iov_len;
         }
+
         ring->length += l;
         return niovecs;
 }
@@ -481,9 +495,11 @@ static int64_t ring_buffer_peekv (const struct medusa_buffer *buffer, int64_t of
         int64_t srcend;
         int64_t riovecs;
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
+
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
         }
+
         if (niovecs < 0) {
                 return -EINVAL;
         }
@@ -505,6 +521,7 @@ static int64_t ring_buffer_peekv (const struct medusa_buffer *buffer, int64_t of
         if (length == 0) {
                 return 0;
         }
+
         srcbeg = ring->head + offset;
         srcend = ring->head + offset + length;
         /*
@@ -524,29 +541,24 @@ static int64_t ring_buffer_peekv (const struct medusa_buffer *buffer, int64_t of
         if (niovecs == 0) {
                 return riovecs;
         }
+
         if (srcbeg >= ring->size) {
-                if (niovecs > 0) {
-                        iovecs[0].iov_base = ring->data + srcbeg - ring->size;
-                        iovecs[0].iov_len  = srcend - srcbeg;
-                        riovecs = 1;
-                }
+                iovecs[0].iov_base = ring->data + srcbeg - ring->size;
+                iovecs[0].iov_len  = srcend - srcbeg;
+                riovecs = 1;
         } else if (srcend > ring->size) {
-                if (niovecs > 0) {
-                        iovecs[0].iov_base = ring->data + srcbeg;
-                        iovecs[0].iov_len  = ring->size - srcbeg;
-                        riovecs = 1;
-                }
+                iovecs[0].iov_base = ring->data + srcbeg;
+                iovecs[0].iov_len  = ring->size - srcbeg;
+                riovecs = 1;
                 if (niovecs > 1) {
                         iovecs[1].iov_base = ring->data + 0;
                         iovecs[1].iov_len  = srcend - ring->size;
                         riovecs = 2;
                 }
         } else {
-                if (niovecs > 0) {
-                        iovecs[0].iov_base = ring->data + srcbeg;
-                        iovecs[0].iov_len  = srcend - srcbeg;
-                        riovecs = 1;
-                }
+                iovecs[0].iov_base = ring->data + srcbeg;
+                iovecs[0].iov_len  = srcend - srcbeg;
+                riovecs = 1;
         }
         return riovecs;
 }
@@ -563,9 +575,11 @@ static int64_t ring_buffer_choke (struct medusa_buffer *buffer, int64_t offset, 
         int64_t dstend;
 
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
+
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return -EINVAL;
         }
+
         if (offset < 0) {
                 offset = ring->length + offset;
         }
@@ -610,12 +624,12 @@ static int64_t ring_buffer_choke (struct medusa_buffer *buffer, int64_t offset, 
          *  ------------------------------------------------------
          *      S1         S2          S3          S4           S5
          */
-        if (dstbeg > ring->size) {
+        if (dstbeg >= ring->size) {
                 len = srcend - srcbeg;
                 src = srcbeg - ring->size;
                 dst = dstbeg - ring->size;
                 memmove(ring->data + dst, ring->data + src, len);
-        } else if (srcbeg > ring->size) {
+        } else if (srcbeg >= ring->size) {
                 len = ring->size - dstbeg;
                 src = srcbeg - ring->size;
                 dst = dstbeg;
@@ -656,6 +670,7 @@ static int64_t ring_buffer_choke (struct medusa_buffer *buffer, int64_t offset, 
                 dst = dstbeg;
                 memmove(ring->data + dst, ring->data + src, len);
         }
+
         ring->length -= length;
         return length;
 }
@@ -666,9 +681,11 @@ static void * ring_buffer_linearize (struct medusa_buffer *buffer, int64_t offse
         int64_t srcbeg;
         int64_t srcend;
         struct medusa_buffer_ring *ring = (struct medusa_buffer_ring *) buffer;
+        
         if (MEDUSA_IS_ERR_OR_NULL(ring)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
+        
         if (offset < 0) {
                 offset = ring->length + offset;
         }
@@ -684,6 +701,7 @@ static void * ring_buffer_linearize (struct medusa_buffer *buffer, int64_t offse
         if (offset + length > ring->length) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
+
 again:
         srcbeg = ring->head + offset;
         srcend = ring->head + offset + length;
@@ -694,7 +712,7 @@ again:
          *  ----------------------------
          *      S1         S2          S3      
          */
-        if (srcbeg > ring->size) {
+        if (srcbeg >= ring->size) {
                 return ring->data + ring->head + offset - ring->size;
         } else if (srcend > ring->size) {
                 rc = ring_buffer_headify(ring);
