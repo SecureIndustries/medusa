@@ -1078,9 +1078,10 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_peek_data (const stru
                 goto out;
         }
         for (i = 0; i < niovecs; i++) {
-                memcpy(data, iovecs[i].iov_base, MIN(length, (int64_t) iovecs[i].iov_len));
-                length -= MIN(length, (int64_t) iovecs[i].iov_len);
-                data   += MIN(length, (int64_t) iovecs[i].iov_len);
+                l = MIN(length, (int64_t) iovecs[i].iov_len);
+                memcpy(data, iovecs[i].iov_base, l);
+                length -= l;
+                data   += l;
         }
         if (length > 0) {
                 ret = -EIO;
