@@ -7,8 +7,10 @@ struct medusa_buffer;
 
 enum {
         MEDUSA_BUFFER_TYPE_SIMPLE               = 0,
+        MEDUSA_BUFFER_TYPE_RING                 = 1,
         MEDUSA_BUFFER_TYPE_DEFAULT              = MEDUSA_BUFFER_TYPE_SIMPLE
 #define MEDUSA_BUFFER_TYPE_SIMPLE               MEDUSA_BUFFER_TYPE_SIMPLE
+#define MEDUSA_BUFFER_TYPE_RING                 MEDUSA_BUFFER_TYPE_RING
 #define MEDUSA_BUFFER_TYPE_DEFAULT              MEDUSA_BUFFER_TYPE_DEFAULT
 };
 

@@ -8,8 +8,10 @@ dist
 src/.libmedusa.a
 src/.libmedusa.o
 src/.libmedusa.so
+src/.libmedusa.so.1
 src/libmedusa.a
 src/libmedusa.o
 src/libmedusa.so
+src/libmedusa.so.1
 test/.*-??
 test/*-??

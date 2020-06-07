@@ -11,6 +11,7 @@
 static const unsigned int g_types[] = {
         MEDUSA_BUFFER_TYPE_DEFAULT,
         MEDUSA_BUFFER_TYPE_SIMPLE,
+        MEDUSA_BUFFER_TYPE_RING
 };
 
 static int test_buffer (unsigned int type, unsigned int count)

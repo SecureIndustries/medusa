@@ -13,6 +13,7 @@
 #include "buffer.h"
 #include "buffer-struct.h"
 #include "buffer-simple.h"
+#include "buffer-ring.h"
 
 #define MIN(a, b)       (((a) < (b)) ? (a) : (b))
 
@@ -1077,9 +1078,10 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_peek_data (const stru
                 goto out;
         }
         for (i = 0; i < niovecs; i++) {
-                memcpy(data, iovecs[i].iov_base, MIN(length, (int64_t) iovecs[i].iov_len));
-                length -= MIN(length, (int64_t) iovecs[i].iov_len);
-                data   += MIN(length, (int64_t) iovecs[i].iov_len);
+                l = MIN(length, (int64_t) iovecs[i].iov_len);
+                memcpy(data, iovecs[i].iov_base, l);
+                length -= l;
+                data   += l;
         }
         if (length > 0) {
                 ret = -EIO;
@@ -1460,9 +1462,19 @@ __attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_buffer_cr
                 if (rc < 0) {
                         return MEDUSA_ERR_PTR(rc);
                 }
-                simple_options.flags   = MEDUSA_BUFFER_SIMPLE_FLAG_DEFAULT;
-                simple_options.grow    = options->grow_size;
+                simple_options.flags = MEDUSA_BUFFER_SIMPLE_FLAG_DEFAULT;
+                simple_options.grow  = options->grow_size;
                 buffer = medusa_buffer_simple_create_with_options(&simple_options);
+        } else if (options->type == MEDUSA_BUFFER_TYPE_RING) {
+                int rc;
+                struct medusa_buffer_ring_init_options ring_options;
+                rc = medusa_buffer_ring_init_options_default(&ring_options);
+                if (rc < 0) {
+                        return MEDUSA_ERR_PTR(rc);
+                }
+                ring_options.flags = MEDUSA_BUFFER_RING_FLAG_DEFAULT;
+                ring_options.grow  = options->grow_size;
+                buffer = medusa_buffer_ring_create_with_options(&ring_options);
         } else {
                 return MEDUSA_ERR_PTR(-ENOENT);
         }
