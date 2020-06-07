@@ -242,22 +242,22 @@ static int64_t ring_buffer_insertv (struct medusa_buffer *buffer, int64_t offset
                         len = dstend - dstbeg;
                         src = 0;
                         dst = dstbeg - ring->size;
-                        memcpy(ring->data + dst, iovecs[i].iov_base + src, len);
+                        memmove(ring->data + dst, iovecs[i].iov_base + src, len);
                 } else if (dstend > ring->size) {
                         len = ring->size - dstbeg;
                         src = 0;
                         dst = dstbeg;
-                        memcpy(ring->data + dst, iovecs[i].iov_base + src, len);
+                        memmove(ring->data + dst, iovecs[i].iov_base + src, len);
 
                         len = dstend - ring->size;
                         src = ring->size - dstbeg;
                         dst = 0;
-                        memcpy(ring->data + dst, iovecs[i].iov_base + src, len);
+                        memmove(ring->data + dst, iovecs[i].iov_base + src, len);
                 } else {
                         len = dstend - dstbeg;
                         src = 0;
                         dst = dstbeg;
-                        memcpy(ring->data + dst, iovecs[i].iov_base + src, len);
+                        memmove(ring->data + dst, iovecs[i].iov_base + src, len);
                 }
                 length += iovecs[i].iov_len;
         }
@@ -706,18 +706,31 @@ again:
         srcbeg = ring->head + offset;
         srcend = ring->head + offset + length;
         /*
-         *  H      SrcBeg    SrcEnd
-         *  |         |         |
-         *  |         ***********
-         *  ----------------------------
+         *  H      SrcBeg    SrcEnd      H + L
+         *  |         |         |          |
+         *  |         ***********          |
+         *  --------------------------------
          *      S1         S2          S3      
          */
         if (srcbeg >= ring->size) {
                 return ring->data + ring->head + offset - ring->size;
         } else if (srcend > ring->size) {
-                rc = ring_buffer_headify(ring);
-                if (rc < 0) {
-                        return MEDUSA_ERR_PTR(-EIO);
+                if (ring->length + length <= ring->size) {
+                        struct iovec iovecs[1];
+                        iovecs[0].iov_base = ring->data + srcbeg;
+                        iovecs[0].iov_len  = ring->size - srcbeg;
+                        rc = ring_buffer_insertv(buffer, ring->size - ring->head, iovecs, 1);
+                        if (rc != (int) iovecs[0].iov_len) {
+                                return MEDUSA_ERR_PTR(-EIO);
+                        }
+                        memmove(ring->data + ring->head + iovecs[0].iov_len, ring->data + ring->head, ring->size - ring->head - iovecs[0].iov_len);
+                        ring->head   += iovecs[0].iov_len;
+                        ring->length -= iovecs[0].iov_len;
+                } else {
+                        rc = ring_buffer_headify(ring);
+                        if (rc < 0) {
+                                return MEDUSA_ERR_PTR(-EIO);
+                        }
                 }
                 goto again;
         } else {
