@@ -106,6 +106,9 @@ static int64_t simple_buffer_insertv (struct medusa_buffer *buffer, int64_t offs
                 return -EINVAL;
         }
         length = 0;
+        for (i = 0; i < niovecs; i++) {
+                length += iovecs[i].iov_len;
+        }
         rc = simple_buffer_resize(simple, simple->length + length);
         if (rc < 0) {
                 return rc;
