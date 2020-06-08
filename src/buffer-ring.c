@@ -164,7 +164,12 @@ static int64_t ring_buffer_insertv (struct medusa_buffer *buffer, int64_t offset
                 return rc;
         }
 
-        if (offset != ring->length) {
+        if (offset == 0) {
+                ring->head = ring->head - length;
+                if (ring->head < 0) {
+                        ring->head += ring->size;
+                }
+        } else if (offset != ring->length) {
                 srcbeg = ring->head + offset;
                 srcend = ring->head + ring->length;
                 dstbeg = srcbeg + length;
@@ -311,7 +316,12 @@ static int64_t ring_buffer_insertfv (struct medusa_buffer *buffer, int64_t offse
         }
 
 again:
-        if (offset != ring->length) {
+        if (offset == 0) {
+                ring->head = ring->head - length;
+                if (ring->head < 0) {
+                        ring->head += ring->size;
+                }
+        } else if (offset != ring->length) {
                 srcbeg = ring->head + offset;
                 srcend = ring->head + ring->length;
                 dstbeg = srcbeg + length;
