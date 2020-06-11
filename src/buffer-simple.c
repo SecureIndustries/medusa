@@ -118,7 +118,7 @@ static int64_t simple_buffer_insertv (struct medusa_buffer *buffer, int64_t offs
         }
         length = 0;
         for (i = 0; i < niovecs; i++) {
-                memcpy(simple->data + offset + length, iovecs[i].iov_base, iovecs[i].iov_len);
+                memmove(simple->data + offset + length, iovecs[i].iov_base, iovecs[i].iov_len);
                 length += iovecs[i].iov_len;
         }
         simple->length += length;
