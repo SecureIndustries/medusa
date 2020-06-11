@@ -62,6 +62,9 @@ int medusa_io_get_clodestroy (const struct medusa_io *io);
 int medusa_io_enable (struct medusa_io *io);
 int medusa_io_disable (struct medusa_io *io);
 
+int medusa_io_set_context (struct medusa_io *io, void *context);
+void * medusa_io_get_context (struct medusa_io *io);
+
 int medusa_io_set_userdata (struct medusa_io *io, void *userdata);
 void * medusa_io_get_userdata (struct medusa_io *io);
 

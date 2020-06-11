@@ -20,8 +20,20 @@ int medusa_condition_get_signalled_unlocked (const struct medusa_condition *cond
 int medusa_condition_set_enabled_unlocked (struct medusa_condition *condition, int enabled);
 int medusa_condition_get_enabled_unlocked (const struct medusa_condition *condition);
 
-void * medusa_condition_get_userdata_unlocked (struct medusa_condition *condition);
+int medusa_condition_set_context_unlocked (struct medusa_condition *condition, void *context);
+void * medusa_condition_get_context_unlocked (struct medusa_condition *condition);
+
 int medusa_condition_set_userdata_unlocked (struct medusa_condition *condition, void *userdata);
+void * medusa_condition_get_userdata_unlocked (struct medusa_condition *condition);
+
+int medusa_condition_set_userdata_ptr_unlocked (struct medusa_condition *condition, void *userdata);
+void * medusa_condition_get_userdata_ptr_unlocked (struct medusa_condition *condition);
+
+int medusa_condition_set_userdata_int_unlocked (struct medusa_condition *condition, int userdara);
+int medusa_condition_get_userdata_int_unlocked (struct medusa_condition *condition);
+
+int medusa_condition_set_userdata_uint_unlocked (struct medusa_condition *condition, unsigned int userdata);
+unsigned int medusa_condition_get_userdata_uint_unlocked (struct medusa_condition *condition);
 
 struct medusa_monitor * medusa_condition_get_monitor_unlocked (const struct medusa_condition *condition);
 

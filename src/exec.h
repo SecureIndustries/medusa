@@ -52,6 +52,9 @@ int medusa_exec_disable (struct medusa_exec *exec);
 int medusa_exec_start (struct medusa_exec *exec);
 int medusa_exec_stop (struct medusa_exec *exec);
 
+int medusa_exec_set_context (struct medusa_exec *exec, void *context);
+void * medusa_exec_get_context (struct medusa_exec *exec);
+
 int medusa_exec_set_userdata (struct medusa_exec *exec, void *userdata);
 void * medusa_exec_get_userdata (struct medusa_exec *exec);
 

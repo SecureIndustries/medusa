@@ -26,8 +26,20 @@ int medusa_io_get_enabled_unlocked (const struct medusa_io *io);
 int medusa_io_set_clodestroy_unlocked (struct medusa_io *io, int clodestroy);
 int medusa_io_get_clodestroy_unlocked (const struct medusa_io *io);
 
-void * medusa_io_get_userdata_unlocked (struct medusa_io *io);
+int medusa_io_set_context_unlocked (struct medusa_io *io, void *context);
+void * medusa_io_get_context_unlocked (struct medusa_io *io);
+
 int medusa_io_set_userdata_unlocked (struct medusa_io *io, void *userdata);
+void * medusa_io_get_userdata_unlocked (struct medusa_io *io);
+
+int medusa_io_set_userdata_ptr_unlocked (struct medusa_io *io, void *userdata);
+void * medusa_io_get_userdata_ptr_unlocked (struct medusa_io *io);
+
+int medusa_io_set_userdata_int_unlocked (struct medusa_io *io, int userdara);
+int medusa_io_get_userdata_int_unlocked (struct medusa_io *io);
+
+int medusa_io_set_userdata_uint_unlocked (struct medusa_io *io, unsigned int userdata);
+unsigned int medusa_io_get_userdata_uint_unlocked (struct medusa_io *io);
 
 struct medusa_monitor * medusa_io_get_monitor_unlocked (const struct medusa_io *io);
 

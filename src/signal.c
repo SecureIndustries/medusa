@@ -432,6 +432,47 @@ __attribute__ ((visibility ("default"))) int medusa_signal_disable (struct medus
         return medusa_signal_set_enabled(signal, 0);
 }
 
+__attribute__ ((visibility ("default"))) int medusa_signal_set_context_unlocked (struct medusa_signal *signal, void *context)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(signal)) {
+                return -EINVAL;
+        }
+        signal->context = context;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_signal_set_context (struct medusa_signal *signal, void *context)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(signal)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(signal->subject.monitor);
+        rc = medusa_signal_set_context_unlocked(signal, context);
+        medusa_monitor_unlock(signal->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_signal_get_context_unlocked (struct medusa_signal *signal)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(signal)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return signal->context;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_signal_get_context (struct medusa_signal *signal)
+{
+        void *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(signal)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(signal->subject.monitor);
+        rc = medusa_signal_get_context_unlocked(signal);
+        medusa_monitor_unlock(signal->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_signal_set_userdata_unlocked (struct medusa_signal *signal, void *userdata)
 {
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {

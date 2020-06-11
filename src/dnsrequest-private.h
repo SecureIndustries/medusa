@@ -32,6 +32,21 @@ int medusa_dnsrequest_get_type_unlocked (struct medusa_dnsrequest *dnsrequest);
 int medusa_dnsrequest_set_name_unlocked (struct medusa_dnsrequest *dnsrequest, const char *name);
 const char * medusa_dnsrequest_get_name_unlocked (struct medusa_dnsrequest *dnsrequest);
 
+int medusa_dnsrequest_set_context_unlocked (struct medusa_dnsrequest *dnsrequest, void *context);
+void * medusa_dnsrequest_get_context_unlocked (struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_set_userdata_unlocked (struct medusa_dnsrequest *dnsrequest, void *userdata);
+void * medusa_dnsrequest_get_userdata_unlocked (struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_set_userdata_ptr_unlocked (struct medusa_dnsrequest *dnsrequest, void *userdata);
+void * medusa_dnsrequest_get_userdata_ptr_unlocked (struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_set_userdata_int_unlocked (struct medusa_dnsrequest *dnsrequest, int userdara);
+int medusa_dnsrequest_get_userdata_int_unlocked (struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_set_userdata_uint_unlocked (struct medusa_dnsrequest *dnsrequest, unsigned int userdata);
+unsigned int medusa_dnsrequest_get_userdata_uint_unlocked (struct medusa_dnsrequest *dnsrequest);
+
 int medusa_dnsrequest_lookup_unlocked (struct medusa_dnsrequest *dnsrequest);
 int medusa_dnsrequest_cancel_unlocked (struct medusa_dnsrequest *dnsrequest);
 int medusa_dnsrequest_abort_unlocked (struct medusa_dnsrequest *dnsrequest);

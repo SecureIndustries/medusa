@@ -42,8 +42,20 @@ int medusa_timer_get_enabled_unlocked (const struct medusa_timer *timer);
 
 int medusa_timer_update_timespec_unlocked (struct medusa_timer *timer, struct timespec *now);
 
-void * medusa_timer_get_userdata_unlocked (struct medusa_timer *timer);
+int medusa_timer_set_context_unlocked (struct medusa_timer *timer, void *context);
+void * medusa_timer_get_context_unlocked (struct medusa_timer *timer);
+
 int medusa_timer_set_userdata_unlocked (struct medusa_timer *timer, void *userdata);
+void * medusa_timer_get_userdata_unlocked (struct medusa_timer *timer);
+
+int medusa_timer_set_userdata_ptr_unlocked (struct medusa_timer *timer, void *userdata);
+void * medusa_timer_get_userdata_ptr_unlocked (struct medusa_timer *timer);
+
+int medusa_timer_set_userdata_int_unlocked (struct medusa_timer *timer, int userdara);
+int medusa_timer_get_userdata_int_unlocked (struct medusa_timer *timer);
+
+int medusa_timer_set_userdata_uint_unlocked (struct medusa_timer *timer, unsigned int userdata);
+unsigned int medusa_timer_get_userdata_uint_unlocked (struct medusa_timer *timer);
 
 struct medusa_monitor * medusa_timer_get_monitor_unlocked (const struct medusa_timer *timer);
 

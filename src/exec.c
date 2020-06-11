@@ -646,6 +646,47 @@ __attribute__ ((visibility ("default"))) int medusa_exec_stop (struct medusa_exe
         return medusa_exec_set_enabled(exec, 0);
 }
 
+__attribute__ ((visibility ("default"))) int medusa_exec_set_context_unlocked (struct medusa_exec *exec, void *context)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(exec)) {
+                return -EINVAL;
+        }
+        exec->context = context;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_exec_set_context (struct medusa_exec *exec, void *context)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(exec)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(exec->subject.monitor);
+        rc = medusa_exec_set_context_unlocked(exec, context);
+        medusa_monitor_unlock(exec->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_exec_get_context_unlocked (struct medusa_exec *exec)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(exec)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return exec->context;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_exec_get_context (struct medusa_exec *exec)
+{
+        void *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(exec)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(exec->subject.monitor);
+        rc = medusa_exec_get_context_unlocked(exec);
+        medusa_monitor_unlock(exec->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_exec_set_userdata_unlocked (struct medusa_exec *exec, void *userdata)
 {
         if (MEDUSA_IS_ERR_OR_NULL(exec)) {

@@ -239,6 +239,9 @@ int medusa_tcpsocket_get_peername (struct medusa_tcpsocket *tcpsocket, struct so
 
 int medusa_tcpsocket_set_onevent (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
 
+int medusa_tcpsocket_set_context (struct medusa_tcpsocket *tcpsocket, void *context);
+void * medusa_tcpsocket_get_context (struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_set_userdata (struct medusa_tcpsocket *tcpsocket, void *userdata);
 void * medusa_tcpsocket_get_userdata (struct medusa_tcpsocket *tcpsocket);
 

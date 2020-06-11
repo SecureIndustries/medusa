@@ -45,8 +45,20 @@ unsigned int medusa_udpsocket_get_events_unlocked (const struct medusa_udpsocket
 int medusa_udpsocket_get_sockname_unlocked (struct medusa_udpsocket *udpsocket, struct sockaddr_storage *sockaddr);
 int medusa_udpsocket_get_peername_unlocked (struct medusa_udpsocket *udpsocket, struct sockaddr_storage *sockaddr);
 
-void * medusa_udpsocket_get_userdata_unlocked (struct medusa_udpsocket *udpsocket);
+int medusa_udpsocket_set_context_unlocked (struct medusa_udpsocket *udpsocket, void *context);
+void * medusa_udpsocket_get_context_unlocked (struct medusa_udpsocket *udpsocket);
+
 int medusa_udpsocket_set_userdata_unlocked (struct medusa_udpsocket *udpsocket, void *userdata);
+void * medusa_udpsocket_get_userdata_unlocked (struct medusa_udpsocket *udpsocket);
+
+int medusa_udpsocket_set_userdata_ptr_unlocked (struct medusa_udpsocket *udpsocket, void *userdata);
+void * medusa_udpsocket_get_userdata_ptr_unlocked (struct medusa_udpsocket *udpsocket);
+
+int medusa_udpsocket_set_userdata_int_unlocked (struct medusa_udpsocket *udpsocket, int userdara);
+int medusa_udpsocket_get_userdata_int_unlocked (struct medusa_udpsocket *udpsocket);
+
+int medusa_udpsocket_set_userdata_uint_unlocked (struct medusa_udpsocket *udpsocket, unsigned int userdata);
+unsigned int medusa_udpsocket_get_userdata_uint_unlocked (struct medusa_udpsocket *udpsocket);
 
 int medusa_udpsocket_onevent_unlocked (struct medusa_udpsocket *udpsocket, unsigned int events, void *param);
 int medusa_udpsocket_onevent (struct medusa_udpsocket *udpsocket, unsigned int events, void *param);

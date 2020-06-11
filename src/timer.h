@@ -82,6 +82,9 @@ int medusa_timer_disable (struct medusa_timer *timer);
 int medusa_timer_start (struct medusa_timer *timer);
 int medusa_timer_stop (struct medusa_timer *timer);
 
+int medusa_timer_set_context (struct medusa_timer *timer, void *context);
+void * medusa_timer_get_context (struct medusa_timer *timer);
+
 int medusa_timer_set_userdata (struct medusa_timer *timer, void *userdata);
 void * medusa_timer_get_userdata (struct medusa_timer *timer);
 

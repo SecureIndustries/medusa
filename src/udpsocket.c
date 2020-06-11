@@ -1785,15 +1785,6 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_onevent_unlocked (
         return ret;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_udpsocket_set_userdata_unlocked (struct medusa_udpsocket *udpsocket, void *userdata)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
-                return -EINVAL;
-        }
-        udpsocket->userdata = userdata;
-        return 0;
-}
-
 __attribute__ ((visibility ("default"))) int medusa_udpsocket_get_sockname_unlocked (struct medusa_udpsocket *udpsocket, struct sockaddr_storage *sockaddr)
 {
         int fd;
@@ -1870,6 +1861,56 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_get_peername (stru
         rc = medusa_udpsocket_get_peername_unlocked(udpsocket, sockaddr);
         medusa_monitor_unlock(udpsocket->subject.monitor);
         return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_set_context_unlocked (struct medusa_udpsocket *udpsocket, void *context)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        udpsocket->context = context;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_set_context (struct medusa_udpsocket *udpsocket, void *context)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(udpsocket->subject.monitor);
+        rc = medusa_udpsocket_set_context_unlocked(udpsocket, context);
+        medusa_monitor_unlock(udpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_udpsocket_get_context_unlocked (struct medusa_udpsocket *udpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return udpsocket->context;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_udpsocket_get_context (struct medusa_udpsocket *udpsocket)
+{
+        void *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(udpsocket->subject.monitor);
+        rc = medusa_udpsocket_get_context_unlocked(udpsocket);
+        medusa_monitor_unlock(udpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_set_userdata_unlocked (struct medusa_udpsocket *udpsocket, void *userdata)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        udpsocket->userdata = userdata;
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_udpsocket_set_userdata (struct medusa_udpsocket *udpsocket, void *userdata)

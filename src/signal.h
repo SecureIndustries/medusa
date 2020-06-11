@@ -45,6 +45,9 @@ int medusa_signal_get_enabled (const struct medusa_signal *signal);
 int medusa_signal_enable (struct medusa_signal *signal);
 int medusa_signal_disable (struct medusa_signal *signal);
 
+int medusa_signal_set_context (struct medusa_signal *signal, void *context);
+void * medusa_signal_get_context (struct medusa_signal *signal);
+
 int medusa_signal_set_userdata (struct medusa_signal *signal, void *userdata);
 void * medusa_signal_get_userdata (struct medusa_signal *signal);
 

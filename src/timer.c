@@ -951,6 +951,47 @@ __attribute__ ((visibility ("default"))) int medusa_timer_update_timespec_unlock
         return 0;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_timer_set_context_unlocked (struct medusa_timer *timer, void *context)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return -EINVAL;
+        }
+        timer->context = context;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_set_context (struct medusa_timer *timer, void *context)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(timer->subject.monitor);
+        rc = medusa_timer_set_context_unlocked(timer, context);
+        medusa_monitor_unlock(timer->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_timer_get_context_unlocked (struct medusa_timer *timer)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return timer->context;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_timer_get_context (struct medusa_timer *timer)
+{
+        void *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(timer->subject.monitor);
+        rc = medusa_timer_get_context_unlocked(timer);
+        medusa_monitor_unlock(timer->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_timer_set_userdata_unlocked (struct medusa_timer *timer, void *userdata)
 {
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
@@ -968,6 +1009,26 @@ __attribute__ ((visibility ("default"))) int medusa_timer_set_userdata (struct m
         }
         medusa_monitor_lock(timer->subject.monitor);
         rc = medusa_timer_set_userdata_unlocked(timer, userdata);
+        medusa_monitor_unlock(timer->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_timer_get_userdata_unlocked (struct medusa_timer *timer)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return timer->userdata;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_timer_get_userdata (struct medusa_timer *timer)
+{
+        void *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(timer->subject.monitor);
+        rc = medusa_timer_get_userdata_unlocked(timer);
         medusa_monitor_unlock(timer->subject.monitor);
         return rc;
 }
@@ -1030,26 +1091,6 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_timer_get_userdata_
 __attribute__ ((visibility ("default"))) unsigned int medusa_timer_get_userdata_uint (struct medusa_timer *timer)
 {
         return (unsigned int) (uintptr_t) medusa_timer_get_userdata(timer);
-}
-
-__attribute__ ((visibility ("default"))) void * medusa_timer_get_userdata_unlocked (struct medusa_timer *timer)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
-                return MEDUSA_ERR_PTR(-EINVAL);
-        }
-        return timer->userdata;
-}
-
-__attribute__ ((visibility ("default"))) void * medusa_timer_get_userdata (struct medusa_timer *timer)
-{
-        void *rc;
-        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
-                return MEDUSA_ERR_PTR(-EINVAL);
-        }
-        medusa_monitor_lock(timer->subject.monitor);
-        rc = medusa_timer_get_userdata_unlocked(timer);
-        medusa_monitor_unlock(timer->subject.monitor);
-        return rc;
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_timer_get_monitor_unlocked (const struct medusa_timer *timer)

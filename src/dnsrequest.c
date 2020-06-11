@@ -1489,6 +1489,148 @@ __attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_get_name
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_context_unlocked (struct medusa_dnsrequest *dnsrequest, void *context)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return -EINVAL;
+        }
+        dnsrequest->context = context;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_context (struct medusa_dnsrequest *dnsrequest, void *context)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(dnsrequest->subject.monitor);
+        rc = medusa_dnsrequest_set_context_unlocked(dnsrequest, context);
+        medusa_monitor_unlock(dnsrequest->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_dnsrequest_get_context_unlocked (struct medusa_dnsrequest *dnsrequest)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return dnsrequest->context;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_dnsrequest_get_context (struct medusa_dnsrequest *dnsrequest)
+{
+        void *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(dnsrequest->subject.monitor);
+        rc = medusa_dnsrequest_get_context_unlocked(dnsrequest);
+        medusa_monitor_unlock(dnsrequest->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_userdata_unlocked (struct medusa_dnsrequest *dnsrequest, void *userdata)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return -EINVAL;
+        }
+        dnsrequest->userdata = userdata;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_userdata (struct medusa_dnsrequest *dnsrequest, void *userdata)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(dnsrequest->subject.monitor);
+        rc = medusa_dnsrequest_set_userdata_unlocked(dnsrequest, userdata);
+        medusa_monitor_unlock(dnsrequest->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_dnsrequest_get_userdata_unlocked (struct medusa_dnsrequest *dnsrequest)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return dnsrequest->userdata;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_dnsrequest_get_userdata (struct medusa_dnsrequest *dnsrequest)
+{
+        void *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(dnsrequest->subject.monitor);
+        rc = medusa_dnsrequest_get_userdata_unlocked(dnsrequest);
+        medusa_monitor_unlock(dnsrequest->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_userdata_ptr_unlocked (struct medusa_dnsrequest *dnsrequest, void *userdata)
+{
+        return medusa_dnsrequest_set_userdata_unlocked(dnsrequest, userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_userdata_ptr (struct medusa_dnsrequest *dnsrequest, void *userdata)
+{
+        return medusa_dnsrequest_set_userdata(dnsrequest, userdata);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_dnsrequest_get_userdata_ptr_unlocked (struct medusa_dnsrequest *dnsrequest)
+{
+        return medusa_dnsrequest_get_userdata_unlocked(dnsrequest);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_dnsrequest_get_userdata_ptr (struct medusa_dnsrequest *dnsrequest)
+{
+        return medusa_dnsrequest_get_userdata(dnsrequest);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_userdata_int_unlocked (struct medusa_dnsrequest *dnsrequest, int userdata)
+{
+        return medusa_dnsrequest_set_userdata_unlocked(dnsrequest, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_userdata_int (struct medusa_dnsrequest *dnsrequest, int userdata)
+{
+        return medusa_dnsrequest_set_userdata(dnsrequest, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_get_userdata_int_unlocked (struct medusa_dnsrequest *dnsrequest)
+{
+        return (int) (intptr_t) medusa_dnsrequest_get_userdata_unlocked(dnsrequest);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_get_userdata_int (struct medusa_dnsrequest *dnsrequest)
+{
+        return (int) (intptr_t) medusa_dnsrequest_get_userdata(dnsrequest);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_userdata_uint_unlocked (struct medusa_dnsrequest *dnsrequest, unsigned int userdata)
+{
+        return medusa_dnsrequest_set_userdata_unlocked(dnsrequest, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_userdata_uint (struct medusa_dnsrequest *dnsrequest, unsigned int userdata)
+{
+        return medusa_dnsrequest_set_userdata(dnsrequest, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_dnsrequest_get_userdata_uint_unlocked (struct medusa_dnsrequest *dnsrequest)
+{
+        return (unsigned int) (intptr_t) medusa_dnsrequest_get_userdata_unlocked(dnsrequest);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_dnsrequest_get_userdata_uint (struct medusa_dnsrequest *dnsrequest)
+{
+        return (unsigned int) (uintptr_t) medusa_dnsrequest_get_userdata(dnsrequest);
+}
+
 __attribute__ ((visibility ("default"))) int medusa_dnsrequest_lookup_unlocked (struct medusa_dnsrequest *dnsrequest)
 {
         int rc;

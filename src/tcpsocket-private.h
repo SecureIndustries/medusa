@@ -75,8 +75,20 @@ int medusa_tcpsocket_get_peername_unlocked (struct medusa_tcpsocket *tcpsocket, 
 
 int medusa_tcpsocket_set_onevent_unlocked (struct medusa_tcpsocket *tcpsocket, int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param), void *context);
 
-void * medusa_tcpsocket_get_userdata_unlocked (struct medusa_tcpsocket *tcpsocket);
+int medusa_tcpsocket_set_context_unlocked (struct medusa_tcpsocket *tcpsocket, void *context);
+void * medusa_tcpsocket_get_context_unlocked (struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_set_userdata_unlocked (struct medusa_tcpsocket *tcpsocket, void *userdata);
+void * medusa_tcpsocket_get_userdata_unlocked (struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_userdata_ptr_unlocked (struct medusa_tcpsocket *tcpsocket, void *userdata);
+void * medusa_tcpsocket_get_userdata_ptr_unlocked (struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_userdata_int_unlocked (struct medusa_tcpsocket *tcpsocket, int userdara);
+int medusa_tcpsocket_get_userdata_int_unlocked (struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_userdata_uint_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int userdata);
+unsigned int medusa_tcpsocket_get_userdata_uint_unlocked (struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_onevent_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *param);
 int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *param);

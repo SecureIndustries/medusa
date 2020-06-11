@@ -12,6 +12,7 @@ struct medusa_dnsrequest {
         char *nameserver;
         unsigned int type;
         char *name;
+        void *userdata;
         struct medusa_udpsocket *udpsocket;
         struct medusa_dnsrequest_reply *reply;
 };

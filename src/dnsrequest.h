@@ -131,6 +131,21 @@ int medusa_dnsrequest_get_type (struct medusa_dnsrequest *dnsrequest);
 int medusa_dnsrequest_set_name (struct medusa_dnsrequest *dnsrequest, const char *name);
 const char * medusa_dnsrequest_get_name (struct medusa_dnsrequest *dnsrequest);
 
+void * medusa_dnsrequest_get_context (struct medusa_dnsrequest *dnsrequest);
+int medusa_dnsrequest_set_context (struct medusa_dnsrequest *dnsrequest, void *context);
+
+void * medusa_dnsrequest_get_userdata (struct medusa_dnsrequest *dnsrequest);
+int medusa_dnsrequest_set_userdata (struct medusa_dnsrequest *dnsrequest, void *userdata);
+
+int medusa_dnsrequest_set_userdata_ptr (struct medusa_dnsrequest *dnsrequest, void *userdata);
+void * medusa_dnsrequest_get_userdata_ptr (struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_set_userdata_int (struct medusa_dnsrequest *dnsrequest, int userdara);
+int medusa_dnsrequest_get_userdata_int (struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_set_userdata_uint (struct medusa_dnsrequest *dnsrequest, unsigned int userdata);
+unsigned int medusa_dnsrequest_get_userdata_uint (struct medusa_dnsrequest *dnsrequest);
+
 int medusa_dnsrequest_lookup (struct medusa_dnsrequest *dnsrequest);
 int medusa_dnsrequest_cancel (struct medusa_dnsrequest *dnsrequest);
 int medusa_dnsrequest_abort (struct medusa_dnsrequest *dnsrequest);

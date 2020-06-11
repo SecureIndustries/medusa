@@ -40,6 +40,9 @@ int medusa_condition_get_enabled (const struct medusa_condition *condition);
 int medusa_condition_enable (struct medusa_condition *condition);
 int medusa_condition_disable (struct medusa_condition *condition);
 
+int medusa_condition_set_context (struct medusa_condition *condition, void *context);
+void * medusa_condition_get_context (struct medusa_condition *condition);
+
 int medusa_condition_set_userdata (struct medusa_condition *condition, void *userdata);
 void * medusa_condition_get_userdata (struct medusa_condition *condition);
 
