@@ -6,8 +6,6 @@ struct medusa_httprequest;
 
 struct medusa_httprequest * medusa_httprequest_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, void *param), void *context);
 struct medusa_httprequest * medusa_httprequest_create_with_options_unlocked (const struct medusa_httprequest_init_options *options);
-
-void medusa_httprequest_uninit_unlocked (struct medusa_httprequest *httprequest);
 void medusa_httprequest_destroy_unlocked (struct medusa_httprequest *httprequest);
 
 unsigned int medusa_httprequest_get_state_unlocked (const struct medusa_httprequest *httprequest);

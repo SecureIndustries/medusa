@@ -8,8 +8,6 @@ struct medusa_dnsrequest * medusa_dnsrequest_create_lookup_unlocked (struct medu
 
 struct medusa_dnsrequest * medusa_dnsrequest_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *context, void *param), void *context);
 struct medusa_dnsrequest * medusa_dnsrequest_create_with_options_unlocked (const struct medusa_dnsrequest_init_options *options);
-
-void medusa_dnsrequest_uninit_unlocked (struct medusa_dnsrequest *dnsrequest);
 void medusa_dnsrequest_destroy_unlocked (struct medusa_dnsrequest *dnsrequest);
 
 unsigned int medusa_dnsrequest_get_state_unlocked (const struct medusa_dnsrequest *dnsrequest);

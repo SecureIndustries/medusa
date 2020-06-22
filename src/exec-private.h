@@ -6,8 +6,6 @@ struct medusa_exec;
 
 struct medusa_exec * medusa_exec_create_unlocked (struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, void *param), void *context);
 struct medusa_exec * medusa_exec_create_with_options_unlocked (const struct medusa_exec_init_options *options);
-
-void medusa_exec_uninit_unlocked (struct medusa_exec *exec);
 void medusa_exec_destroy_unlocked (struct medusa_exec *exec);
 
 int medusa_exec_get_pid_unlocked (const struct medusa_exec *exec);

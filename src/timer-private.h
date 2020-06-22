@@ -10,8 +10,6 @@ int medusa_timer_create_singleshot_timespec_unlocked (struct medusa_monitor *mon
 
 struct medusa_timer * medusa_timer_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_timer *timer, unsigned int events, void *context, void *param), void *context);
 struct medusa_timer * medusa_timer_create_with_options_unlocked (const struct medusa_timer_init_options *options);
-
-void medusa_timer_uninit_unlocked (struct medusa_timer *timer);
 void medusa_timer_destroy_unlocked (struct medusa_timer *timer);
 
 int medusa_timer_set_initial_unlocked (struct medusa_timer *timer, double initial);

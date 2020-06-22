@@ -6,8 +6,6 @@ struct medusa_io;
 
 struct medusa_io * medusa_io_create_unlocked (struct medusa_monitor *monitor, int fd, int (*onevent) (struct medusa_io *io, unsigned int events, void *context, void *param), void *context);
 struct medusa_io * medusa_io_create_with_options_unlocked (const struct medusa_io_init_options *options);
-
-void medusa_io_uninit_unlocked (struct medusa_io *io);
 void medusa_io_destroy_unlocked (struct medusa_io *io);
 
 int medusa_io_get_fd_unlocked (const struct medusa_io *io);

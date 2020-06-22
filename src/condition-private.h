@@ -6,8 +6,6 @@ struct medusa_condition;
 
 struct medusa_condition * medusa_condition_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, void *param), void *context);
 struct medusa_condition * medusa_condition_create_with_options_unlocked (const struct medusa_condition_init_options *options);
-
-void medusa_condition_uninit_unlocked (struct medusa_condition *condition);
 void medusa_condition_destroy_unlocked (struct medusa_condition *condition);
 
 int medusa_condition_signal_unlocked (struct medusa_condition *condition);
