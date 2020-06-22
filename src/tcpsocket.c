@@ -750,6 +750,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_bind_options_defau
         }
         memset(options, 0, sizeof(struct medusa_tcpsocket_bind_options));
         options->protocol   = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
+        options->backlog    = 128;
         options->fd         = -1;
         options->clodestroy = 1;
         return 0;
