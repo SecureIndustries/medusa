@@ -85,6 +85,8 @@ static int test_poll (unsigned int poll)
                 return -1;
         }
 
+        pthread_join(thread, NULL);
+
         fprintf(stderr, "finish\n");
 
         medusa_monitor_destroy(monitor);

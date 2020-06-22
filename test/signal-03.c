@@ -106,11 +106,12 @@ static void sigint_handler (int sig)
         abort();
 }
 
+int g_do_nothing_thread_running = 1;
 static void * do_nothing_thread (void *context)
 {
         (void) context;
 
-        while (1) {
+        while (g_do_nothing_thread_running) {
                 sleep(1);
         }
 
@@ -141,5 +142,7 @@ int main (int argc, char *argv[])
                 }
         }
 
+        g_do_nothing_thread_running = 0;
+        pthread_join(thread, NULL);
         return 0;
 }
