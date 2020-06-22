@@ -97,6 +97,9 @@ libmedusa.a_files-y += \
 	../3rdparty/SPCDNS/src/mappings.c \
 	../3rdparty/SPCDNS/src/output.c
 
+libmedusa.a_files-y += \
+	websocketserver.c
+
 libmedusa.o_cflags-y = \
 	${libmedusa.a_cflags-y}
 
@@ -136,6 +139,7 @@ dist.include-y = \
 	udpsocket.h \
 	httprequest.h \
 	dnsrequest.h \
+	websocketserver.h \
 	exec.h \
 	queue.h
 

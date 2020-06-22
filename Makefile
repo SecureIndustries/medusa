@@ -57,6 +57,7 @@ install: src test
 	install -m 0644 dist/include/medusa/udpsocket.h ${DESTDIR}/${prefix}/include/medusa/udpsocket.h
 	install -m 0644 dist/include/medusa/timer.h ${DESTDIR}/${prefix}/include/medusa/timer.h
 	install -m 0644 dist/include/medusa/dnsrequest.h ${DESTDIR}/${prefix}/include/medusa/dnsrequest.h
+	install -m 0644 dist/include/medusa/websocketserver.h ${DESTDIR}/${prefix}/include/medusa/websocketserver.h
 	
 	install -d ${DESTDIR}/${prefix}/lib
 	install -m 0755 dist/lib/libmedusa.so.${MEDUSA_SONAME} ${DESTDIR}/${prefix}/lib/
