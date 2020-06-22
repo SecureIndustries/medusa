@@ -164,7 +164,8 @@ static int64_t ring_buffer_insertv (struct medusa_buffer *buffer, int64_t offset
                 return rc;
         }
 
-        if (offset == 0) {
+        if (offset == 0 &&
+            ring->length != 0) {
                 ring->head = ring->head - length;
                 if (ring->head < 0) {
                         ring->head += ring->size;
@@ -309,14 +310,16 @@ static int64_t ring_buffer_insertfv (struct medusa_buffer *buffer, int64_t offse
         if (length < 0) {
                 return -EIO;
         }
-        
-        rc = ring_buffer_resize(ring, ring->length + length + 1);
+        length += 1;
+
+        rc = ring_buffer_resize(ring, ring->length + length);
         if (rc < 0) {
                 return rc;
         }
 
 again:
-        if (offset == 0) {
+        if (offset == 0 &&
+            ring->head >= length) {
                 ring->head = ring->head - length;
                 if (ring->head < 0) {
                         ring->head += ring->size;
@@ -378,13 +381,20 @@ again:
                         dst = dstbeg;
                         memmove(ring->data + dst, ring->data + src, len);
                 }
+        } else if (offset == ring->length &&
+                   ring->head + offset + length > ring->size) {
+                rc = ring_buffer_headify(ring);
+                if (rc < 0) {
+                        return -EIO;
+                }
+                goto again;
         }
 
-        len = length + 1;
+        len = length;
         dst = (ring->head + offset) % ring->size;
 
         va_copy(vs, va);
-        rc = vsnprintf(ring->data + dst, length + 1, format, vs);
+        rc = vsnprintf(ring->data + dst, len, format, vs);
         va_end(vs);
         if (rc < 0) {
                 return -EIO;
