@@ -950,45 +950,7 @@ bail:   medusa_monitor_unlock(monitor);
         return -EIO;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_dnsrequest_init_options_default (struct medusa_dnsrequest_init_options *options)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(options)) {
-                return -EINVAL;
-        }
-        memset(options, 0, sizeof(struct medusa_dnsrequest_init_options));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_dnsrequest_init_unlocked (struct medusa_dnsrequest *dnsrequest, struct medusa_monitor *monitor, int (*onevent) (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *context, void *param), void *context)
-{
-        int rc;
-        struct medusa_dnsrequest_init_options options;
-        rc = medusa_dnsrequest_init_options_default(&options);
-        if (rc < 0) {
-                return rc;
-        }
-        options.monitor = monitor;
-        options.onevent = onevent;
-        options.context = context;
-        return medusa_dnsrequest_init_with_options_unlocked(dnsrequest, &options);
-}
-
-__attribute__ ((visibility ("default"))) int medusa_dnsrequest_init (struct medusa_dnsrequest *dnsrequest, struct medusa_monitor *monitor, int (*onevent) (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *context, void *param), void *context)
-{
-        int rc;
-        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
-                return -EINVAL;
-        }
-        medusa_monitor_lock(monitor);
-        rc = medusa_dnsrequest_init_unlocked(dnsrequest, monitor, onevent, context);
-        medusa_monitor_unlock(monitor);
-        return rc;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_dnsrequest_init_with_options_unlocked (struct medusa_dnsrequest *dnsrequest, const struct medusa_dnsrequest_init_options *options)
+static int dnsrequest_init_with_options_unlocked (struct medusa_dnsrequest *dnsrequest, const struct medusa_dnsrequest_init_options *options)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
@@ -1036,25 +998,7 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_init_with_options
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_dnsrequest_init_with_options (struct medusa_dnsrequest *dnsrequest, const struct medusa_dnsrequest_init_options *options)
-{
-        int rc;
-        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(options)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(options->monitor)) {
-                return -EINVAL;
-        }
-        medusa_monitor_lock(options->monitor);
-        rc = medusa_dnsrequest_init_with_options_unlocked(dnsrequest, options);
-        medusa_monitor_unlock(options->monitor);
-        return rc;
-}
-
-__attribute__ ((visibility ("default"))) void medusa_dnsrequest_uninit_unlocked (struct medusa_dnsrequest *dnsrequest)
+static void dnsrequest_uninit_unlocked (struct medusa_dnsrequest *dnsrequest)
 {
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
                 return;
@@ -1066,14 +1010,13 @@ __attribute__ ((visibility ("default"))) void medusa_dnsrequest_uninit_unlocked 
         }
 }
 
-__attribute__ ((visibility ("default"))) void medusa_dnsrequest_uninit (struct medusa_dnsrequest *dnsrequest)
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_init_options_default (struct medusa_dnsrequest_init_options *options)
 {
-        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
-                return;
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return -EINVAL;
         }
-        medusa_monitor_lock(dnsrequest->subject.monitor);
-        medusa_dnsrequest_uninit_unlocked(dnsrequest);
-        medusa_monitor_unlock(dnsrequest->subject.monitor);
+        memset(options, 0, sizeof(struct medusa_dnsrequest_init_options));
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_dnsrequest * medusa_dnsrequest_create_lookup_unlocked (struct medusa_monitor *monitor, const char *nameserver, unsigned int type, const char *name, int (*onevent) (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *context, void *param), void *context)
@@ -1179,12 +1122,11 @@ __attribute__ ((visibility ("default"))) struct medusa_dnsrequest * medusa_dnsre
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
         memset(dnsrequest, 0, sizeof(struct medusa_dnsrequest));
-        rc = medusa_dnsrequest_init_with_options_unlocked(dnsrequest, options);
+        rc = dnsrequest_init_with_options_unlocked(dnsrequest, options);
         if (rc < 0) {
                 medusa_dnsrequest_destroy_unlocked(dnsrequest);
                 return MEDUSA_ERR_PTR(rc);
         }
-        dnsrequest->subject.flags |= MEDUSA_SUBJECT_FLAG_ALLOC;
         return dnsrequest;
 }
 
@@ -1208,7 +1150,7 @@ __attribute__ ((visibility ("default"))) void medusa_dnsrequest_destroy_unlocked
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
                 return;
         }
-        medusa_dnsrequest_uninit_unlocked(dnsrequest);
+        dnsrequest_uninit_unlocked(dnsrequest);
 }
 
 __attribute__ ((visibility ("default"))) void medusa_dnsrequest_destroy (struct medusa_dnsrequest *dnsrequest)
@@ -2180,15 +2122,11 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_onevent_unlocked 
                         medusa_udpsocket_destroy_unlocked(dnsrequest->udpsocket);
                         dnsrequest->udpsocket = NULL;
                 }
-                if (dnsrequest->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
 #if defined(MEDUSA_DNSREQUEST_USE_POOL) && (MEDUSA_DNSREQUEST_USE_POOL == 1)
-                        medusa_pool_free(dnsrequest);
+                medusa_pool_free(dnsrequest);
 #else
-                        free(dnsrequest);
+                free(dnsrequest);
 #endif
-                } else {
-                        memset(dnsrequest, 0, sizeof(struct medusa_dnsrequest));
-                }
         }
         return ret;
 }

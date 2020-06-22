@@ -4,9 +4,6 @@
 
 struct medusa_condition;
 
-int medusa_condition_init_unlocked (struct medusa_condition *condition, struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, void *param), void *context);
-int medusa_condition_init_with_options_unlocked (struct medusa_condition *condition, const struct medusa_condition_init_options *options);
-
 struct medusa_condition * medusa_condition_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, void *param), void *context);
 struct medusa_condition * medusa_condition_create_with_options_unlocked (const struct medusa_condition_init_options *options);
 

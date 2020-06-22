@@ -812,45 +812,7 @@ bail:   medusa_monitor_unlock(monitor);
         return -EIO;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_init_options_default (struct medusa_httprequest_init_options *options)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(options)) {
-                return -EINVAL;
-        }
-        memset(options, 0, sizeof(struct medusa_httprequest_init_options));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_httprequest_init_unlocked (struct medusa_httprequest *httprequest, struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, void *param), void *context)
-{
-        int rc;
-        struct medusa_httprequest_init_options options;
-        rc = medusa_httprequest_init_options_default(&options);
-        if (rc < 0) {
-                return rc;
-        }
-        options.monitor = monitor;
-        options.onevent = onevent;
-        options.context = context;
-        return medusa_httprequest_init_with_options_unlocked(httprequest, &options);
-}
-
-__attribute__ ((visibility ("default"))) int medusa_httprequest_init (struct medusa_httprequest *httprequest, struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, void *param), void *context)
-{
-        int rc;
-        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
-                return -EINVAL;
-        }
-        medusa_monitor_lock(monitor);
-        rc = medusa_httprequest_init_unlocked(httprequest, monitor, onevent, context);
-        medusa_monitor_unlock(monitor);
-        return rc;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_httprequest_init_with_options_unlocked (struct medusa_httprequest *httprequest, const struct medusa_httprequest_init_options *options)
+static int httprequest_init_with_options_unlocked (struct medusa_httprequest *httprequest, const struct medusa_httprequest_init_options *options)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
@@ -892,25 +854,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_init_with_option
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_init_with_options (struct medusa_httprequest *httprequest, const struct medusa_httprequest_init_options *options)
-{
-        int rc;
-        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(options)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(options->monitor)) {
-                return -EINVAL;
-        }
-        medusa_monitor_lock(options->monitor);
-        rc = medusa_httprequest_init_with_options_unlocked(httprequest, options);
-        medusa_monitor_unlock(options->monitor);
-        return rc;
-}
-
-__attribute__ ((visibility ("default"))) void medusa_httprequest_uninit_unlocked (struct medusa_httprequest *httprequest)
+static void httprequest_uninit_unlocked (struct medusa_httprequest *httprequest)
 {
         if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
                 return;
@@ -922,14 +866,13 @@ __attribute__ ((visibility ("default"))) void medusa_httprequest_uninit_unlocked
         }
 }
 
-__attribute__ ((visibility ("default"))) void medusa_httprequest_uninit (struct medusa_httprequest *httprequest)
+__attribute__ ((visibility ("default"))) int medusa_httprequest_init_options_default (struct medusa_httprequest_init_options *options)
 {
-        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
-                return;
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return -EINVAL;
         }
-        medusa_monitor_lock(httprequest->subject.monitor);
-        medusa_httprequest_uninit_unlocked(httprequest);
-        medusa_monitor_unlock(httprequest->subject.monitor);
+        memset(options, 0, sizeof(struct medusa_httprequest_init_options));
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_httprequest * medusa_httprequest_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, void *param), void *context)
@@ -980,12 +923,11 @@ __attribute__ ((visibility ("default"))) struct medusa_httprequest * medusa_http
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
         memset(httprequest, 0, sizeof(struct medusa_httprequest));
-        rc = medusa_httprequest_init_with_options_unlocked(httprequest, options);
+        rc = httprequest_init_with_options_unlocked(httprequest, options);
         if (rc < 0) {
                 medusa_httprequest_destroy_unlocked(httprequest);
                 return MEDUSA_ERR_PTR(rc);
         }
-        httprequest->subject.flags |= MEDUSA_SUBJECT_FLAG_ALLOC;
         return httprequest;
 }
 
@@ -1009,7 +951,7 @@ __attribute__ ((visibility ("default"))) void medusa_httprequest_destroy_unlocke
         if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
                 return;
         }
-        medusa_httprequest_uninit_unlocked(httprequest);
+        httprequest_uninit_unlocked(httprequest);
 }
 
 __attribute__ ((visibility ("default"))) void medusa_httprequest_destroy (struct medusa_httprequest *httprequest)
@@ -1438,15 +1380,11 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_onevent_unlocked
                         medusa_httprequest_reply_destroy(httprequest->reply);
                         httprequest->reply = NULL;
                 }
-                if (httprequest->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
 #if defined(MEDUSA_HTTPREQUEST_USE_POOL) && (MEDUSA_HTTPREQUEST_USE_POOL == 1)
-                        medusa_pool_free(httprequest);
+                medusa_pool_free(httprequest);
 #else
-                        free(httprequest);
+                free(httprequest);
 #endif
-                } else {
-                        memset(httprequest, 0, sizeof(struct medusa_httprequest));
-                }
         }
         return ret;
 }

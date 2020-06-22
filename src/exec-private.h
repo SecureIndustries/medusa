@@ -4,9 +4,6 @@
 
 struct medusa_exec;
 
-int medusa_exec_init_unlocked (struct medusa_exec *exec, struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, void *param), void *context);
-int medusa_exec_init_with_options_unlocked (struct medusa_exec *exec, const struct medusa_exec_init_options *options);
-
 struct medusa_exec * medusa_exec_create_unlocked (struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, void *param), void *context);
 struct medusa_exec * medusa_exec_create_with_options_unlocked (const struct medusa_exec_init_options *options);
 

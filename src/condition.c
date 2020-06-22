@@ -58,45 +58,7 @@ static int condition_set_signalled (struct medusa_condition *condition, int sign
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_condition_init_options_default (struct medusa_condition_init_options *options)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(options)) {
-                return -EINVAL;
-        }
-        memset(options, 0, sizeof(struct medusa_condition_init_options));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_condition_init_unlocked (struct medusa_condition *condition, struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, void *param), void *context)
-{
-        int rc;
-        struct medusa_condition_init_options options;
-        rc = medusa_condition_init_options_default(&options);
-        if (rc < 0) {
-                return rc;
-        }
-        options.monitor = monitor;
-        options.onevent = onevent;
-        options.context = context;
-        return medusa_condition_init_with_options_unlocked(condition, &options);
-}
-
-__attribute__ ((visibility ("default"))) int medusa_condition_init (struct medusa_condition *condition, struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, void *param), void *context)
-{
-        int rc;
-        if (MEDUSA_IS_ERR_OR_NULL(condition)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
-                return -EINVAL;
-        }
-        medusa_monitor_lock(monitor);
-        rc = medusa_condition_init_unlocked(condition, monitor, onevent, context);
-        medusa_monitor_unlock(monitor);
-        return rc;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_condition_init_with_options_unlocked (struct medusa_condition *condition, const struct medusa_condition_init_options *options)
+static int condition_init_with_options_unlocked (struct medusa_condition *condition, const struct medusa_condition_init_options *options)
 {
         if (MEDUSA_IS_ERR_OR_NULL(options)) {
                 return -EINVAL;
@@ -119,7 +81,7 @@ __attribute__ ((visibility ("default"))) int medusa_condition_init_with_options_
         return medusa_monitor_add_unlocked(options->monitor, &condition->subject);
 }
 
-__attribute__ ((visibility ("default"))) void medusa_condition_uninit_unlocked (struct medusa_condition *condition)
+static void condition_uninit_unlocked (struct medusa_condition *condition)
 {
         if (MEDUSA_IS_ERR_OR_NULL(condition)) {
                 return;
@@ -131,14 +93,13 @@ __attribute__ ((visibility ("default"))) void medusa_condition_uninit_unlocked (
         }
 }
 
-__attribute__ ((visibility ("default"))) void medusa_condition_uninit (struct medusa_condition *condition)
+__attribute__ ((visibility ("default"))) int medusa_condition_init_options_default (struct medusa_condition_init_options *options)
 {
-        if (MEDUSA_IS_ERR_OR_NULL(condition)) {
-                return;
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return -EINVAL;
         }
-        medusa_monitor_lock(condition->subject.monitor);
-        medusa_condition_uninit_unlocked(condition);
-        medusa_monitor_unlock(condition->subject.monitor);
+        memset(options, 0, sizeof(struct medusa_condition_init_options));
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_condition * medusa_condition_create_unlocked (struct medusa_monitor *monitor, int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, void *param), void *context)
@@ -189,12 +150,11 @@ __attribute__ ((visibility ("default"))) struct medusa_condition * medusa_condit
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
         memset(condition, 0, sizeof(struct medusa_condition));
-        rc = medusa_condition_init_with_options_unlocked(condition, options);
+        rc = condition_init_with_options_unlocked(condition, options);
         if (rc < 0) {
                 medusa_condition_destroy_unlocked(condition);
                 return MEDUSA_ERR_PTR(rc);
         }
-        condition->subject.flags |= MEDUSA_SUBJECT_FLAG_ALLOC;
         return condition;
 }
 
@@ -218,7 +178,7 @@ __attribute__ ((visibility ("default"))) void medusa_condition_destroy_unlocked 
         if (MEDUSA_IS_ERR_OR_NULL(condition)) {
                 return;
         }
-        medusa_condition_uninit_unlocked(condition);
+        condition_uninit_unlocked(condition);
 }
 
 __attribute__ ((visibility ("default"))) void medusa_condition_destroy (struct medusa_condition *condition)
@@ -227,7 +187,7 @@ __attribute__ ((visibility ("default"))) void medusa_condition_destroy (struct m
                 return;
         }
         medusa_monitor_lock(condition->subject.monitor);
-        medusa_condition_uninit_unlocked(condition);
+        condition_uninit_unlocked(condition);
         medusa_monitor_unlock(condition->subject.monitor);
 }
 
@@ -536,15 +496,11 @@ __attribute__ ((visibility ("default"))) int medusa_condition_onevent_unlocked (
                 }
         }
         if (events & MEDUSA_CONDITION_EVENT_DESTROY) {
-                if (condition->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
 #if defined(MEDUSA_CONDITION_USE_POOL) && (MEDUSA_CONDITION_USE_POOL == 1)
-                        medusa_pool_free(condition);
+                medusa_pool_free(condition);
 #else
-                        free(condition);
+                free(condition);
 #endif
-                } else {
-                        memset(condition, 0, sizeof(struct medusa_condition));
-                }
         }
         return rc;
 }

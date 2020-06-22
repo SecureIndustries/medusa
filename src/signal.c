@@ -70,46 +70,7 @@ static int signal_set_enabled (struct medusa_signal *signal, int enabled)
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_signal_init_options_default (struct medusa_signal_init_options *options)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(options)) {
-                return -EINVAL;
-        }
-        memset(options, 0, sizeof(struct medusa_signal_init_options));
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_signal_init_unlocked (struct medusa_signal *signal, struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param), void *context)
-{
-        int rc;
-        struct medusa_signal_init_options options;
-        rc = medusa_signal_init_options_default(&options);
-        if (rc < 0) {
-                return rc;
-        }
-        options.monitor = monitor;
-        options.number  = number;
-        options.onevent = onevent;
-        options.context = context;
-        return medusa_signal_init_with_options_unlocked(signal, &options);
-}
-
-__attribute__ ((visibility ("default"))) int medusa_signal_init (struct medusa_signal *signal, struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param), void *context)
-{
-        int rc;
-        if (MEDUSA_IS_ERR_OR_NULL(signal)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
-                return -EINVAL;
-        }
-        medusa_monitor_lock(monitor);
-        rc = medusa_signal_init_unlocked(signal, monitor, number, onevent, context);
-        medusa_monitor_unlock(monitor);
-        return rc;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_signal_init_with_options_unlocked (struct medusa_signal *signal, const struct medusa_signal_init_options *options)
+static int signal_init_with_options_unlocked (struct medusa_signal *signal, const struct medusa_signal_init_options *options)
 {
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {
                 return -EINVAL;
@@ -137,25 +98,7 @@ __attribute__ ((visibility ("default"))) int medusa_signal_init_with_options_unl
         return medusa_monitor_add_unlocked(options->monitor, &signal->subject);
 }
 
-__attribute__ ((visibility ("default"))) int medusa_signal_init_with_options (struct medusa_signal *signal, const struct medusa_signal_init_options *options)
-{
-        int rc;
-        if (MEDUSA_IS_ERR_OR_NULL(signal)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(options)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(options->monitor)) {
-                return -EINVAL;
-        }
-        medusa_monitor_lock(options->monitor);
-        rc = medusa_signal_init_with_options_unlocked(signal, options);
-        medusa_monitor_unlock(options->monitor);
-        return rc;
-}
-
-__attribute__ ((visibility ("default"))) void medusa_signal_uninit_unlocked (struct medusa_signal *signal)
+static void signal_uninit_unlocked (struct medusa_signal *signal)
 {
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {
                 return;
@@ -167,14 +110,13 @@ __attribute__ ((visibility ("default"))) void medusa_signal_uninit_unlocked (str
         }
 }
 
-__attribute__ ((visibility ("default"))) void medusa_signal_uninit (struct medusa_signal *signal)
+__attribute__ ((visibility ("default"))) int medusa_signal_init_options_default (struct medusa_signal_init_options *options)
 {
-        if (MEDUSA_IS_ERR_OR_NULL(signal)) {
-                return;
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return -EINVAL;
         }
-        medusa_monitor_lock(signal->subject.monitor);
-        medusa_signal_uninit_unlocked(signal);
-        medusa_monitor_unlock(signal->subject.monitor);
+        memset(options, 0, sizeof(struct medusa_signal_init_options));
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_signal_create_singleshot_unlocked (struct medusa_monitor *monitor, int number, int (*onevent) (struct medusa_signal *signal, unsigned int events, void *context, void *param), void *context)
@@ -270,12 +212,11 @@ __attribute__ ((visibility ("default"))) struct medusa_signal * medusa_signal_cr
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
         memset(signal, 0, sizeof(struct medusa_signal));
-        rc = medusa_signal_init_with_options_unlocked(signal, options);
+        rc = signal_init_with_options_unlocked(signal, options);
         if (rc < 0) {
                 medusa_signal_destroy_unlocked(signal);
                 return MEDUSA_ERR_PTR(rc);
         }
-        signal->subject.flags |= MEDUSA_SUBJECT_FLAG_ALLOC;
         return signal;
 }
 
@@ -299,7 +240,7 @@ __attribute__ ((visibility ("default"))) void medusa_signal_destroy_unlocked (st
         if (MEDUSA_IS_ERR_OR_NULL(signal)) {
                 return;
         }
-        medusa_signal_uninit_unlocked(signal);
+        signal_uninit_unlocked(signal);
 }
 
 __attribute__ ((visibility ("default"))) void medusa_signal_destroy (struct medusa_signal *signal)
@@ -308,7 +249,7 @@ __attribute__ ((visibility ("default"))) void medusa_signal_destroy (struct medu
                 return;
         }
         medusa_monitor_lock(signal->subject.monitor);
-        medusa_signal_uninit_unlocked(signal);
+        medusa_signal_destroy_unlocked(signal);
         medusa_monitor_unlock(signal->subject.monitor);
 }
 
@@ -622,15 +563,11 @@ __attribute__ ((visibility ("default"))) int medusa_signal_onevent_unlocked (str
                 }
         }
         if (events & MEDUSA_SIGNAL_EVENT_DESTROY) {
-                if (signal->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
 #if defined(MEDUSA_SIGNAL_USE_POOL) && (MEDUSA_SIGNAL_USE_POOL == 1)
-                        medusa_pool_free(signal);
+                medusa_pool_free(signal);
 #else
-                        free(signal);
+                free(signal);
 #endif
-                } else {
-                        memset(signal, 0, sizeof(struct medusa_signal));
-                }
         }
         return rc;
 }

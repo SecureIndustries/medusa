@@ -76,11 +76,11 @@ struct medusa_monitor {
                 struct pqueue_head *pqueue;
                 int fired;
                 int dirty;
-                struct medusa_io io;
+                struct medusa_io *io;
         } timer;
         struct {
                 struct medusa_signal_backend *backend;
-                struct medusa_io io;
+                struct medusa_io *io;
         } signal;
         struct {
                 struct pqueue_head *pqueue;
@@ -90,7 +90,7 @@ struct medusa_monitor {
         struct {
                 int fds[2];
                 int fired;
-                struct medusa_io io;
+                struct medusa_io *io;
         } wakeup;
         struct {
                 int (*callback) (struct medusa_monitor *monitor, unsigned int events, void *context, void *param);
@@ -1165,39 +1165,39 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         if (rc != 0) {
                 goto bail;
         }
-        rc = medusa_io_init(&monitor->wakeup.io, monitor, monitor->wakeup.fds[0], monitor_wakeup_io_onevent, monitor);
+        monitor->wakeup.io = medusa_io_create(monitor, monitor->wakeup.fds[0], monitor_wakeup_io_onevent, monitor);
+        if (MEDUSA_IS_ERR_OR_NULL(monitor->wakeup.io)) {
+                goto bail;
+        }
+        rc = medusa_io_set_events(monitor->wakeup.io, MEDUSA_IO_EVENT_IN);
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_io_set_events(&monitor->wakeup.io, MEDUSA_IO_EVENT_IN);
+        rc = medusa_io_set_enabled(monitor->wakeup.io, 1);
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_io_set_enabled(&monitor->wakeup.io, 1);
+        monitor->timer.io = medusa_io_create(monitor, monitor->timer.backend->fd(monitor->timer.backend), monitor_timer_io_onevent, monitor);
+        if (MEDUSA_IS_ERR_OR_NULL(monitor->timer.io)) {
+                goto bail;
+        }
+        rc = medusa_io_set_events(monitor->timer.io, MEDUSA_IO_EVENT_IN);
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_io_init(&monitor->timer.io, monitor, monitor->timer.backend->fd(monitor->timer.backend), monitor_timer_io_onevent, monitor);
+        rc = medusa_io_set_enabled(monitor->timer.io, 1);
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_io_set_events(&monitor->timer.io, MEDUSA_IO_EVENT_IN);
+        monitor->signal.io = medusa_io_create(monitor, monitor->signal.backend->fd(monitor->signal.backend), monitor_signal_io_onevent, monitor);
+        if (MEDUSA_IS_ERR_OR_NULL(monitor->signal.io)) {
+                goto bail;
+        }
+        rc = medusa_io_set_events(monitor->signal.io, MEDUSA_IO_EVENT_IN);
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_io_set_enabled(&monitor->timer.io, 1);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_io_init(&monitor->signal.io, monitor, monitor->signal.backend->fd(monitor->signal.backend), monitor_signal_io_onevent, monitor);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_io_set_events(&monitor->signal.io, MEDUSA_IO_EVENT_IN);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_io_set_enabled(&monitor->signal.io, 1);
+        rc = medusa_io_set_enabled(monitor->signal.io, 1);
         if (rc < 0) {
                 goto bail;
         }
@@ -1234,6 +1234,15 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                 return;
         }
         medusa_monitor_lock(monitor);
+        if (!MEDUSA_IS_ERR_OR_NULL(monitor->wakeup.io)) {
+                medusa_io_destroy_unlocked(monitor->wakeup.io);
+        }
+        if (!MEDUSA_IS_ERR_OR_NULL(monitor->timer.io)) {
+                medusa_io_destroy_unlocked(monitor->timer.io);
+        }
+        if (!MEDUSA_IS_ERR_OR_NULL(monitor->signal.io)) {
+                medusa_io_destroy_unlocked(monitor->signal.io);
+        }
         while (!TAILQ_EMPTY(&monitor->rogues)) {
                 subject = TAILQ_FIRST(&monitor->rogues);
                 medusa_monitor_del_unlocked(subject);

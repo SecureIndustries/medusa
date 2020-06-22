@@ -227,49 +227,7 @@ static int exec_timer_onevent (struct medusa_timer *timer, unsigned int events, 
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_exec_init_options_default (struct medusa_exec_init_options *options)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(options)) {
-                return -EINVAL;
-        }
-        memset(options, 0, sizeof(struct medusa_exec_init_options));
-        options->uid      = -1;
-        options->gid      = -1;
-        options->interval = 0.1;
-        return 0;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_exec_init_unlocked (struct medusa_exec *exec, struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, void *param), void *context)
-{
-        int rc;
-        struct medusa_exec_init_options options;
-        rc = medusa_exec_init_options_default(&options);
-        if (rc < 0) {
-                return rc;
-        }
-        options.monitor = monitor;
-        options.argv    = argv;
-        options.onevent = onevent;
-        options.context = context;
-        return medusa_exec_init_with_options_unlocked(exec, &options);
-}
-
-__attribute__ ((visibility ("default"))) int medusa_exec_init (struct medusa_exec *exec, struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, void *param), void *context)
-{
-        int rc;
-        if (MEDUSA_IS_ERR_OR_NULL(exec)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
-                return -EINVAL;
-        }
-        medusa_monitor_lock(monitor);
-        rc = medusa_exec_init_unlocked(exec, monitor, argv, onevent, context);
-        medusa_monitor_unlock(monitor);
-        return rc;
-}
-
-__attribute__ ((visibility ("default"))) int medusa_exec_init_with_options_unlocked (struct medusa_exec *exec, const struct medusa_exec_init_options *options)
+static int exec_init_with_options_unlocked (struct medusa_exec *exec, const struct medusa_exec_init_options *options)
 {
         int rc;
         int ret;
@@ -376,25 +334,7 @@ bail:   for (argc = 0; options->argv != NULL && options->argv[argc] != NULL; arg
         return ret;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_exec_init_with_options (struct medusa_exec *exec, const struct medusa_exec_init_options *options)
-{
-        int rc;
-        if (MEDUSA_IS_ERR_OR_NULL(exec)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(options)) {
-                return -EINVAL;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(options->monitor)) {
-                return -EINVAL;
-        }
-        medusa_monitor_lock(options->monitor);
-        rc = medusa_exec_init_with_options_unlocked(exec, options);
-        medusa_monitor_unlock(options->monitor);
-        return rc;
-}
-
-__attribute__ ((visibility ("default"))) void medusa_exec_uninit_unlocked (struct medusa_exec *exec)
+static void exec_uninit_unlocked (struct medusa_exec *exec)
 {
         if (MEDUSA_IS_ERR_OR_NULL(exec)) {
                 return;
@@ -406,14 +346,16 @@ __attribute__ ((visibility ("default"))) void medusa_exec_uninit_unlocked (struc
         }
 }
 
-__attribute__ ((visibility ("default"))) void medusa_exec_uninit (struct medusa_exec *exec)
+__attribute__ ((visibility ("default"))) int medusa_exec_init_options_default (struct medusa_exec_init_options *options)
 {
-        if (MEDUSA_IS_ERR_OR_NULL(exec)) {
-                return;
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return -EINVAL;
         }
-        medusa_monitor_lock(exec->subject.monitor);
-        medusa_exec_uninit_unlocked(exec);
-        medusa_monitor_unlock(exec->subject.monitor);
+        memset(options, 0, sizeof(struct medusa_exec_init_options));
+        options->uid      = -1;
+        options->gid      = -1;
+        options->interval = 0.1;
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_exec * medusa_exec_create_unlocked (struct medusa_monitor *monitor, const char *argv[], int (*onevent) (struct medusa_exec *exec, unsigned int events, void *context, void *param), void *context)
@@ -465,12 +407,11 @@ __attribute__ ((visibility ("default"))) struct medusa_exec * medusa_exec_create
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
         memset(exec, 0, sizeof(struct medusa_exec));
-        rc = medusa_exec_init_with_options_unlocked(exec, options);
+        rc = exec_init_with_options_unlocked(exec, options);
         if (rc < 0) {
                 medusa_exec_destroy_unlocked(exec);
                 return MEDUSA_ERR_PTR(rc);
         }
-        exec->subject.flags |= MEDUSA_SUBJECT_FLAG_ALLOC;
         return exec;
 }
 
@@ -494,7 +435,7 @@ __attribute__ ((visibility ("default"))) void medusa_exec_destroy_unlocked (stru
         if (MEDUSA_IS_ERR_OR_NULL(exec)) {
                 return;
         }
-        medusa_exec_uninit_unlocked(exec);
+        exec_uninit_unlocked(exec);
 }
 
 __attribute__ ((visibility ("default"))) void medusa_exec_destroy (struct medusa_exec *exec)
@@ -503,7 +444,7 @@ __attribute__ ((visibility ("default"))) void medusa_exec_destroy (struct medusa
                 return;
         }
         medusa_monitor_lock(exec->subject.monitor);
-        medusa_exec_uninit_unlocked(exec);
+        medusa_exec_destroy_unlocked(exec);
         medusa_monitor_unlock(exec->subject.monitor);
 }
 
@@ -843,15 +784,11 @@ __attribute__ ((visibility ("default"))) int medusa_exec_onevent_unlocked (struc
                         }
                         free(exec->envv);
                 }
-                if (exec->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
 #if defined(MEDUSA_EXEC_USE_POOL) && (MEDUSA_EXEC_USE_POOL == 1)
-                        medusa_pool_free(exec);
+                medusa_pool_free(exec);
 #else
-                        free(exec);
+                free(exec);
 #endif
-                } else {
-                        memset(exec, 0, sizeof(struct medusa_exec));
-                }
         }
         return rc;
 }
