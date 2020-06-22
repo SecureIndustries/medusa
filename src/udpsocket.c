@@ -1772,15 +1772,11 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_onevent_unlocked (
                         medusa_io_destroy_unlocked(udpsocket->io);
                         udpsocket->io = NULL;
                 }
-                if (udpsocket->subject.flags & MEDUSA_SUBJECT_FLAG_ALLOC) {
 #if defined(MEDUSA_UDPSOCKET_USE_POOL) && (MEDUSA_UDPSOCKET_USE_POOL == 1)
-                        medusa_pool_free(udpsocket);
+                medusa_pool_free(udpsocket);
 #else
-                        free(udpsocket);
+                free(udpsocket);
 #endif
-                } else {
-                        memset(udpsocket, 0, sizeof(struct medusa_udpsocket));
-                }
         }
         return ret;
 }
