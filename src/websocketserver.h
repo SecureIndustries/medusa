@@ -21,13 +21,15 @@ enum {
         MEDUSA_WEBSOCKETSERVER_EVENT_BINDING                    = (1 << 2),
         MEDUSA_WEBSOCKETSERVER_EVENT_BOUND                      = (1 << 3),
         MEDUSA_WEBSOCKETSERVER_EVENT_LISTENING                  = (1 << 4),
-        MEDUSA_WEBSOCKETSERVER_EVENT_ERROR                      = (1 << 5),
-        MEDUSA_WEBSOCKETSERVER_EVENT_DESTROY                    = (1 << 6)
+        MEDUSA_WEBSOCKETSERVER_EVENT_CONNECTION                 = (1 << 5),
+        MEDUSA_WEBSOCKETSERVER_EVENT_ERROR                      = (1 << 6),
+        MEDUSA_WEBSOCKETSERVER_EVENT_DESTROY                    = (1 << 7)
 #define MEDUSA_WEBSOCKETSERVER_EVENT_STARTED                    MEDUSA_WEBSOCKETSERVER_EVENT_STARTED
 #define MEDUSA_WEBSOCKETSERVER_EVENT_STOPPED                    MEDUSA_WEBSOCKETSERVER_EVENT_STOPPED
 #define MEDUSA_WEBSOCKETSERVER_EVENT_BINDING                    MEDUSA_WEBSOCKETSERVER_EVENT_BINDING
 #define MEDUSA_WEBSOCKETSERVER_EVENT_BOUND                      MEDUSA_WEBSOCKETSERVER_EVENT_BOUND
 #define MEDUSA_WEBSOCKETSERVER_EVENT_LISTENING                  MEDUSA_WEBSOCKETSERVER_EVENT_LISTENING
+#define MEDUSA_WEBSOCKETSERVER_EVENT_CONNECTION                 MEDUSA_WEBSOCKETSERVER_EVENT_CONNECTION
 #define MEDUSA_WEBSOCKETSERVER_EVENT_ERROR                      MEDUSA_WEBSOCKETSERVER_EVENT_ERROR
 #define MEDUSA_WEBSOCKETSERVER_EVENT_DESTROY                    MEDUSA_WEBSOCKETSERVER_EVENT_DESTROY
 };
@@ -55,6 +57,13 @@ struct medusa_websocketserver_init_options {
         const char *address;
         unsigned short port;
         const char *servername;
+        int buffered;
+        int enabled;
+        int (*onevent) (struct medusa_websocketserver *websocketserver, unsigned int events, void *context, void *param);
+        void *context;
+};
+
+struct medusa_websocketserver_accept_options {
         int buffered;
         int enabled;
         int (*onevent) (struct medusa_websocketserver *websocketserver, unsigned int events, void *context, void *param);
@@ -100,6 +109,10 @@ struct medusa_monitor * medusa_websocketserver_get_monitor (struct medusa_websoc
 
 const char * medusa_websocketserver_event_string (unsigned int events);
 const char * medusa_websocketserver_state_string (unsigned int state);
+
+int medusa_websocketserver_accept_options_default (struct medusa_websocketserver_accept_options *options);
+struct medusa_websocketserver_client * medusa_websocketserver_accept (struct medusa_websocketserver *websocketserver);
+struct medusa_websocketserver_client * medusa_websocketserver_accept_with_options (struct medusa_websocketserver *websocketserver, struct medusa_websocketserver_accept_options *options);
 
 #ifdef __cplusplus
 }

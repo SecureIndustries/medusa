@@ -6,6 +6,7 @@ TAILQ_HEAD(medusa_websocketserver_clients, medusa_websocketserver_client);
 struct medusa_websocketserver_client {
         TAILQ_ENTRY(medusa_websocketserver_client) list;
         struct medusa_tcpsocket *tcpsocket;
+        struct medusa_buffer *rbuffer;
         struct medusa_websocketserver *websocketserver;
 };
 

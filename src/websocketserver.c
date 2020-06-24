@@ -6,10 +6,14 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include <sys/uio.h>
+#include <sys/ioctl.h>
+
 #include "error.h"
 #include "pool.h"
 #include "queue.h"
 #include "subject-struct.h"
+#include "buffer.h"
 #include "tcpsocket.h"
 #include "tcpsocket-private.h"
 #include "websocketserver.h"
@@ -21,7 +25,46 @@
 
 #if defined(MEDUSA_WEBSOCKETSERVER_USE_POOL) && (MEDUSA_WEBSOCKETSERVER_USE_POOL == 1)
 static struct medusa_pool *g_pool;
+static struct medusa_pool *g_pool_client;
 #endif
+
+static void client_destroy_unlocked (struct medusa_websocketserver_client *client)
+{
+        if (client == NULL) {
+                return;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(client->tcpsocket)) {
+                medusa_tcpsocket_destroy_unlocked(client->tcpsocket);
+        }
+#if defined(MEDUSA_WEBSOCKETSERVER_USE_POOL) && (MEDUSA_WEBSOCKETSERVER_USE_POOL == 1)
+        medusa_pool_free(client);
+#else
+        free(client);
+#endif
+}
+
+static struct medusa_websocketserver_client * client_create_unlocked (struct medusa_websocketserver *websocketserver, struct medusa_tcpsocket *tcpsocket)
+{
+        int error;
+        struct medusa_websocketserver_client *client;
+#if defined(MEDUSA_WEBSOCKETSERVER_USE_POOL) && (MEDUSA_WEBSOCKETSERVER_USE_POOL == 1)
+        client = medusa_pool_malloc(g_pool_client);
+#else
+        client = malloc(sizeof(struct medusa_websocketserver_client));
+#endif
+        if (client == NULL) {
+                error = -ENOMEM;
+                goto bail;
+        }
+        memset(client, 0, sizeof(struct medusa_websocketserver_client));
+        client->tcpsocket       = tcpsocket;
+        client->websocketserver = websocketserver;
+        return client;
+bail:   if (client != NULL) {
+                client_destroy_unlocked(client);
+        }
+        return MEDUSA_ERR_PTR(error);
+}
 
 static unsigned int websocketserver_protocol_to_tcpsocket_protocol (unsigned int protocol)
 {
@@ -47,10 +90,12 @@ static inline int websocketserver_set_state (struct medusa_websocketserver *webs
 
 static int accepted_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
+        int rc;
+        int error;
         struct medusa_monitor *monitor;
+        struct medusa_websocketserver_client *client;
         struct medusa_websocketserver *websocketserver = (struct medusa_websocketserver *) context;
 
-        (void) websocketserver;
         (void) param;
 
         fprintf(stderr, "websocketserver.accepted.events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
@@ -58,12 +103,113 @@ static int accepted_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int ev
         monitor = medusa_tcpsocket_get_monitor(tcpsocket);
         medusa_monitor_lock(monitor);
 
-        if (events & MEDUSA_TCPSOCKET_EVENT_IN) {
-                
+        if (events & MEDUSA_TCPSOCKET_EVENT_DESTROY) {
+                goto out;
         }
 
-        medusa_monitor_unlock(monitor);
+        if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
+                client = client_create_unlocked(websocketserver, tcpsocket);
+                if (MEDUSA_IS_ERR_OR_NULL(client)) {
+                        error = -EIO;
+                        goto bail;
+                }
+                rc = medusa_tcpsocket_set_userdata_unlocked(tcpsocket, client);
+                if (rc < 0) {
+                        error = rc;
+                        client_destroy_unlocked(client);
+                        goto bail;
+                }
+                TAILQ_INSERT_TAIL(&websocketserver->clients, client, list);
+        }
+
+        client = medusa_tcpsocket_get_userdata_unlocked(tcpsocket);
+        if (MEDUSA_IS_ERR_OR_NULL(client)) {
+                error = -EIO;
+                medusa_tcpsocket_destroy_unlocked(tcpsocket);
+                goto bail;
+        }
+
+        if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
+                TAILQ_REMOVE(&websocketserver->clients, client, list);
+                client_destroy_unlocked(client);
+                goto out;
+        }
+
+        if (events & MEDUSA_TCPSOCKET_EVENT_IN) {
+                do {
+                        int n;
+                        int fd;
+                        ssize_t rlength;
+                        int64_t clength;
+                        int64_t niovecs;
+                        struct iovec iovec;
+
+                        fd = medusa_tcpsocket_get_fd_unlocked(tcpsocket);
+                        if (fd < 0) {
+                                goto bail;
+                        }
+
+                        n = 4096;
+                        rc = ioctl(fd, FIONREAD, &n);
+                        if (rc < 0) {
+                                n = 4096;
+                        }
+                        if (n < 0) {
+                                goto bail;
+                        }
+
+                        niovecs = medusa_buffer_reservev(client->rbuffer, n, &iovec, 1);
+                        if (niovecs < 0) {
+                                goto bail;
+                        }
+                        if (niovecs == 0) {
+                                client_set_state(client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED);
+                                rc = client_onevent_unlocked(client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DISCONNECTED, NULL);
+                                if (rc < 0) {
+                                        goto bail;
+                                }
+                                break;
+                        }
+                        rlength = recv(fd, iovec.iov_base, iovec.iov_len, 0);
+                        if (rlength < 0) {
+                                if (errno == EINTR) {
+                                        break;
+                                } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                                        break;
+                                } else if (errno == ECONNRESET || errno == ECONNREFUSED || errno == ETIMEDOUT) {
+                                        client_set_state(client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED);
+                                        rc = client_onevent_unlocked(client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DISCONNECTED, NULL);
+                                        if (rc < 0) {
+                                                goto bail;
+                                        }
+                                        break;
+                                } else {
+                                        goto bail;
+                                }
+                        } else if (rlength == 0) {
+                                client_set_state(client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED);
+                                rc = client_onevent_unlocked(client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DISCONNECTED, NULL);
+                                if (rc < 0) {
+                                        goto bail;
+                                }
+                                break;
+                        } else {
+                                iovec.iov_len = rlength;
+                                clength = medusa_buffer_commitv(client->rbuffer, &iovec, 1);
+                                if (clength < 0) {
+                                        goto bail;
+                                }
+                                if (clength != 1) {
+                                        goto bail;
+                                }
+                        }
+                } while (0);
+        }
+
+out:    medusa_monitor_unlock(monitor);
         return 0;
+bail:   medusa_monitor_unlock(monitor);
+        return error;
 }
 
 static int tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
@@ -119,16 +265,6 @@ static int tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int e
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
                 struct medusa_tcpsocket *accepted;
                 struct medusa_tcpsocket_accept_options medusa_tcpsocket_accept_options;
-                struct medusa_websocketserver_client *medusa_websocketserver_client;
-                
-                medusa_websocketserver_client = malloc(sizeof(struct medusa_websocketserver_client));
-                if (medusa_websocketserver_client == NULL) {
-                        error = -ENOMEM;
-                        goto bail;
-                }
-                memset(medusa_websocketserver_client, 0, sizeof(struct medusa_websocketserver_client));
-                medusa_websocketserver_client->websocketserver = websocketserver;
-                TAILQ_INSERT_TAIL(&websocketserver->clients, medusa_websocketserver_client, list);
 
                 rc = medusa_tcpsocket_accept_options_default(&medusa_tcpsocket_accept_options);
                 if (rc != 0) {
@@ -140,7 +276,7 @@ static int tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int e
                 medusa_tcpsocket_accept_options.nonblocking = 1;
                 medusa_tcpsocket_accept_options.enabled     = 1;
                 medusa_tcpsocket_accept_options.onevent     = accepted_onevent;
-                medusa_tcpsocket_accept_options.context     = medusa_websocketserver_client;
+                medusa_tcpsocket_accept_options.context     = websocketserver;
                 accepted = medusa_tcpsocket_accept_with_options_unlocked(tcpsocket, &medusa_tcpsocket_accept_options);
                 if (MEDUSA_IS_ERR_OR_NULL(accepted)) {
                         error = MEDUSA_PTR_ERR(accepted);
@@ -598,10 +734,7 @@ __attribute__ ((visibility ("default"))) int medusa_websocketserver_onevent_unlo
                 struct medusa_websocketserver_client *nclient;
                 TAILQ_FOREACH_SAFE(client, &websocketserver->clients, list, nclient) {
                         TAILQ_REMOVE(&websocketserver->clients, client, list);
-                        if (!MEDUSA_IS_ERR_OR_NULL(client->tcpsocket)) {
-                                medusa_tcpsocket_destroy_unlocked(client->tcpsocket);
-                        }
-                        free(client);
+                        client_destroy_unlocked(client);
                 }
                 if (websocketserver->address != NULL) {
                         free(websocketserver->address);
@@ -661,6 +794,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_websocketserver_eve
         if (events == MEDUSA_WEBSOCKETSERVER_EVENT_BINDING)             return "MEDUSA_WEBSOCKETSERVER_EVENT_BINDING";
         if (events == MEDUSA_WEBSOCKETSERVER_EVENT_BOUND)               return "MEDUSA_WEBSOCKETSERVER_EVENT_BOUND";
         if (events == MEDUSA_WEBSOCKETSERVER_EVENT_LISTENING)           return "MEDUSA_WEBSOCKETSERVER_EVENT_LISTENING";
+        if (events == MEDUSA_WEBSOCKETSERVER_EVENT_CONNECTION)          return "MEDUSA_WEBSOCKETSERVER_EVENT_CONNECTION";
         if (events == MEDUSA_WEBSOCKETSERVER_EVENT_ERROR)               return "MEDUSA_WEBSOCKETSERVER_EVENT_ERROR";
         if (events == MEDUSA_WEBSOCKETSERVER_EVENT_DESTROY)             return "MEDUSA_WEBSOCKETSERVER_EVENT_DESTROY";
         return "MEDUSA_WEBSOCKETSERVER_EVENT_UNKNOWN";
@@ -682,12 +816,16 @@ __attribute__ ((constructor)) static void websocketserver_constructor (void)
 {
 #if defined(MEDUSA_WEBSOCKETSERVER_USE_POOL) && (MEDUSA_WEBSOCKETSERVER_USE_POOL == 1)
         g_pool = medusa_pool_create("medusa-websocketserver", sizeof(struct medusa_websocketserver), 0, 0, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
+        g_pool_client = medusa_pool_create("medusa-websocketserver-client", sizeof(struct medusa_websocketserver_client), 0, 0, MEDUSA_POOL_FLAG_DEFAULT | MEDUSA_POOL_FLAG_THREAD_SAFE, NULL, NULL, NULL);
 #endif
 }
 
 __attribute__ ((destructor)) static void websocketserver_destructor (void)
 {
 #if defined(MEDUSA_WEBSOCKETSERVER_USE_POOL) && (MEDUSA_WEBSOCKETSERVER_USE_POOL == 1)
+        if (g_pool_client != NULL) {
+                medusa_pool_destroy(g_pool_client);
+        }
         if (g_pool != NULL) {
                 medusa_pool_destroy(g_pool);
         }
