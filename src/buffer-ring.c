@@ -620,9 +620,14 @@ static int64_t ring_buffer_choke (struct medusa_buffer *buffer, int64_t offset, 
         }
 
         if (offset == 0) {
-                ring->head   += length;
-                ring->head   %= ring->size;
-                ring->length -= length;
+                if (length == ring->length) {
+                        ring->head   = 0;
+                        ring->length = 0;
+                } else {
+                        ring->head   += length;
+                        ring->head   %= ring->size;
+                        ring->length -= length;
+                }
                 return length;
         }
         if (ring->head + offset + length == ring->length) {
