@@ -13,7 +13,7 @@ void medusa_websocketserver_destroy_unlocked (struct medusa_websocketserver *web
 unsigned int medusa_websocketserver_get_state_unlocked (const struct medusa_websocketserver *websocketserver);
 
 int medusa_websocketserver_set_buffered_unlocked (struct medusa_websocketserver *websocketserver, int buffered);
-int medusa_websocketserver_get_buffered_unlocked (struct medusa_websocketserver *websocketserver);
+int medusa_websocketserver_get_buffered_unlocked (const struct medusa_websocketserver *websocketserver);
 
 int medusa_websocketserver_set_enabled_unlocked (struct medusa_websocketserver *websocketserver, int enabled);
 int medusa_websocketserver_get_enabled_unlocked (const struct medusa_websocketserver *websocketserver);

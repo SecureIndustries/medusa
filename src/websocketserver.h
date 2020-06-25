@@ -100,7 +100,7 @@ void medusa_websocketserver_destroy (struct medusa_websocketserver *websocketser
 unsigned int medusa_websocketserver_get_state (const struct medusa_websocketserver *websocketserver);
 
 int medusa_websocketserver_set_buffered (struct medusa_websocketserver *websocketserver, int buffered);
-int medusa_websocketserver_get_buffered (struct medusa_websocketserver *websocketserver);
+int medusa_websocketserver_get_buffered (const struct medusa_websocketserver *websocketserver);
 
 int medusa_websocketserver_set_enabled (struct medusa_websocketserver *websocketserver, int enabled);
 int medusa_websocketserver_get_enabled (const struct medusa_websocketserver *websocketserver);
