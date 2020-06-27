@@ -851,20 +851,43 @@ static int websocketserver_client_httpparser_on_status (http_parser *http_parser
 static int websocketserver_client_httpparser_on_header_field (http_parser *http_parser, const char *at, size_t length)
 {
         struct medusa_websocketserver_client *websocketserver_client = http_parser->data;
-        (void) websocketserver_client;
-        (void) at;
-        (void) length;
-        fprintf(stderr, "websocketserver-client.httpparser @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        if (websocketserver_client->http_parser_header_field != NULL) {
+                free(websocketserver_client->http_parser_header_field);
+                websocketserver_client->http_parser_header_field = NULL;
+        }
+        websocketserver_client->http_parser_header_field = strndup(at, length);
+        if (websocketserver_client->http_parser_header_field == NULL) {
+                return -ENOMEM;
+        }
         return 0;
 }
 
 static int websocketserver_client_httpparser_on_header_value (http_parser *http_parser, const char *at, size_t length)
 {
         struct medusa_websocketserver_client *websocketserver_client = http_parser->data;
-        (void) websocketserver_client;
-        (void) at;
-        (void) length;
-        fprintf(stderr, "websocketserver-client.httpparser @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        if (websocketserver_client->http_parser_header_value != NULL) {
+                free(websocketserver_client->http_parser_header_value);
+                websocketserver_client->http_parser_header_value = NULL;
+        }
+        websocketserver_client->http_parser_header_value = strndup(at, length);
+        if (websocketserver_client->http_parser_header_value == NULL) {
+                return -ENOMEM;
+        }
+        fprintf(stderr, "websocketserver-client.httpparser header %s: %s @ %s %s:%d\n", websocketserver_client->http_parser_header_field, websocketserver_client->http_parser_header_value, __FUNCTION__, __FILE__, __LINE__);
+        if (strcasecmp(websocketserver_client->http_parser_header_field, "Sec-WebSocket-Key") == 0) {
+                websocketserver_client->sec_websocket_key = strdup(websocketserver_client->http_parser_header_value);
+                if (websocketserver_client->sec_websocket_key == NULL) {
+                        return -ENOMEM;
+                }
+        }
+        if (websocketserver_client->http_parser_header_field != NULL) {
+                free(websocketserver_client->http_parser_header_field);
+                websocketserver_client->http_parser_header_field = NULL;
+        }
+        if (websocketserver_client->http_parser_header_value != NULL) {
+                free(websocketserver_client->http_parser_header_value);
+                websocketserver_client->http_parser_header_value = NULL;
+        }
         return 0;
 }
 
@@ -1325,6 +1348,10 @@ __attribute__ ((visibility ("default"))) int medusa_websocketserver_client_oneve
                 }
         }
         if (events & MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY) {
+                if (websocketserver_client->sec_websocket_key != NULL) {
+                        free(websocketserver_client->sec_websocket_key);
+                        websocketserver_client->sec_websocket_key = NULL;
+                }
                 if (!MEDUSA_IS_ERR_OR_NULL(websocketserver_client->tcpsocket)) {
                         medusa_tcpsocket_destroy_unlocked(websocketserver_client->tcpsocket);
                         websocketserver_client->tcpsocket = NULL;       
