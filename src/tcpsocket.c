@@ -1203,7 +1203,7 @@ bail:   if (MEDUSA_IS_ERR_OR_NULL(accepted)) {
         tcpsocket_set_state(accepted, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
         accepted->error = -ret;
         medusa_tcpsocket_onevent_unlocked(accepted, MEDUSA_TCPSOCKET_EVENT_ERROR, NULL);
-        medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DISCONNECTED, NULL);
+        medusa_tcpsocket_onevent_unlocked(accepted, MEDUSA_TCPSOCKET_EVENT_DISCONNECTED, NULL);
         return tcpsocket;
 }
 
