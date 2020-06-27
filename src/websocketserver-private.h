@@ -18,8 +18,8 @@ int medusa_websocketserver_get_buffered_unlocked (const struct medusa_websockets
 int medusa_websocketserver_set_enabled_unlocked (struct medusa_websocketserver *websocketserver, int enabled);
 int medusa_websocketserver_get_enabled_unlocked (const struct medusa_websocketserver *websocketserver);
 
-int medusa_websocketserver_start (struct medusa_websocketserver *websocketserver);
-int medusa_websocketserver_stop (struct medusa_websocketserver *websocketserver);
+int medusa_websocketserver_start_unlocked (struct medusa_websocketserver *websocketserver);
+int medusa_websocketserver_stop_unlocked (struct medusa_websocketserver *websocketserver);
 
 int medusa_websocketserver_set_context_unlocked (struct medusa_websocketserver *websocketserver, void *context);
 void * medusa_websocketserver_get_context_unlocked (struct medusa_websocketserver *websocketserver);
@@ -48,8 +48,8 @@ unsigned int medusa_websocketserver_client_get_state_unlocked (const struct medu
 int medusa_websocketserver_client_set_enabled_unlocked (struct medusa_websocketserver_client *websocketserver_client, int enabled);
 int medusa_websocketserver_client_get_enabled_unlocked (struct medusa_websocketserver_client *websocketserver_client);
 
-int medusa_websocketserver_client_start (struct medusa_websocketserver_client *websocketserver_client);
-int medusa_websocketserver_client_stop (struct medusa_websocketserver_client *websocketserver_client);
+int medusa_websocketserver_client_start_unlocked (struct medusa_websocketserver_client *websocketserver_client);
+int medusa_websocketserver_client_stop_unlocked (struct medusa_websocketserver_client *websocketserver_client);
 
 int medusa_websocketserver_client_set_context_unlocked (struct medusa_websocketserver_client *websocketserver_client, void *context);
 void * medusa_websocketserver_client_get_context_unlocked (struct medusa_websocketserver_client *websocketserver_client);
