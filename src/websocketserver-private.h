@@ -18,6 +18,12 @@ int medusa_websocketserver_get_buffered_unlocked (const struct medusa_websockets
 int medusa_websocketserver_set_enabled_unlocked (struct medusa_websocketserver *websocketserver, int enabled);
 int medusa_websocketserver_get_enabled_unlocked (const struct medusa_websocketserver *websocketserver);
 
+int medusa_websocketserver_pause_unlocked (struct medusa_websocketserver *websocketserver);
+int medusa_websocketserver_resume_unlocked (struct medusa_websocketserver *websocketserver);
+
+int medusa_websocketserver_set_started_unlocked (struct medusa_websocketserver *websocketserver, int started);
+int medusa_websocketserver_get_started_unlocked (const struct medusa_websocketserver *websocketserver);
+
 int medusa_websocketserver_start_unlocked (struct medusa_websocketserver *websocketserver);
 int medusa_websocketserver_stop_unlocked (struct medusa_websocketserver *websocketserver);
 

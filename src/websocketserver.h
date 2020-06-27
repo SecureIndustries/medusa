@@ -71,6 +71,7 @@ struct medusa_websocketserver_init_options {
         const char *servername;
         int buffered;
         int enabled;
+        int started;
         int (*onevent) (struct medusa_websocketserver *websocketserver, unsigned int events, void *context, void *param);
         void *context;
 };
@@ -100,6 +101,12 @@ int medusa_websocketserver_get_buffered (const struct medusa_websocketserver *we
 
 int medusa_websocketserver_set_enabled (struct medusa_websocketserver *websocketserver, int enabled);
 int medusa_websocketserver_get_enabled (const struct medusa_websocketserver *websocketserver);
+
+int medusa_websocketserver_pause (struct medusa_websocketserver *websocketserver);
+int medusa_websocketserver_resume (struct medusa_websocketserver *websocketserver);
+
+int medusa_websocketserver_set_started (struct medusa_websocketserver *websocketserver, int started);
+int medusa_websocketserver_get_started (const struct medusa_websocketserver *websocketserver);
 
 int medusa_websocketserver_start (struct medusa_websocketserver *websocketserver);
 int medusa_websocketserver_stop (struct medusa_websocketserver *websocketserver);
