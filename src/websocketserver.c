@@ -9,6 +9,8 @@
 #include <sys/uio.h>
 #include <sys/ioctl.h>
 
+#include "../3rdparty/http-parser/http_parser.h"
+
 #include "error.h"
 #include "pool.h"
 #include "queue.h"
@@ -818,6 +820,96 @@ static inline int websocketserver_client_set_state (struct medusa_websocketserve
         return 0;
 }
 
+static int websocketserver_client_httpparser_on_message_begin (http_parser *http_parser)
+{
+        struct medusa_websocketserver_client *websocketserver_client = http_parser->data;
+        (void) websocketserver_client;
+        fprintf(stderr, "websocketserver-client.httpparser @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int websocketserver_client_httpparser_on_url (http_parser *http_parser, const char *at, size_t length)
+{
+        struct medusa_websocketserver_client *websocketserver_client = http_parser->data;
+        (void) websocketserver_client;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "websocketserver-client.httpparser @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int websocketserver_client_httpparser_on_status (http_parser *http_parser, const char *at, size_t length)
+{
+        struct medusa_websocketserver_client *websocketserver_client = http_parser->data;
+        (void) websocketserver_client;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "websocketserver-client.httpparser @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int websocketserver_client_httpparser_on_header_field (http_parser *http_parser, const char *at, size_t length)
+{
+        struct medusa_websocketserver_client *websocketserver_client = http_parser->data;
+        (void) websocketserver_client;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "websocketserver-client.httpparser @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int websocketserver_client_httpparser_on_header_value (http_parser *http_parser, const char *at, size_t length)
+{
+        struct medusa_websocketserver_client *websocketserver_client = http_parser->data;
+        (void) websocketserver_client;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "websocketserver-client.httpparser @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int websocketserver_client_httpparser_on_headers_complete (http_parser *http_parser)
+{
+        struct medusa_websocketserver_client *websocketserver_client = http_parser->data;
+        (void) websocketserver_client;
+        fprintf(stderr, "websocketserver-client.httpparser @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int websocketserver_client_httpparser_on_body (http_parser *http_parser, const char *at, size_t length)
+{
+        struct medusa_websocketserver_client *websocketserver_client = http_parser->data;
+        (void) websocketserver_client;
+        (void) at;
+        (void) length;
+        fprintf(stderr, "websocketserver-client.httpparser @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int websocketserver_client_httpparser_on_message_complete (http_parser *http_parser)
+{
+        struct medusa_websocketserver_client *websocketserver_client = http_parser->data;
+        (void) websocketserver_client;
+        fprintf(stderr, "websocketserver-client.httpparser @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int websocketserver_client_httpparser_on_chunk_header (http_parser *http_parser)
+{
+        struct medusa_websocketserver_client *websocketserver_client = http_parser->data;
+        (void) websocketserver_client;
+        fprintf(stderr, "websocketserver-client.httpparser @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
+static int websocketserver_client_httpparser_on_chunk_complete (http_parser *http_parser)
+{
+        struct medusa_websocketserver_client *websocketserver_client = http_parser->data;
+        (void) websocketserver_client;
+        fprintf(stderr, "websocketserver-client.httpparser @ %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+        return 0;
+}
+
 static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
@@ -843,9 +935,54 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
                         error = rc;
                         goto bail;
                 }
+                http_parser_settings_init(&websocketserver_client->http_parser_settings);
+                websocketserver_client->http_parser_settings.on_message_begin      = websocketserver_client_httpparser_on_message_begin;
+                websocketserver_client->http_parser_settings.on_url                = websocketserver_client_httpparser_on_url;
+                websocketserver_client->http_parser_settings.on_status             = websocketserver_client_httpparser_on_status;
+                websocketserver_client->http_parser_settings.on_header_field       = websocketserver_client_httpparser_on_header_field;
+                websocketserver_client->http_parser_settings.on_header_value       = websocketserver_client_httpparser_on_header_value;
+                websocketserver_client->http_parser_settings.on_headers_complete   = websocketserver_client_httpparser_on_headers_complete;
+                websocketserver_client->http_parser_settings.on_body               = websocketserver_client_httpparser_on_body;
+                websocketserver_client->http_parser_settings.on_message_complete   = websocketserver_client_httpparser_on_message_complete;
+                websocketserver_client->http_parser_settings.on_chunk_header       = websocketserver_client_httpparser_on_chunk_header;
+                websocketserver_client->http_parser_settings.on_chunk_complete     = websocketserver_client_httpparser_on_chunk_complete;
+                http_parser_init(&websocketserver_client->http_parser, HTTP_REQUEST);
+                websocketserver_client->http_parser.data = websocketserver_client;
         } else if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ) {
                 if (websocketserver_client->state == MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ACCEPTED) {
+                        int64_t siovecs;
+                        int64_t niovecs;
+                        int64_t iiovecs;
+                        struct iovec iovecs[1];
 
+                        size_t nparsed;
+                        size_t tparsed;
+                        int64_t clength;
+
+                        siovecs = sizeof(iovecs) / sizeof(iovecs[0]);
+                        niovecs = medusa_buffer_peekv(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, -1, iovecs, siovecs);
+                        if (niovecs < 0) {
+                                error = niovecs;
+                                goto bail;
+                        }
+
+                        tparsed = 0;
+                        for (iiovecs = 0; iiovecs < niovecs; iiovecs++) {
+                                nparsed = http_parser_execute(&websocketserver_client->http_parser, &websocketserver_client->http_parser_settings, iovecs[iiovecs].iov_base, iovecs[iiovecs].iov_len);
+                                if (websocketserver_client->http_parser.http_errno != 0) {
+                                        error = -EIO;
+                                        goto bail;
+                                }
+                                tparsed += nparsed;
+                                if (nparsed != iovecs[iiovecs].iov_len) {
+                                        break;
+                                }
+                        }
+                        clength = medusa_buffer_choke(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, tparsed);
+                        if (clength != (int64_t) tparsed) {
+                                error = -EIO;
+                                goto bail;
+                        }
                 } else {
                         error = -EIO;
                         goto bail;
@@ -910,8 +1047,6 @@ __attribute__ ((visibility ("default"))) struct medusa_websocketserver_client * 
         struct medusa_tcpsocket *accepted;
         struct medusa_tcpsocket_accept_options medusa_tcpsocket_accept_options;
 
-        struct medusa_buffer_init_options medusa_buffer_init_options;
-
         struct medusa_websocketserver_client *websocketserver_client;
 
         websocketserver_client = NULL;
@@ -936,17 +1071,6 @@ __attribute__ ((visibility ("default"))) struct medusa_websocketserver_client * 
                 goto bail;
         }
         memset(websocketserver_client, 0, sizeof(struct medusa_websocketserver_client));
-        rc = medusa_buffer_init_options_default(&medusa_buffer_init_options);
-        if (rc < 0) {
-                error = rc;
-                goto bail;
-        }
-        medusa_buffer_init_options.type = MEDUSA_BUFFER_TYPE_DEFAULT;
-        websocketserver_client->rbuffer = medusa_buffer_create_with_options(&medusa_buffer_init_options);
-        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client->rbuffer)) {
-                error = MEDUSA_PTR_ERR(websocketserver_client->rbuffer);
-                goto bail;
-        }
         medusa_subject_set_type(&websocketserver_client->subject, MEDUSA_SUBJECT_TYPE_WEBSOCKETSERVER_CLIENT);
         websocketserver_client->subject.monitor = NULL;
         websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED);
@@ -1203,7 +1327,7 @@ __attribute__ ((visibility ("default"))) int medusa_websocketserver_client_oneve
         if (events & MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY) {
                 if (!MEDUSA_IS_ERR_OR_NULL(websocketserver_client->tcpsocket)) {
                         medusa_tcpsocket_destroy_unlocked(websocketserver_client->tcpsocket);
-                        websocketserver_client->tcpsocket = NULL;
+                        websocketserver_client->tcpsocket = NULL;       
                 }
                 if (websocketserver_client->websocketserver != NULL) {
                         TAILQ_REMOVE(&websocketserver_client->websocketserver->clients, websocketserver_client, list);

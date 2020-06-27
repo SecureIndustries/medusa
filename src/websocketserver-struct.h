@@ -12,7 +12,8 @@ struct medusa_websocketserver_client {
         void *context;
         void *userdata;
         struct medusa_tcpsocket *tcpsocket;
-        struct medusa_buffer *rbuffer;
+        http_parser http_parser;
+        http_parser_settings http_parser_settings;
         struct medusa_websocketserver *websocketserver;
         TAILQ_ENTRY(medusa_websocketserver_client) list;
 };

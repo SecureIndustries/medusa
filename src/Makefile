@@ -98,7 +98,8 @@ libmedusa.a_files-y += \
 	../3rdparty/SPCDNS/src/output.c
 
 libmedusa.a_files-y += \
-	websocketserver.c
+	websocketserver.c \
+	../3rdparty/http-parser/http_parser.c
 
 libmedusa.o_cflags-y = \
 	${libmedusa.a_cflags-y}
