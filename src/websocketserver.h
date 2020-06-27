@@ -40,27 +40,35 @@ enum {
         MEDUSA_WEBSOCKETSERVER_STATE_STARTED                    = 2,
         MEDUSA_WEBSOCKETSERVER_STATE_BINDING                    = 3,
         MEDUSA_WEBSOCKETSERVER_STATE_BOUND                      = 4,
-        MEDUSA_WEBSOCKETSERVER_STATE_LISTENING                  = 5
+        MEDUSA_WEBSOCKETSERVER_STATE_LISTENING                  = 5,
+        MEDUSA_WEBSOCKETSERVER_STATE_ERROR                      = 6
 #define MEDUSA_WEBSOCKETSERVER_STATE_UNKNOWN                    MEDUSA_WEBSOCKETSERVER_STATE_UNKNOWN
 #define MEDUSA_WEBSOCKETSERVER_STATE_STOPPED                    MEDUSA_WEBSOCKETSERVER_STATE_STOPPED
 #define MEDUSA_WEBSOCKETSERVER_STATE_STARTED                    MEDUSA_WEBSOCKETSERVER_STATE_STARTED
 #define MEDUSA_WEBSOCKETSERVER_STATE_BINDING                    MEDUSA_WEBSOCKETSERVER_STATE_BINDING
 #define MEDUSA_WEBSOCKETSERVER_STATE_BOUND                      MEDUSA_WEBSOCKETSERVER_STATE_BOUND
 #define MEDUSA_WEBSOCKETSERVER_STATE_LISTENING                  MEDUSA_WEBSOCKETSERVER_STATE_LISTENING
+#define MEDUSA_WEBSOCKETSERVER_STATE_ERROR                      MEDUSA_WEBSOCKETSERVER_STATE_ERROR
 };
 
 enum {
         MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR               = (1 << 0),
-        MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY             = (1 << 1)
+        MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED            = (1 << 1),
+        MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY             = (1 << 2)
 #define MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR               MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR
+#define MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED            MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED
 #define MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY             MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY
 };
 
 enum {
         MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_UNKNOWN             = 0,
-        MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED        = 1
+        MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED        = 1,
+        MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ACCEPTED            = 2,
+        MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ERROR               = 3
 #define MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_UNKNOWN             MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_UNKNOWN
 #define MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED        MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED
+#define MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ACCEPTED            MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ACCEPTED
+#define MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ERROR               MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ERROR
 };
 
 struct medusa_websocketserver_init_options {
@@ -69,7 +77,6 @@ struct medusa_websocketserver_init_options {
         const char *address;
         unsigned short port;
         const char *servername;
-        int buffered;
         int enabled;
         int started;
         int (*onevent) (struct medusa_websocketserver *websocketserver, unsigned int events, void *context, void *param);
@@ -77,7 +84,6 @@ struct medusa_websocketserver_init_options {
 };
 
 struct medusa_websocketserver_accept_options {
-        int buffered;
         int enabled;
         int (*onevent) (struct medusa_websocketserver_client *websocketserver_client, unsigned int events, void *context, void *param);
         void *context;
@@ -95,9 +101,6 @@ struct medusa_websocketserver * medusa_websocketserver_create_with_options (cons
 void medusa_websocketserver_destroy (struct medusa_websocketserver *websocketserver);
 
 unsigned int medusa_websocketserver_get_state (const struct medusa_websocketserver *websocketserver);
-
-int medusa_websocketserver_set_buffered (struct medusa_websocketserver *websocketserver, int buffered);
-int medusa_websocketserver_get_buffered (const struct medusa_websocketserver *websocketserver);
 
 int medusa_websocketserver_set_enabled (struct medusa_websocketserver *websocketserver, int enabled);
 int medusa_websocketserver_get_enabled (const struct medusa_websocketserver *websocketserver);

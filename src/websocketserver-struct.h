@@ -7,10 +7,12 @@ struct medusa_websocketserver_client {
         struct medusa_subject subject;
         unsigned int state;
         unsigned int flags;
+        int error;
         int (*onevent) (struct medusa_websocketserver_client *websocketserver_client, unsigned int events, void *context, void *param);
         void *context;
         void *userdata;
         struct medusa_tcpsocket *tcpsocket;
+        struct medusa_buffer *rbuffer;
         struct medusa_websocketserver *websocketserver;
         TAILQ_ENTRY(medusa_websocketserver_client) list;
 };

@@ -1284,7 +1284,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_WEBSOCKETSERVER_CLIENT) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
-                        medusa_websocketserver_client_onevent_unlocked((struct medusa_websocketserver_client *) subject, MEDUSA_WEBSOCKETSERVER_EVENT_DESTROY, NULL);
+                        medusa_websocketserver_client_onevent_unlocked((struct medusa_websocketserver_client *) subject, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY, NULL);
                 }
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
