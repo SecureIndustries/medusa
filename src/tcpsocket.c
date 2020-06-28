@@ -444,6 +444,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                         goto bail;
                                                 }
                                         } else {
+                                                struct medusa_tcpsocket_event_buffered_write medusa_tcpsocket_event_buffered_write;
                                                 clength = medusa_buffer_choke(tcpsocket->wbuffer, 0, wlength);
                                                 if (clength < 0) {
                                                         goto bail;
@@ -451,7 +452,9 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                 if (clength != wlength) {
                                                         goto bail;
                                                 }
-                                                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE, &(struct medusa_tcpsocket_event_buffered_write) { .length = wlength });
+                                                medusa_tcpsocket_event_buffered_write.length    = wlength;
+                                                medusa_tcpsocket_event_buffered_write.remaining = medusa_buffer_get_length(tcpsocket->wbuffer);
+                                                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE, &medusa_tcpsocket_event_buffered_write);
                                                 if (rc < 0) {
                                                         goto bail;
                                                 }

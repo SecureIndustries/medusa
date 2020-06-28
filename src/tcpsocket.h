@@ -152,6 +152,7 @@ struct medusa_tcpsocket_attach_options {
 
 struct medusa_tcpsocket_event_buffered_write {
         int64_t length;
+        int64_t remaining;
 };
 
 #ifdef __cplusplus
