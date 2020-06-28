@@ -917,8 +917,20 @@ static int websocketserver_client_httpparser_on_header_value (http_parser *http_
         }
 
         if (strcasecmp(websocketserver_client->http_parser_header_field, "Sec-WebSocket-Key") == 0) {
+                if (websocketserver_client->sec_websocket_key != NULL) {
+                        free(websocketserver_client->sec_websocket_key);
+                }
                 websocketserver_client->sec_websocket_key = strdup(websocketserver_client->http_parser_header_value);
                 if (websocketserver_client->sec_websocket_key == NULL) {
+                        return -ENOMEM;
+                }
+        }
+        if (strcasecmp(websocketserver_client->http_parser_header_field, "Sec-WebSocket-Protocol") == 0) {
+                if (websocketserver_client->sec_websocket_protocol != NULL) {
+                        free(websocketserver_client->sec_websocket_protocol);
+                }
+                websocketserver_client->sec_websocket_protocol = strdup(websocketserver_client->http_parser_header_value);
+                if (websocketserver_client->sec_websocket_protocol == NULL) {
                         return -ENOMEM;
                 }
         }
@@ -1095,8 +1107,10 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
 			        "Server: %s\r\n"
 			        "Upgrade: websocket\r\n"
 			        "Connection: Upgrade\r\n"
+                                "Sec-WebSocket-Protocol: %s\r\n"
 			        "Sec-WebSocket-Accept: %s\r\n\r\n",
                                 (websocketserver_client->websocketserver->servername) ? websocketserver_client->websocketserver->servername : "medusa-websocketserver",
+                                (websocketserver_client->sec_websocket_protocol) ? websocketserver_client->sec_websocket_protocol : "generic",
 			        base64);
                         free(base64);
                         free(str);
@@ -1114,6 +1128,9 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
 
                         free(websocketserver_client->sec_websocket_key);
                         websocketserver_client->sec_websocket_key = NULL;
+
+                        free(websocketserver_client->sec_websocket_protocol);
+                        websocketserver_client->sec_websocket_protocol = NULL;
                 }
                 if (websocketserver_client->state == MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_CONNECTED) {
 restart_buffer:
@@ -1793,6 +1810,10 @@ __attribute__ ((visibility ("default"))) int medusa_websocketserver_client_oneve
                 if (websocketserver_client->sec_websocket_key != NULL) {
                         free(websocketserver_client->sec_websocket_key);
                         websocketserver_client->sec_websocket_key = NULL;
+                }
+                if (websocketserver_client->sec_websocket_protocol != NULL) {
+                        free(websocketserver_client->sec_websocket_protocol);
+                        websocketserver_client->sec_websocket_protocol = NULL;
                 }
                 if (websocketserver_client->http_parser_header_field != NULL) {
                         free(websocketserver_client->http_parser_header_field);

@@ -17,6 +17,7 @@ struct medusa_websocketserver_client {
         char *http_parser_header_field;
         char *http_parser_header_value;
         char *sec_websocket_key;
+        char *sec_websocket_protocol;
         unsigned int frame_state;
         unsigned int frame_mask_offset;
         unsigned int frame_payload_offset;
