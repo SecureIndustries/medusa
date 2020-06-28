@@ -1095,13 +1095,13 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
                         strcat(str, key);
                         strcat(str, gid);
                         medusa_sha1(hash, str, strlen(str));
-                        base64 = malloc(medusa_base64_encode_length(strlen(hash)));
+                        base64 = malloc(medusa_base64_encode_length(MEDUSA_SHA1_LENGTH));
                         if (base64 == NULL) {
                                 free(str);
                                 error = -ENOMEM;
                                 goto bail;
                         }
-                        medusa_base64_encode(base64, hash, strlen(hash));
+                        medusa_base64_encode(base64, hash, MEDUSA_SHA1_LENGTH);
                         medusa_tcpsocket_printf_unlocked(websocketserver_client->tcpsocket,
                                 "HTTP/1.1 101 Switching Protocols\r\n"
 			        "Server: %s\r\n"
