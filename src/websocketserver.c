@@ -112,8 +112,6 @@ static int websocketserver_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket
 
         (void) param;
 
-        fprintf(stderr, "websocketserver.tcpsocket.events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
-
         if (events & MEDUSA_TCPSOCKET_EVENT_DESTROY) {
                 return 0;
         }
@@ -989,10 +987,6 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
         struct medusa_monitor *monitor;
         struct medusa_websocketserver_client *websocketserver_client = (struct medusa_websocketserver_client *) context;
 
-        (void) param;
-
-        fprintf(stderr, "websocketserver-client.tcpsocket.events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
-        
         if (events & MEDUSA_TCPSOCKET_EVENT_DESTROY) {
                 return 0;
         }
@@ -1263,7 +1257,7 @@ restart_buffer:
                                         medusa_websocketserver_client_event_message.final   = !!(uint8 & 0x80);
                                         medusa_websocketserver_client_event_message.type    = (opcode == WS_OPCODE_CLOSE) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CLOSE :
                                                                                               (opcode == WS_OPCODE_PING) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_PING :
-                                                                                              (opcode == WS_OPCODE_PONG) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_POMG :
+                                                                                              (opcode == WS_OPCODE_PONG) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_PONG :
                                                                                               (opcode == WS_OPCODE_TEXT) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_TEXT :
                                                                                               (opcode == WS_OPCODE_BINARY) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_BINARY :
                                                                                               MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CONTINUATION;
@@ -1304,7 +1298,21 @@ short_buffer:
 
                 }
         } else if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE) {
+                struct medusa_tcpsocket_event_buffered_write *medusa_tcpsocket_event_buffered_write = (struct medusa_tcpsocket_event_buffered_write *) param;
+                struct medusa_websocketserver_client_event_buffered_write medusa_websocketserver_client_event_buffered_write;
+                medusa_websocketserver_client_event_buffered_write.length    = medusa_tcpsocket_event_buffered_write->length;
+                medusa_websocketserver_client_event_buffered_write.remaining = medusa_tcpsocket_event_buffered_write->remaining;
+                rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_BUFFERED_WRITE, &medusa_websocketserver_client_event_buffered_write);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
         } else if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED) {
+                rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED, NULL);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
         } else if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
                 rc = websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED);
                 if (rc < 0) {
@@ -1499,6 +1507,132 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_websocketserver_cli
         medusa_monitor_unlock(websocketserver_client->subject.monitor);
         return rc;
 }
+
+__attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_websocketserver_client_get_read_buffer_unlocked (const struct medusa_websocketserver_client *websocketserver_client)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return medusa_tcpsocket_get_read_buffer_unlocked(websocketserver_client->tcpsocket);
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_websocketserver_client_get_read_buffer (const struct medusa_websocketserver_client *websocketserver_client)
+{
+        struct medusa_buffer *buffer;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(websocketserver_client->subject.monitor);
+        buffer = medusa_websocketserver_client_get_read_buffer_unlocked(websocketserver_client);
+        medusa_monitor_unlock(websocketserver_client->subject.monitor);
+        return buffer;
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_websocketserver_client_get_write_buffer_unlocked (const struct medusa_websocketserver_client *websocketserver_client)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return medusa_tcpsocket_get_write_buffer_unlocked(websocketserver_client->tcpsocket);
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_buffer * medusa_websocketserver_client_get_write_buffer (const struct medusa_websocketserver_client *websocketserver_client)
+{
+        struct medusa_buffer *buffer;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(websocketserver_client->subject.monitor);
+        buffer = medusa_websocketserver_client_get_write_buffer_unlocked(websocketserver_client);
+        medusa_monitor_unlock(websocketserver_client->subject.monitor);
+        return buffer;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_websocketserver_client_write_unlocked (struct medusa_websocketserver_client *websocketserver_client, unsigned int final, unsigned int type, const void *data, int64_t length)
+{
+        int rc;
+        int error;
+        uint8_t uint8;
+
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return -EINVAL;
+        }
+
+        uint8  = 0;
+        uint8 |= (final) ? 0x80 : 0x00;
+        uint8 |= (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CONTINUATION) ? 0x00 :
+                 (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CLOSE)        ? 0x08 :
+                 (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_PING)         ? 0x09 :
+                 (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_PONG)         ? 0x0a :
+                 (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_TEXT)         ? 0x01 :
+                 (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_BINARY)       ? 0x02 :
+                 0x00;
+        rc = medusa_buffer_append_uint8_be(medusa_tcpsocket_get_write_buffer_unlocked(websocketserver_client->tcpsocket), uint8);
+        if (rc < 0) {
+                error = rc;
+                goto bail;
+        }
+
+        if (length <= 125) {
+                uint8  = 0;
+                uint8 |= length;
+                rc = medusa_buffer_append_uint8_be(medusa_tcpsocket_get_write_buffer_unlocked(websocketserver_client->tcpsocket), uint8);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
+        } else if (length <= 0xffff) {
+                uint8  = 0;
+                uint8 |= 126;
+                rc = medusa_buffer_append_uint8_be(medusa_tcpsocket_get_write_buffer_unlocked(websocketserver_client->tcpsocket), uint8);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
+                rc = medusa_buffer_append_uint16_be(medusa_tcpsocket_get_write_buffer_unlocked(websocketserver_client->tcpsocket), length);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
+        } else {
+                uint8  = 0;
+                uint8 |= 127;
+                rc = medusa_buffer_append_uint8_be(medusa_tcpsocket_get_write_buffer_unlocked(websocketserver_client->tcpsocket), uint8);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
+                rc = medusa_buffer_append_uint64_be(medusa_tcpsocket_get_write_buffer_unlocked(websocketserver_client->tcpsocket), length);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
+        }
+        rc = medusa_buffer_append(medusa_tcpsocket_get_write_buffer_unlocked(websocketserver_client->tcpsocket), data, length);
+        if (rc < 0) {
+                error = rc;
+                goto bail;
+        }
+
+        return length;
+bail:   websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ERROR);
+        websocketserver_client->error = -error;
+        medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR, NULL);
+        return error;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_websocketserver_client_write (struct medusa_websocketserver_client *websocketserver_client, unsigned int final, unsigned int type, const void *data, int64_t length)
+{
+        int64_t rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(websocketserver_client->subject.monitor);
+        rc = medusa_websocketserver_client_write_unlocked(websocketserver_client, final, type, data, length);
+        medusa_monitor_unlock(websocketserver_client->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_websocketserver_client_set_context_unlocked (struct medusa_websocketserver_client *websocketserver_client, void *context)
 {
         if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
@@ -1719,15 +1853,17 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_websocke
 
 __attribute__ ((visibility ("default"))) const char * medusa_websocketserver_client_event_string (unsigned int events)
 {
-        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR)                return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR";
-        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED)             return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED";
-        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_RECEIVING)    return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_RECEIVING";
-        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_HEADER)       return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_HEADER";
-        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_RECEIVED)     return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_RECEIVED";
-        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_CONNECTED)            return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_CONNECTED";
-        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_MESSAGE)              return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_MESSAGE";
-        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DISCONNECTED)         return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DISCONNECTED";
-        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY)              return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR)                        return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED)                     return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_RECEIVING)            return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_RECEIVING";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_HEADER)               return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_HEADER";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_RECEIVED)             return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_RECEIVED";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_CONNECTED)                    return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_CONNECTED";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_MESSAGE)                      return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_MESSAGE";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_BUFFERED_WRITE)               return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_BUFFERED_WRITE";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED)      return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DISCONNECTED)                 return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DISCONNECTED";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY)                      return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY";
         return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_UNKNOWN";
 }
 
@@ -1748,7 +1884,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_websocketserver_cli
         if (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CONTINUATION)      return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CONTINUATION";
         if (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CLOSE)             return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CLOSE";
         if (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_PING)              return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_PING";
-        if (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_POMG)              return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_POMG";
+        if (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_PONG)              return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_PONG";
         if (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_TEXT)              return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_TEXT";
         if (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_BINARY)            return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_BINARY";
         return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_UNKNOWN";
