@@ -63,7 +63,7 @@ tests: all
 	${Q}echo "running tests";
 	${Q}for T in ${tests} ${tests_event}; do \
 		printf "  $${T} ..."; \
-		valgrind --leak-check=full --show-reachable=yes --error-exitcode=1 ./$${T} 2>$${T}.log 1>$${T}.log; \
+		./$${T} 2>$${T}.log 1>$${T}.log; \
 		retval=$$?; \
 		if [ $$retval != 0 ]; then \
 			printf " fail (rc: $$retval)"; \
