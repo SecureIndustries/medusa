@@ -13,6 +13,8 @@
 
 #include "error.h"
 #include "pool.h"
+#include "base64.h"
+#include "sha1.h"
 #include "queue.h"
 #include "subject-struct.h"
 #include "buffer.h"
@@ -864,7 +866,11 @@ static int websocketserver_client_httpparser_on_header_field (http_parser *http_
 
 static int websocketserver_client_httpparser_on_header_value (http_parser *http_parser, const char *at, size_t length)
 {
+        int rc;
+        struct medusa_websocketserver_client_event_request_header websocketserver_client_event_request_header;
+
         struct medusa_websocketserver_client *websocketserver_client = http_parser->data;
+
         if (websocketserver_client->http_parser_header_value != NULL) {
                 free(websocketserver_client->http_parser_header_value);
                 websocketserver_client->http_parser_header_value = NULL;
@@ -873,13 +879,23 @@ static int websocketserver_client_httpparser_on_header_value (http_parser *http_
         if (websocketserver_client->http_parser_header_value == NULL) {
                 return -ENOMEM;
         }
+
         fprintf(stderr, "websocketserver-client.httpparser header %s: %s @ %s %s:%d\n", websocketserver_client->http_parser_header_field, websocketserver_client->http_parser_header_value, __FUNCTION__, __FILE__, __LINE__);
+        
+        websocketserver_client_event_request_header.field = websocketserver_client->http_parser_header_field;
+        websocketserver_client_event_request_header.value = websocketserver_client->http_parser_header_value;
+        rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_HEADER, &websocketserver_client_event_request_header);
+        if (rc < 0) {
+                return rc;
+        }
+
         if (strcasecmp(websocketserver_client->http_parser_header_field, "Sec-WebSocket-Key") == 0) {
                 websocketserver_client->sec_websocket_key = strdup(websocketserver_client->http_parser_header_value);
                 if (websocketserver_client->sec_websocket_key == NULL) {
                         return -ENOMEM;
                 }
         }
+
         if (websocketserver_client->http_parser_header_field != NULL) {
                 free(websocketserver_client->http_parser_header_field);
                 websocketserver_client->http_parser_header_field = NULL;
@@ -1403,9 +1419,10 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_websocke
 
 __attribute__ ((visibility ("default"))) const char * medusa_websocketserver_client_event_string (unsigned int events)
 {
-        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR)        return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR";
-        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED)     return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED";
-        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY)      return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR)                return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED)             return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_HEADER)       return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_HEADER";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY)              return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY";
         return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_UNKNOWN";
 }
 

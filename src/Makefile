@@ -33,6 +33,8 @@ libmedusa.a_cflags-y = \
 
 libmedusa.a_files-y = \
 	clock.c \
+	base64.c \
+	sha1.c \
 	pool.c \
 	buffer.c \
 	buffer-simple.c \
@@ -142,7 +144,9 @@ dist.include-y = \
 	dnsrequest.h \
 	websocketserver.h \
 	exec.h \
-	queue.h
+	queue.h \
+	sha1.h \
+	base64.h
 
 dist.lib-y = \
 	libmedusa.a \

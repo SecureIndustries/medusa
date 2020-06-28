@@ -54,9 +54,11 @@ enum {
 enum {
         MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR               = (1 << 0),
         MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED            = (1 << 1),
-        MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY             = (1 << 2)
+        MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_HEADER      = (1 << 3),
+        MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY             = (1 << 5)
 #define MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR               MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR
 #define MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED            MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED
+#define MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_HEADER      MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_HEADER
 #define MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY             MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY
 };
 
@@ -87,6 +89,11 @@ struct medusa_websocketserver_accept_options {
         int enabled;
         int (*onevent) (struct medusa_websocketserver_client *websocketserver_client, unsigned int events, void *context, void *param);
         void *context;
+};
+
+struct medusa_websocketserver_client_event_request_header {
+        const char *field;
+        const char *value;
 };
 
 #ifdef __cplusplus
