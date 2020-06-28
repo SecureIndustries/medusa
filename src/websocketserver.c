@@ -1342,6 +1342,7 @@ short_buffer:
                         goto bail;
                 }
                 medusa_websocketserver_client_destroy_unlocked(websocketserver_client);
+        } else if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
         } else {
                 error = -EIO;
                 goto bail;
@@ -1353,7 +1354,7 @@ bail:   websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKE
         websocketserver_client->error = -error;
         medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR, NULL);
         medusa_monitor_unlock(monitor);
-        return error;
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_websocketserver_accept_options_default (struct medusa_websocketserver_accept_options *options)
