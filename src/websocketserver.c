@@ -32,6 +32,29 @@ static struct medusa_pool *g_pool_websocketserver;
 static struct medusa_pool *g_pool_websocketserver_client;
 #endif
 
+#define WS_FRAGMENT_FIN                 0x80
+
+#define WS_NONBLOCK                     0x02
+
+#define WS_OPCODE_CONTINUE              0x00
+#define WS_OPCODE_TEXT                  0x01
+#define WS_OPCODE_BINARY                0x02
+#define WS_OPCODE_CLOSE                 0x08
+#define WS_OPCODE_PING                  0x09
+#define WS_OPCODE_PONG                  0x0a
+
+#define WS_CLOSE_NORMAL                 1000
+#define WS_CLOSE_GOING_AWAY             1001
+#define WS_CLOSE_PROTOCOL_ERROR         1002
+#define WS_CLOSE_NOT_ALLOWED            1003
+#define WS_CLOSE_RESERVED               1004
+#define WS_CLOSE_NO_CODE                1005
+#define WS_CLOSE_DIRTY                  1006
+#define WS_CLOSE_WRONG_TYPE             1007
+#define WS_CLOSE_POLICY_VIOLATION       1008
+#define WS_CLOSE_MESSAGE_TOO_BIG        1009
+#define WS_CLOSE_UNEXPECTED_ERROR       1011
+
 enum {
         MEDUSA_WEBSOCKETSERVER_FLAG_NONE                = (1 << 0),
         MEDUSA_WEBSOCKETSERVER_FLAG_ENABLED             = (1 << 1)
@@ -789,6 +812,17 @@ enum {
 #define MEDUSA_WEBSOCKETSERVER_CLIENT_FLAG_ENABLED      MEDUSA_WEBSOCKETSERVER_CLIENT_FLAG_ENABLED
 };
 
+enum {
+        MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_START         = 0,
+        MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_HEADER        = 1,
+        MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_PAYLOAD       = 2,
+        MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_FINISH        = 3
+#define MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_START         MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_START
+#define MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_HEADER        MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_HEADER
+#define MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_PAYLOAD       MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_PAYLOAD
+#define MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_FINISH        MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_FINISH
+};
+
 static inline void websocketserver_client_set_flag (struct medusa_websocketserver_client *websocketserver_client, unsigned int flag)
 {
         websocketserver_client->flags = flag;
@@ -1083,16 +1117,176 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
                                 error = rc;
                                 goto bail;
                         }
+
+                        free(websocketserver_client->sec_websocket_key);
+                        websocketserver_client->sec_websocket_key = NULL;
                 }
                 if (websocketserver_client->state == MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_CONNECTED) {
-                        int64_t rlength;
+restart_buffer:
+                        switch (websocketserver_client->frame_state) {
+                                case MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_START: {
+                                        int64_t rlength;
+                                        rlength = medusa_buffer_get_length(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket));
+                                        if (rlength < 0) {
+                                                error = rlength;
+                                                goto bail;
+                                        }
+                                        if (rlength < 2) {
+                                                goto short_buffer;
+                                        }
+                                        websocketserver_client->frame_state          = MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_HEADER;
+                                        websocketserver_client->frame_mask_offset    = 0;
+                                        websocketserver_client->frame_payload_offset = 0;
+                                        websocketserver_client->frame_payload_length = 0;
+                                        __attribute__ ((fallthrough));
+                                }
+                                case MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_HEADER: {
+                                        uint8_t uint8;
+                                        rc = medusa_buffer_peek_uint8(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 1, &uint8);
+                                        if (rc < 0) {
+                                                error = rc;
+                                                goto bail;
+                                        }
+                                        switch (uint8 & 0x7f) {
+                                                case 126: {
+                                                        uint16_t uint16;
+                                                        int64_t rlength;
+                                                        rlength = medusa_buffer_get_length(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket));
+                                                        if (rlength < 0) {
+                                                                error = rlength;
+                                                                goto bail;
+                                                        }
+                                                        if (rlength < 4) {
+                                                                goto short_buffer;
+                                                        }
+                                                        rc = medusa_buffer_peek_uint16_be(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 2, &uint16);
+                                                        if (rc < 0) {
+                                                                error = rc;
+                                                                goto bail;
+                                                        }
+                                                        websocketserver_client->frame_mask_offset    = 4;
+                                                        websocketserver_client->frame_payload_offset = websocketserver_client->frame_mask_offset + 4;
+                                                        websocketserver_client->frame_payload_length = uint16;
+                                                        break;
+                                                }
+                                                case 127: {
+                                                        uint64_t uint64;
+                                                        int64_t rlength;
+                                                        rlength = medusa_buffer_get_length(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket));
+                                                        if (rlength < 0) {
+                                                                error = rlength;
+                                                                goto bail;
+                                                        }
+                                                        if (rlength < 10) {
+                                                                goto short_buffer;
+                                                        }
+                                                        rc = medusa_buffer_peek_uint64_be(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 2, &uint64);
+                                                        if (rc < 0) {
+                                                                error = rc;
+                                                                goto bail;
+                                                        }
+                                                        websocketserver_client->frame_mask_offset    = 10;
+                                                        websocketserver_client->frame_payload_offset = websocketserver_client->frame_mask_offset + 4;
+                                                        websocketserver_client->frame_payload_length = uint64;
+                                                        break;
+                                                }
+                                                default:
+                                                        websocketserver_client->frame_mask_offset    = 2;
+                                                        websocketserver_client->frame_payload_offset = websocketserver_client->frame_mask_offset + 4;
+                                                        websocketserver_client->frame_payload_length = uint8 & 0x7f;
+                                                        break;
+                                        }
+                                        if ((uint8 & 0x80) == 0) {
+                                                websocketserver_client->frame_mask_offset     = 0;
+                                                websocketserver_client->frame_payload_offset -= 4;
+                                        }
+                                        websocketserver_client->frame_state = MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_PAYLOAD;
+                                        __attribute__ ((fallthrough));
+                                }
+                                case MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_PAYLOAD: {
+                                        unsigned int i;
+                                        int64_t rlength;
+                                        uint8_t *payload;
 
-                        rlength = medusa_buffer_get_length(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket));
-                        if (rlength < 0) {
-                                error = rlength;
-                                goto bail;
+                                        rlength = medusa_buffer_get_length(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket));
+                                        if (rlength < 0) {
+                                                error = rlength;
+                                                goto bail;
+                                        }
+                                        if (rlength < websocketserver_client->frame_payload_offset + websocketserver_client->frame_payload_length) {
+                                                goto short_buffer;
+                                        }
+                                        
+                                        payload = medusa_buffer_linearize(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), websocketserver_client->frame_payload_offset, websocketserver_client->frame_payload_length);
+                                        if (MEDUSA_IS_ERR_OR_NULL(payload)) {
+                                                error = MEDUSA_PTR_ERR(payload);
+                                                goto bail;
+                                        }
+                                        if (websocketserver_client->frame_mask_offset != 0) {
+                                                uint8_t mask[4];
+                                                rc  = medusa_buffer_peek_uint8(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), websocketserver_client->frame_mask_offset + 0, &mask[0]);
+                                                rc |= medusa_buffer_peek_uint8(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), websocketserver_client->frame_mask_offset + 1, &mask[1]);
+                                                rc |= medusa_buffer_peek_uint8(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), websocketserver_client->frame_mask_offset + 2, &mask[2]);
+                                                rc |= medusa_buffer_peek_uint8(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), websocketserver_client->frame_mask_offset + 3, &mask[3]);
+                                                if (rc < 0) {
+                                                        error = rc;
+                                                        goto bail;
+                                                }
+                                                for (i = 0; i < websocketserver_client->frame_payload_length; i++) {
+                                                        payload[i] = payload[i] ^ mask[i & 3];
+                                                }
+                                        }
+                                        
+                                        websocketserver_client->frame_state = MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_FINISH;
+                                        __attribute__ ((fallthrough));
+                                }
+                                case MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_FINISH: {
+                                        uint8_t uint8;
+                                        uint8_t opcode;
+                                        int64_t clength;
+                                        uint8_t *payload;
+                                        struct medusa_websocketserver_client_frame_received medusa_websocketserver_client_frame_received;
+
+                                        rc = medusa_buffer_peek_uint8(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, &uint8);
+                                        if (rc < 0) {
+                                                error = rc;
+                                                goto bail;
+                                        }
+
+                                        payload = medusa_buffer_linearize(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), websocketserver_client->frame_payload_offset, websocketserver_client->frame_payload_length);
+                                        if (MEDUSA_IS_ERR_OR_NULL(payload)) {
+                                                error = MEDUSA_PTR_ERR(payload);
+                                                goto bail;
+                                        }
+
+                                        opcode = uint8 & 0x0f;
+                                        medusa_websocketserver_client_frame_received.final   = !!(uint8 & 0x80);
+                                        medusa_websocketserver_client_frame_received.type    = (opcode == WS_OPCODE_CLOSE) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CLOSE :
+                                                                                               (opcode == WS_OPCODE_PING) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_PING :
+                                                                                               (opcode == WS_OPCODE_PONG) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_POMG :
+                                                                                               (opcode == WS_OPCODE_TEXT) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_TEXT :
+                                                                                               (opcode == WS_OPCODE_BINARY) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_BINARY :
+                                                                                               MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CONTINUATION;
+                                        medusa_websocketserver_client_frame_received.length  = websocketserver_client->frame_payload_length;
+                                        medusa_websocketserver_client_frame_received.payload = payload;
+                                        rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_FRAME_RECEIVED, &medusa_websocketserver_client_frame_received);
+                                        if (rc < 0) {
+                                                error = rc;
+                                                goto bail;
+                                        }
+                                        clength = medusa_buffer_choke(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, websocketserver_client->frame_payload_offset + websocketserver_client->frame_payload_length);
+                                        if (clength != websocketserver_client->frame_payload_offset + websocketserver_client->frame_payload_length) {
+                                                error = -EIO;
+                                                goto bail;
+                                        }
+
+                                        websocketserver_client->frame_state = MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_START;
+                                        goto restart_buffer;
+                                }
                         }
-                        
+short_buffer: 
+                        ;
+
                 }
         } else if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE) {
         } else if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED) {
@@ -1186,6 +1380,7 @@ __attribute__ ((visibility ("default"))) struct medusa_websocketserver_client * 
         websocketserver_client_set_flag(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_FLAG_ENABLED);
         websocketserver_client->onevent = options->onevent;
         websocketserver_client->context = options->context;
+        websocketserver_client->frame_state = MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_START;
         rc = medusa_monitor_add_unlocked(websocketserver->subject.monitor, &websocketserver_client->subject);
         if (rc < 0) {
                 error = rc;
@@ -1503,6 +1698,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_websocketserver_cli
         if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_HEADER)       return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_HEADER";
         if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_RECEIVED)     return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_RECEIVED";
         if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_CONNECTED)            return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_CONNECTED";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_FRAME_RECEIVED)       return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_FRAME_RECEIVED";
         if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY)              return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY";
         return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_UNKNOWN";
 }
@@ -1517,6 +1713,17 @@ __attribute__ ((visibility ("default"))) const char * medusa_websocketserver_cli
         if (state == MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_CONNECTED)             return "MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_CONNECTED";
         if (state == MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ERROR)                 return "MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ERROR";
         return "MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_UNKNOWN";
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_websocketserver_client_frame_type_string (unsigned int type)
+{
+        if (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CONTINUATION)      return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CONTINUATION";
+        if (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CLOSE)             return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CLOSE";
+        if (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_PING)              return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_PING";
+        if (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_POMG)              return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_POMG";
+        if (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_TEXT)              return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_TEXT";
+        if (type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_BINARY)            return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_BINARY";
+        return "MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_UNKNOWN";
 }
 
 __attribute__ ((constructor)) static void websocketserver_constructor (void)

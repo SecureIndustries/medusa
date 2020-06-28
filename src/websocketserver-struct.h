@@ -17,6 +17,10 @@ struct medusa_websocketserver_client {
         char *http_parser_header_field;
         char *http_parser_header_value;
         char *sec_websocket_key;
+        unsigned int frame_state;
+        unsigned int frame_mask_offset;
+        unsigned int frame_payload_offset;
+        unsigned int frame_payload_length;
         struct medusa_websocketserver *websocketserver;
         TAILQ_ENTRY(medusa_websocketserver_client) list;
 };
