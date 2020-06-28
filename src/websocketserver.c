@@ -1245,7 +1245,7 @@ restart_buffer:
                                         uint8_t opcode;
                                         int64_t clength;
                                         uint8_t *payload;
-                                        struct medusa_websocketserver_client_frame_received medusa_websocketserver_client_frame_received;
+                                        struct medusa_websocketserver_client_event_message medusa_websocketserver_client_event_message;
 
                                         rc = medusa_buffer_peek_uint8(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, &uint8);
                                         if (rc < 0) {
@@ -1260,16 +1260,16 @@ restart_buffer:
                                         }
 
                                         opcode = uint8 & 0x0f;
-                                        medusa_websocketserver_client_frame_received.final   = !!(uint8 & 0x80);
-                                        medusa_websocketserver_client_frame_received.type    = (opcode == WS_OPCODE_CLOSE) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CLOSE :
-                                                                                               (opcode == WS_OPCODE_PING) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_PING :
-                                                                                               (opcode == WS_OPCODE_PONG) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_POMG :
-                                                                                               (opcode == WS_OPCODE_TEXT) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_TEXT :
-                                                                                               (opcode == WS_OPCODE_BINARY) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_BINARY :
-                                                                                               MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CONTINUATION;
-                                        medusa_websocketserver_client_frame_received.length  = websocketserver_client->frame_payload_length;
-                                        medusa_websocketserver_client_frame_received.payload = payload;
-                                        rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_FRAME_RECEIVED, &medusa_websocketserver_client_frame_received);
+                                        medusa_websocketserver_client_event_message.final   = !!(uint8 & 0x80);
+                                        medusa_websocketserver_client_event_message.type    = (opcode == WS_OPCODE_CLOSE) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CLOSE :
+                                                                                              (opcode == WS_OPCODE_PING) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_PING :
+                                                                                              (opcode == WS_OPCODE_PONG) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_POMG :
+                                                                                              (opcode == WS_OPCODE_TEXT) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_TEXT :
+                                                                                              (opcode == WS_OPCODE_BINARY) ? MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_BINARY :
+                                                                                              MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_CONTINUATION;
+                                        medusa_websocketserver_client_event_message.length  = websocketserver_client->frame_payload_length;
+                                        medusa_websocketserver_client_event_message.payload = payload;
+                                        rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_MESSAGE, &medusa_websocketserver_client_event_message);
                                         if (rc < 0) {
                                                 error = rc;
                                                 goto bail;
@@ -1278,6 +1278,21 @@ restart_buffer:
                                         if (clength != websocketserver_client->frame_payload_offset + websocketserver_client->frame_payload_length) {
                                                 error = -EIO;
                                                 goto bail;
+                                        }
+
+                                        if (opcode == WS_OPCODE_CLOSE) {
+                                                rc = websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED);
+                                                if (rc < 0) {
+                                                        error = rc;
+                                                        goto bail;
+                                                }
+                                                rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DISCONNECTED, NULL);
+                                                if (rc < 0) {
+                                                        error = rc;
+                                                        goto bail;
+                                                }
+                                                medusa_websocketserver_client_destroy_unlocked(websocketserver_client);
+                                                goto out;
                                         }
 
                                         websocketserver_client->frame_state = MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_START;
@@ -1290,12 +1305,24 @@ short_buffer:
                 }
         } else if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE) {
         } else if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED) {
+        } else if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
+                rc = websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
+                rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DISCONNECTED, NULL);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
+                medusa_websocketserver_client_destroy_unlocked(websocketserver_client);
         } else {
                 error = -EIO;
                 goto bail;
         }
 
-        medusa_monitor_unlock(monitor);
+out:    medusa_monitor_unlock(monitor);
         return 0;
 bail:   websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ERROR);
         websocketserver_client->error = -error;
@@ -1698,7 +1725,8 @@ __attribute__ ((visibility ("default"))) const char * medusa_websocketserver_cli
         if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_HEADER)       return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_HEADER";
         if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_RECEIVED)     return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_RECEIVED";
         if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_CONNECTED)            return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_CONNECTED";
-        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_FRAME_RECEIVED)       return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_FRAME_RECEIVED";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_MESSAGE)              return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_MESSAGE";
+        if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DISCONNECTED)         return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DISCONNECTED";
         if (events == MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY)              return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DESTROY";
         return "MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_UNKNOWN";
 }
