@@ -25,6 +25,12 @@
 #include "websocketserver-struct.h"
 #include "monitor-private.h"
 
+#if defined(__GNUC__) && __GNUC__ >= 7
+        #define FALL_THROUGH __attribute__ ((fallthrough))
+#else
+        #define FALL_THROUGH ((void)0)
+#endif /* __GNUC__ >= 7 */
+
 #define MEDUSA_WEBSOCKETSERVER_USE_POOL         1
 
 #if defined(MEDUSA_WEBSOCKETSERVER_USE_POOL) && (MEDUSA_WEBSOCKETSERVER_USE_POOL == 1)
@@ -1149,7 +1155,7 @@ restart_buffer:
                                         websocketserver_client->frame_mask_offset    = 0;
                                         websocketserver_client->frame_payload_offset = 0;
                                         websocketserver_client->frame_payload_length = 0;
-                                        __attribute__ ((fallthrough));
+                                        FALL_THROUGH;
                                 }
                                 case MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_HEADER: {
                                         uint8_t uint8;
@@ -1212,7 +1218,7 @@ restart_buffer:
                                                 websocketserver_client->frame_payload_offset -= 4;
                                         }
                                         websocketserver_client->frame_state = MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_PAYLOAD;
-                                        __attribute__ ((fallthrough));
+                                        FALL_THROUGH;
                                 }
                                 case MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_PAYLOAD: {
                                         unsigned int i;
@@ -1249,7 +1255,7 @@ restart_buffer:
                                         }
                                         
                                         websocketserver_client->frame_state = MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_FINISH;
-                                        __attribute__ ((fallthrough));
+                                        FALL_THROUGH;
                                 }
                                 case MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_FINISH: {
                                         uint8_t uint8;
