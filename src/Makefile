@@ -145,6 +145,7 @@ dist.include-y = \
 	tcpsocket.h \
 	udpsocket.h \
 	httprequest.h \
+	httpserver.h \
 	dnsrequest.h \
 	websocketserver.h \
 	exec.h \

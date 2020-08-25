@@ -5,6 +5,10 @@
 struct medusa_monitor;
 struct medusa_httpserver;
 struct medusa_httpserver_client;
+struct medusa_httpserver_client_request;
+struct medusa_httpserver_client_request_header;
+struct medusa_httpserver_client_request_headers;
+struct medusa_httpserver_client_request_body;
 
 enum {
         MEDUSA_HTTPSERVER_PROTOCOL_ANY                     = 0,
@@ -56,16 +60,14 @@ enum {
         MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED                   = (1 <<  1),
         MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING           = (1 <<  2),
         MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED            = (1 <<  3),
-        MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST                     = (1 <<  4),
-        MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE              = (1 <<  5),
-        MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED     = (1 <<  6),
-        MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED                = (1 <<  7),
-        MEDUSA_HTTPSERVER_CLIENT_EVENT_DESTROY                     = (1 <<  8)
+        MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE              = (1 <<  4),
+        MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED     = (1 <<  5),
+        MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED                = (1 <<  6),
+        MEDUSA_HTTPSERVER_CLIENT_EVENT_DESTROY                     = (1 <<  7)
 #define MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR                       MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR
 #define MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED                   MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED
 #define MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING           MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING
 #define MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED            MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED
-#define MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST                     MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST
 #define MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE              MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE
 #define MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED     MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED
 #define MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED                MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED
@@ -104,7 +106,8 @@ struct medusa_httpserver_accept_options {
         void *context;
 };
 
-struct medusa_httpserver_client_event_request {
+struct medusa_httpserver_client_event_request_received {
+        struct medusa_httpserver_client_request *request;
 };
 
 struct medusa_httpserver_client_event_buffered_write {
@@ -168,6 +171,24 @@ unsigned int medusa_httpserver_client_get_state (const struct medusa_httpserver_
 
 int medusa_httpserver_client_set_enabled (struct medusa_httpserver_client *httpserver_client, int enabled);
 int medusa_httpserver_client_get_enabled (struct medusa_httpserver_client *httpserver_client);
+
+const struct medusa_httpserver_client_request * medusa_httprequest_get_request (const struct medusa_httpserver_client *httpserver_client);
+
+const struct medusa_httpserver_client_request_status * medusa_httpserver_client_request_get_status (const struct medusa_httpserver_client_request *reply);
+int64_t medusa_httpserver_client_request_status_get_code (const struct medusa_httpserver_client_request_status *status);
+const char * medusa_httpserver_client_request_status_get_value (const struct medusa_httpserver_client_request_status *status);
+
+const struct medusa_httpserver_client_request_headers * medusa_httpserver_client_request_get_headers (const struct medusa_httpserver_client_request *reply);
+int64_t medusa_httpserver_client_request_headers_get_count (const struct medusa_httpserver_client_request_headers *headers);
+const struct medusa_httpserver_client_request_header * medusa_httpserver_client_request_headers_get_first (const struct medusa_httpserver_client_request_headers *headers);
+
+const char * medusa_httpserver_client_request_header_get_key (const struct medusa_httpserver_client_request_header *header);
+const char * medusa_httpserver_client_request_header_get_value (const struct medusa_httpserver_client_request_header *header);
+const struct medusa_httpserver_client_request_header * medusa_httpserver_client_request_header_get_next (const struct medusa_httpserver_client_request_header *header);
+
+const struct medusa_httpserver_client_request_body * medusa_httpserver_client_request_get_body (const struct medusa_httpserver_client_request *reply);
+int64_t medusa_httpserver_client_request_body_get_length (const struct medusa_httpserver_client_request_body *body);
+const void * medusa_httpserver_client_request_body_get_value (const struct medusa_httpserver_client_request_body *body);
 
 int medusa_httpserver_client_set_context (struct medusa_httpserver_client *httpserver_client, void *context);
 void * medusa_httpserver_client_get_context (struct medusa_httpserver_client *httpserver_client);

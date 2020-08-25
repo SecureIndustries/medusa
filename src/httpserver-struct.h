@@ -14,6 +14,7 @@ struct medusa_httpserver_client {
         struct medusa_tcpsocket *tcpsocket;
         http_parser http_parser;
         http_parser_settings http_parser_settings;
+        struct medusa_httpserver_client_request *request;
         struct medusa_httpserver *httpserver;
         TAILQ_ENTRY(medusa_httpserver_client) list;
 };

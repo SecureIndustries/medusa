@@ -418,9 +418,6 @@ static int httprequest_httpparser_on_url (http_parser *http_parser, const char *
 static int httprequest_httpparser_on_status (http_parser *http_parser, const char *at, size_t length)
 {
         struct medusa_httprequest *httprequest = http_parser->data;
-        (void) httprequest;
-        (void) at;
-        (void) length;
         httprequest->reply->status.code = http_parser->status_code;
         httprequest->reply->status.value = strndup(at, length);
         if (httprequest->reply->status.value == NULL) {
@@ -453,9 +450,6 @@ static int httprequest_httpparser_on_header_value (http_parser *http_parser, con
         int rc;
         struct medusa_httprequest_reply_header *header;
         struct medusa_httprequest *httprequest = http_parser->data;
-        (void) httprequest;
-        (void) at;
-        (void) length;
         header = TAILQ_LAST(&httprequest->reply->headers.list, medusa_httprequest_reply_headers_list);
         if (MEDUSA_IS_ERR_OR_NULL(header)) {
                 return MEDUSA_PTR_ERR(header);
@@ -471,7 +465,6 @@ static int httprequest_httpparser_on_headers_complete (http_parser *http_parser)
 {
         int rc;
         struct medusa_httprequest *httprequest = http_parser->data;
-        (void) httprequest;
         if (httprequest->method != NULL &&
             strcasecmp(httprequest->method, "head") == 0) {
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_RECEIVED);
@@ -487,9 +480,6 @@ static int httprequest_httpparser_on_body (http_parser *http_parser, const char 
 {
         void *tmp;
         struct medusa_httprequest *httprequest = http_parser->data;
-        (void) httprequest;
-        (void) at;
-        (void) length;
         tmp = realloc(httprequest->reply->body.value, httprequest->reply->body.length + length + 1);
         if (tmp == NULL) {
                 tmp = malloc(httprequest->reply->body.length + length + 1);
@@ -512,7 +502,6 @@ static int httprequest_httpparser_on_message_complete (http_parser *http_parser)
 {
         int rc;
         struct medusa_httprequest *httprequest = http_parser->data;
-        (void) httprequest;
         httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_RECEIVED);
         rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RECEIVED, NULL);
         if (rc < 0) {
