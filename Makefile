@@ -1,9 +1,9 @@
 
-MEDUSA_VERSION			= 1.0.0
-MEDUSA_SONAME			= 1
+MEDUSA_VERSION			 = 1.0.0
+MEDUSA_SONAME			 = 1
 
-MEDUSA_BUILD_TEST     ?= n
-MEDUSA_BUILD_EXAMPLES ?= n
+MEDUSA_BUILD_TEST     		?= n
+MEDUSA_BUILD_EXAMPLES 		?= n
 
 MEDUSA_TCPSOCKET_OPENSSL_ENABLE ?= y
 
@@ -38,7 +38,7 @@ examples_makeflags-y = \
 include Makefile.lib
 
 tests: all
-	@${Q}+${MAKE} -C test tests
+	${Q}+${MAKE} ${test_makeflags-y} -C test tests
 
 install: src test
 	install -d ${DESTDIR}/${prefix}/include/medusa
