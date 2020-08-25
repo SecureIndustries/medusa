@@ -43,10 +43,11 @@ static void usage (const char *pname)
 
 static int httpserver_client_onevent (struct medusa_httpserver_client *httpserver_client, unsigned int events, void *context, void *param)
 {
-        (void) httpserver_client;
-        (void) events;
+        int rc;
+
         (void) context;
         (void) param;
+
         fprintf(stderr, "httpserver_client state: %d, %s events: 0x%08x, %s\n", medusa_httpserver_client_get_state(httpserver_client), medusa_httpserver_client_state_string(medusa_httpserver_client_get_state(httpserver_client)), events, medusa_httpserver_client_event_string(events));
         if (events & MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED) {
                 struct medusa_httpserver_client_event_request_received *httpserver_client_event_request_received = (struct medusa_httpserver_client_event_request_received *) param;
@@ -90,6 +91,19 @@ static int httpserver_client_onevent (struct medusa_httpserver_client *httpserve
                 fprintf(stderr, "  value : %.*s\n",
                         (int) medusa_httpserver_client_request_body_get_length(httpserver_client_request_body),
                         (char *) medusa_httpserver_client_request_body_get_value(httpserver_client_request_body));
+
+                rc  = medusa_httpserver_client_reply_send_start(httpserver_client);
+                rc |= medusa_httpserver_client_reply_send_status(httpserver_client, 200, "OK");
+                rc |= medusa_httpserver_client_reply_send_header(httpserver_client, "key", "value");
+                rc |= medusa_httpserver_client_reply_send_header(httpserver_client, NULL, NULL);
+                rc |= medusa_httpserver_client_reply_send_bodyf(httpserver_client, "body");
+                rc |= medusa_httpserver_client_reply_send_finish(httpserver_client);
+                if (rc != 0) {
+                        fprintf(stderr, "can not send httpserver client reply\n");
+                        goto bail;
+                }
+        } else if (events & MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED) {
+                medusa_httpserver_client_destroy(httpserver_client);
         }
         return 0;
 bail:   return -1;
