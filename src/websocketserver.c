@@ -312,15 +312,19 @@ __attribute__ ((visibility ("default"))) struct medusa_websocketserver * medusa_
         }
         websocketserver->port     = options->port;
         websocketserver->protocol = options->protocol;
-        rc = medusa_websocketserver_set_enabled_unlocked(websocketserver, options->enabled);
-        if (rc < 0) {
-                error = rc;
-                goto bail;
+        if (options->enabled != 0) {
+                rc = medusa_websocketserver_set_enabled_unlocked(websocketserver, options->enabled);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
         }
-        rc = medusa_websocketserver_set_started_unlocked(websocketserver, options->started);
-        if (rc < 0) {
-                error = rc;
-                goto bail;
+        if (options->started != 0) {
+                rc = medusa_websocketserver_set_started_unlocked(websocketserver, options->started);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
         }
 
         return websocketserver;
