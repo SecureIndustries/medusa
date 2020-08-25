@@ -100,6 +100,10 @@ libmedusa.a_files-y += \
 	../3rdparty/SPCDNS/src/output.c
 
 libmedusa.a_files-y += \
+	httpserver.c \
+	../3rdparty/http-parser/http_parser.c
+
+libmedusa.a_files-y += \
 	websocketserver.c \
 	../3rdparty/http-parser/http_parser.c
 
