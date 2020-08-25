@@ -62,6 +62,8 @@ static int httpserver_client_onevent (struct medusa_httpserver_client *httpserve
                         goto bail;
                 }
 
+                fprintf(stderr, "method: %s\n", medusa_httpserver_client_request_get_method(httpserver_client_request));
+
                 httpserver_client_request_headers = medusa_httpserver_client_request_get_headers(httpserver_client_request);
                 if (MEDUSA_IS_ERR_OR_NULL(httpserver_client_request_headers)) {
                         fprintf(stderr, "hettprequest reply headers is invalid\n");

@@ -871,6 +871,7 @@ struct medusa_httpserver_client_request_body {
 };
 
 struct medusa_httpserver_client_request {
+        char *method;
         struct medusa_httpserver_client_request_headers headers;
         struct medusa_httpserver_client_request_body body;
 };
@@ -968,27 +969,48 @@ static void medusa_httpserver_client_request_headers_init (struct medusa_httpser
         TAILQ_INIT(&headers->list);
 }
 
-static void medusa_httpserver_client_request_destroy (struct medusa_httpserver_client_request *reply)
+static int medusa_httpserver_client_request_set_method (struct medusa_httpserver_client_request *request, const char *method)
 {
-        if (reply == NULL) {
+        if (request == NULL) {
+                return -EINVAL;
+        }
+        if (request->method != NULL) {
+                free(request->method);
+                request->method = NULL;
+        }
+        if (method != NULL) {
+                request->method = strdup(method);
+                if (request->method == NULL) {
+                        return -ENOMEM;
+                }
+        }
+        return 0;
+}
+
+static void medusa_httpserver_client_request_destroy (struct medusa_httpserver_client_request *request)
+{
+        if (request == NULL) {
                 return;
         }
-        medusa_httpserver_client_request_body_uninit(&reply->body);
-        medusa_httpserver_client_request_headers_uninit(&reply->headers);
-        free(reply);
+        if (request->method != NULL) {
+                free(request->method);
+        }
+        medusa_httpserver_client_request_body_uninit(&request->body);
+        medusa_httpserver_client_request_headers_uninit(&request->headers);
+        free(request);
 }
 
 static struct medusa_httpserver_client_request * medusa_httpserver_client_request_create (void)
 {
-        struct medusa_httpserver_client_request *reply;
-        reply = malloc(sizeof(struct medusa_httpserver_client_request));
-        if (reply == NULL) {
+        struct medusa_httpserver_client_request *request;
+        request = malloc(sizeof(struct medusa_httpserver_client_request));
+        if (request == NULL) {
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
-        memset(reply, 0, sizeof(struct medusa_httpserver_client_request));
-        medusa_httpserver_client_request_headers_init(&reply->headers);
-        medusa_httpserver_client_request_body_init(&reply->body);
-        return reply;
+        memset(request, 0, sizeof(struct medusa_httpserver_client_request));
+        medusa_httpserver_client_request_headers_init(&request->headers);
+        medusa_httpserver_client_request_body_init(&request->body);
+        return request;
 }
 
 static int httpserver_client_httpparser_on_message_begin (http_parser *http_parser)
@@ -1007,10 +1029,14 @@ static int httpserver_client_httpparser_on_message_begin (http_parser *http_pars
 
 static int httpserver_client_httpparser_on_url (http_parser *http_parser, const char *at, size_t length)
 {
+        int rc;
         struct medusa_httpserver_client *httpserver_client = http_parser->data;
-        (void) httpserver_client;
         (void) at;
         (void) length;
+        rc = medusa_httpserver_client_request_set_method(httpserver_client->request, http_method_str(http_parser->method));
+        if (rc != 0) {
+                return rc;
+        }
         return 0;
 }
 
@@ -1482,12 +1508,20 @@ __attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_r
         return httpserver_client->request;
 }
 
-__attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_request_headers * medusa_httpserver_client_request_get_headers (const struct medusa_httpserver_client_request *reply)
+const char * medusa_httpserver_client_request_get_method (const struct medusa_httpserver_client_request *request)
 {
-        if (MEDUSA_IS_ERR_OR_NULL(reply)) {
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
-        return &reply->headers;
+        return request->method;
+}
+
+__attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_request_headers * medusa_httpserver_client_request_get_headers (const struct medusa_httpserver_client_request *request)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return &request->headers;
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_httpserver_client_request_headers_get_count (const struct medusa_httpserver_client_request_headers *headers)
@@ -1530,12 +1564,12 @@ __attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_r
         return TAILQ_NEXT(header, list);
 }
 
-__attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_request_body * medusa_httpserver_client_request_get_body (const struct medusa_httpserver_client_request *reply)
+__attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_request_body * medusa_httpserver_client_request_get_body (const struct medusa_httpserver_client_request *request)
 {
-        if (MEDUSA_IS_ERR_OR_NULL(reply)) {
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
-        return &reply->body;
+        return &request->body;
 }
 
 __attribute__ ((visibility ("default"))) int64_t medusa_httpserver_client_request_body_get_length (const struct medusa_httpserver_client_request_body *body)

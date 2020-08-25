@@ -174,7 +174,9 @@ int medusa_httpserver_client_get_enabled (const struct medusa_httpserver_client 
 
 const struct medusa_httpserver_client_request * medusa_httprequest_client_get_request (const struct medusa_httpserver_client *httpserver_client);
 
-const struct medusa_httpserver_client_request_headers * medusa_httpserver_client_request_get_headers (const struct medusa_httpserver_client_request *reply);
+const char * medusa_httpserver_client_request_get_method (const struct medusa_httpserver_client_request *request);
+
+const struct medusa_httpserver_client_request_headers * medusa_httpserver_client_request_get_headers (const struct medusa_httpserver_client_request *request);
 int64_t medusa_httpserver_client_request_headers_get_count (const struct medusa_httpserver_client_request_headers *headers);
 const struct medusa_httpserver_client_request_header * medusa_httpserver_client_request_headers_get_first (const struct medusa_httpserver_client_request_headers *headers);
 
@@ -182,7 +184,7 @@ const char * medusa_httpserver_client_request_header_get_key (const struct medus
 const char * medusa_httpserver_client_request_header_get_value (const struct medusa_httpserver_client_request_header *header);
 const struct medusa_httpserver_client_request_header * medusa_httpserver_client_request_header_get_next (const struct medusa_httpserver_client_request_header *header);
 
-const struct medusa_httpserver_client_request_body * medusa_httpserver_client_request_get_body (const struct medusa_httpserver_client_request *reply);
+const struct medusa_httpserver_client_request_body * medusa_httpserver_client_request_get_body (const struct medusa_httpserver_client_request *request);
 int64_t medusa_httpserver_client_request_body_get_length (const struct medusa_httpserver_client_request_body *body);
 const void * medusa_httpserver_client_request_body_get_value (const struct medusa_httpserver_client_request_body *body);
 
