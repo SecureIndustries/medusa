@@ -1440,11 +1440,17 @@ __attribute__ ((visibility ("default"))) struct medusa_websocketserver_client * 
         medusa_subject_set_type(&websocketserver_client->subject, MEDUSA_SUBJECT_TYPE_WEBSOCKETSERVER_CLIENT);
         websocketserver_client->subject.monitor = NULL;
         websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED);
-        websocketserver_client_set_flag(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_FLAG_ENABLED);
+        websocketserver_client_set_flag(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_FLAG_NONE);
         websocketserver_client->onevent = options->onevent;
         websocketserver_client->context = options->context;
         websocketserver_client->frame_state = MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_START;
         rc = medusa_monitor_add_unlocked(websocketserver->subject.monitor, &websocketserver_client->subject);
+        if (rc < 0) {
+                error = rc;
+                goto bail;
+        }
+
+        rc = medusa_websocketserver_client_set_enabled_unlocked(websocketserver_client, options->enabled);
         if (rc < 0) {
                 error = rc;
                 goto bail;
@@ -1532,6 +1538,61 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_websocketserver_cli
         }
         medusa_monitor_lock(websocketserver_client->subject.monitor);
         rc = medusa_websocketserver_client_get_state_unlocked(websocketserver_client);
+        medusa_monitor_unlock(websocketserver_client->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_client_set_enabled_unlocked (struct medusa_websocketserver_client *websocketserver_client, int enabled)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return -EINVAL;
+        }
+        if (websocketserver_client_has_flag(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_FLAG_ENABLED) == !!enabled) {
+                return 0;
+        }
+        if (enabled) {
+                websocketserver_client_add_flag(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_FLAG_ENABLED);
+        } else {
+                websocketserver_client_del_flag(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_FLAG_ENABLED);
+        }
+        if (!MEDUSA_IS_ERR_OR_NULL(websocketserver_client->tcpsocket)) {
+                rc = medusa_tcpsocket_set_enabled_unlocked(websocketserver_client->tcpsocket, enabled);
+                if (rc < 0) {
+                        return rc;
+                }
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_client_set_enabled (struct medusa_websocketserver_client *websocketserver_client, int enabled)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(websocketserver_client->subject.monitor);
+        rc = medusa_websocketserver_client_set_enabled_unlocked(websocketserver_client, enabled);
+        medusa_monitor_unlock(websocketserver_client->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_client_get_enabled_unlocked (const struct medusa_websocketserver_client *websocketserver_client)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return -EINVAL;
+        }
+        return websocketserver_client_has_flag(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_FLAG_ENABLED);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_client_get_enabled (const struct medusa_websocketserver_client *websocketserver_client)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(websocketserver_client->subject.monitor);
+        rc = medusa_websocketserver_client_get_enabled_unlocked(websocketserver_client);
         medusa_monitor_unlock(websocketserver_client->subject.monitor);
         return rc;
 }

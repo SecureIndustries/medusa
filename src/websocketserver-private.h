@@ -49,7 +49,7 @@ void medusa_websocketserver_client_destroy_unlocked (struct medusa_websocketserv
 unsigned int medusa_websocketserver_client_get_state_unlocked (const struct medusa_websocketserver_client *websocketserver_client);
 
 int medusa_websocketserver_client_set_enabled_unlocked (struct medusa_websocketserver_client *websocketserver_client, int enabled);
-int medusa_websocketserver_client_get_enabled_unlocked (struct medusa_websocketserver_client *websocketserver_client);
+int medusa_websocketserver_client_get_enabled_unlocked (const struct medusa_websocketserver_client *websocketserver_client);
 
 struct medusa_buffer * medusa_websocketserver_client_get_read_buffer_unlocked (const struct medusa_websocketserver_client *websocketserver_client);
 struct medusa_buffer * medusa_websocketserver_client_get_write_buffer_unlocked (const struct medusa_websocketserver_client *websocketserver_client);
