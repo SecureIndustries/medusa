@@ -198,7 +198,7 @@ void medusa_websocketserver_client_destroy (struct medusa_websocketserver_client
 unsigned int medusa_websocketserver_client_get_state (const struct medusa_websocketserver_client *websocketserver_client);
 
 int medusa_websocketserver_client_set_enabled (struct medusa_websocketserver_client *websocketserver_client, int enabled);
-int medusa_websocketserver_client_get_enabled (struct medusa_websocketserver_client *websocketserver_client);
+int medusa_websocketserver_client_get_enabled (const struct medusa_websocketserver_client *websocketserver_client);
 
 struct medusa_buffer * medusa_websocketserver_client_get_read_buffer (const struct medusa_websocketserver_client *websocketserver_client);
 struct medusa_buffer * medusa_websocketserver_client_get_write_buffer (const struct medusa_websocketserver_client *websocketserver_client);
