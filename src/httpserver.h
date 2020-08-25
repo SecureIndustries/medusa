@@ -170,13 +170,9 @@ void medusa_httpserver_client_destroy (struct medusa_httpserver_client *httpserv
 unsigned int medusa_httpserver_client_get_state (const struct medusa_httpserver_client *httpserver_client);
 
 int medusa_httpserver_client_set_enabled (struct medusa_httpserver_client *httpserver_client, int enabled);
-int medusa_httpserver_client_get_enabled (struct medusa_httpserver_client *httpserver_client);
+int medusa_httpserver_client_get_enabled (const struct medusa_httpserver_client *httpserver_client);
 
-const struct medusa_httpserver_client_request * medusa_httprequest_get_request (const struct medusa_httpserver_client *httpserver_client);
-
-const struct medusa_httpserver_client_request_status * medusa_httpserver_client_request_get_status (const struct medusa_httpserver_client_request *reply);
-int64_t medusa_httpserver_client_request_status_get_code (const struct medusa_httpserver_client_request_status *status);
-const char * medusa_httpserver_client_request_status_get_value (const struct medusa_httpserver_client_request_status *status);
+const struct medusa_httpserver_client_request * medusa_httprequest_client_get_request (const struct medusa_httpserver_client *httpserver_client);
 
 const struct medusa_httpserver_client_request_headers * medusa_httpserver_client_request_get_headers (const struct medusa_httpserver_client_request *reply);
 int64_t medusa_httpserver_client_request_headers_get_count (const struct medusa_httpserver_client_request_headers *headers);

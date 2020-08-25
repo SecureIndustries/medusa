@@ -49,7 +49,7 @@ void medusa_httpserver_client_destroy_unlocked (struct medusa_httpserver_client 
 unsigned int medusa_httpserver_client_get_state_unlocked (const struct medusa_httpserver_client *httpserver_client);
 
 int medusa_httpserver_client_set_enabled_unlocked (struct medusa_httpserver_client *httpserver_client, int enabled);
-int medusa_httpserver_client_get_enabled_unlocked (struct medusa_httpserver_client *httpserver_client);
+int medusa_httpserver_client_get_enabled_unlocked (const struct medusa_httpserver_client *httpserver_client);
 
 int medusa_httpserver_client_set_context_unlocked (struct medusa_httpserver_client *httpserver_client, void *context);
 void * medusa_httpserver_client_get_context_unlocked (struct medusa_httpserver_client *httpserver_client);

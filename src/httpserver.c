@@ -860,11 +860,6 @@ struct medusa_httpserver_client_request_header {
         char *value;
 };
 
-struct medusa_httpserver_client_request_status {
-        unsigned int code;
-        char *value;
-};
-
 struct medusa_httpserver_client_request_headers {
         int64_t count;
         struct medusa_httpserver_client_request_headers_list list;
@@ -876,7 +871,6 @@ struct medusa_httpserver_client_request_body {
 };
 
 struct medusa_httpserver_client_request {
-        struct medusa_httpserver_client_request_status status;
         struct medusa_httpserver_client_request_headers headers;
         struct medusa_httpserver_client_request_body body;
 };
@@ -974,20 +968,6 @@ static void medusa_httpserver_client_request_headers_init (struct medusa_httpser
         TAILQ_INIT(&headers->list);
 }
 
-static void medusa_httpserver_client_request_status_uninit (struct medusa_httpserver_client_request_status *status)
-{
-        status->code = 0;
-        if (status->value != NULL) {
-                free(status->value);
-        }
-}
-
-static void medusa_httpserver_client_request_status_init (struct medusa_httpserver_client_request_status *status)
-{
-        memset(status, 0, sizeof(struct medusa_httpserver_client_request_status));
-        status->code = 0;
-}
-
 static void medusa_httpserver_client_request_destroy (struct medusa_httpserver_client_request *reply)
 {
         if (reply == NULL) {
@@ -995,7 +975,6 @@ static void medusa_httpserver_client_request_destroy (struct medusa_httpserver_c
         }
         medusa_httpserver_client_request_body_uninit(&reply->body);
         medusa_httpserver_client_request_headers_uninit(&reply->headers);
-        medusa_httpserver_client_request_status_uninit(&reply->status);
         free(reply);
 }
 
@@ -1007,7 +986,6 @@ static struct medusa_httpserver_client_request * medusa_httpserver_client_reques
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
         memset(reply, 0, sizeof(struct medusa_httpserver_client_request));
-        medusa_httpserver_client_request_status_init(&reply->status);
         medusa_httpserver_client_request_headers_init(&reply->headers);
         medusa_httpserver_client_request_body_init(&reply->body);
         return reply;
@@ -1039,11 +1017,9 @@ static int httpserver_client_httpparser_on_url (http_parser *http_parser, const 
 static int httpserver_client_httpparser_on_status (http_parser *http_parser, const char *at, size_t length)
 {
         struct medusa_httpserver_client *httpserver_client = http_parser->data;
-        httpserver_client->request->status.code = http_parser->status_code;
-        httpserver_client->request->status.value = strndup(at, length);
-        if (httpserver_client->request->status.value == NULL) {
-                return -ENOMEM;
-        }
+        (void) httpserver_client;
+        (void) at;
+        (void) length;
         return 0;
 }
 
@@ -1342,10 +1318,16 @@ __attribute__ ((visibility ("default"))) struct medusa_httpserver_client * medus
         medusa_subject_set_type(&httpserver_client->subject, MEDUSA_SUBJECT_TYPE_HTTPSERVER_CLIENT);
         httpserver_client->subject.monitor = NULL;
         httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_DISCONNECTED);
-        httpserver_client_set_flag(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_FLAG_ENABLED);
+        httpserver_client_set_flag(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_FLAG_NONE);
         httpserver_client->onevent = options->onevent;
         httpserver_client->context = options->context;
         rc = medusa_monitor_add_unlocked(httpserver->subject.monitor, &httpserver_client->subject);
+        if (rc < 0) {
+                error = rc;
+                goto bail;
+        }
+
+        rc = medusa_httpserver_client_set_enabled_unlocked(httpserver_client, options->enabled);
         if (rc < 0) {
                 error = rc;
                 goto bail;
@@ -1368,7 +1350,7 @@ __attribute__ ((visibility ("default"))) struct medusa_httpserver_client * medus
                 goto bail;
         }
 
-        httpserver_client->tcpsocket       = accepted;
+        httpserver_client->tcpsocket  = accepted;
         httpserver_client->httpserver = httpserver;
         TAILQ_INSERT_TAIL(&httpserver->clients, httpserver_client, list);
 
@@ -1437,36 +1419,67 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_httpserver_client_g
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_request * medusa_httprequest_get_request (const struct medusa_httpserver_client *httpserver_client)
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_set_enabled_unlocked (struct medusa_httpserver_client *httpserver_client, int enabled)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        if (httpserver_client_has_flag(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_FLAG_ENABLED) == !!enabled) {
+                return 0;
+        }
+        if (enabled) {
+                httpserver_client_add_flag(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_FLAG_ENABLED);
+        } else {
+                httpserver_client_del_flag(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_FLAG_ENABLED);
+        }
+        if (!MEDUSA_IS_ERR_OR_NULL(httpserver_client->tcpsocket)) {
+                rc = medusa_tcpsocket_set_enabled_unlocked(httpserver_client->tcpsocket, enabled);
+                if (rc < 0) {
+                        return rc;
+                }
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_set_enabled (struct medusa_httpserver_client *httpserver_client, int enabled)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httpserver_client->subject.monitor);
+        rc = medusa_httpserver_client_set_enabled_unlocked(httpserver_client, enabled);
+        medusa_monitor_unlock(httpserver_client->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_get_enabled_unlocked (const struct medusa_httpserver_client *httpserver_client)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        return httpserver_client_has_flag(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_FLAG_ENABLED);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_get_enabled (const struct medusa_httpserver_client *httpserver_client)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httpserver_client->subject.monitor);
+        rc = medusa_httpserver_client_get_enabled_unlocked(httpserver_client);
+        medusa_monitor_unlock(httpserver_client->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_request * medusa_httprequest_client_get_request (const struct medusa_httpserver_client *httpserver_client)
 {
         if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
         return httpserver_client->request;
-}
-
-__attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_request_status * medusa_httpserver_client_request_get_status (const struct medusa_httpserver_client_request *reply)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(reply)) {
-                return MEDUSA_ERR_PTR(-EINVAL);
-        }
-        return &reply->status;
-}
-
-__attribute__ ((visibility ("default"))) int64_t medusa_httpserver_client_request_status_get_code (const struct medusa_httpserver_client_request_status *status)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(status)) {
-                return -EINVAL;
-        }
-        return status->code;
-}
-
-__attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_request_status_get_value (const struct medusa_httpserver_client_request_status *status)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(status)) {
-                return MEDUSA_ERR_PTR(-EINVAL);
-        }
-        return status->value;
 }
 
 __attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_request_headers * medusa_httpserver_client_request_get_headers (const struct medusa_httpserver_client_request *reply)

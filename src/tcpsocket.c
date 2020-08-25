@@ -199,7 +199,7 @@ static inline int tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsig
         return 0;
 }
 
-static int tcpsocket_ctimer_onevent(struct medusa_timer *timer, unsigned int events, void *context, void *param)
+static int tcpsocket_ctimer_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
         int rc;
         struct medusa_monitor *monitor;

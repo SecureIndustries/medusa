@@ -41,14 +41,89 @@ static void usage (const char *pname)
         fprintf(stdout, "  %s -a 127.0.0.1 -p 12345\n", pname);
 }
 
+static int httpserver_client_onevent (struct medusa_httpserver_client *httpserver_client, unsigned int events, void *context, void *param)
+{
+        (void) httpserver_client;
+        (void) events;
+        (void) context;
+        (void) param;
+        fprintf(stderr, "httpserver_client state: %d, %s events: 0x%08x, %s\n", medusa_httpserver_client_get_state(httpserver_client), medusa_httpserver_client_state_string(medusa_httpserver_client_get_state(httpserver_client)), events, medusa_httpserver_client_event_string(events));
+        if (events & MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED) {
+                struct medusa_httpserver_client_event_request_received *httpserver_client_event_request_received = (struct medusa_httpserver_client_event_request_received *) param;
+
+                const struct medusa_httpserver_client_request *httpserver_client_request;
+                const struct medusa_httpserver_client_request_header *httpserver_client_request_header;
+                const struct medusa_httpserver_client_request_headers *httpserver_client_request_headers;
+                const struct medusa_httpserver_client_request_body *httpserver_client_request_body;
+
+                httpserver_client_request = httpserver_client_event_request_received->request;
+                if (httpserver_client_request != medusa_httprequest_client_get_request(httpserver_client)) {
+                        fprintf(stderr, "httpserver client request logic error\n");
+                        goto bail;
+                }
+
+                httpserver_client_request_headers = medusa_httpserver_client_request_get_headers(httpserver_client_request);
+                if (MEDUSA_IS_ERR_OR_NULL(httpserver_client_request_headers)) {
+                        fprintf(stderr, "hettprequest reply headers is invalid\n");
+                        goto bail;
+                }
+                fprintf(stderr, "headers:\n");
+                fprintf(stderr, "  count: %ld\n", medusa_httpserver_client_request_headers_get_count(httpserver_client_request_headers));
+                for (httpserver_client_request_header = medusa_httpserver_client_request_headers_get_first(httpserver_client_request_headers);
+                     httpserver_client_request_header;
+                     httpserver_client_request_header = medusa_httpserver_client_request_header_get_next(httpserver_client_request_header)) {
+                        fprintf(stderr, "  %s = %s\n",
+                                medusa_httpserver_client_request_header_get_key(httpserver_client_request_header),
+                                medusa_httpserver_client_request_header_get_value(httpserver_client_request_header));
+                }
+
+                httpserver_client_request_body = medusa_httpserver_client_request_get_body(httpserver_client_request);
+                if (MEDUSA_IS_ERR_OR_NULL(httpserver_client_request_body)) {
+                        fprintf(stderr, "hettprequest reply body is invalid\n");
+                        goto bail;
+                }
+                fprintf(stderr, "body\n");
+                fprintf(stderr, "  length: %ld\n", medusa_httpserver_client_request_body_get_length(httpserver_client_request_body));
+                fprintf(stderr, "  value : %.*s\n",
+                        (int) medusa_httpserver_client_request_body_get_length(httpserver_client_request_body),
+                        (char *) medusa_httpserver_client_request_body_get_value(httpserver_client_request_body));
+        }
+        return 0;
+bail:   return -1;
+}
+
 static int httpserver_onevent (struct medusa_httpserver *httpserver, unsigned int events, void *context, void *param)
 {
+        int rc;
+        struct medusa_httpserver_accept_options httpserver_accept_options;
+
+        struct medusa_httpserver_client *httpserver_client;
         (void) httpserver;
         (void) events;
         (void) context;
         (void) param;
         fprintf(stderr, "httpserver state: %d, %s events: 0x%08x, %s\n", medusa_httpserver_get_state(httpserver), medusa_httpserver_state_string(medusa_httpserver_get_state(httpserver)), events, medusa_httpserver_event_string(events));
+        if (events & MEDUSA_HTTPSERVER_EVENT_CONNECTION) {
+                rc = medusa_httpserver_accept_options_default(&httpserver_accept_options);
+                if (rc != 0) {
+                        fprintf(stderr, "can not get default accept options\n");
+                        goto bail;
+                }
+                httpserver_accept_options.onevent = httpserver_client_onevent;
+                httpserver_accept_options.context = NULL;
+                httpserver_client = medusa_httpserver_accept_with_options(httpserver, &httpserver_accept_options);
+                if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                        fprintf(stderr, "can not accept httpserver client\n");
+                        goto bail;
+                }
+                rc = medusa_httpserver_client_set_enabled(httpserver_client, 1);
+                if (rc != 0) {
+                        fprintf(stderr, "can not enable httpserver client\n");
+                        goto bail;
+                }
+        }
         return 0;
+bail:   return -1;
 }
 
 static void sigint_handler (int sig)
@@ -110,15 +185,27 @@ int main (int argc, char *argv[])
         }
 
         medusa_httpserver_init_options_default(&httpserver_init_options);
-        httpserver_init_options.address = option_address;
-        httpserver_init_options.port    = option_port;
-        httpserver_init_options.monitor = monitor;
-        httpserver_init_options.onevent = httpserver_onevent;
-        httpserver_init_options.context = NULL;
+        httpserver_init_options.address  = option_address;
+        httpserver_init_options.port     = option_port;
+        httpserver_init_options.enabled  = 0;
+        httpserver_init_options.started  = 0;
+        httpserver_init_options.monitor  = monitor;
+        httpserver_init_options.onevent  = httpserver_onevent;
+        httpserver_init_options.context  = NULL;
 
         httpserver = medusa_httpserver_create_with_options(&httpserver_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
                 fprintf(stderr, "can not create httpserver errno: %ld, %s\n", MEDUSA_PTR_ERR(httpserver), strerror(MEDUSA_PTR_ERR(httpserver)));
+                goto bail;
+        }
+        rc = medusa_httpserver_set_enabled(httpserver, 1);
+        if (rc != 0) {
+                fprintf(stderr, "can not enable httpserver\n");
+                goto bail;
+        }
+        rc = medusa_httpserver_set_started(httpserver, 1);
+        if (rc != 0) {
+                fprintf(stderr, "can not start httpserver\n");
                 goto bail;
         }
 
