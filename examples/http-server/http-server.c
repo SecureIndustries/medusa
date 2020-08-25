@@ -62,14 +62,15 @@ static int httpserver_client_onevent (struct medusa_httpserver_client *httpserve
                         goto bail;
                 }
 
-                fprintf(stderr, "method: %s\n", medusa_httpserver_client_request_get_method(httpserver_client_request));
+                fprintf(stderr, "method : %s\n", medusa_httpserver_client_request_get_method(httpserver_client_request));
+                fprintf(stderr, "url    : %s\n", medusa_httpserver_client_request_get_url(httpserver_client_request));
 
                 httpserver_client_request_headers = medusa_httpserver_client_request_get_headers(httpserver_client_request);
                 if (MEDUSA_IS_ERR_OR_NULL(httpserver_client_request_headers)) {
                         fprintf(stderr, "hettprequest reply headers is invalid\n");
                         goto bail;
                 }
-                fprintf(stderr, "headers:\n");
+                fprintf(stderr, "headers\n");
                 fprintf(stderr, "  count: %ld\n", medusa_httpserver_client_request_headers_get_count(httpserver_client_request_headers));
                 for (httpserver_client_request_header = medusa_httpserver_client_request_headers_get_first(httpserver_client_request_headers);
                      httpserver_client_request_header;

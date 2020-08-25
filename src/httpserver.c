@@ -872,6 +872,7 @@ struct medusa_httpserver_client_request_body {
 
 struct medusa_httpserver_client_request {
         char *method;
+        char *url;
         struct medusa_httpserver_client_request_headers headers;
         struct medusa_httpserver_client_request_body body;
 };
@@ -987,6 +988,24 @@ static int medusa_httpserver_client_request_set_method (struct medusa_httpserver
         return 0;
 }
 
+static int medusa_httpserver_client_request_set_url (struct medusa_httpserver_client_request *request, const char *url, int length)
+{
+        if (request == NULL) {
+                return -EINVAL;
+        }
+        if (request->url != NULL) {
+                free(request->url);
+                request->url = NULL;
+        }
+        if (length > 0) {
+                request->url = strndup(url, length);
+                if (request->url == NULL) {
+                        return -ENOMEM;
+                }
+        }
+        return 0;
+}
+
 static void medusa_httpserver_client_request_destroy (struct medusa_httpserver_client_request *request)
 {
         if (request == NULL) {
@@ -994,6 +1013,9 @@ static void medusa_httpserver_client_request_destroy (struct medusa_httpserver_c
         }
         if (request->method != NULL) {
                 free(request->method);
+        }
+        if (request->url != NULL) {
+                free(request->url);
         }
         medusa_httpserver_client_request_body_uninit(&request->body);
         medusa_httpserver_client_request_headers_uninit(&request->headers);
@@ -1031,10 +1053,12 @@ static int httpserver_client_httpparser_on_url (http_parser *http_parser, const 
 {
         int rc;
         struct medusa_httpserver_client *httpserver_client = http_parser->data;
-        (void) at;
-        (void) length;
         rc = medusa_httpserver_client_request_set_method(httpserver_client->request, http_method_str(http_parser->method));
-        if (rc != 0) {
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_httpserver_client_request_set_url(httpserver_client->request, at, length);
+        if (rc < 0) {
                 return rc;
         }
         return 0;
@@ -1508,12 +1532,20 @@ __attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_r
         return httpserver_client->request;
 }
 
-const char * medusa_httpserver_client_request_get_method (const struct medusa_httpserver_client_request *request)
+__attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_request_get_method (const struct medusa_httpserver_client_request *request)
 {
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
         return request->method;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_request_get_url (const struct medusa_httpserver_client_request *request)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return request->url;
 }
 
 __attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_request_headers * medusa_httpserver_client_request_get_headers (const struct medusa_httpserver_client_request *request)

@@ -175,6 +175,7 @@ int medusa_httpserver_client_get_enabled (const struct medusa_httpserver_client 
 const struct medusa_httpserver_client_request * medusa_httprequest_client_get_request (const struct medusa_httpserver_client *httpserver_client);
 
 const char * medusa_httpserver_client_request_get_method (const struct medusa_httpserver_client_request *request);
+const char * medusa_httpserver_client_request_get_url (const struct medusa_httpserver_client_request *request);
 
 const struct medusa_httpserver_client_request_headers * medusa_httpserver_client_request_get_headers (const struct medusa_httpserver_client_request *request);
 int64_t medusa_httpserver_client_request_headers_get_count (const struct medusa_httpserver_client_request_headers *headers);
