@@ -5,13 +5,14 @@
 struct medusa_monitor;
 struct medusa_condition_init_options;
 
+TAILQ_HEAD(medusa_conditions, medusa_condition);
+
 struct medusa_condition {
         struct medusa_subject subject;
         unsigned int flags;
         int (*onevent) (struct medusa_condition *condition, unsigned int events, void *context, void *param);
         void *context;
-        unsigned int _signalled;
-        unsigned int _position;
+        TAILQ_ENTRY(medusa_condition) _signalled;
         void *userdata;
 };
 
