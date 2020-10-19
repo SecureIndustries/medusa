@@ -70,6 +70,7 @@ extern "C"
 int medusa_clock_realtime (struct timespec *timespec);
 int medusa_clock_monotonic (struct timespec *timespec);
 int medusa_clock_monotonic_raw (struct timespec *timespec);
+int medusa_clock_monotonic_coarse (struct timespec *timespec);
 
 #ifdef __cplusplus
 }
