@@ -47,6 +47,7 @@ install: src test
 	install -m 0644 dist/include/medusa/error.h ${DESTDIR}/${prefix}/include/medusa/error.h
 	install -m 0644 dist/include/medusa/exec.h ${DESTDIR}/${prefix}/include/medusa/exec.h
 	install -m 0644 dist/include/medusa/httprequest.h ${DESTDIR}/${prefix}/include/medusa/httprequest.h
+	install -m 0644 dist/include/medusa/httpserver.h ${DESTDIR}/${prefix}/include/medusa/httpserver.h
 	install -m 0644 dist/include/medusa/io.h ${DESTDIR}/${prefix}/include/medusa/io.h
 	install -m 0644 dist/include/medusa/monitor.h ${DESTDIR}/${prefix}/include/medusa/monitor.h
 	install -m 0644 dist/include/medusa/pool.h ${DESTDIR}/${prefix}/include/medusa/pool.h

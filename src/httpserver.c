@@ -1541,7 +1541,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_r
         return request->method;
 }
 
-__attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_request_get_url (const struct medusa_httpserver_client_request *request)
+__attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_request_get_path (const struct medusa_httpserver_client_request *request)
 {
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
