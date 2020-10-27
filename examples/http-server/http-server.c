@@ -10,12 +10,18 @@
 #include <medusa/httpserver.h>
 #include <medusa/monitor.h>
 
-#define OPTIONS_DEFAULT_ADDRESS         "127.0.0.1"
-#define OPTIONS_DEFAULT_PORT            12345
+#define OPTIONS_DEFAULT_ADDRESS                 "127.0.0.1"
+#define OPTIONS_DEFAULT_PORT                    12345
+#define OPTIONS_DEFAULT_CLIENT_READ_TIMEOUT     -1
 
 #define OPTION_HELP                     'h'
 #define OPTION_ADDRESS                  'a'
 #define OPTION_PORT                     'p'
+#define OPTION_CLIENT_READ_TIMEOUT      'r'
+
+static const char *g_option_address     = OPTIONS_DEFAULT_ADDRESS;
+static int g_option_port                = OPTIONS_DEFAULT_PORT;
+static int g_option_client_read_timeout = OPTIONS_DEFAULT_CLIENT_READ_TIMEOUT;
 
 static int g_running = 0;
 
@@ -23,6 +29,7 @@ static struct option longopts[] = {
         { "help",               no_argument,            NULL,        OPTION_HELP                },
         { "address",            required_argument,      NULL,        OPTION_ADDRESS             },
         { "port",               required_argument,      NULL,        OPTION_PORT                },
+        { "client-read-timeout",required_argument,      NULL,        OPTION_CLIENT_READ_TIMEOUT },
         { NULL,                 0,                      NULL,        0                          },
 };
 
@@ -34,8 +41,9 @@ static void usage (const char *pname)
         fprintf(stdout, "  %s [options]\n", pname);
         fprintf(stdout, "\n");
         fprintf(stdout, "options:\n");
-        fprintf(stdout, "  -a, --address: address to run on (default: %s)\n", OPTIONS_DEFAULT_ADDRESS);
-        fprintf(stdout, "  -p, --port   : port to run on (default: %d)\n", OPTIONS_DEFAULT_PORT);
+        fprintf(stdout, "  -a, --address            : address to run on (default: %s)\n", OPTIONS_DEFAULT_ADDRESS);
+        fprintf(stdout, "  -p, --port               : port to run on (default: %d)\n", OPTIONS_DEFAULT_PORT);
+        fprintf(stdout, "  -r, --client-read-timeout: client read timeout in milliseconds (default: %d)\n", OPTIONS_DEFAULT_CLIENT_READ_TIMEOUT);
         fprintf(stdout, "\n");
         fprintf(stdout, "example:\n");
         fprintf(stdout, "  %s -a 127.0.0.1 -p 12345\n", pname);
@@ -102,6 +110,8 @@ static int httpserver_client_onevent (struct medusa_httpserver_client *httpserve
                         fprintf(stderr, "can not send httpserver client reply\n");
                         goto bail;
                 }
+        } else if (events & MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVE_TIMEOUT) {
+                medusa_httpserver_client_destroy(httpserver_client);
         } else if (events & MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED) {
                 medusa_httpserver_client_destroy(httpserver_client);
         }
@@ -133,6 +143,11 @@ static int httpserver_onevent (struct medusa_httpserver *httpserver, unsigned in
                         fprintf(stderr, "can not accept httpserver client\n");
                         goto bail;
                 }
+                rc = medusa_httpserver_client_set_read_timeout(httpserver_client, g_option_client_read_timeout / 1000.00);
+                if (rc != 0) {
+                        fprintf(stderr, "can not server read timeout for httpserver client\n");
+                        goto bail;
+                }
                 rc = medusa_httpserver_client_set_enabled(httpserver_client, 1);
                 if (rc != 0) {
                         fprintf(stderr, "can not enable httpserver client\n");
@@ -155,9 +170,6 @@ int main (int argc, char *argv[])
         int _argc;
         char **_argv;
 
-        const char *option_address;
-        int option_port;
-
         int rc;
         struct medusa_monitor *monitor;
 
@@ -169,8 +181,9 @@ int main (int argc, char *argv[])
 
         monitor = NULL;
 
-        option_address  = OPTIONS_DEFAULT_ADDRESS;
-        option_port     = OPTIONS_DEFAULT_PORT;
+        g_option_address             = OPTIONS_DEFAULT_ADDRESS;
+        g_option_port                = OPTIONS_DEFAULT_PORT;
+        g_option_client_read_timeout = OPTIONS_DEFAULT_CLIENT_READ_TIMEOUT;
 
         _argv = malloc(sizeof(char *) * (argc + 1));
 
@@ -178,16 +191,19 @@ int main (int argc, char *argv[])
         for (_argc = 0; _argc < argc; _argc++) {
                 _argv[_argc] = argv[_argc];
         }
-        while ((c = getopt_long(_argc, _argv, "ha:p:", longopts, NULL)) != -1) {
+        while ((c = getopt_long(_argc, _argv, "ha:p:r:", longopts, NULL)) != -1) {
                 switch (c) {
                         case OPTION_HELP:
                                 usage(argv[0]);
                                 goto out;
                         case OPTION_ADDRESS:
-                                option_address = optarg;
+                                g_option_address = optarg;
                                 break;
                         case OPTION_PORT:
-                                option_port = atoi(optarg);
+                                g_option_port = atoi(optarg);
+                                break;
+                        case OPTION_CLIENT_READ_TIMEOUT:
+                                g_option_client_read_timeout = atoi(optarg);
                                 break;
                         default:
                                 fprintf(stderr, "invalid option: %s\n", argv[optind - 1]);
@@ -202,8 +218,8 @@ int main (int argc, char *argv[])
         }
 
         medusa_httpserver_init_options_default(&httpserver_init_options);
-        httpserver_init_options.address  = option_address;
-        httpserver_init_options.port     = option_port;
+        httpserver_init_options.address  = g_option_address;
+        httpserver_init_options.port     = g_option_port;
         httpserver_init_options.enabled  = 0;
         httpserver_init_options.started  = 0;
         httpserver_init_options.monitor  = monitor;

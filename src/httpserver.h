@@ -60,14 +60,16 @@ enum {
         MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED                   = (1 <<  1),
         MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING           = (1 <<  2),
         MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED            = (1 <<  3),
-        MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE              = (1 <<  4),
-        MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED     = (1 <<  5),
-        MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED                = (1 <<  6),
-        MEDUSA_HTTPSERVER_CLIENT_EVENT_DESTROY                     = (1 <<  7)
+        MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVE_TIMEOUT     = (1 <<  4),
+        MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE              = (1 <<  5),
+        MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED     = (1 <<  6),
+        MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED                = (1 <<  7),
+        MEDUSA_HTTPSERVER_CLIENT_EVENT_DESTROY                     = (1 <<  8)
 #define MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR                       MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR
 #define MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED                   MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED
 #define MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING           MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING
 #define MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED            MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED
+#define MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVE_TIMEOUT     MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVE_TIMEOUT
 #define MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE              MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE
 #define MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED     MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED
 #define MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED                MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED
@@ -171,6 +173,9 @@ unsigned int medusa_httpserver_client_get_state (const struct medusa_httpserver_
 
 int medusa_httpserver_client_set_enabled (struct medusa_httpserver_client *httpserver_client, int enabled);
 int medusa_httpserver_client_get_enabled (const struct medusa_httpserver_client *httpserver_client);
+
+int medusa_httpserver_client_set_read_timeout (struct medusa_httpserver_client *httpserver_client, double timeout);
+double medusa_httpserver_client_get_read_timeout (const struct medusa_httpserver_client *httpserver_client);
 
 const struct medusa_httpserver_client_request * medusa_httprequest_client_get_request (const struct medusa_httpserver_client *httpserver_client);
 

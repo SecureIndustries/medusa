@@ -1253,6 +1253,12 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
                 }
                 if (httpserver_client->state == MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVED) {
                 }
+        } else if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ_TIMEOUT) {
+                rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVE_TIMEOUT, NULL);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
         } else if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE) {
                 struct medusa_tcpsocket_event_buffered_write *medusa_tcpsocket_event_buffered_write = (struct medusa_tcpsocket_event_buffered_write *) param;
                 struct medusa_httpserver_client_event_buffered_write medusa_httpserver_client_event_buffered_write;
@@ -1521,6 +1527,52 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_get_enable
         }
         medusa_monitor_lock(httpserver_client->subject.monitor);
         rc = medusa_httpserver_client_get_enabled_unlocked(httpserver_client);
+        medusa_monitor_unlock(httpserver_client->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_set_read_timeout_unlocked (struct medusa_httpserver_client *httpserver_client, double timeout)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client->tcpsocket)) {
+                return -EIO;
+        }
+        return medusa_tcpsocket_set_read_timeout_unlocked(httpserver_client->tcpsocket, timeout);        
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_set_read_timeout (struct medusa_httpserver_client *httpserver_client, double timeout)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httpserver_client->subject.monitor);
+        rc = medusa_httpserver_client_set_read_timeout_unlocked(httpserver_client, timeout);
+        medusa_monitor_unlock(httpserver_client->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) double medusa_httpserver_client_get_read_timeout_unlocked (const struct medusa_httpserver_client *httpserver_client)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client->tcpsocket)) {
+                return -EIO;
+        }
+        return medusa_tcpsocket_get_read_timeout_unlocked(httpserver_client->tcpsocket);        
+}
+
+__attribute__ ((visibility ("default"))) double medusa_httpserver_client_get_read_timeout (const struct medusa_httpserver_client *httpserver_client)
+{
+        double rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httpserver_client->subject.monitor);
+        rc = medusa_httpserver_client_get_read_timeout_unlocked(httpserver_client);
         medusa_monitor_unlock(httpserver_client->subject.monitor);
         return rc;
 }
@@ -2121,6 +2173,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_e
         if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED)                    return "MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED";
         if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING)            return "MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING";
         if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED)             return "MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED";
+        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVE_TIMEOUT)      return "MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVE_TIMEOUT";
         if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE)               return "MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE";
         if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED)      return "MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED";
         if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED)                 return "MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED";
