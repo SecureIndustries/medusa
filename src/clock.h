@@ -5,6 +5,11 @@
 struct timeval;
 struct timespec;
 
+#define medusa_time_after(a, b)         ((int64_t)(((uint64_t)(b)) - ((uint64_t)(a))) < 0)
+#define medusa_time_before(a, b)        medusa_time_after(b, a)
+#define medusa_time_after_eq(a, b)      ((int64_t)(((uint64_t)(a)) - ((uint64_t)(b))) >= 0)
+#define medusa_time_before_eq(a, b)     medusa_time_after_eq(b, a)
+
 #define medusa_timeval_isset(mts)      ((mts)->tv_sec || (mts)->tv_usec)
 #define medusa_timeval_clear(mts)      ((mts)->tv_sec = (mts)->tv_usec = 0)
 
@@ -68,8 +73,10 @@ extern "C"
 #endif
 
 int medusa_clock_realtime (struct timespec *timespec);
+int medusa_clock_realtime_coarse (struct timespec *timespec);
 int medusa_clock_monotonic (struct timespec *timespec);
 int medusa_clock_monotonic_raw (struct timespec *timespec);
+int medusa_clock_monotonic_coarse (struct timespec *timespec);
 
 #ifdef __cplusplus
 }
