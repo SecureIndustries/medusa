@@ -1,3 +1,10 @@
+medusa (1.0.4-1) unstable; urgency=low
+
+  * httpserver support
+  * clock coarse support
+
+ -- Murat Demirten <mdemirten@yh.com.tr>  Thu, 29 Oct 2020 23:17:15 +0300
+
 medusa (1.0.3-1) unstable; urgency=low
 
   * websocket server support
