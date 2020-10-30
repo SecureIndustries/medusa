@@ -103,8 +103,9 @@ static int httpserver_client_onevent (struct medusa_httpserver_client *httpserve
                 rc  = medusa_httpserver_client_reply_send_start(httpserver_client);
                 rc |= medusa_httpserver_client_reply_send_status(httpserver_client, 200, "OK");
                 rc |= medusa_httpserver_client_reply_send_header(httpserver_client, "key", "value");
+                rc |= medusa_httpserver_client_reply_send_header(httpserver_client, "Content-Length", "%d", (int) strlen("body"));
                 rc |= medusa_httpserver_client_reply_send_header(httpserver_client, NULL, NULL);
-                //rc |= medusa_httpserver_client_reply_send_bodyf(httpserver_client, "body");
+                rc |= medusa_httpserver_client_reply_send_bodyf(httpserver_client, "body");
                 rc |= medusa_httpserver_client_reply_send_finish(httpserver_client);
                 if (rc != 0) {
                         fprintf(stderr, "can not send httpserver client reply\n");
