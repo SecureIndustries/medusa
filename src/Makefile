@@ -45,7 +45,8 @@ libmedusa.a_files-y = \
 	io.c \
 	signal.c \
 	timer.c \
-	monitor.c
+	monitor.c \
+	version.c
 
 libmedusa.a_cflags-${MEDUSA_POLL_EPOLL_ENABLE} += \
 	-DMEDUSA_POLL_EPOLL_ENABLE=1
@@ -151,7 +152,8 @@ dist.include-y = \
 	exec.h \
 	queue.h \
 	sha1.h \
-	base64.h
+	base64.h \
+	version.h
 
 dist.lib-y = \
 	libmedusa.a \
