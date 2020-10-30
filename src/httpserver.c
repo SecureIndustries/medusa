@@ -1807,7 +1807,7 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send
                         return rc;
                 }
         } else {
-                rc  = medusa_buffer_printf(buffer, "%s:", key);
+                rc  = medusa_buffer_printf(buffer, "%s: ", key);
                 if (rc < 0) {
                         return rc;
                 }
@@ -1817,10 +1817,10 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send
                                 return rc;
                         }
                 }
-        }
-        rc = medusa_buffer_printf(buffer, "\r\n");
-        if (rc < 0) {
-                return rc;
+                rc = medusa_buffer_printf(buffer, "\r\n");
+                if (rc < 0) {
+                        return rc;
+                }
         }
         return 0;
 }
@@ -1915,10 +1915,6 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send
                 return -EINVAL;
         }
         rc  = medusa_buffer_vprintf(buffer, body, va);
-        if (rc < 0) {
-                return rc;
-        }
-        rc = medusa_buffer_printf(buffer, "\r\n");
         if (rc < 0) {
                 return rc;
         }
