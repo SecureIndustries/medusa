@@ -15,8 +15,8 @@ unsigned int medusa_dnsrequest_get_state_unlocked (const struct medusa_dnsreques
 int medusa_dnsrequest_set_connect_timeout_unlocked (struct medusa_dnsrequest *dnsrequest, double timeout);
 double medusa_dnsrequest_get_connect_timeout_unlocked (const struct medusa_dnsrequest *dnsrequest);
 
-int medusa_dnsrequest_set_read_timeout_unlocked (struct medusa_dnsrequest *dnsrequest, double timeout);
-double medusa_dnsrequest_get_read_timeout_unlocked (const struct medusa_dnsrequest *dnsrequest);
+int medusa_dnsrequest_set_receive_timeout_unlocked (struct medusa_dnsrequest *dnsrequest, double timeout);
+double medusa_dnsrequest_get_receive_timeout_unlocked (const struct medusa_dnsrequest *dnsrequest);
 
 int medusa_dnsrequest_set_nameserver_unlocked (struct medusa_dnsrequest *dnsrequest, const char *nameserver);
 const char * medusa_dnsrequest_get_nameserver_unlocked (struct medusa_dnsrequest *dnsrequest);
