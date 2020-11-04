@@ -29,6 +29,7 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
         (void) events;
         (void) context;
         (void) param;
+        fprintf(stderr, "events: 0x%08x %s\n", events, medusa_dnsrequest_event_string(events));
         return 0;
 }
 

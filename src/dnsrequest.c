@@ -943,11 +943,18 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
                 dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
         }
         if (events & MEDUSA_UDPSOCKET_EVENT_IN_TIMEOUT) {
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
                 rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RECEIVE_TIMEOUT, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
+        }
+        if (events & MEDUSA_UDPSOCKET_EVENT_ERROR) {
                 dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
+                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                if (rc < 0) {
+                        goto bail;
+                }
         }
 
         medusa_monitor_unlock(monitor);
