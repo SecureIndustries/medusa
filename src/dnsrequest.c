@@ -936,12 +936,18 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
                 }
 
                 dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RECEIVED);
-                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RECEIVED, NULL);
+                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RECEIVED, dnsrequest->reply);
                 if (rc < 0) {
                         goto bail;
                 }
-
-
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
+        }
+        if (events & MEDUSA_UDPSOCKET_EVENT_IN_TIMEOUT) {
+                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RECEIVE_TIMEOUT, NULL);
+                if (rc < 0) {
+                        goto bail;
+                }
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
         }
 
         medusa_monitor_unlock(monitor);
@@ -972,7 +978,7 @@ static int dnsrequest_init_with_options_unlocked (struct medusa_dnsrequest *dnsr
         dnsrequest->onevent = options->onevent;
         dnsrequest->context = options->context;
         dnsrequest->connect_timeout = -1;
-        dnsrequest->read_timeout    = -1;
+        dnsrequest->receive_timeout = -1;
         rc = medusa_monitor_add_unlocked(options->monitor, &dnsrequest->subject);
         if (rc < 0) {
                 return rc;
@@ -1224,43 +1230,50 @@ __attribute__ ((visibility ("default"))) double medusa_dnsrequest_get_connect_ti
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_read_timeout_unlocked (struct medusa_dnsrequest *dnsrequest, double timeout)
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_receive_timeout_unlocked (struct medusa_dnsrequest *dnsrequest, double timeout)
 {
+        int rc;
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
                 return -EINVAL;
         }
-        dnsrequest->read_timeout = timeout;
+        if (!MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
+                rc = medusa_udpsocket_set_read_timeout_unlocked(dnsrequest->udpsocket, timeout);
+                if (rc < 0) {
+                        return rc;
+                }
+        }
+        dnsrequest->receive_timeout = timeout;
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_read_timeout (struct medusa_dnsrequest *dnsrequest, double timeout)
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_receive_timeout (struct medusa_dnsrequest *dnsrequest, double timeout)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
                 return -EINVAL;
         }
         medusa_monitor_lock(dnsrequest->subject.monitor);
-        rc = medusa_dnsrequest_set_read_timeout_unlocked(dnsrequest, timeout);
+        rc = medusa_dnsrequest_set_receive_timeout_unlocked(dnsrequest, timeout);
         medusa_monitor_unlock(dnsrequest->subject.monitor);
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) double medusa_dnsrequest_get_read_timeout_unlocked (const struct medusa_dnsrequest *dnsrequest)
+__attribute__ ((visibility ("default"))) double medusa_dnsrequest_get_receive_timeout_unlocked (const struct medusa_dnsrequest *dnsrequest)
 {
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
                 return -EINVAL;
         }
-        return dnsrequest->read_timeout;
+        return dnsrequest->receive_timeout;
 }
 
-__attribute__ ((visibility ("default"))) double medusa_dnsrequest_get_read_timeout (const struct medusa_dnsrequest *dnsrequest)
+__attribute__ ((visibility ("default"))) double medusa_dnsrequest_get_receive_timeout (const struct medusa_dnsrequest *dnsrequest)
 {
         double rc;
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
                 return -EINVAL;
         }
         medusa_monitor_lock(dnsrequest->subject.monitor);
-        rc = medusa_dnsrequest_get_read_timeout_unlocked(dnsrequest);
+        rc = medusa_dnsrequest_get_receive_timeout_unlocked(dnsrequest);
         medusa_monitor_unlock(dnsrequest->subject.monitor);
         return rc;
 }
@@ -1612,6 +1625,12 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_lookup_unlocked (
         dnsrequest->udpsocket = medusa_udpsocket_connect_with_options_unlocked(&medusa_udpsocket_connect_options);
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
                 return MEDUSA_PTR_ERR(dnsrequest->udpsocket);
+        }
+        rc = medusa_udpsocket_set_read_timeout_unlocked(dnsrequest->udpsocket, dnsrequest->receive_timeout);
+        if (rc < 0) {
+                medusa_udpsocket_destroy_unlocked(dnsrequest->udpsocket);
+                dnsrequest->udpsocket = NULL;
+                return -EIO;
         }
 
         return 0;
@@ -2212,6 +2231,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_event_st
         if (events == MEDUSA_DNSREQUEST_EVENT_REQUESTED)        return "MEDUSA_DNSREQUEST_EVENT_REQUESTED";
         if (events == MEDUSA_DNSREQUEST_EVENT_RECEIVING)        return "MEDUSA_DNSREQUEST_EVENT_RECEIVING";
         if (events == MEDUSA_DNSREQUEST_EVENT_RECEIVED)         return "MEDUSA_DNSREQUEST_EVENT_RECEIVED";
+        if (events == MEDUSA_DNSREQUEST_EVENT_RECEIVE_TIMEOUT)  return "MEDUSA_DNSREQUEST_EVENT_RECEIVE_TIMEOUT";
         if (events == MEDUSA_DNSREQUEST_EVENT_CANCELED)         return "MEDUSA_DNSREQUEST_EVENT_CANCELED";
         if (events == MEDUSA_DNSREQUEST_EVENT_ERROR)            return "MEDUSA_DNSREQUEST_EVENT_ERROR";
         if (events == MEDUSA_DNSREQUEST_EVENT_DISCONNECTED)     return "MEDUSA_DNSREQUEST_EVENT_DISCONNECTED";

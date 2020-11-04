@@ -8,7 +8,7 @@ struct medusa_dnsrequest {
         int (*onevent) (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *context, void *param);
         void *context;
         double connect_timeout;
-        double read_timeout;
+        double receive_timeout;
         char *nameserver;
         unsigned int type;
         char *name;

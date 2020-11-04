@@ -22,10 +22,11 @@ enum {
         MEDUSA_DNSREQUEST_EVENT_REQUESTED               = (1 <<  7),
         MEDUSA_DNSREQUEST_EVENT_RECEIVING               = (1 <<  8),
         MEDUSA_DNSREQUEST_EVENT_RECEIVED                = (1 <<  9),
-        MEDUSA_DNSREQUEST_EVENT_CANCELED                = (1 << 10),
-        MEDUSA_DNSREQUEST_EVENT_ERROR                   = (1 << 11),
-        MEDUSA_DNSREQUEST_EVENT_DISCONNECTED            = (1 << 12),
-        MEDUSA_DNSREQUEST_EVENT_DESTROY                 = (1 << 13)
+        MEDUSA_DNSREQUEST_EVENT_RECEIVE_TIMEOUT         = (1 << 10),
+        MEDUSA_DNSREQUEST_EVENT_CANCELED                = (1 << 11),
+        MEDUSA_DNSREQUEST_EVENT_ERROR                   = (1 << 12),
+        MEDUSA_DNSREQUEST_EVENT_DISCONNECTED            = (1 << 13),
+        MEDUSA_DNSREQUEST_EVENT_DESTROY                 = (1 << 14)
 #define MEDUSA_DNSREQUEST_EVENT_RESOLVING               MEDUSA_DNSREQUEST_EVENT_RESOLVING
 #define MEDUSA_DNSREQUEST_EVENT_RESOLVE_TIMEOUT         MEDUSA_DNSREQUEST_EVENT_RESOLVE_TIMEOUT
 #define MEDUSA_DNSREQUEST_EVENT_RESOLVED                MEDUSA_DNSREQUEST_EVENT_RESOLVED
@@ -36,6 +37,7 @@ enum {
 #define MEDUSA_DNSREQUEST_EVENT_REQUESTED               MEDUSA_DNSREQUEST_EVENT_REQUESTED
 #define MEDUSA_DNSREQUEST_EVENT_RECEIVING               MEDUSA_DNSREQUEST_EVENT_RECEIVING
 #define MEDUSA_DNSREQUEST_EVENT_RECEIVED                MEDUSA_DNSREQUEST_EVENT_RECEIVED
+#define MEDUSA_DNSREQUEST_EVENT_RECEIVE_TIMEOUT         MEDUSA_DNSREQUEST_EVENT_RECEIVE_TIMEOUT
 #define MEDUSA_DNSREQUEST_EVENT_CANCELED                MEDUSA_DNSREQUEST_EVENT_CANCELED
 #define MEDUSA_DNSREQUEST_EVENT_ERROR                   MEDUSA_DNSREQUEST_EVENT_ERROR
 #define MEDUSA_DNSREQUEST_EVENT_DISCONNECTED            MEDUSA_DNSREQUEST_EVENT_DISCONNECTED
@@ -119,8 +121,8 @@ unsigned int medusa_dnsrequest_get_state (const struct medusa_dnsrequest *dnsreq
 int medusa_dnsrequest_set_connect_timeout (struct medusa_dnsrequest *dnsrequest, double timeout);
 double medusa_dnsrequest_get_connect_timeout (const struct medusa_dnsrequest *dnsrequest);
 
-int medusa_dnsrequest_set_read_timeout (struct medusa_dnsrequest *dnsrequest, double timeout);
-double medusa_dnsrequest_get_read_timeout (const struct medusa_dnsrequest *dnsrequest);
+int medusa_dnsrequest_set_receive_timeout (struct medusa_dnsrequest *dnsrequest, double timeout);
+double medusa_dnsrequest_get_receive_timeout (const struct medusa_dnsrequest *dnsrequest);
 
 int medusa_dnsrequest_set_nameserver (struct medusa_dnsrequest *dnsrequest, const char *nameserver);
 const char * medusa_dnsrequest_get_nameserver (struct medusa_dnsrequest *dnsrequest);
