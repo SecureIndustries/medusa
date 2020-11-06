@@ -1,3 +1,10 @@
+medusa (1.0.6-1) unstable; urgency=low
+
+  * dnsrequests timeout support
+  * version check helpers
+
+ -- Murat Demirten <mdemirten@yh.com.tr>  Fri, 06 Nov 2020 15:34:13 +0300
+
 medusa (1.0.4-1) unstable; urgency=low
 
   * httpserver support
