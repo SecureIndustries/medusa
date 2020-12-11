@@ -106,13 +106,13 @@ static void sigint_handler (int sig)
         abort();
 }
 
-int g_do_nothing_thread_running = 1;
+static int g_do_nothing_thread_running = 1;
 static void * do_nothing_thread (void *context)
 {
         (void) context;
 
         while (g_do_nothing_thread_running) {
-                sleep(1);
+                usleep(100000);
         }
 
         return NULL;
