@@ -20,13 +20,13 @@
 static const unsigned int g_polls[] = {
         MEDUSA_MONITOR_POLL_DEFAULT,
 #if defined(__LINUX__)
-//        MEDUSA_MONITOR_POLL_EPOLL,
+        MEDUSA_MONITOR_POLL_EPOLL,
 #endif
 #if defined(__APPLE__)
         MEDUSA_MONITOR_POLL_KQUEUE,
 #endif
-//        MEDUSA_MONITOR_POLL_POLL,
-//        MEDUSA_MONITOR_POLL_SELECT
+        MEDUSA_MONITOR_POLL_POLL,
+        MEDUSA_MONITOR_POLL_SELECT
 };
 
 static int signal_onevent (struct medusa_signal *signal, unsigned int events, void *context, void *param)
@@ -180,7 +180,7 @@ int main (int argc, char *argv[])
         signal(SIGINT, sigint_handler);
 
         for (i = 0; i < sizeof(g_polls) / sizeof(g_polls[0]); i++) {
-                //alarm(5);
+                alarm(5);
                 fprintf(stderr, "testing poll: %d\n", g_polls[i]);
                 rc = test_poll(g_polls[i]);
                 if (rc != 0) {

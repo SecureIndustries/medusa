@@ -32,7 +32,10 @@ static int signal_onevent (struct medusa_signal *signal, unsigned int events, vo
         (void) events;
         (void) context;
         (void) param;
-        return medusa_monitor_break(medusa_signal_get_monitor(signal));
+        if (events & MEDUSA_SIGNAL_EVENT_FIRED) {
+                return medusa_monitor_break(medusa_signal_get_monitor(signal));
+        }
+        return 0;
 }
 
 static int timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
@@ -42,8 +45,10 @@ static int timer_onevent (struct medusa_timer *timer, unsigned int events, void 
         (void) events;
         (void) context;
         (void) param;
-        pid = getpid();
-        kill(pid, SIGUSR1);
+        if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
+                pid = getpid();
+                kill(pid, SIGUSR1);
+        }
         return 0;
 }
 
