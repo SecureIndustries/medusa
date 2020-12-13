@@ -37,7 +37,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         unsigned int *cevents;
         (void) param;
         cevents = (unsigned int *) context;
-        fprintf(stderr, "client   events: 0x%08x / 0x%08x\n", events, *cevents);
+        fprintf(stderr, "client   events: 0x%08x, %s / 0x%08x\n", events, medusa_tcpsocket_event_string(events), *cevents);
         if (events & MEDUSA_TCPSOCKET_EVENT_RESOLVING) {
                 if (*cevents & MEDUSA_TCPSOCKET_EVENT_RESOLVING) {
                         fprintf(stderr, "  invalid events\n");
@@ -158,7 +158,7 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         unsigned int *levents;
         (void) param;
         levents = (unsigned int *) context;
-        fprintf(stderr, "server   events: 0x%08x / 0x%08x\n", events, *levents);
+        fprintf(stderr, "server   events: 0x%08x, %s / 0x%08x\n", events, medusa_tcpsocket_event_string(events), *levents);
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 if (*levents & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                         fprintf(stderr, "  invalid events\n");
