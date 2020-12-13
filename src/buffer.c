@@ -601,6 +601,9 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_memcmp (const struct 
         if (l < length) {
                 return -1;
         }
+        if (length == 0) {
+                return 0;
+        }
         niovecs = medusa_buffer_peekv(buffer, offset, length, NULL, 0);
         if (niovecs < 0) {
                 return niovecs;
@@ -668,7 +671,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_memmem (const str
         return -ENOENT;
 }
 
-int medusa_buffer_strcmp (const struct medusa_buffer *buffer, int64_t offset, const char *str)
+__attribute__ ((visibility ("default"))) int medusa_buffer_strcmp (const struct medusa_buffer *buffer, int64_t offset, const char *str)
 {
         int ret;
         int64_t i;
@@ -691,6 +694,9 @@ int medusa_buffer_strcmp (const struct medusa_buffer *buffer, int64_t offset, co
         }
         if (l < length) {
                 return -1;
+        }
+        if (length == 0) {
+                return 0;
         }
         niovecs = medusa_buffer_peekv(buffer, offset, length, NULL, 0);
         if (niovecs < 0) {
@@ -743,7 +749,8 @@ int medusa_buffer_strncmp (const struct medusa_buffer *buffer, int64_t offset, c
         if (MEDUSA_IS_ERR_OR_NULL(str)) {
                 return -EINVAL;
         }
-        length = n;
+        length = strlen(str);
+        length = MIN(length, n);
         l = medusa_buffer_get_length(buffer);
         if (length == 0 &&
             l == 0) {
@@ -751,6 +758,9 @@ int medusa_buffer_strncmp (const struct medusa_buffer *buffer, int64_t offset, c
         }
         if (l < length) {
                 return -1;
+        }
+        if (length == 0) {
+                return 0;
         }
         niovecs = medusa_buffer_peekv(buffer, offset, length, NULL, 0);
         if (niovecs < 0) {
@@ -812,6 +822,9 @@ int medusa_buffer_strcasecmp (const struct medusa_buffer *buffer, int64_t offset
         if (l < length) {
                 return -1;
         }
+        if (length == 0) {
+                return 0;
+        }
         niovecs = medusa_buffer_peekv(buffer, offset, length, NULL, 0);
         if (niovecs < 0) {
                 return niovecs;
@@ -863,7 +876,8 @@ int medusa_buffer_strncasecmp (const struct medusa_buffer *buffer, int64_t offse
         if (MEDUSA_IS_ERR_OR_NULL(str)) {
                 return -EINVAL;
         }
-        length = n;
+        length = strlen(str);
+        length = MIN(length, n);;
         l = medusa_buffer_get_length(buffer);
         if (length == 0 &&
             l == 0) {
@@ -871,6 +885,9 @@ int medusa_buffer_strncasecmp (const struct medusa_buffer *buffer, int64_t offse
         }
         if (l < length) {
                 return -1;
+        }
+        if (length == 0) {
+                return 0;
         }
         niovecs = medusa_buffer_peekv(buffer, offset, length, NULL, 0);
         if (niovecs < 0) {
