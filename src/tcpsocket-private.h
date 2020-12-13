@@ -25,6 +25,9 @@ int medusa_tcpsocket_get_enabled_unlocked (const struct medusa_tcpsocket *tcpsoc
 int medusa_tcpsocket_set_buffered_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_buffered_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_set_clodestroy_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled);
+int medusa_tcpsocket_get_clodestroy_unlocked (const struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_set_nonblocking_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_nonblocking_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
@@ -92,6 +95,7 @@ unsigned int medusa_tcpsocket_get_userdata_uint_unlocked (struct medusa_tcpsocke
 
 int medusa_tcpsocket_onevent_unlocked (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *param);
 int medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *param);
+
 struct medusa_monitor * medusa_tcpsocket_get_monitor_unlocked (struct medusa_tcpsocket *tcpsocket);
 
 int64_t medusa_tcpsocket_peek_unlocked  (const struct medusa_tcpsocket *tcpsocket, void *data, int64_t length);

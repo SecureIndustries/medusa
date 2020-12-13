@@ -190,6 +190,9 @@ int medusa_tcpsocket_disable (struct medusa_tcpsocket *tcpsocket);
 int medusa_tcpsocket_set_buffered (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_buffered (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_set_clodestroy (struct medusa_tcpsocket *tcpsocket, int enabled);
+int medusa_tcpsocket_get_clodestroy (const struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_set_nonblocking (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_nonblocking (const struct medusa_tcpsocket *tcpsocket);
 

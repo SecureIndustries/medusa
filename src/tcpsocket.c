@@ -61,10 +61,11 @@ enum {
         MEDUSA_TCPSOCKET_FLAG_REUSEADDR         = (1 <<  9),
         MEDUSA_TCPSOCKET_FLAG_REUSEPORT         = (1 << 10),
         MEDUSA_TCPSOCKET_FLAG_BACKLOG           = (1 << 11),
-        MEDUSA_TCPSOCKET_FLAG_SSL               = (1 << 12),
-        MEDUSA_TCPSOCKET_FLAG_SSL_CTX_EXTERNAL  = (1 << 13),
-        MEDUSA_TCPSOCKET_FLAG_SSL_EXTERNAL      = (1 << 14),
-        MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK      = (1 << 15)
+        MEDUSA_TCPSOCKET_FLAG_CLODESTROY        = (1 << 12),
+        MEDUSA_TCPSOCKET_FLAG_SSL               = (1 << 13),
+        MEDUSA_TCPSOCKET_FLAG_SSL_CTX_EXTERNAL  = (1 << 14),
+        MEDUSA_TCPSOCKET_FLAG_SSL_EXTERNAL      = (1 << 15),
+        MEDUSA_TCPSOCKET_FLAG_SSL_STATE_OK      = (1 << 16)
 #define MEDUSA_TCPSOCKET_FLAG_NONE              MEDUSA_TCPSOCKET_FLAG_NONE
 #define MEDUSA_TCPSOCKET_FLAG_BIND              MEDUSA_TCPSOCKET_FLAG_BIND
 #define MEDUSA_TCPSOCKET_FLAG_ACCEPT            MEDUSA_TCPSOCKET_FLAG_ACCEPT
@@ -77,6 +78,7 @@ enum {
 #define MEDUSA_TCPSOCKET_FLAG_REUSEADDR         MEDUSA_TCPSOCKET_FLAG_REUSEADDR
 #define MEDUSA_TCPSOCKET_FLAG_REUSEPORT         MEDUSA_TCPSOCKET_FLAG_REUSEPORT
 #define MEDUSA_TCPSOCKET_FLAG_BACKLOG           MEDUSA_TCPSOCKET_FLAG_BACKLOG
+#define MEDUSA_TCPSOCKET_FLAG_CLODESTROY        MEDUSA_TCPSOCKET_FLAG_CLODESTROY
 #define MEDUSA_TCPSOCKET_FLAG_SSL               MEDUSA_TCPSOCKET_FLAG_SSL
 #define MEDUSA_TCPSOCKET_FLAG_SSL_CTX_EXTERNAL  MEDUSA_TCPSOCKET_FLAG_SSL_CTX_EXTERNAL
 #define MEDUSA_TCPSOCKET_FLAG_SSL_EXTERNAL      MEDUSA_TCPSOCKET_FLAG_SSL_EXTERNAL
@@ -979,6 +981,11 @@ ipv6:
                 ret = rc;
                 goto bail;
         }
+        rc = medusa_tcpsocket_set_clodestroy_unlocked(tcpsocket, options->clodestroy);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
         rc = medusa_tcpsocket_set_enabled_unlocked(tcpsocket, options->enabled);
         if (rc < 0) {
                 ret = rc;
@@ -1162,6 +1169,11 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 goto bail;
         }
         rc = medusa_tcpsocket_set_buffered_unlocked(accepted, options->buffered);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_clodestroy_unlocked(accepted, options->clodestroy);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
@@ -1557,6 +1569,11 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 ret = rc;
                 goto bail;
         }
+        rc = medusa_tcpsocket_set_clodestroy_unlocked(tcpsocket, options->clodestroy);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
         rc = medusa_tcpsocket_set_enabled_unlocked(tcpsocket, options->enabled);
         if (rc < 0) {
                 ret = rc;
@@ -1718,6 +1735,11 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 goto bail;
         }
         rc = medusa_tcpsocket_set_buffered_unlocked(tcpsocket, options->buffered);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_clodestroy_unlocked(tcpsocket, options->clodestroy);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
@@ -2038,6 +2060,58 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_buffered (cons
         }
         medusa_monitor_lock(tcpsocket->subject.monitor);
         rc = medusa_tcpsocket_get_buffered_unlocked(tcpsocket);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_clodestroy_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (enabled) {
+                tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_CLODESTROY);
+        } else {
+                tcpsocket_del_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_CLODESTROY);
+        }
+        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
+                int rc;
+                rc = medusa_io_set_clodestroy_unlocked(tcpsocket->io, enabled);
+                if (rc != 0) {
+                        return rc;
+                }
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_clodestroy (struct medusa_tcpsocket *tcpsocket, int enabled)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_set_clodestroy_unlocked(tcpsocket, enabled);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_clodestroy_unlocked (const struct medusa_tcpsocket *tcpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        return tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_CLODESTROY);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_clodestroy (const struct medusa_tcpsocket *tcpsocket)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_get_clodestroy_unlocked(tcpsocket);
         medusa_monitor_unlock(tcpsocket->subject.monitor);
         return rc;
 }
