@@ -195,14 +195,21 @@ struct medusa_signal_backend * medusa_signal_sigaction_create (const struct medu
         int rc;
         struct internal *internal;
         (void) options;
+        pthread_mutex_lock(&g_signal_handler_wakeup_mutex);
+        if (g_signal_handler_wakeup_write_fd != -1) {
+                pthread_mutex_unlock(&g_signal_handler_wakeup_mutex);
+                return MEDUSA_ERR_PTR(-EALREADY);
+        }
         internal = (struct internal *) malloc(sizeof(struct internal));
         if (internal == NULL) {
+                pthread_mutex_unlock(&g_signal_handler_wakeup_mutex);
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
         memset(internal, 0, sizeof(struct internal));
         TAILQ_INIT(&internal->entries);
         rc = pipe(internal->sfd);
         if (rc < 0) {
+                pthread_mutex_unlock(&g_signal_handler_wakeup_mutex);
                 internal_destroy(&internal->backend);
                 return MEDUSA_ERR_PTR(-errno);
         }
@@ -212,5 +219,7 @@ struct medusa_signal_backend * medusa_signal_sigaction_create (const struct medu
         internal->backend.del     = internal_del;
         internal->backend.run     = internal_run;
         internal->backend.destroy = internal_destroy;
+        g_signal_handler_wakeup_write_fd = internal->sfd[1];
+        pthread_mutex_unlock(&g_signal_handler_wakeup_mutex);
         return &internal->backend;
 }

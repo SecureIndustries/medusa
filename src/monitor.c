@@ -797,6 +797,11 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_add_unlocked (struct
         if (!MEDUSA_IS_ERR_OR_NULL(subject->monitor)) {
                 return -EALREADY;
         }
+        if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_SIGNAL) {
+                if (MEDUSA_IS_ERR_OR_NULL(monitor->signal.backend)) {
+                        return -ENOENT;
+                }
+        }
         TAILQ_INSERT_TAIL(&monitor->changes, subject, list);
         subject->monitor = monitor;
         subject->flags |= MEDUSA_SUBJECT_FLAG_MOD;
@@ -1145,10 +1150,12 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         } else {
                 goto bail;
         }
-        if (monitor->signal.backend == NULL) {
-                goto bail;
+        if (MEDUSA_IS_ERR_OR_NULL(monitor->signal.backend)) {
+                if (!MEDUSA_IS_ERR(monitor->signal.backend) ||
+                    (MEDUSA_PTR_ERR(monitor->signal.backend) != -EALREADY)) {
+                        goto bail;
+                }
         }
-        monitor->signal.backend->monitor = monitor;
         TAILQ_INIT(&monitor->condition.signalled);
         rc = pipe(monitor->wakeup.fds);
         if (rc != 0) {
@@ -1186,17 +1193,20 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         if (rc < 0) {
                 goto bail;
         }
-        monitor->signal.io = medusa_io_create(monitor, monitor->signal.backend->fd(monitor->signal.backend), monitor_signal_io_onevent, monitor);
-        if (MEDUSA_IS_ERR_OR_NULL(monitor->signal.io)) {
-                goto bail;
-        }
-        rc = medusa_io_set_events(monitor->signal.io, MEDUSA_IO_EVENT_IN);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_io_set_enabled(monitor->signal.io, 1);
-        if (rc < 0) {
-                goto bail;
+        if (!MEDUSA_IS_ERR_OR_NULL(monitor->signal.backend)) {
+                monitor->signal.backend->monitor = monitor;
+                monitor->signal.io = medusa_io_create(monitor, monitor->signal.backend->fd(monitor->signal.backend), monitor_signal_io_onevent, monitor);
+                if (MEDUSA_IS_ERR_OR_NULL(monitor->signal.io)) {
+                        goto bail;
+                }
+                rc = medusa_io_set_events(monitor->signal.io, MEDUSA_IO_EVENT_IN);
+                if (rc < 0) {
+                        goto bail;
+                }
+                rc = medusa_io_set_enabled(monitor->signal.io, 1);
+                if (rc < 0) {
+                        goto bail;
+                }
         }
         monitor->onevent.callback = options->onevent.callback;
         monitor->onevent.context  = options->onevent.context;
@@ -1340,7 +1350,7 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
         if (monitor->poll.backend != NULL) {
                 monitor->poll.backend->destroy(monitor->poll.backend);
         }
-        if (monitor->signal.backend != NULL) {
+        if (!MEDUSA_IS_ERR_OR_NULL(monitor->signal.backend)) {
                 monitor->signal.backend->destroy(monitor->signal.backend);
         }
         if (monitor->timer.backend != NULL) {
