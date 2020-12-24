@@ -809,6 +809,9 @@ __attribute__ ((visibility ("default"))) int medusa_timer_set_enabled_unlocked (
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 return -EINVAL;
         }
+        if (!!medusa_timer_get_enabled_unlocked(timer) == !!enabled) {
+                return 0;
+        }
         rc = timer_set_enabled(timer, enabled);
         if (rc < 0) {
                 return rc;
