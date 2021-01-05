@@ -1280,6 +1280,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_connect_options_de
         }
         memset(options, 0, sizeof(struct medusa_tcpsocket_connect_options));
         options->protocol   = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
+        options->sprotocol  = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
         options->timeout    = -1;
         options->fd         = -1;
         options->reuseaddr  = 1;
@@ -1444,21 +1445,96 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                                 goto bail;
                         }
                 }
-                if (options->sport > 0) {
+                if (options->sport > 0 ||
+                    options->saddress != NULL) {
+                        unsigned int sprotocol;
+                        const char *saddress;
+                        unsigned short sport;
+
                         struct sockaddr_storage bind_sockaddr;
-                        if (res->ai_family == AF_INET) {
+
+                        sprotocol = options->sprotocol;
+                        saddress  = options->saddress;
+                        sport     = options->sport;
+
+                        if (sprotocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV4) {
                                 struct sockaddr_in *bind_sockaddr_in;
+bind_ipv4:
                                 bind_sockaddr_in = (struct sockaddr_in *) &bind_sockaddr;
-                                bind_sockaddr_in->sin_family      = AF_INET;
-                                bind_sockaddr_in->sin_addr.s_addr = INADDR_ANY;
-                                bind_sockaddr_in->sin_port        = htons(options->sport);
-                        } else if (res->ai_family == AF_INET6) {
+                                bind_sockaddr_in->sin_family = AF_INET;
+                                if (saddress == NULL) {
+                                        saddress = "0.0.0.0";
+                                } else if (strcmp(saddress, "localhost") == 0) {
+                                        saddress = "127.0.0.1";
+                                } else if (strcmp(saddress, "loopback") == 0) {
+                                        saddress = "127.0.0.1";
+                                }
+                                rc = inet_pton(AF_INET, saddress, &bind_sockaddr_in->sin_addr);
+                                if (rc == 0) {
+                                        ret = -EINVAL;
+                                        if (options->fd < 0 ||
+                                            options->clodestroy == 1) {
+                                                close(fd);
+                                        }
+                                        goto bail;
+                                } else if (rc < 0) {
+                                        ret = -EINVAL;
+                                        if (options->fd < 0 ||
+                                            options->clodestroy == 1) {
+                                                close(fd);
+                                        }
+                                        goto bail;
+                                }
+                                bind_sockaddr_in->sin_port = htons(sport);
+                        } else if (sprotocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV6) {
                                 struct sockaddr_in6 *bind_sockaddr_in6;
+bind_ipv6:
                                 bind_sockaddr_in6 = (struct sockaddr_in6 *) &bind_sockaddr;
                                 bind_sockaddr_in6->sin6_family = AF_INET6;
-                                bind_sockaddr_in6->sin6_addr   = in6addr_any;
-                                bind_sockaddr_in6->sin6_port   = htons(options->sport);
+                                if (saddress == NULL) {
+                                        saddress = "0.0.0.0";
+                                } else if (strcmp(saddress, "localhost") == 0) {
+                                        saddress = "::1";
+                                } else if (strcmp(saddress, "loopback") == 0) {
+                                        saddress = "::1";
+                                }
+                                rc = inet_pton(AF_INET6, saddress, &bind_sockaddr_in6->sin6_addr);
+                                if (rc == 0) {
+                                        ret = -EINVAL;
+                                        if (options->fd < 0 ||
+                                            options->clodestroy == 1) {
+                                                close(fd);
+                                        }
+                                        goto bail;
+                                } else if (rc < 0) {
+                                        ret = -EINVAL;
+                                        if (options->fd < 0 ||
+                                            options->clodestroy == 1) {
+                                                close(fd);
+                                        }
+                                        goto bail;
+                                }
+                                bind_sockaddr_in6->sin6_port = htons(sport);
+                        } else if (saddress == NULL) {
+                                saddress = "0.0.0.0";
+                                goto bind_ipv4;
+                        } else if (strcmp(saddress, "localhost") == 0) {
+                                saddress = "127.0.0.1";
+                                goto bind_ipv4;
+                        } else if (strcmp(saddress, "loopback") == 0) {
+                                saddress = "127.0.0.1";
+                                goto bind_ipv4;
                         } else {
+                                struct sockaddr_in bind_sockaddr_in;
+                                struct sockaddr_in6 bind_sockaddr_in6;
+                                rc = inet_pton(AF_INET, saddress, &bind_sockaddr_in.sin_addr);
+                                if (rc > 0) {
+                                        goto bind_ipv4;
+                                }
+                                rc = inet_pton(AF_INET6, saddress, &bind_sockaddr_in6.sin6_addr);
+                                if (rc > 0) {
+                                        goto bind_ipv6;
+                                }
                                 ret = -EINVAL;
                                 if (options->fd < 0 ||
                                     options->clodestroy == 1) {
@@ -1466,6 +1542,7 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                                 }
                                 goto bail;
                         }
+
                         if (options->reuseaddr != 0) {
                                 int on;
                                 on = 1;
