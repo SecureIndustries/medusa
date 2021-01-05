@@ -125,6 +125,8 @@ struct medusa_tcpsocket_connect_options {
         unsigned int protocol;
         const char *address;
         unsigned short port;
+        unsigned int sprotocol;
+        const char *saddress;
         unsigned short sport;
         double timeout;
         int fd;
