@@ -234,7 +234,12 @@ static int udpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                 } else {
                         goto bail;
                 }
-        } else if (events & (MEDUSA_IO_EVENT_ERR | MEDUSA_IO_EVENT_HUP)) {
+        } else if (events & MEDUSA_IO_EVENT_ERR) {
+                rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_ERROR, NULL);
+                if (rc < 0) {
+                        goto bail;
+                }
+        } else if (events & MEDUSA_IO_EVENT_HUP) {
                 rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_DISCONNECTED);
                 if (rc < 0) {
                         goto bail;
