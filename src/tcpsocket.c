@@ -658,7 +658,12 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                 } else {
                         goto bail;
                 }
-        } else if (events & (MEDUSA_IO_EVENT_ERR | MEDUSA_IO_EVENT_HUP)) {
+        } else if (events & MEDUSA_IO_EVENT_ERR) {
+                rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR, NULL);
+                if (rc < 0) {
+                        goto bail;
+                }
+        } else if (events & MEDUSA_IO_EVENT_HUP) {
                 rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
                 if (rc < 0) {
                         goto bail;
