@@ -7,6 +7,10 @@ MEDUSA_BUILD_EXAMPLES 		?= n
 
 MEDUSA_TCPSOCKET_OPENSSL_ENABLE ?= y
 
+MEDUSA_LIBMEDUSA_TARGET_A	?= y
+MEDUSA_LIBMEDUSA_TARGET_O	?= y
+MEDUSA_LIBMEDUSA_TARGET_SO	?= y
+
 prefix	?= /usr/local
 
 subdir-y = \
@@ -21,6 +25,9 @@ subdir-${MEDUSA_BUILD_EXAMPLES} += \
 src_makeflags-y = \
 	MEDUSA_VERSION=${MEDUSA_VERSION} \
 	MEDUSA_SONAME=${MEDUSA_SONAME} \
+	MEDUSA_LIBMEDUSA_TARGET_A=${MEDUSA_LIBMEDUSA_TARGET_A} \
+	MEDUSA_LIBMEDUSA_TARGET_O=${MEDUSA_LIBMEDUSA_TARGET_O} \
+	MEDUSA_LIBMEDUSA_TARGET_SO=${MEDUSA_LIBMEDUSA_TARGET_SO} \
 	MEDUSA_TCPSOCKET_OPENSSL_ENABLE=${MEDUSA_TCPSOCKET_OPENSSL_ENABLE}
 
 test_depends-y = \
@@ -59,19 +66,24 @@ install: src test
 	install -m 0644 dist/include/medusa/timer.h ${DESTDIR}/${prefix}/include/medusa/timer.h
 	install -m 0644 dist/include/medusa/dnsrequest.h ${DESTDIR}/${prefix}/include/medusa/dnsrequest.h
 	install -m 0644 dist/include/medusa/websocketserver.h ${DESTDIR}/${prefix}/include/medusa/websocketserver.h
-	
+
+ifeq (${MEDUSA_LIBMEDUSA_TARGET_SO}, y)
 	install -d ${DESTDIR}/${prefix}/lib
 	install -m 0755 dist/lib/libmedusa.so.${MEDUSA_SONAME} ${DESTDIR}/${prefix}/lib/
 	ln -sf libmedusa.so.${MEDUSA_SONAME} ${DESTDIR}/${prefix}/lib/libmedusa.so.${MEDUSA_VERSION}
+endif
+ifeq (${MEDUSA_LIBMEDUSA_TARGET_A}, y)
+	install -d ${DESTDIR}/${prefix}/lib
 	install -m 0644 dist/lib/libmedusa.a ${DESTDIR}/${prefix}/lib/
+endif
 
 	install -d ${DESTDIR}/${prefix}/lib/pkgconfig
 	sed 's?'prefix=/usr/local'?'prefix=${DESTDIR}/${prefix}'?g' libmedusa.pc > ${DESTDIR}/${prefix}/lib/pkgconfig/libmedusa.pc
 
 uninstall:
 	rm -rf ${DESTDIR}/${prefix}/include/medusa
-	
+
 	rm -f ${DESTDIR}/${prefix}/lib/libmedusa.so*
 	rm -f ${DESTDIR}/${prefix}/lib/libmedusa.a
-	
+
 	rm -f ${DESTDIR}/${prefix}/lib/pkgconfig/libmedusa.pc

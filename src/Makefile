@@ -1,4 +1,8 @@
 
+MEDUSA_LIBMEDUSA_TARGET_A	?= y
+MEDUSA_LIBMEDUSA_TARGET_O	?= y
+MEDUSA_LIBMEDUSA_TARGET_SO	?= y
+
 ifeq ($(__LINUX__), y)
 MEDUSA_POLL_EPOLL_ENABLE     	?= y
 endif
@@ -19,13 +23,13 @@ endif
 
 MEDUSA_TCPSOCKET_OPENSSL_ENABLE ?= y
 
-target.a-y = \
+target.a-${MEDUSA_LIBMEDUSA_TARGET_A} = \
 	libmedusa.a \
 
-target.o-y = \
+target.o-${MEDUSA_LIBMEDUSA_TARGET_O} = \
 	libmedusa.o \
 
-target.so-y = \
+target.so-${MEDUSA_LIBMEDUSA_TARGET_SO} = \
 	libmedusa.so.${MEDUSA_SONAME} \
 
 libmedusa.a_cflags-y = \
@@ -155,8 +159,13 @@ dist.include-y = \
 	base64.h \
 	version.h
 
-dist.lib-y = \
-	libmedusa.a \
-	libmedusa.so.${MEDUSA_SONAME} \
+dist.obj-${MEDUSA_LIBMEDUSA_TARGET_O} += \
+	libmedusa.o
+
+dist.lib-${MEDUSA_LIBMEDUSA_TARGET_A} += \
+	libmedusa.a
+
+dist.lib-${MEDUSA_LIBMEDUSA_TARGET_SO} += \
+	libmedusa.so.${MEDUSA_SONAME}
 
 include ../Makefile.lib
