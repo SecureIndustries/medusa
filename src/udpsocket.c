@@ -1587,7 +1587,7 @@ __attribute__ ((visibility ("default"))) double medusa_udpsocket_get_read_timeou
                 return -EINVAL;
         }
         medusa_monitor_lock(udpsocket->subject.monitor);
-        rc = medusa_udpsocket_get_read_timeout(udpsocket);
+        rc = medusa_udpsocket_get_read_timeout_unlocked(udpsocket);
         medusa_monitor_unlock(udpsocket->subject.monitor);
         return rc;
 }
