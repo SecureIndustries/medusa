@@ -104,6 +104,18 @@ libmedusa.a_files-y += \
 	../3rdparty/SPCDNS/src/mappings.c \
 	../3rdparty/SPCDNS/src/output.c
 
+libmedusa.a_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
+	-Wno-error=unused-but-set-variable \
+	-Wno-unused-but-set-variable
+
+libmedusa.o_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
+	-Wno-error=unused-but-set-variable \
+	-Wno-unused-but-set-variable
+
+libmedusa.so_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
+	-Wno-error=unused-but-set-variable \
+	-Wno-unused-but-set-variable
+
 libmedusa.a_files-y += \
 	httpserver.c \
 	../3rdparty/http-parser/http_parser.c
