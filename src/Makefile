@@ -112,7 +112,7 @@ libmedusa.o_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
 	-Wno-error=unused-but-set-variable \
 	-Wno-unused-but-set-variable
 
-libmedusa.so_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
+libmedusa.so.${MEDUSA_SONAME}_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
 	-Wno-error=unused-but-set-variable \
 	-Wno-unused-but-set-variable
 
