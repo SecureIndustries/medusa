@@ -1150,6 +1150,11 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 }
                 olen += rlen;
         }
+        rc = medusa_tcpsocket_printf_unlocked(httprequest->tcpsocket, "Connection: close");
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
         rc = medusa_tcpsocket_printf_unlocked(httprequest->tcpsocket, "Content-Length: %" PRIi64 "\r\n", length);
         if (rc < 0) {
                 ret = rc;
