@@ -279,7 +279,7 @@ static int test_poll (unsigned int poll)
                 tcpsocket_bind_options.address     = "127.0.0.1";
                 tcpsocket_bind_options.port        = port;
                 tcpsocket_bind_options.reuseaddr   = 1;
-                tcpsocket_bind_options.reuseport   = 1;
+                tcpsocket_bind_options.reuseport   = 0;
                 tcpsocket_bind_options.backlog     = 10;
                 tcpsocket_bind_options.nonblocking = 1;
                 tcpsocket_bind_options.nodelay     = 0;

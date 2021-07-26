@@ -113,10 +113,16 @@ static int httprequest_onevent (struct medusa_httprequest *httprequest, unsigned
 
                 medusa_monitor_break(medusa_httprequest_get_monitor(httprequest));
         }
+        if (events & MEDUSA_HTTPREQUEST_EVENT_RECEIVE_TIMEOUT) {
+                medusa_httprequest_destroy(httprequest);
+        }
         if (events & MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED) {
                 medusa_monitor_break(medusa_httprequest_get_monitor(httprequest));
         }
         if (events & MEDUSA_HTTPREQUEST_EVENT_ERROR) {
+                medusa_monitor_break(medusa_httprequest_get_monitor(httprequest));
+        }
+        if (events & MEDUSA_HTTPREQUEST_EVENT_DESTROY) {
                 medusa_monitor_break(medusa_httprequest_get_monitor(httprequest));
         }
         return 0;

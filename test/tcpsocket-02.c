@@ -34,7 +34,7 @@ static int tcpsocket_bind_onevent (struct medusa_tcpsocket *tcpsocket, unsigned 
         (void) events;
         (void) context;
         (void) param;
-        fprintf(stderr, "bind    events: 0x%08x\n", events);
+        fprintf(stderr, "bind    events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
                 return medusa_monitor_break(medusa_tcpsocket_get_monitor(tcpsocket));
         }
@@ -47,7 +47,7 @@ static int tcpsocket_connect_onevent (struct medusa_tcpsocket *tcpsocket, unsign
         (void) events;
         (void) context;
         (void) param;
-        fprintf(stderr, "connect events: 0x%08x\n", events);
+        fprintf(stderr, "connect events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
         return 0;
 }
 
@@ -93,7 +93,7 @@ static int test_poll (unsigned int poll)
                 tcpsocket_bind_options.address     = "127.0.0.1";
                 tcpsocket_bind_options.port        = port;
                 tcpsocket_bind_options.reuseaddr   = 1;
-                tcpsocket_bind_options.reuseport   = 1;
+                tcpsocket_bind_options.reuseport   = 0;
                 tcpsocket_bind_options.backlog     = 128;
                 tcpsocket_bind_options.nonblocking = 1;
                 tcpsocket_bind_options.nodelay     = 0;

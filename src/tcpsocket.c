@@ -602,6 +602,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                 if (errno == EINTR ||
                                                     errno == EAGAIN ||
                                                     errno == EWOULDBLOCK) {
+                                                        break;
                                                 } else {
                                                         rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_DISCONNECTED);
                                                         if (rc < 0) {
@@ -652,7 +653,10 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                         goto bail;
                                                 }
                                         }
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
+#else
                                         break;
+#endif
                                  }
                         }
                 } else {

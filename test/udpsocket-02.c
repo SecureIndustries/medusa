@@ -99,7 +99,7 @@ static int test_poll (unsigned int poll)
                 udpsocket_bind_options.address     = "127.0.0.1";
                 udpsocket_bind_options.port        = port;
                 udpsocket_bind_options.reuseaddr   = 1;
-                udpsocket_bind_options.reuseport   = 1;
+                udpsocket_bind_options.reuseport   = 0;
                 udpsocket_bind_options.nonblocking = 1;
                 udpsocket_bind_options.enabled     = 1;
 

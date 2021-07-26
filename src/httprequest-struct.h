@@ -9,8 +9,6 @@ struct medusa_httprequest {
         void *context;
         char *method;
         struct medusa_buffer *headers;
-        struct medusa_buffer *wbuffer;
-        struct medusa_buffer *rbuffer;
         struct medusa_tcpsocket *tcpsocket;
         double connect_timeout;
         double read_timeout;

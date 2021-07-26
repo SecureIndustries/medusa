@@ -307,7 +307,7 @@ static struct server * server_create (struct medusa_monitor *monitor, const char
                 tcpsocket_bind_options.address     = host;
                 tcpsocket_bind_options.port        = port;
                 tcpsocket_bind_options.reuseaddr   = 1;
-                tcpsocket_bind_options.reuseport   = 1;
+                tcpsocket_bind_options.reuseport   = 0;
                 tcpsocket_bind_options.backlog     = 10;
                 tcpsocket_bind_options.nonblocking = 1;
                 tcpsocket_bind_options.nodelay     = 1;
