@@ -580,6 +580,9 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                         } else if (error == SSL_ERROR_SYSCALL) {
                                                                 rlength = -1;
                                                                 errno = EIO;
+                                                        } else if (error == SSL_ERROR_ZERO_RETURN) {
+                                                                rlength = 0;
+                                                                errno = 0;
                                                         } else {
                                                                 rlength = -1;
                                                                 errno = EIO;
