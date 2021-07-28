@@ -101,6 +101,7 @@ struct medusa_monitor * medusa_tcpsocket_get_monitor_unlocked (struct medusa_tcp
 int64_t medusa_tcpsocket_peek_unlocked  (const struct medusa_tcpsocket *tcpsocket, void *data, int64_t length);
 int64_t medusa_tcpsocket_read_unlocked  (struct medusa_tcpsocket *tcpsocket, void *data, int64_t length);
 int64_t medusa_tcpsocket_write_unlocked (struct medusa_tcpsocket *tcpsocket, const void *data, int64_t length);
+int64_t medusa_tcpsocket_writev_unlocked  (struct medusa_tcpsocket *tcpsocket, const struct iovec *iovecs, int64_t niovecs);
 int64_t medusa_tcpsocket_printf_unlocked (struct medusa_tcpsocket *tcpsocket, const char *format, ...)  __attribute__((format(printf, 2, 3)));
 int64_t medusa_tcpsocket_vprintf_unlocked (struct medusa_tcpsocket *tcpsocket, const char *format, va_list va);
 
