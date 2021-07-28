@@ -1150,7 +1150,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 for (rlen = 0, i = 0; i < niovecs; i++) {
                         rlen += iovecs[i].iov_len;
                 }
-                wlen = medusa_tcpsocket_write_unlocked(httprequest->tcpsocket, iovecs, niovecs);
+                wlen = medusa_tcpsocket_writev_unlocked(httprequest->tcpsocket, iovecs, niovecs);
                 if (wlen < 0) {
                         goto bail;
                 }
@@ -1159,7 +1159,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 }
                 olen += rlen;
         }
-        rc = medusa_tcpsocket_printf_unlocked(httprequest->tcpsocket, "Connection: close");
+        rc = medusa_tcpsocket_printf_unlocked(httprequest->tcpsocket, "Connection: close\r\n");
         if (rc < 0) {
                 ret = rc;
                 goto bail;
