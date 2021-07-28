@@ -155,9 +155,18 @@ static int medusa_httprequest_reply_header_set_key (struct medusa_httprequest_re
         if (length <= 0) {
                 return -EINVAL;
         }
-        header->key = strndup(key, length);
-        if (header->key == NULL) {
-                return -ENOMEM;
+        if (header->key != NULL) {
+                char *tmp = realloc(header->key, strlen(header->key) + length + 1);
+                if (tmp == NULL) {
+                        return -ENOMEM;
+                }
+                header->key = tmp;
+                strncat(header->key, key, length);
+        } else {
+                header->key = strndup(key, length);
+                if (header->key == NULL) {
+                        return -ENOMEM;
+                }
         }
         return 0;
 }
