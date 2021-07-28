@@ -56,6 +56,9 @@ struct medusa_buffer * medusa_websocketserver_client_get_write_buffer_unlocked (
 
 int64_t medusa_websocketserver_client_write_unlocked (struct medusa_websocketserver_client *websocketserver_client, unsigned int final, unsigned int type, const void *data, int64_t length);
 
+int medusa_websocketserver_client_get_sockname_unlocked (struct medusa_websocketserver_client *websocketserver_client, struct sockaddr_storage *sockaddr);
+int medusa_websocketserver_client_get_peername_unlocked (struct medusa_websocketserver_client *websocketserver_client, struct sockaddr_storage *sockaddr);
+
 int medusa_websocketserver_client_set_context_unlocked (struct medusa_websocketserver_client *websocketserver_client, void *context);
 void * medusa_websocketserver_client_get_context_unlocked (struct medusa_websocketserver_client *websocketserver_client);
 

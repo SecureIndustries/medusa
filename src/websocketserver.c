@@ -1237,7 +1237,7 @@ restart_buffer:
                                         if (rlength < websocketserver_client->frame_payload_offset + websocketserver_client->frame_payload_length) {
                                                 goto short_buffer;
                                         }
-                                        
+
                                         payload = medusa_buffer_linearize(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), websocketserver_client->frame_payload_offset, websocketserver_client->frame_payload_length);
                                         if (MEDUSA_IS_ERR_OR_NULL(payload)) {
                                                 error = MEDUSA_PTR_ERR(payload);
@@ -1257,7 +1257,7 @@ restart_buffer:
                                                         payload[i] = payload[i] ^ mask[i & 3];
                                                 }
                                         }
-                                        
+
                                         websocketserver_client->frame_state = MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_STATE_FINISH;
                                         FALL_THROUGH;
                                 }
@@ -1320,7 +1320,7 @@ restart_buffer:
                                         goto restart_buffer;
                                 }
                         }
-short_buffer: 
+short_buffer:
                         ;
 
                 }
@@ -1722,6 +1722,130 @@ __attribute__ ((visibility ("default"))) int64_t medusa_websocketserver_client_w
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_client_get_sockname_unlocked (struct medusa_websocketserver_client *websocketserver_client, struct sockaddr_storage *sockaddr)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return -EINVAL;
+        }
+        if (sockaddr == NULL) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client->tcpsocket)) {
+                return -EINVAL;
+        }
+        rc = medusa_tcpsocket_get_sockname_unlocked(websocketserver_client->tcpsocket, sockaddr);
+        if (rc < 0) {
+                return rc;
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_client_get_sockname (struct medusa_websocketserver_client *websocketserver_client, struct sockaddr_storage *sockaddr)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(websocketserver_client->subject.monitor);
+        rc = medusa_websocketserver_client_get_sockname_unlocked(websocketserver_client, sockaddr);
+        medusa_monitor_unlock(websocketserver_client->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_client_get_peername_unlocked (struct medusa_websocketserver_client *websocketserver_client, struct sockaddr_storage *sockaddr)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return -EINVAL;
+        }
+        if (sockaddr == NULL) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client->tcpsocket)) {
+                return -EINVAL;
+        }
+        rc = medusa_tcpsocket_get_peername_unlocked(websocketserver_client->tcpsocket, sockaddr);
+        if (rc < 0) {
+                return rc;
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_client_get_peername (struct medusa_websocketserver_client *websocketserver_client, struct sockaddr_storage *sockaddr)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(websocketserver_client->subject.monitor);
+        rc = medusa_websocketserver_client_get_peername_unlocked(websocketserver_client, sockaddr);
+        medusa_monitor_unlock(websocketserver_client->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_client_get_sockname_unlocked (struct medusa_websocketserver_client *websocketserver_client, struct sockaddr_storage *sockaddr)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return -EINVAL;
+        }
+        if (sockaddr == NULL) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client->tcpsocket)) {
+                return -EINVAL;
+        }
+        rc = medusa_tcpsocket_get_sockname_unlocked(websocketserver_client->tcpsocket, sockaddr);
+        if (rc < 0) {
+                return rc;
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_client_get_sockname (struct medusa_websocketserver_client *websocketserver_client, struct sockaddr_storage *sockaddr)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(websocketserver_client->subject.monitor);
+        rc = medusa_websocketserver_client_get_sockname_unlocked(websocketserver_client, sockaddr);
+        medusa_monitor_unlock(websocketserver_client->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_client_get_peername_unlocked (struct medusa_websocketserver_client *websocketserver_client, struct sockaddr_storage *sockaddr)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return -EINVAL;
+        }
+        if (sockaddr == NULL) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client->tcpsocket)) {
+                return -EINVAL;
+        }
+        rc = medusa_tcpsocket_get_peername_unlocked(websocketserver_client->tcpsocket, sockaddr);
+        if (rc < 0) {
+                return rc;
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_client_get_peername (struct medusa_websocketserver_client *websocketserver_client, struct sockaddr_storage *sockaddr)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(websocketserver_client->subject.monitor);
+        rc = medusa_websocketserver_client_get_peername_unlocked(websocketserver_client, sockaddr);
+        medusa_monitor_unlock(websocketserver_client->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_websocketserver_client_set_context_unlocked (struct medusa_websocketserver_client *websocketserver_client, void *context)
 {
         if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
@@ -1897,7 +2021,7 @@ __attribute__ ((visibility ("default"))) int medusa_websocketserver_client_oneve
                 }
                 if (!MEDUSA_IS_ERR_OR_NULL(websocketserver_client->tcpsocket)) {
                         medusa_tcpsocket_destroy_unlocked(websocketserver_client->tcpsocket);
-                        websocketserver_client->tcpsocket = NULL;       
+                        websocketserver_client->tcpsocket = NULL;
                 }
                 if (websocketserver_client->websocketserver != NULL) {
                         TAILQ_REMOVE(&websocketserver_client->websocketserver->clients, websocketserver_client, list);
