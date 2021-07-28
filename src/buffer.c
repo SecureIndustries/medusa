@@ -1051,6 +1051,11 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_write (struct med
         return medusa_buffer_append(buffer, data, length);
 }
 
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_writev (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
+{
+        return medusa_buffer_appendv(buffer, iovecs, niovecs);
+}
+
 __attribute__ ((visibility ("default"))) int medusa_buffer_peek_data (const struct medusa_buffer *buffer, int64_t offset, void *data, int64_t length)
 {
         int ret;
