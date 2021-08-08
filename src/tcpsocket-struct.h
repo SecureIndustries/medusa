@@ -22,6 +22,7 @@ struct medusa_tcpsocket {
         char *ssl_privatekey;
         int ssl_wantread;
         int ssl_wantwrite;
+        char *ssl_hostname;
 #endif
         void *userdata;
 };

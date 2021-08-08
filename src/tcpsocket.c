@@ -1376,6 +1376,14 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 goto bail;
         }
 
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
+        tcpsocket->ssl_hostname = strdup(address);
+        if (tcpsocket->ssl_hostname == NULL) {
+                ret = -ENOMEM;
+                goto bail;
+        }
+#endif
+
         rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_RESOLVED);
         if (rc < 0) {
                 ret = rc;
@@ -2666,7 +2674,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                         if (tcpsocket->ssl_ctx == NULL) {
                                 return -EIO;
                         }
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && (OPENSSL_API_COMPAT >= 0x10100000L)
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) || (OPENSSL_API_COMPAT >= 0x10100000L)
                         SSL_CTX_set_ecdh_auto(tcpsocket->ssl_ctx, 1);
 #endif
                 }
@@ -2692,6 +2700,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                         if (tcpsocket->ssl == NULL) {
                                 return -EIO;
                         }
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) || (OPENSSL_API_COMPAT >= 0x10100000L)
+                        SSL_set_tlsext_host_name(tcpsocket->ssl, tcpsocket->ssl_hostname);
+#endif
                         rc = SSL_set_fd(tcpsocket->ssl, medusa_tcpsocket_get_fd_unlocked(tcpsocket));
                         if (rc <= 0) {
                                 return -EIO;
@@ -3262,6 +3273,10 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent_unlocked (
                         SSL_CTX_free(tcpsocket->ssl_ctx);
                 }
                 tcpsocket->ssl_ctx = NULL;
+                if (tcpsocket->ssl_hostname != NULL) {
+                        free(tcpsocket->ssl_hostname);
+                        tcpsocket->ssl_hostname = NULL;
+                }
 #endif
 #if defined(MEDUSA_TCPSOCKET_USE_POOL) && (MEDUSA_TCPSOCKET_USE_POOL == 1)
                 medusa_pool_free(tcpsocket);
