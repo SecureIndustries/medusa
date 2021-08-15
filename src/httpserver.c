@@ -7,8 +7,6 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <sys/ioctl.h>
-
 #include "../3rdparty/http-parser/http_parser.h"
 
 #include "error.h"
