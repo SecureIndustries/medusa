@@ -514,7 +514,11 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                 int64_t niovecs;
                                 struct medusa_iovec iovec;
                                 n = 4096;
+#if defined(WIN32)
+                                rc = -ENOTSUP;
+#else
                                 rc = ioctl(medusa_io_get_fd_unlocked(io), FIONREAD, &n);
+#endif
                                 if (rc < 0) {
                                         n = 4096;
                                 }
@@ -912,7 +916,7 @@ ipv6:
                 int rc;
                 int on;
                 on = !!options->reuseaddr;
-                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *) &on, sizeof(on));
                 if (rc < 0) {
                         if (options->fd < 0 ||
                             options->clodestroy == 1) {
@@ -926,7 +930,12 @@ ipv6:
                 int rc;
                 int on;
                 on = !!options->reuseport;
-                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+#if defined(SO_REUSEPORT)
+                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (void *) &on, sizeof(on));
+#else
+                (void) on;
+                rc = 0;
+#endif
                 if (rc < 0) {
                         if (options->fd < 0 ||
                             options->clodestroy == 1) {
@@ -1449,6 +1458,10 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 }
                 {
                         int rc;
+#if defined(WIN32)
+                        unsigned long mode = options->nonblocking ? 0 : 1;
+                        rc = ioctlsocket(fd, FIONBIO, &mode);
+#else
                         int flags;
                         flags = fcntl(fd, F_GETFL, 0);
                         if (flags < 0) {
@@ -1461,6 +1474,7 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                         }
                         flags = (options->nonblocking) ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
                         rc = fcntl(fd, F_SETFL, flags);
+#endif
                         if (rc != 0) {
                                 ret = -errno;
                                 if (options->fd < 0 ||
@@ -1571,7 +1585,7 @@ bind_ipv6:
                         if (options->reuseaddr != 0) {
                                 int on;
                                 on = 1;
-                                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+                                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *) &on, sizeof(on));
                                 if (rc < 0) {
                                         ret = -errno;
                                         if (options->fd < 0 ||
@@ -1584,7 +1598,12 @@ bind_ipv6:
                         if (options->reuseport != 0) {
                                 int on;
                                 on = 1;
-                                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+#if defined(SO_REUSEPORT)
+                                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (void *) &on, sizeof(on));
+#else
+                                (void) on;
+                                rc = 0;
+#endif
                                 if (rc < 0) {
                                         ret = -errno;
                                         if (options->fd < 0 ||
@@ -2230,6 +2249,10 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_nonblocking_un
         }
         if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
                 int rc;
+#if defined(WIN32)
+                unsigned long mode = enabled ? 0 : 1;
+                rc = ioctlsocket(medusa_io_get_fd_unlocked(tcpsocket->io), FIONBIO, &mode);
+#else
                 int flags;
                 flags = fcntl(medusa_io_get_fd_unlocked(tcpsocket->io), F_GETFL, 0);
                 if (flags < 0) {
@@ -2237,6 +2260,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_nonblocking_un
                 }
                 flags = (tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NONBLOCKING)) ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
                 rc = fcntl(medusa_io_get_fd_unlocked(tcpsocket->io), F_SETFL, flags);
+#endif
                 if (rc != 0) {
                         return -errno;
                 }
@@ -2290,7 +2314,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_nodelay_unlock
                 int rc;
                 int on;
                 on = !!tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_NODELAY);
-                rc = setsockopt(medusa_io_get_fd_unlocked(tcpsocket->io), SOL_TCP, TCP_NODELAY, &on, sizeof(on));
+                rc = setsockopt(medusa_io_get_fd_unlocked(tcpsocket->io), IPPROTO_TCP, TCP_NODELAY, (void *) &on, sizeof(on));
                 if (rc != 0) {
                         return -errno;
                 }
@@ -2347,7 +2371,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_reuseaddr_unlo
                 int rc;
                 int on;
                 on = !!enabled;
-                rc = setsockopt(medusa_io_get_fd_unlocked(tcpsocket->io), SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+                rc = setsockopt(medusa_io_get_fd_unlocked(tcpsocket->io), SOL_SOCKET, SO_REUSEADDR, (void *) &on, sizeof(on));
                 if (rc < 0) {
                         return -errno;
                 }
@@ -2404,7 +2428,12 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_reuseport_unlo
                 int rc;
                 int on;
                 on = !!enabled;
-                rc = setsockopt(medusa_io_get_fd_unlocked(tcpsocket->io), SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+#if defined(SO_REUSEPORT)
+                rc = setsockopt(medusa_io_get_fd_unlocked(tcpsocket->io), SOL_SOCKET, SO_REUSEPORT, (void *) &on, sizeof(on));
+#else
+                (void) on;
+                rc = 0;
+#endif
                 if (rc < 0) {
                         return -errno;
                 }
