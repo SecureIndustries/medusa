@@ -4,12 +4,10 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdint.h>
-#include <endian.h>
 #include <errno.h>
 
-#include <sys/uio.h>
-
 #include "error.h"
+#include "iovec.h"
 #include "buffer.h"
 #include "buffer-struct.h"
 #include "buffer-simple.h"
@@ -73,7 +71,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_get_length (const
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
         int64_t niovecs;
-        struct iovec iovecs[1];
+        struct medusa_iovec iovecs[1];
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
@@ -92,7 +90,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_prepend (struct m
         return medusa_buffer_prependv(buffer, iovecs, niovecs);
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prependv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_prependv (struct medusa_buffer *buffer, const struct medusa_iovec *iovecs, int64_t niovecs)
 {
         return medusa_buffer_insertv(buffer, 0, iovecs, niovecs);
 }
@@ -100,7 +98,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_prependv (struct 
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_append (struct medusa_buffer *buffer, const void *data, int64_t length)
 {
         int64_t niovecs;
-        struct iovec iovecs[1];
+        struct medusa_iovec iovecs[1];
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
@@ -119,7 +117,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_append (struct me
         return medusa_buffer_appendv(buffer, iovecs, niovecs);
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_appendv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_appendv (struct medusa_buffer *buffer, const struct medusa_iovec *iovecs, int64_t niovecs)
 {
         return medusa_buffer_insertv(buffer, medusa_buffer_get_length(buffer), iovecs, niovecs);
 }
@@ -127,7 +125,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_appendv (struct m
 __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert (struct medusa_buffer *buffer, int64_t offset, const void *data, int64_t length)
 {
         int64_t niovecs;
-        struct iovec iovecs[1];
+        struct medusa_iovec iovecs[1];
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
@@ -146,7 +144,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insert (struct me
         return medusa_buffer_insertv(buffer, offset, iovecs, niovecs);
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertv (struct medusa_buffer *buffer, int64_t offset, const struct iovec *iovecs, int64_t niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertv (struct medusa_buffer *buffer, int64_t offset, const struct medusa_iovec *iovecs, int64_t niovecs)
 {
         int rc;
         int64_t ret;
@@ -481,7 +479,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_vprintf (struct m
         return medusa_buffer_appendfv(buffer, format, va);
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_reservev (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_reservev (struct medusa_buffer *buffer, int64_t length, struct medusa_iovec *iovecs, int64_t niovecs)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
@@ -501,7 +499,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_reservev (struct 
         return buffer->backend->reservev(buffer, length, iovecs, niovecs);
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_commitv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_commitv (struct medusa_buffer *buffer, const struct medusa_iovec *iovecs, int64_t niovecs)
 {
         int rc;
         int64_t ret;
@@ -534,7 +532,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_commitv (struct m
 
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_peekv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_peekv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct medusa_iovec *iovecs, int64_t niovecs)
 {
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
@@ -582,8 +580,8 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_memcmp (const struct 
         int64_t i;
         int64_t l;
         int64_t niovecs;
-        struct iovec *iovecs;
-        struct iovec _iovecs[16];
+        struct medusa_iovec *iovecs;
+        struct medusa_iovec _iovecs[16];
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
@@ -609,7 +607,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_memcmp (const struct 
                 return niovecs;
         }
         if (niovecs > (int64_t) (sizeof(_iovecs) / sizeof(_iovecs[0]))) {
-                iovecs = malloc(sizeof(struct iovec) * niovecs);
+                iovecs = malloc(sizeof(struct medusa_iovec) * niovecs);
                 if (iovecs == NULL) {
                         return -ENOMEM;
                 }
@@ -678,8 +676,8 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_strcmp (const struct 
         int64_t l;
         int64_t length;
         int64_t niovecs;
-        struct iovec *iovecs;
-        struct iovec _iovecs[16];
+        struct medusa_iovec *iovecs;
+        struct medusa_iovec _iovecs[16];
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
@@ -703,7 +701,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_strcmp (const struct 
                 return niovecs;
         }
         if (niovecs > (int64_t) (sizeof(_iovecs) / sizeof(_iovecs[0]))) {
-                iovecs = malloc(sizeof(struct iovec) * niovecs);
+                iovecs = malloc(sizeof(struct medusa_iovec) * niovecs);
                 if (iovecs == NULL) {
                         return -ENOMEM;
                 }
@@ -741,8 +739,8 @@ int medusa_buffer_strncmp (const struct medusa_buffer *buffer, int64_t offset, c
         int64_t l;
         int64_t length;
         int64_t niovecs;
-        struct iovec *iovecs;
-        struct iovec _iovecs[16];
+        struct medusa_iovec *iovecs;
+        struct medusa_iovec _iovecs[16];
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
@@ -767,7 +765,7 @@ int medusa_buffer_strncmp (const struct medusa_buffer *buffer, int64_t offset, c
                 return niovecs;
         }
         if (niovecs > (int64_t) (sizeof(_iovecs) / sizeof(_iovecs[0]))) {
-                iovecs = malloc(sizeof(struct iovec) * niovecs);
+                iovecs = malloc(sizeof(struct medusa_iovec) * niovecs);
                 if (iovecs == NULL) {
                         return -ENOMEM;
                 }
@@ -805,8 +803,8 @@ int medusa_buffer_strcasecmp (const struct medusa_buffer *buffer, int64_t offset
         int64_t l;
         int64_t length;
         int64_t niovecs;
-        struct iovec *iovecs;
-        struct iovec _iovecs[16];
+        struct medusa_iovec *iovecs;
+        struct medusa_iovec _iovecs[16];
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
@@ -830,7 +828,7 @@ int medusa_buffer_strcasecmp (const struct medusa_buffer *buffer, int64_t offset
                 return niovecs;
         }
         if (niovecs > (int64_t) (sizeof(_iovecs) / sizeof(_iovecs[0]))) {
-                iovecs = malloc(sizeof(struct iovec) * niovecs);
+                iovecs = malloc(sizeof(struct medusa_iovec) * niovecs);
                 if (iovecs == NULL) {
                         return -ENOMEM;
                 }
@@ -868,8 +866,8 @@ int medusa_buffer_strncasecmp (const struct medusa_buffer *buffer, int64_t offse
         int64_t l;
         int64_t length;
         int64_t niovecs;
-        struct iovec *iovecs;
-        struct iovec _iovecs[16];
+        struct medusa_iovec *iovecs;
+        struct medusa_iovec _iovecs[16];
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
@@ -894,7 +892,7 @@ int medusa_buffer_strncasecmp (const struct medusa_buffer *buffer, int64_t offse
                 return niovecs;
         }
         if (niovecs > (int64_t) (sizeof(_iovecs) / sizeof(_iovecs[0]))) {
-                iovecs = malloc(sizeof(struct iovec) * niovecs);
+                iovecs = malloc(sizeof(struct medusa_iovec) * niovecs);
                 if (iovecs == NULL) {
                         return -ENOMEM;
                 }
@@ -1051,7 +1049,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_write (struct med
         return medusa_buffer_append(buffer, data, length);
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_buffer_writev (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_buffer_writev (struct medusa_buffer *buffer, const struct medusa_iovec *iovecs, int64_t niovecs)
 {
         return medusa_buffer_appendv(buffer, iovecs, niovecs);
 }
@@ -1062,8 +1060,8 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_peek_data (const stru
         int64_t i;
         int64_t l;
         int64_t niovecs;
-        struct iovec *iovecs;
-        struct iovec _iovecs[16];
+        struct medusa_iovec *iovecs;
+        struct medusa_iovec _iovecs[16];
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
@@ -1086,7 +1084,7 @@ __attribute__ ((visibility ("default"))) int medusa_buffer_peek_data (const stru
                 return niovecs;
         }
         if (niovecs > (int64_t) (sizeof(_iovecs) / sizeof(_iovecs[0]))) {
-                iovecs = malloc(sizeof(struct iovec) * niovecs);
+                iovecs = malloc(sizeof(struct medusa_iovec) * niovecs);
                 if (iovecs == NULL) {
                         return -ENOMEM;
                 }

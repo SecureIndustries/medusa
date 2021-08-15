@@ -2,7 +2,7 @@
 #if !defined(MEDUSA_TCPSOCKET_H)
 #define MEDUSA_TCPSOCKET_H
 
-struct iovec;
+struct medusa_iovec;
 struct sockaddr_storage;
 
 struct ssl_st;
@@ -265,7 +265,7 @@ struct medusa_monitor * medusa_tcpsocket_get_monitor (struct medusa_tcpsocket *t
 int64_t medusa_tcpsocket_peek   (const struct medusa_tcpsocket *tcpsocket, void *data, int64_t length);
 int64_t medusa_tcpsocket_read   (struct medusa_tcpsocket *tcpsocket, void *data, int64_t length);
 int64_t medusa_tcpsocket_write  (struct medusa_tcpsocket *tcpsocket, const void *data, int64_t length);
-int64_t medusa_tcpsocket_writev  (struct medusa_tcpsocket *tcpsocket, const struct iovec *iovecs, int64_t niovecs);
+int64_t medusa_tcpsocket_writev  (struct medusa_tcpsocket *tcpsocket, const struct medusa_iovec *iovecs, int64_t niovecs);
 int64_t medusa_tcpsocket_printf (struct medusa_tcpsocket *tcpsocket, const char *format, ...)  __attribute__((format(printf, 2, 3)));
 int64_t medusa_tcpsocket_vprintf (struct medusa_tcpsocket *tcpsocket, const char *format, va_list va);
 

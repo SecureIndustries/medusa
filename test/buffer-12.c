@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include "medusa/error.h"
+#include "medusa/iovec.h"
 #include "medusa/buffer.h"
 
 static const unsigned int g_types[] = {

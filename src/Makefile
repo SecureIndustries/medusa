@@ -154,6 +154,7 @@ dist.include-y = \
 	clock.h \
 	error.h \
 	pool.h \
+	iovec.h \
 	buffer.h \
 	condition.h \
 	io.h \

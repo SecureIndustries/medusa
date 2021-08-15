@@ -9,7 +9,6 @@
 #include <errno.h>
 
 #include <inttypes.h>
-#include <sys/uio.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -21,6 +20,7 @@
 #include "error.h"
 #include "pool.h"
 #include "queue.h"
+#include "iovec.h"
 #include "buffer.h"
 #include "subject-struct.h"
 #include "tcpsocket.h"
@@ -643,7 +643,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                         size_t nparsed;
                         int64_t clength;
                         int64_t niovecs;
-                        struct iovec iovec;
+                        struct medusa_iovec iovec;
 
                         niovecs = medusa_buffer_peekv(medusa_tcpsocket_get_read_buffer_unlocked(httprequest->tcpsocket), 0, -1, &iovec, 1);
                         if (niovecs < 0) {
@@ -1069,7 +1069,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
         int64_t rlen;
         int64_t wlen;
         int64_t niovecs;
-        struct iovec iovecs[16];
+        struct medusa_iovec iovecs[16];
 
         if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
                 return -EINVAL;

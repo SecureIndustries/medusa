@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <sys/uio.h>
 #include <sys/ioctl.h>
 
 #include "../3rdparty/http-parser/http_parser.h"
@@ -18,6 +17,7 @@
 #include "sha1.h"
 #include "queue.h"
 #include "subject-struct.h"
+#include "iovec.h"
 #include "buffer.h"
 #include "tcpsocket.h"
 #include "tcpsocket-private.h"
@@ -1220,7 +1220,7 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
                         int64_t siovecs;
                         int64_t niovecs;
                         int64_t iiovecs;
-                        struct iovec iovecs[1];
+                        struct medusa_iovec iovecs[1];
 
                         size_t nparsed;
                         size_t tparsed;
@@ -1539,7 +1539,7 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_set_read_t
         if (MEDUSA_IS_ERR_OR_NULL(httpserver_client->tcpsocket)) {
                 return -EIO;
         }
-        return medusa_tcpsocket_set_read_timeout_unlocked(httpserver_client->tcpsocket, timeout);        
+        return medusa_tcpsocket_set_read_timeout_unlocked(httpserver_client->tcpsocket, timeout);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_httpserver_client_set_read_timeout (struct medusa_httpserver_client *httpserver_client, double timeout)
@@ -1562,7 +1562,7 @@ __attribute__ ((visibility ("default"))) double medusa_httpserver_client_get_rea
         if (MEDUSA_IS_ERR_OR_NULL(httpserver_client->tcpsocket)) {
                 return -EIO;
         }
-        return medusa_tcpsocket_get_read_timeout_unlocked(httpserver_client->tcpsocket);        
+        return medusa_tcpsocket_get_read_timeout_unlocked(httpserver_client->tcpsocket);
 }
 
 __attribute__ ((visibility ("default"))) double medusa_httpserver_client_get_read_timeout (const struct medusa_httpserver_client *httpserver_client)
@@ -2116,7 +2116,7 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_onevent_un
                 }
                 if (!MEDUSA_IS_ERR_OR_NULL(httpserver_client->tcpsocket)) {
                         medusa_tcpsocket_destroy_unlocked(httpserver_client->tcpsocket);
-                        httpserver_client->tcpsocket = NULL;       
+                        httpserver_client->tcpsocket = NULL;
                 }
                 if (httpserver_client->httpserver != NULL) {
                         TAILQ_REMOVE(&httpserver_client->httpserver->clients, httpserver_client, list);

@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <sys/uio.h>
 
 #include "medusa/error.h"
 #include "medusa/clock.h"
+#include "medusa/iovec.h"
 #include "medusa/buffer.h"
 
 static const unsigned int g_types[] = {

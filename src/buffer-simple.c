@@ -6,10 +6,9 @@
 #include <stdint.h>
 #include <errno.h>
 
-#include <sys/uio.h>
-
 #include "error.h"
 #include "pool.h"
+#include "iovec.h"
 #include "buffer.h"
 #include "buffer-struct.h"
 #include "buffer-simple.h"
@@ -78,7 +77,7 @@ static int64_t simple_buffer_get_length (const struct medusa_buffer *buffer)
         return simple->length;
 }
 
-static int64_t simple_buffer_insertv (struct medusa_buffer *buffer, int64_t offset, const struct iovec *iovecs, int64_t niovecs)
+static int64_t simple_buffer_insertv (struct medusa_buffer *buffer, int64_t offset, const struct medusa_iovec *iovecs, int64_t niovecs)
 {
         int rc;
         int64_t i;
@@ -166,7 +165,7 @@ static int64_t simple_buffer_insertfv (struct medusa_buffer *buffer, int64_t off
         return rc;
 }
 
-static int64_t simple_buffer_reservev (struct medusa_buffer *buffer, int64_t length, struct iovec *iovecs, int64_t niovecs)
+static int64_t simple_buffer_reservev (struct medusa_buffer *buffer, int64_t length, struct medusa_iovec *iovecs, int64_t niovecs)
 {
         int rc;
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
@@ -194,7 +193,7 @@ static int64_t simple_buffer_reservev (struct medusa_buffer *buffer, int64_t len
         return 1;
 }
 
-static int64_t simple_buffer_commitv (struct medusa_buffer *buffer, const struct iovec *iovecs, int64_t niovecs)
+static int64_t simple_buffer_commitv (struct medusa_buffer *buffer, const struct medusa_iovec *iovecs, int64_t niovecs)
 {
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {
@@ -220,7 +219,7 @@ static int64_t simple_buffer_commitv (struct medusa_buffer *buffer, const struct
         return 1;
 }
 
-static int64_t simple_buffer_peekv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct iovec *iovecs, int64_t niovecs)
+static int64_t simple_buffer_peekv (const struct medusa_buffer *buffer, int64_t offset, int64_t length, struct medusa_iovec *iovecs, int64_t niovecs)
 {
         struct medusa_buffer_simple *simple = (struct medusa_buffer_simple *) buffer;
         if (MEDUSA_IS_ERR_OR_NULL(simple)) {

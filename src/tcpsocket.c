@@ -5,7 +5,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/uio.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -29,6 +28,7 @@
 #include "error.h"
 #include "pool.h"
 #include "queue.h"
+#include "iovec.h"
 #include "buffer.h"
 #include "subject-struct.h"
 #include "io.h"
@@ -365,7 +365,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                 int64_t wlength;
                                 int64_t clength;
                                 int64_t niovecs;
-                                struct iovec iovec;
+                                struct medusa_iovec iovec;
                                 while (1) {
                                         niovecs = medusa_buffer_peekv(tcpsocket->wbuffer, 0, -1, &iovec, 1);
                                         if (niovecs < 0) {
@@ -506,7 +506,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                 int64_t clength;
                                 int64_t rlength;
                                 int64_t niovecs;
-                                struct iovec iovec;
+                                struct medusa_iovec iovec;
                                 n = 4096;
                                 rc = ioctl(medusa_io_get_fd_unlocked(io), FIONREAD, &n);
                                 if (rc < 0) {
@@ -3764,7 +3764,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_write (struct 
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_writev_unlocked (struct medusa_tcpsocket *tcpsocket, const struct iovec *iovecs, int64_t niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_writev_unlocked (struct medusa_tcpsocket *tcpsocket, const struct medusa_iovec *iovecs, int64_t niovecs)
 {
         int64_t rc;
         int enabled;
@@ -3820,7 +3820,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_writev_unlocke
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_writev (struct medusa_tcpsocket *tcpsocket, const struct iovec *iovecs, int64_t niovecs)
+__attribute__ ((visibility ("default"))) int64_t medusa_tcpsocket_writev (struct medusa_tcpsocket *tcpsocket, const struct medusa_iovec *iovecs, int64_t niovecs)
 {
         int64_t rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {

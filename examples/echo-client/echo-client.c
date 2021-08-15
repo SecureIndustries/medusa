@@ -8,14 +8,13 @@
 #include <signal.h>
 #include <errno.h>
 
-#include <sys/uio.h>
-
 #if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #endif
 
 #include "medusa/error.h"
+#include "medusa/iovec.h"
 #include "medusa/buffer.h"
 #include "medusa/io.h"
 #include "medusa/tcpsocket.h"
@@ -98,7 +97,7 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
 
                         int64_t i;
                         int64_t niovecs;
-                        struct iovec *iovecs;
+                        struct medusa_iovec *iovecs;
 
                         rbuffer = medusa_tcpsocket_get_read_buffer(tcpsocket);
                         if (MEDUSA_IS_ERR_OR_NULL(rbuffer)) {
@@ -121,7 +120,7 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
                                 return -EIO;
                         }
 
-                        iovecs = malloc(sizeof(struct iovec) * niovecs);
+                        iovecs = malloc(sizeof(struct medusa_iovec) * niovecs);
                         if (iovecs == NULL) {
                                 return -ENOMEM;
                         }

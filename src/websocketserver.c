@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <sys/uio.h>
 #include <sys/ioctl.h>
 
 #include "../3rdparty/http-parser/http_parser.h"
@@ -17,6 +16,7 @@
 #include "sha1.h"
 #include "queue.h"
 #include "subject-struct.h"
+#include "iovec.h"
 #include "buffer.h"
 #include "tcpsocket.h"
 #include "tcpsocket-private.h"
@@ -1103,7 +1103,7 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
                         int64_t siovecs;
                         int64_t niovecs;
                         int64_t iiovecs;
-                        struct iovec iovecs[1];
+                        struct medusa_iovec iovecs[1];
 
                         size_t nparsed;
                         size_t tparsed;
