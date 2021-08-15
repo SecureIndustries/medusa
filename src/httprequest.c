@@ -13,6 +13,7 @@
 
 #include "../3rdparty/http-parser/http_parser.h"
 
+#include "strndup.h"
 #include "error.h"
 #include "pool.h"
 #include "queue.h"
@@ -159,7 +160,7 @@ static int medusa_httprequest_reply_header_set_key (struct medusa_httprequest_re
                 header->key = tmp;
                 strncat(header->key, key, length);
         } else {
-                header->key = strndup(key, length);
+                header->key = medusa_strndup(key, length);
                 if (header->key == NULL) {
                         return -ENOMEM;
                 }
@@ -186,7 +187,7 @@ static int medusa_httprequest_reply_header_set_value (struct medusa_httprequest_
                 header->value = tmp;
                 strncat(header->value, value, length);
         } else {
-                header->value = strndup(value, length);
+                header->value = medusa_strndup(value, length);
                 if (header->value == NULL) {
                         return -ENOMEM;
                 }
@@ -438,7 +439,7 @@ static int httprequest_httpparser_on_status (http_parser *http_parser, const cha
 {
         struct medusa_httprequest *httprequest = http_parser->data;
         httprequest->reply->status.code = http_parser->status_code;
-        httprequest->reply->status.value = strndup(at, length);
+        httprequest->reply->status.value = medusa_strndup(at, length);
         if (httprequest->reply->status.value == NULL) {
                 return -ENOMEM;
         }
@@ -1160,7 +1161,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 ret = rc;
                 goto bail;
         }
-        rc = medusa_tcpsocket_printf_unlocked(httprequest->tcpsocket, "Content-Length: %" PRIi64 "\r\n", length);
+        rc = medusa_tcpsocket_printf_unlocked(httprequest->tcpsocket, "Content-Length: %ld\r\n", length);
         if (rc < 0) {
                 ret = rc;
                 goto bail;

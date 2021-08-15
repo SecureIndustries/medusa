@@ -32,6 +32,7 @@ libmedusa.a_cflags-y = \
 	-fvisibility=hidden
 
 libmedusa.a_files-y = \
+	strndup.c \
 	clock.c \
 	base64.c \
 	sha1.c \

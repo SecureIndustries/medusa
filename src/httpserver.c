@@ -9,6 +9,7 @@
 
 #include "../3rdparty/http-parser/http_parser.h"
 
+#include "strndup.h"
 #include "error.h"
 #include "pool.h"
 #include "base64.h"
@@ -887,9 +888,18 @@ static int medusa_httpserver_client_request_header_set_key (struct medusa_httpse
         if (length <= 0) {
                 return -EINVAL;
         }
-        header->key = strndup(key, length);
-        if (header->key == NULL) {
-                return -ENOMEM;
+        if (header->key != NULL) {
+                char *tmp = realloc(header->key, strlen(header->key) + length + 1);
+                if (tmp == NULL) {
+                        return -ENOMEM;
+                }
+                header->key = tmp;
+                strncat(header->key, key, length);
+        } else {
+                header->key = medusa_strndup(key, length);
+                if (header->key == NULL) {
+                        return -ENOMEM;
+                }
         }
         return 0;
 }
@@ -905,9 +915,18 @@ static int medusa_httpserver_client_request_header_set_value (struct medusa_http
         if (length <= 0) {
                 return -EINVAL;
         }
-        header->value = strndup(value, length);
-        if (header->value == NULL) {
-                return -ENOMEM;
+        if (header->value != NULL) {
+                char *tmp = realloc(header->value, strlen(header->value) + length + 1);
+                if (tmp == NULL) {
+                        return -ENOMEM;
+                }
+                header->value = tmp;
+                strncat(header->value, value, length);
+        } else {
+                header->value = medusa_strndup(value, length);
+                if (header->value == NULL) {
+                        return -ENOMEM;
+                }
         }
         return 0;
 }
@@ -997,7 +1016,7 @@ static int medusa_httpserver_client_request_set_url (struct medusa_httpserver_cl
                 request->url = NULL;
         }
         if (length > 0) {
-                request->url = strndup(url, length);
+                request->url = medusa_strndup(url, length);
                 if (request->url == NULL) {
                         return -ENOMEM;
                 }
