@@ -6,10 +6,9 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <sys/ioctl.h>
-
 #include "../3rdparty/http-parser/http_parser.h"
 
+#include "strndup.h"
 #include "error.h"
 #include "pool.h"
 #include "base64.h"
@@ -940,7 +939,7 @@ static int websocketserver_client_httpparser_on_header_field (http_parser *http_
                 websocketserver_client->http_parser_header_field = tmp;
                 strncat(websocketserver_client->http_parser_header_field, at, length);
         } else {
-                websocketserver_client->http_parser_header_field = strndup(at, length);
+                websocketserver_client->http_parser_header_field = medusa_strndup(at, length);
                 if (websocketserver_client->http_parser_header_field == NULL) {
                         return -ENOMEM;
                 }
@@ -961,7 +960,7 @@ static int websocketserver_client_httpparser_on_header_value (http_parser *http_
                 websocketserver_client->http_parser_header_value = tmp;
                 strncat(websocketserver_client->http_parser_header_value, at, length);
         } else {
-                websocketserver_client->http_parser_header_value = strndup(at, length);
+                websocketserver_client->http_parser_header_value = medusa_strndup(at, length);
                 if (websocketserver_client->http_parser_header_value == NULL) {
                         return -ENOMEM;
                 }

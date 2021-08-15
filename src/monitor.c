@@ -56,9 +56,11 @@
 #include "poll-backend.h"
 
 #include "signal-sigaction.h"
+#include "signal-null.h"
 #include "signal-backend.h"
 
 #include "timer-timerfd.h"
+#include "timer-monotonic.h"
 #include "timer-backend.h"
 
 enum {
@@ -297,7 +299,11 @@ static int monitor_subject_onevent (struct medusa_monitor *monitor, struct medus
                         rc = medusa_dnsrequest_onevent_unlocked((struct medusa_dnsrequest *) subject, events, param);
                         break;
                 case MEDUSA_SUBJECT_TYPE_EXEC:
+#if defined(MEDUSA_EXEC_ENABLE) && (MEDUSA_EXEC_ENABLE == 1)
                         rc = medusa_exec_onevent_unlocked((struct medusa_exec *) subject, events, param);
+#else
+                        rc = -ENOTSUP;
+#endif
                         break;
                 case MEDUSA_SUBJECT_TYPE_WEBSOCKETSERVER:
                         rc = medusa_websocketserver_onevent_unlocked((struct medusa_websocketserver *) subject, events, param);
@@ -1129,10 +1135,20 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
                                 break;
                         }
 #endif
+#if defined(MEDUSA_TIMER_MONOTONIC_ENABLE) && (MEDUSA_TIMER_MONOTONIC_ENABLE == 1)
+                        monitor->timer.backend = medusa_timer_monotonic_create(NULL);
+                        if (monitor->timer.backend != NULL) {
+                                break;
+                        }
+#endif
                 } while (0);
 #if defined(MEDUSA_TIMER_TIMERFD_ENABLE) && (MEDUSA_TIMER_TIMERFD_ENABLE == 1)
         } else if (options->timer.type == MEDUSA_MONITOR_TIMER_TIMERFD) {
                 monitor->timer.backend = medusa_timer_timerfd_create(NULL);
+#endif
+#if defined(MEDUSA_TIMER_MONOTONIC_ENABLE) && (MEDUSA_TIMER_MONOTONIC_ENABLE == 1)
+        } else if (options->timer.type == MEDUSA_MONITOR_TIMER_MONOTONIC) {
+                monitor->timer.backend = medusa_timer_monotonic_create(NULL);
 #endif
         } else {
                 goto bail;
@@ -1153,10 +1169,20 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
                                 break;
                         }
 #endif
+#if defined(MEDUSA_SIGNAL_NULL_ENABLE) && (MEDUSA_SIGNAL_NULL_ENABLE == 1)
+                        monitor->signal.backend = medusa_signal_null_create(NULL);
+                        if (monitor->signal.backend != NULL) {
+                                break;
+                        }
+#endif
                 } while (0);
 #if defined(MEDUSA_SIGNAL_SIGACTION_ENABLE) && (MEDUSA_SIGNAL_SIGACTION_ENABLE == 1)
         } else if (options->signal.type == MEDUSA_MONITOR_SIGNAL_SIGACTION) {
                 monitor->signal.backend = medusa_signal_sigaction_create(NULL);
+#endif
+#if defined(MEDUSA_SIGNAL_NULL_ENABLE) && (MEDUSA_SIGNAL_NULL_ENABLE == 1)
+        } else if (options->signal.type == MEDUSA_MONITOR_SIGNAL_NULL) {
+                monitor->signal.backend = medusa_signal_null_create(NULL);
 #endif
         } else {
                 goto bail;
@@ -1180,43 +1206,49 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
         if (rc != 0) {
                 goto bail;
         }
-        monitor->wakeup.io = medusa_io_create(monitor, monitor->wakeup.fds[0], monitor_wakeup_io_onevent, monitor);
-        if (MEDUSA_IS_ERR_OR_NULL(monitor->wakeup.io)) {
-                goto bail;
+        if (0) {
+                monitor->wakeup.io = medusa_io_create(monitor, monitor->wakeup.fds[0], monitor_wakeup_io_onevent, monitor);
+                if (MEDUSA_IS_ERR_OR_NULL(monitor->wakeup.io)) {
+                        goto bail;
+                }
+                rc = medusa_io_set_events(monitor->wakeup.io, MEDUSA_IO_EVENT_IN);
+                if (rc < 0) {
+                        goto bail;
+                }
+                rc = medusa_io_set_enabled(monitor->wakeup.io, 1);
+                if (rc < 0) {
+                        goto bail;
+                }
         }
-        rc = medusa_io_set_events(monitor->wakeup.io, MEDUSA_IO_EVENT_IN);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_io_set_enabled(monitor->wakeup.io, 1);
-        if (rc < 0) {
-                goto bail;
-        }
-        monitor->timer.io = medusa_io_create(monitor, monitor->timer.backend->fd(monitor->timer.backend), monitor_timer_io_onevent, monitor);
-        if (MEDUSA_IS_ERR_OR_NULL(monitor->timer.io)) {
-                goto bail;
-        }
-        rc = medusa_io_set_events(monitor->timer.io, MEDUSA_IO_EVENT_IN);
-        if (rc < 0) {
-                goto bail;
-        }
-        rc = medusa_io_set_enabled(monitor->timer.io, 1);
-        if (rc < 0) {
-                goto bail;
+        if (monitor->timer.backend->fd != NULL) {
+                monitor->timer.io = medusa_io_create(monitor, monitor->timer.backend->fd(monitor->timer.backend), monitor_timer_io_onevent, monitor);
+                if (MEDUSA_IS_ERR_OR_NULL(monitor->timer.io)) {
+                        goto bail;
+                }
+                rc = medusa_io_set_events(monitor->timer.io, MEDUSA_IO_EVENT_IN);
+                if (rc < 0) {
+                        goto bail;
+                }
+                rc = medusa_io_set_enabled(monitor->timer.io, 1);
+                if (rc < 0) {
+                        goto bail;
+                }
         }
         if (!MEDUSA_IS_ERR_OR_NULL(monitor->signal.backend)) {
                 monitor->signal.backend->monitor = monitor;
-                monitor->signal.io = medusa_io_create(monitor, monitor->signal.backend->fd(monitor->signal.backend), monitor_signal_io_onevent, monitor);
-                if (MEDUSA_IS_ERR_OR_NULL(monitor->signal.io)) {
-                        goto bail;
-                }
-                rc = medusa_io_set_events(monitor->signal.io, MEDUSA_IO_EVENT_IN);
-                if (rc < 0) {
-                        goto bail;
-                }
-                rc = medusa_io_set_enabled(monitor->signal.io, 1);
-                if (rc < 0) {
-                        goto bail;
+                if (monitor->signal.backend->fd != NULL) {
+                        monitor->signal.io = medusa_io_create(monitor, monitor->signal.backend->fd(monitor->signal.backend), monitor_signal_io_onevent, monitor);
+                        if (MEDUSA_IS_ERR_OR_NULL(monitor->signal.io)) {
+                                goto bail;
+                        }
+                        rc = medusa_io_set_events(monitor->signal.io, MEDUSA_IO_EVENT_IN);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                        rc = medusa_io_set_enabled(monitor->signal.io, 1);
+                        if (rc < 0) {
+                                goto bail;
+                        }
                 }
         }
         monitor->onevent.callback = options->onevent.callback;
@@ -1297,12 +1329,14 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                         medusa_websocketserver_onevent_unlocked((struct medusa_websocketserver *) subject, MEDUSA_WEBSOCKETSERVER_EVENT_DESTROY, NULL);
                 }
         }
+#if defined(MEDUSA_EXEC_ENABLE) && (MEDUSA_EXEC_ENABLE == 1)
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_EXEC) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         medusa_exec_onevent_unlocked((struct medusa_exec *) subject, MEDUSA_EXEC_EVENT_DESTROY, NULL);
                 }
         }
+#endif
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSREQUEST) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);

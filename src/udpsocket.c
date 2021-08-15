@@ -5,6 +5,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#if defined(WIN32)
+#include <winsock2.h>
+#include <wspiapi.h>
+#else
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -13,6 +17,7 @@
 #include <netinet/in.h>
 #include <netinet/udp.h>
 #include <netdb.h>
+#endif
 #include <errno.h>
 
 #include "error.h"
@@ -471,7 +476,7 @@ ipv6:
                 int rc;
                 int on;
                 on = !!options->reuseaddr;
-                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *) &on, sizeof(on));
                 if (rc < 0) {
                         close(fd);
                         ret = -errno;
@@ -482,7 +487,12 @@ ipv6:
                 int rc;
                 int on;
                 on = !!options->reuseport;
-                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+#if defined(SO_REUSEPORT)
+                rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (void *) &on, sizeof(on));
+#else
+                (void) on;
+                rc = 0;
+#endif
                 if (rc < 0) {
                         close(fd);
                         ret = -errno;
@@ -924,6 +934,10 @@ __attribute__ ((visibility ("default"))) struct medusa_udpsocket * medusa_udpsoc
                 }
                 {
                         int rc;
+#if defined(WIN32)
+                        unsigned long mode = options->nonblocking ? 0 : 1;
+                        rc = ioctlsocket(fd, FIONBIO, &mode);
+#else
                         int flags;
                         flags = fcntl(fd, F_GETFL, 0);
                         if (flags < 0) {
@@ -932,6 +946,7 @@ __attribute__ ((visibility ("default"))) struct medusa_udpsocket * medusa_udpsoc
                         }
                         flags = (options->nonblocking) ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
                         rc = fcntl(fd, F_SETFL, flags);
+#endif
                         if (rc != 0) {
                                 ret = -errno;
                                 goto bail;
@@ -1366,6 +1381,10 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_set_nonblocking_un
         }
         if (!MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
                 int rc;
+#if defined(WIN32)
+                unsigned long mode = enabled ? 0 : 1;
+                rc = ioctlsocket(medusa_io_get_fd_unlocked(udpsocket->io), FIONBIO, &mode);
+#else
                 int flags;
                 flags = fcntl(medusa_io_get_fd_unlocked(udpsocket->io), F_GETFL, 0);
                 if (flags < 0) {
@@ -1373,6 +1392,7 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_set_nonblocking_un
                 }
                 flags = (udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_NONBLOCKING)) ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
                 rc = fcntl(medusa_io_get_fd_unlocked(udpsocket->io), F_SETFL, flags);
+#endif
                 if (rc != 0) {
                         return -errno;
                 }
@@ -1426,7 +1446,7 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_set_reuseaddr_unlo
                 int rc;
                 int on;
                 on = !!enabled;
-                rc = setsockopt(medusa_io_get_fd_unlocked(udpsocket->io), SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+                rc = setsockopt(medusa_io_get_fd_unlocked(udpsocket->io), SOL_SOCKET, SO_REUSEADDR, (void *) &on, sizeof(on));
                 if (rc < 0) {
                         return -errno;
                 }
@@ -1480,7 +1500,12 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_set_reuseport_unlo
                 int rc;
                 int on;
                 on = !!enabled;
-                rc = setsockopt(medusa_io_get_fd_unlocked(udpsocket->io), SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+#if defined(SO_REUSEPORT)
+                rc = setsockopt(medusa_io_get_fd_unlocked(udpsocket->io), SOL_SOCKET, SO_REUSEPORT, (void *) &on, sizeof(on));
+#else
+                (void) on;
+                rc = 0;
+#endif
                 if (rc < 0) {
                         return -errno;
                 }

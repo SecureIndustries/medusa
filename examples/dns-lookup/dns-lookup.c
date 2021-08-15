@@ -8,7 +8,7 @@
 #include <signal.h>
 #include <errno.h>
 
-#include <sys/uio.h>
+#include <winsock2.h>
 
 #include "medusa/error.h"
 #include "medusa/dnsrequest.h"
@@ -190,6 +190,9 @@ int main (int argc, char *argv[])
         (void) argc;
         (void) argv;
 
+        WSADATA wsaData;
+        WSAStartup(MAKEWORD(2,2), &wsaData);
+
         err = 0;
         medusa_monitor = NULL;
 
@@ -238,17 +241,20 @@ int main (int argc, char *argv[])
 
         rc = medusa_monitor_init_options_default(&medusa_monitor_init_options);
         if (rc < 0) {
+                fprintf(stderr, "can not init medusa monitor init default options\n");
                 err = rc;
                 goto out;
         }
         medusa_monitor = medusa_monitor_create_with_options(&medusa_monitor_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(medusa_monitor)) {
+                fprintf(stderr, "can not create medusa monitor: 0x%p\n", medusa_monitor);
                 err = MEDUSA_PTR_ERR(medusa_monitor);
                 goto out;
         }
 
         rc = medusa_signal_init_options_default(&medusa_signal_init_options);
         if (rc < 0) {
+                fprintf(stderr, "can not init medusa signal init default options\n");
                 err = rc;
                 goto out;
         }
@@ -260,6 +266,7 @@ int main (int argc, char *argv[])
         medusa_signal_init_options.singleshot  = 0;
         medusa_signal = medusa_signal_create_with_options(&medusa_signal_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(medusa_signal)) {
+                fprintf(stderr, "can not create medusa signal\n");
                 err = MEDUSA_PTR_ERR(medusa_signal);
                 goto out;
         }
@@ -272,6 +279,7 @@ int main (int argc, char *argv[])
 
         while (g_running == 1) {
                 rc = medusa_monitor_run_once(medusa_monitor);
+                fprintf(stderr, "medusa_monitor_run_once: %d\n", rc);
                 if (rc < 0) {
                         err = rc;
                         break;

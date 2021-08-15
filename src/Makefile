@@ -1,24 +1,4 @@
 
-ifeq ($(__LINUX__), y)
-MEDUSA_POLL_EPOLL_ENABLE     	?= y
-endif
-ifeq ($(__DARWIN__), y)
-MEDUSA_POLL_KQUEUE_ENABLE    	?= y
-endif
-MEDUSA_POLL_POLL_ENABLE      	?= y
-MEDUSA_POLL_SELECT_ENABLE    	?= y
-
-ifeq ($(__LINUX__), y)
-MEDUSA_TIMER_TIMERFD_ENABLE  	?= y
-endif
-
-MEDUSA_SIGNAL_SIGACTION_ENABLE	?= y
-ifeq ($(__LINUX__), y)
-MEDUSA_SIGNAL_SIGNALFD_ENABLE	?= y
-endif
-
-MEDUSA_TCPSOCKET_OPENSSL_ENABLE ?= y
-
 target.a-${MEDUSA_LIBMEDUSA_TARGET_A} = \
 	libmedusa.a \
 
@@ -48,6 +28,8 @@ libmedusa.a_files-y = \
 	monitor.c \
 	version.c
 
+libmedusa.a_cflags-${MEDUSA_EXEC_ENABLE} += \
+	-DMEDUSA_EXEC_ENABLE=1
 libmedusa.a_files-${MEDUSA_EXEC_ENABLE} += \
 	exec.c
 
@@ -76,6 +58,11 @@ libmedusa.a_cflags-${MEDUSA_TIMER_TIMERFD_ENABLE} += \
 libmedusa.a_files-${MEDUSA_TIMER_TIMERFD_ENABLE} += \
 	timer-timerfd.c
 
+libmedusa.a_cflags-${MEDUSA_TIMER_MONOTONIC_ENABLE} += \
+	-DMEDUSA_TIMER_MONOTONIC_ENABLE=1
+libmedusa.a_files-${MEDUSA_TIMER_MONOTONIC_ENABLE} += \
+	timer-monotonic.c
+
 libmedusa.a_cflags-${MEDUSA_SIGNAL_SIGACTION_ENABLE} += \
 	-DMEDUSA_SIGNAL_SIGACTION_ENABLE=1
 libmedusa.a_files-${MEDUSA_SIGNAL_SIGACTION_ENABLE} += \
@@ -85,6 +72,11 @@ libmedusa.a_cflags-${MEDUSA_SIGNAL_SIGNALFD_ENABLE} += \
 	-DMEDUSA_SIGNAL_SIGNALFD_ENABLE=1
 libmedusa.a_files-${MEDUSA_SIGNAL_SIGNALFD_ENABLE} += \
 	signal-signalfd.c
+
+libmedusa.a_cflags-${MEDUSA_SIGNAL_NULL_ENABLE} += \
+	-DMEDUSA_SIGNAL_NULL_ENABLE=1
+libmedusa.a_files-${MEDUSA_SIGNAL_NULL_ENABLE} += \
+	signal-null.c
 
 libmedusa.a_cflags-${MEDUSA_TCPSOCKET_OPENSSL_ENABLE} += \
 	-DMEDUSA_TCPSOCKET_OPENSSL_ENABLE=1
@@ -138,6 +130,9 @@ libmedusa.so.${MEDUSA_SONAME}_files-y = \
 libmedusa.so.${MEDUSA_SONAME}_ldflags-y = \
 	-lpthread \
 	-lm
+
+libmedusa.so.${MEDUSA_SONAME}_ldflags-${__WINDOWS__} += \
+	-lws2_32
 
 libmedusa.so.${MEDUSA_SONAME}_ldflags-$(__LINUX__) += \
 	-lrt
