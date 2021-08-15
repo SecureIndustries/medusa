@@ -4,6 +4,18 @@
 
 #include "error.h"
 
+#if !defined(CLOCK_REALTIME_COARSE)
+#define CLOCK_REALTIME_COARSE   CLOCK_REALTIME
+#endif
+
+#if !defined(CLOCK_MONOTONIC_RAW)
+#define CLOCK_MONOTONIC_RAW     CLOCK_MONOTONIC
+#endif
+
+#if !defined(CLOCK_MONOTONIC_COARSE)
+#define CLOCK_MONOTONIC_COARSE  CLOCK_MONOTONIC
+#endif
+
 __attribute__ ((visibility ("default"))) int medusa_clock_realtime (struct timespec *timespec)
 {
         int rc;

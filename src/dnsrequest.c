@@ -21,7 +21,11 @@
 #include "dnsrequest-struct.h"
 #include "monitor-private.h"
 
-#define MEDUSA_DNSREQUEST_USE_POOL             1
+#if !defined(MSG_NOSIGNAL)
+#define MSG_NOSIGNAL                            0
+#endif
+
+#define MEDUSA_DNSREQUEST_USE_POOL              1
 
 #if defined(MEDUSA_DNSREQUEST_USE_POOL) && (MEDUSA_DNSREQUEST_USE_POOL == 1)
 static struct medusa_pool *g_pool;
@@ -865,7 +869,7 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
                                 goto bail;
                         }
                 }
-                rc = sendto(fd, request, reqsize, MSG_NOSIGNAL, NULL, 0);
+                rc = sendto(fd, (void *) request, reqsize, MSG_NOSIGNAL, NULL, 0);
                 if (rc != (int) reqsize) {
                         dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
                         rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
@@ -905,7 +909,7 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
                                 goto bail;
                         }
                 }
-                rc = recvfrom(fd, reply, replysize, MSG_NOSIGNAL, NULL, 0);
+                rc = recvfrom(fd, (void *) reply, replysize, MSG_NOSIGNAL, NULL, 0);
                 if (rc <= 0) {
                         dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
                         rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);

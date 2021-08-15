@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <errno.h>
 
+#include "endian.h"
 #include "error.h"
 #include "iovec.h"
 #include "buffer.h"

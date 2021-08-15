@@ -1,8 +1,4 @@
 
-MEDUSA_LIBMEDUSA_TARGET_A	?= y
-MEDUSA_LIBMEDUSA_TARGET_O	?= y
-MEDUSA_LIBMEDUSA_TARGET_SO	?= y
-
 ifeq ($(__LINUX__), y)
 MEDUSA_POLL_EPOLL_ENABLE     	?= y
 endif
@@ -45,12 +41,14 @@ libmedusa.a_files-y = \
 	buffer-ring.c \
 	pqueue.c \
 	condition.c \
-	exec.c \
 	io.c \
 	signal.c \
 	timer.c \
 	monitor.c \
 	version.c
+
+libmedusa.a_files-${MEDUSA_EXEC_ENABLE} += \
+	exec.c
 
 libmedusa.a_cflags-${MEDUSA_POLL_EPOLL_ENABLE} += \
 	-DMEDUSA_POLL_EPOLL_ENABLE=1
@@ -168,6 +166,7 @@ dist.include-y = \
 	websocketserver.h \
 	exec.h \
 	queue.h \
+	queue_sys.h \
 	sha1.h \
 	base64.h \
 	version.h
