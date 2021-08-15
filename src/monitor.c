@@ -8,6 +8,11 @@
 #include <pthread.h>
 #include <errno.h>
 
+#if defined(WIN32)
+#include <fcntl.h>
+#define pipe(fds) _pipe(fds, 1024, _O_BINARY)
+#endif
+
 #include "queue.h"
 #include "pqueue.h"
 
@@ -119,6 +124,11 @@ static const struct medusa_monitor_init_options g_init_options = {
 
 static int fd_set_blocking (int fd, int on)
 {
+#if defined(WIN32)
+        (void) fd;
+        (void) on;
+        return 0;
+#else
         int rc;
         int flags;
         if (fd < 0) {
@@ -134,6 +144,7 @@ static int fd_set_blocking (int fd, int on)
                 return -errno;
         }
         return 0;
+#endif
 }
 
 static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events, void *context, void *param)

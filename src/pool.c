@@ -9,6 +9,10 @@
 #include "queue.h"
 #include "pool.h"
 
+#if defined(WIN32)
+#define getpagesize()   0x1000
+#endif
+
 SLIST_HEAD(entries, entry);
 struct entry {
         SLIST_ENTRY(entry) list;

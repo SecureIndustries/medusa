@@ -1161,7 +1161,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 ret = rc;
                 goto bail;
         }
-        rc = medusa_tcpsocket_printf_unlocked(httprequest->tcpsocket, "Content-Length: %ld\r\n", length);
+        rc = medusa_tcpsocket_printf_unlocked(httprequest->tcpsocket, "Content-Length: %ld\r\n", (long int) length);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
