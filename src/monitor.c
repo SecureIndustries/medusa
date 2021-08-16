@@ -8,6 +8,13 @@
 #include <pthread.h>
 #include <errno.h>
 
+#if defined(WIN32)
+#include <winsock2.h>
+#else
+#include <sys/types.h>
+#include <sys/socket.h>
+#endif
+
 #include "queue.h"
 #include "pqueue.h"
 #include "pipe.h"
@@ -120,8 +127,6 @@ static const struct medusa_monitor_init_options g_init_options = {
         },
 };
 
-#include <winsock2.h>
-
 static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events, void *context, void *param)
 {
         int rc;
@@ -130,18 +135,25 @@ static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events,
         (void) param;
         if (events & MEDUSA_IO_EVENT_IN) {
                 while (1) {
+#if defined(WIN32)
                         rc = recv(io->fd, (void *) &reason, sizeof(reason), 0);
+#else
+                        rc = read(io->fd, (void *) &reason, sizeof(reason));
+#endif
                         if (rc == 0) {
                                 break;
                         } else if (rc < 0) {
+#if defined(WIN32)
+                                switch (WSAGetLastError())) {
+                                        case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
+                                        case WSATRY_AGAIN:      errno = EAGAIN;    break;
+                                        case WSAEINTR:          errno = EINTR;    break;
+                                }
+#endif
+
                                 if (errno == EAGAIN ||
                                     errno == EWOULDBLOCK ||
                                     errno == EINTR) {
-                                        break;
-                                }
-                                if (WSAGetLastError() == WSAEWOULDBLOCK ||
-                                    WSAGetLastError() == WSATRY_AGAIN ||
-                                    WSAGetLastError() == WSAEINTR) {
                                         break;
                                 }
                                 goto bail;
@@ -206,7 +218,11 @@ static int monitor_signal (struct medusa_monitor *monitor, unsigned int reason)
 {
         int rc;
         if (monitor->wakeup.fired == 0) {
+#if defined(WIN32)
                 rc = send(monitor->wakeup.fds[1], (void *) &reason, sizeof(reason), 0);
+#else
+                rc = write(monitor->wakeup.fds[1], (void *) &reason, sizeof(reason));
+#endif
                 if (rc != sizeof(reason)) {
                         goto bail;
                 }
