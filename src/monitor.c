@@ -144,10 +144,12 @@ static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events,
                                 break;
                         } else if (rc < 0) {
 #if defined(WIN32)
-                                switch (WSAGetLastError())) {
-                                        case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
-                                        case WSATRY_AGAIN:      errno = EAGAIN;    break;
-                                        case WSAEINTR:          errno = EINTR;    break;
+                                if (rc == SOCKET_ERROR) {
+                                        switch (WSAGetLastError()) {
+                                                case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
+                                                case WSATRY_AGAIN:      errno = EAGAIN;         break;
+                                                case WSAEINTR:          errno = EINTR;          break;
+                                        }
                                 }
 #endif
 
