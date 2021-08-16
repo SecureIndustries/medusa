@@ -96,6 +96,12 @@ static inline int httpserver_set_state (struct medusa_httpserver *httpserver, un
                         httpserver->tcpsocket = NULL;
                 }
         }
+        if (state == MEDUSA_HTTPSERVER_STATE_ERROR) {
+                if (!MEDUSA_IS_ERR_OR_NULL(httpserver->tcpsocket)) {
+                        medusa_tcpsocket_destroy_unlocked(httpserver->tcpsocket);
+                        httpserver->tcpsocket = NULL;
+                }
+        }
         httpserver->state = state;
         return 0;
 }
@@ -167,6 +173,12 @@ static int httpserver_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, uns
                         error = rc;
                         goto bail;
                 }
+        }
+        if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
+                medusa_tcpsocket_destroy_unlocked(httpserver->tcpsocket);
+                httpserver->tcpsocket = NULL;
+                medusa_httpserver_onevent_unlocked(httpserver, MEDUSA_HTTPSERVER_EVENT_ERROR, NULL);
+                httpserver_set_state(httpserver, MEDUSA_HTTPSERVER_STATE_ERROR);
         }
 
         medusa_monitor_unlock(monitor);
@@ -495,8 +507,10 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_set_started_unloc
                         error =  MEDUSA_PTR_ERR(httpserver->tcpsocket);
                         goto bail;
                 }
-                httpserver_set_state(httpserver, MEDUSA_HTTPSERVER_STATE_STARTED);
-                medusa_httpserver_onevent_unlocked(httpserver, MEDUSA_HTTPSERVER_EVENT_STARTED, NULL);
+                if (httpserver->state != MEDUSA_HTTPSERVER_STATE_ERROR) {
+                        httpserver_set_state(httpserver, MEDUSA_HTTPSERVER_STATE_STARTED);
+                        medusa_httpserver_onevent_unlocked(httpserver, MEDUSA_HTTPSERVER_EVENT_STARTED, NULL);
+                }
         } else {
                 if (httpserver->state == MEDUSA_HTTPSERVER_STATE_STOPPED) {
                         return -EALREADY;

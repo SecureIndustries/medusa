@@ -131,7 +131,9 @@ static int httpserver_onevent (struct medusa_httpserver *httpserver, unsigned in
         (void) context;
         (void) param;
         fprintf(stderr, "httpserver state: %d, %s events: 0x%08x, %s\n", medusa_httpserver_get_state(httpserver), medusa_httpserver_state_string(medusa_httpserver_get_state(httpserver)), events, medusa_httpserver_event_string(events));
-        if (events & MEDUSA_HTTPSERVER_EVENT_CONNECTION) {
+        if (events & MEDUSA_HTTPSERVER_EVENT_ERROR) {
+                medusa_monitor_break(medusa_httpserver_get_monitor(httpserver));
+        } else if (events & MEDUSA_HTTPSERVER_EVENT_CONNECTION) {
                 rc = medusa_httpserver_accept_options_default(&httpserver_accept_options);
                 if (rc != 0) {
                         fprintf(stderr, "can not get default accept options\n");
