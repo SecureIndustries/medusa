@@ -8,13 +8,9 @@
 #include <pthread.h>
 #include <errno.h>
 
-#if defined(WIN32)
-#include <fcntl.h>
-#define pipe(fds) _pipe(fds, 1024, _O_BINARY)
-#endif
-
 #include "queue.h"
 #include "pqueue.h"
+#include "pipe.h"
 
 #include "error.h"
 #include "clock.h"
@@ -124,30 +120,7 @@ static const struct medusa_monitor_init_options g_init_options = {
         },
 };
 
-static int fd_set_blocking (int fd, int on)
-{
-#if defined(WIN32)
-        (void) fd;
-        (void) on;
-        return 0;
-#else
-        int rc;
-        int flags;
-        if (fd < 0) {
-                return -EINVAL;
-        }
-        flags = fcntl(fd, F_GETFL, 0);
-        if (flags < 0) {
-                return -errno;
-        }
-        flags = on ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
-        rc = fcntl(fd, F_SETFL, flags);
-        if (rc != 0) {
-                return -errno;
-        }
-        return 0;
-#endif
-}
+#include <winsock2.h>
 
 static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events, void *context, void *param)
 {
@@ -157,13 +130,18 @@ static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events,
         (void) param;
         if (events & MEDUSA_IO_EVENT_IN) {
                 while (1) {
-                        rc = read(io->fd, &reason, sizeof(reason));
+                        rc = recv(io->fd, (void *) &reason, sizeof(reason), 0);
                         if (rc == 0) {
                                 break;
                         } else if (rc < 0) {
                                 if (errno == EAGAIN ||
                                     errno == EWOULDBLOCK ||
                                     errno == EINTR) {
+                                        break;
+                                }
+                                if (WSAGetLastError() == WSAEWOULDBLOCK ||
+                                    WSAGetLastError() == WSATRY_AGAIN ||
+                                    WSAGetLastError() == WSAEINTR) {
                                         break;
                                 }
                                 goto bail;
@@ -228,7 +206,7 @@ static int monitor_signal (struct medusa_monitor *monitor, unsigned int reason)
 {
         int rc;
         if (monitor->wakeup.fired == 0) {
-                rc = write(monitor->wakeup.fds[1], &reason, sizeof(reason));
+                rc = send(monitor->wakeup.fds[1], (void *) &reason, sizeof(reason), 0);
                 if (rc != sizeof(reason)) {
                         goto bail;
                 }
@@ -1194,31 +1172,21 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_monitor_
                 }
         }
         TAILQ_INIT(&monitor->condition.signalled);
-        rc = pipe(monitor->wakeup.fds);
+        rc = medusa_pipe2(monitor->wakeup.fds, MEDUSA_PIPE_FLAG_NONBLOCK);
         if (rc != 0) {
                 goto bail;
         }
-        rc = fd_set_blocking(monitor->wakeup.fds[0], 0);
-        if (rc != 0) {
+        monitor->wakeup.io = medusa_io_create(monitor, monitor->wakeup.fds[0], monitor_wakeup_io_onevent, monitor);
+        if (MEDUSA_IS_ERR_OR_NULL(monitor->wakeup.io)) {
                 goto bail;
         }
-        rc = fd_set_blocking(monitor->wakeup.fds[1], 0);
-        if (rc != 0) {
+        rc = medusa_io_set_events(monitor->wakeup.io, MEDUSA_IO_EVENT_IN);
+        if (rc < 0) {
                 goto bail;
         }
-        if (0) {
-                monitor->wakeup.io = medusa_io_create(monitor, monitor->wakeup.fds[0], monitor_wakeup_io_onevent, monitor);
-                if (MEDUSA_IS_ERR_OR_NULL(monitor->wakeup.io)) {
-                        goto bail;
-                }
-                rc = medusa_io_set_events(monitor->wakeup.io, MEDUSA_IO_EVENT_IN);
-                if (rc < 0) {
-                        goto bail;
-                }
-                rc = medusa_io_set_enabled(monitor->wakeup.io, 1);
-                if (rc < 0) {
-                        goto bail;
-                }
+        rc = medusa_io_set_enabled(monitor->wakeup.io, 1);
+        if (rc < 0) {
+                goto bail;
         }
         if (monitor->timer.backend->fd != NULL) {
                 monitor->timer.io = medusa_io_create(monitor, monitor->timer.backend->fd(monitor->timer.backend), monitor_timer_io_onevent, monitor);

@@ -8,7 +8,9 @@
 #include <signal.h>
 #include <errno.h>
 
+#if defined(WIN32)
 #include <winsock2.h>
+#endif
 
 #include "medusa/error.h"
 #include "medusa/dnsrequest.h"
@@ -190,8 +192,10 @@ int main (int argc, char *argv[])
         (void) argc;
         (void) argv;
 
+#if defined(WIN32)
         WSADATA wsaData;
         WSAStartup(MAKEWORD(2,2), &wsaData);
+#endif
 
         err = 0;
         medusa_monitor = NULL;

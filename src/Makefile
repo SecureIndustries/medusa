@@ -13,6 +13,7 @@ libmedusa.a_cflags-y = \
 
 libmedusa.a_files-y = \
 	strndup.c \
+	pipe.c \
 	clock.c \
 	base64.c \
 	sha1.c \

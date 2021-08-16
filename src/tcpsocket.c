@@ -1459,8 +1459,8 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 {
                         int rc;
 #if defined(WIN32)
-                        unsigned long mode = options->nonblocking ? 0 : 1;
-                        rc = ioctlsocket(fd, FIONBIO, &mode);
+                        unsigned long nonblocking = options->nonblocking ? 1 : 0;
+                        rc = ioctlsocket(fd, FIONBIO, &nonblocking);
 #else
                         int flags;
                         flags = fcntl(fd, F_GETFL, 0);
@@ -2250,8 +2250,8 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_nonblocking_un
         if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
                 int rc;
 #if defined(WIN32)
-                unsigned long mode = enabled ? 0 : 1;
-                rc = ioctlsocket(medusa_io_get_fd_unlocked(tcpsocket->io), FIONBIO, &mode);
+                unsigned long nonblocking = enabled ? 1 : 0;
+                rc = ioctlsocket(medusa_io_get_fd_unlocked(tcpsocket->io), FIONBIO, &nonblocking);
 #else
                 int flags;
                 flags = fcntl(medusa_io_get_fd_unlocked(tcpsocket->io), F_GETFL, 0);
