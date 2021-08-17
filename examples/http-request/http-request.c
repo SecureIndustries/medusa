@@ -86,7 +86,7 @@ static int httprequest_onevent (struct medusa_httprequest *httprequest, unsigned
                         goto bail;
                 }
                 fprintf(stderr, "status:\n");
-                fprintf(stderr, "  code : %lld\n", medusa_httprequest_reply_status_get_code(httprequest_reply_status));
+                fprintf(stderr, "  code : %lld\n", (long long int) medusa_httprequest_reply_status_get_code(httprequest_reply_status));
                 fprintf(stderr, "  value: %s\n", medusa_httprequest_reply_status_get_value(httprequest_reply_status));
 
                 httprequest_reply_headers = medusa_httprequest_reply_get_headers(httprequest_reply);
@@ -95,7 +95,7 @@ static int httprequest_onevent (struct medusa_httprequest *httprequest, unsigned
                         goto bail;
                 }
                 fprintf(stderr, "headers:\n");
-                fprintf(stderr, "  count: %lld\n", medusa_httprequest_reply_headers_get_count(httprequest_reply_headers));
+                fprintf(stderr, "  count: %lld\n", (long long int) medusa_httprequest_reply_headers_get_count(httprequest_reply_headers));
                 for (httprequest_reply_header = medusa_httprequest_reply_headers_get_first(httprequest_reply_headers);
                      httprequest_reply_header;
                      httprequest_reply_header = medusa_httprequest_reply_header_get_next(httprequest_reply_header)) {
@@ -110,7 +110,7 @@ static int httprequest_onevent (struct medusa_httprequest *httprequest, unsigned
                         goto bail;
                 }
                 fprintf(stderr, "body\n");
-                fprintf(stderr, "  length: %lld\n", medusa_httprequest_reply_body_get_length(httprequest_reply_body));
+                fprintf(stderr, "  length: %lld\n", (long long int) medusa_httprequest_reply_body_get_length(httprequest_reply_body));
                 fprintf(stderr, "  value : %.*s\n",
                         (int) medusa_httprequest_reply_body_get_length(httprequest_reply_body),
                         (char *) medusa_httprequest_reply_body_get_value(httprequest_reply_body));

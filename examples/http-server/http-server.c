@@ -84,7 +84,7 @@ static int httpserver_client_onevent (struct medusa_httpserver_client *httpserve
                         goto bail;
                 }
                 fprintf(stderr, "headers\n");
-                fprintf(stderr, "  count: %lld\n", medusa_httpserver_client_request_headers_get_count(httpserver_client_request_headers));
+                fprintf(stderr, "  count: %lld\n", (long long int) medusa_httpserver_client_request_headers_get_count(httpserver_client_request_headers));
                 for (httpserver_client_request_header = medusa_httpserver_client_request_headers_get_first(httpserver_client_request_headers);
                      httpserver_client_request_header;
                      httpserver_client_request_header = medusa_httpserver_client_request_header_get_next(httpserver_client_request_header)) {
@@ -99,7 +99,7 @@ static int httpserver_client_onevent (struct medusa_httpserver_client *httpserve
                         goto bail;
                 }
                 fprintf(stderr, "body\n");
-                fprintf(stderr, "  length: %lld\n", medusa_httpserver_client_request_body_get_length(httpserver_client_request_body));
+                fprintf(stderr, "  length: %lld\n", (long long int) medusa_httpserver_client_request_body_get_length(httpserver_client_request_body));
                 fprintf(stderr, "  value : %.*s\n",
                         (int) medusa_httpserver_client_request_body_get_length(httpserver_client_request_body),
                         (char *) medusa_httpserver_client_request_body_get_value(httpserver_client_request_body));
@@ -240,7 +240,7 @@ int main (int argc, char *argv[])
 
         httpserver = medusa_httpserver_create_with_options(&httpserver_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
-                fprintf(stderr, "can not create httpserver errno: %lld, %s\n", MEDUSA_PTR_ERR(httpserver), strerror(MEDUSA_PTR_ERR(httpserver)));
+                fprintf(stderr, "can not create httpserver errno: %d, %s\n", MEDUSA_PTR_ERR(httpserver), strerror(MEDUSA_PTR_ERR(httpserver)));
                 goto bail;
         }
         rc = medusa_httpserver_set_enabled(httpserver, 1);
