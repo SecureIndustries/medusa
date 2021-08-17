@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-char * medusa_strndup (const char *str, size_t n)
+__attribute__ ((visibility ("default"))) char * medusa_strndup (const char *str, size_t n)
 {
 	size_t len;
 	char *copy;
