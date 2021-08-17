@@ -9,14 +9,14 @@
 
 #define MEDUSA_IS_ERR_VALUE(x) ((uintptr_t) (void *) (x) >= (uintptr_t) -MAX_ERRNO)
 
-static inline void * MEDUSA_ERR_PTR (intptr_t error)
+static inline void * MEDUSA_ERR_PTR (int error)
 {
-        return (void *) error;
+        return (void *) (intptr_t) error;
 }
 
-static inline intptr_t MEDUSA_PTR_ERR (const void *ptr)
+static inline int MEDUSA_PTR_ERR (const void *ptr)
 {
-        return (intptr_t) ptr;
+        return (int) (intptr_t) ptr;
 }
 
 static inline int MEDUSA_IS_ERR (const void *ptr)
