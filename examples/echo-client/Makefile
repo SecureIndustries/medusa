@@ -17,6 +17,10 @@ medusa-echo-client_ldflags-y += \
 	-lpthread \
 	-lm
 
+medusa-echo-client_ldflags-${__WINDOWS__} += \
+	-lws2_32 \
+	-static
+
 medusa-echo-client_ldflags-${MEDUSA_TCPSOCKET_OPENSSL_ENABLE} += \
 	-lssl \
 	-lcrypto

@@ -424,6 +424,15 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                 wlength = send(medusa_io_get_fd_unlocked(io), iovec.iov_base, iovec.iov_len, 0);
                                         }
                                         if (wlength < 0) {
+#if defined(WIN32)
+                                                if (wlength == SOCKET_ERROR) {
+                                                        switch (WSAGetLastError()) {
+                                                                case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
+                                                                case WSATRY_AGAIN:      errno = EAGAIN;         break;
+                                                                case WSAEINTR:          errno = EINTR;          break;
+                                                        }
+                                                }
+#endif
                                                 if (errno == EINTR ||
                                                     errno == EAGAIN ||
                                                     errno == EWOULDBLOCK) {
@@ -1625,8 +1634,19 @@ bind_ipv6:
                 }
                 rc = connect(fd, res->ai_addr, res->ai_addrlen);
                 if (rc != 0) {
+#if defined(WIN32)
+                        if (rc == SOCKET_ERROR) {
+                                switch (WSAGetLastError()) {
+                                        case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
+                                        case WSATRY_AGAIN:      errno = EAGAIN;         break;
+                                        case WSAEINTR:          errno = EINTR;          break;
+                                }
+                        }
+#endif
                         if (errno != EINPROGRESS &&
-                            errno != EALREADY) {
+                            errno != EALREADY &&
+                            errno != EWOULDBLOCK &&
+                            errno != EINTR) {
                                 if (options->fd < 0) {
                                         close(fd);
                                 }
@@ -1642,7 +1662,9 @@ bind_ipv6:
             (fd == -1) ||
             (rc != 0 &&
              rc != -EINPROGRESS &&
-             rc != -EALREADY)) {
+             rc != -EALREADY &&
+             rc != -EWOULDBLOCK &&
+             rc != -EINTR)) {
                 ret = rc;
                 if (options->fd < 0 ||
                     options->clodestroy == 1) {

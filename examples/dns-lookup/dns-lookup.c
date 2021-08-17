@@ -189,9 +189,6 @@ int main (int argc, char *argv[])
         struct medusa_monitor *medusa_monitor;
         struct medusa_monitor_init_options medusa_monitor_init_options;
 
-        (void) argc;
-        (void) argv;
-
 #if defined(WIN32)
         WSADATA wsaData;
         WSAStartup(MAKEWORD(2,2), &wsaData);

@@ -18,6 +18,10 @@ medusa-http-server_ldflags-y += \
 	-lpthread \
 	-lm
 
+medusa-http-server_ldflags-${__WINDOWS__} += \
+	-lws2_32 \
+	-static
+
 medusa-http-server_ldflags-${MEDUSA_TCPSOCKET_OPENSSL_ENABLE} += \
 	-lssl \
 	-lcrypto

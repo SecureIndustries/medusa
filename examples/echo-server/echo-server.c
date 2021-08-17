@@ -9,6 +9,10 @@
 #include <signal.h>
 #include <errno.h>
 
+#if defined(WIN32)
+#include <winsock2.h>
+#endif
+
 #if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -164,8 +168,10 @@ int main (int argc, char *argv[])
         struct medusa_monitor *medusa_monitor;
         struct medusa_monitor_init_options medusa_monitor_init_options;
 
-        (void) argc;
-        (void) argv;
+#if defined(WIN32)
+        WSADATA wsaData;
+        WSAStartup(MAKEWORD(2,2), &wsaData);
+#endif
 
 #if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
         SSL_library_init();

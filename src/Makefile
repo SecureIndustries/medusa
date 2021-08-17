@@ -186,6 +186,7 @@ dist.include-y = \
 	queue_sys.h \
 	sha1.h \
 	base64.h \
+	strndup.h \
 	version.h
 
 dist.obj-${MEDUSA_LIBMEDUSA_TARGET_O} += \
