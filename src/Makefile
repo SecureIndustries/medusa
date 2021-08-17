@@ -1,4 +1,24 @@
 
+ifneq ($(__LINUX__), y)
+override MEDUSA_POLL_EPOLL_ENABLE   	= n
+override MEDUSA_SIGNAL_SIGNALFD_ENABLE	= n
+override MEDUSA_TIMER_TIMERFD_ENABLE  	= n
+endif
+
+ifneq ($(__DARWIN__), y)
+override MEDUSA_POLL_KQUEUE_ENABLE    	= n
+endif
+
+ifeq ($(__WINDOWS__), y)
+override MEDUSA_EXEC_ENABLE		= n
+override MEDUSA_POLL_POLL_ENABLE   	= n
+override MEDUSA_SIGNAL_SIGACTION_ENABLE	= n
+override MEDUSA_SIGNAL_SIGNALFD_ENABLE	= n
+override MEDUSA_TCPSOCKET_OPENSSL_ENABLE= n
+override MEDUSA_LIBMEDUSA_TARGET_O	= n
+override MEDUSA_LIBMEDUSA_TARGET_SO	= n
+endif
+
 target.a-${MEDUSA_LIBMEDUSA_TARGET_A} = \
 	libmedusa.a \
 
