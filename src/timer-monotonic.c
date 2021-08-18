@@ -30,6 +30,8 @@ bail:   return -1;
 
 static int internal_get (struct medusa_timer_backend *backend, struct timespec *timespec)
 {
+        int rc;
+        struct timespec now;
         struct internal *internal = (struct internal *) backend;
         if (internal == NULL) {
                 goto bail;
@@ -37,8 +39,13 @@ static int internal_get (struct medusa_timer_backend *backend, struct timespec *
         if (timespec == NULL) {
                 goto bail;
         }
+        rc = medusa_clock_monotonic(&now);
+        if (rc < 0) {
+                goto bail;
+        }
         timespec->tv_sec  = internal->timespec.tv_sec;
         timespec->tv_nsec = internal->timespec.tv_nsec;
+        medusa_timespec_sub(timespec, &now, timespec);
         return 0;
 bail:   return -1;
 }

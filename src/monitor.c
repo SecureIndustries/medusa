@@ -672,7 +672,7 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
 bail:   return rc;
 }
 
-static int monitor_setup_timer (struct medusa_monitor *monitor)
+static int monitor_setup_timer (struct medusa_monitor *monitor, struct timespec *remaining)
 {
         int rc;
         struct medusa_timer *timer;
@@ -683,6 +683,14 @@ static int monitor_setup_timer (struct medusa_monitor *monitor)
                         goto bail;
                 }
                 monitor->timer.dirty = 0;
+        }
+        if (monitor->timer.backend->fd == NULL) {
+                rc = monitor->timer.backend->get(monitor->timer.backend, remaining);
+                if (rc < 0) {
+                        goto bail;
+                }
+        } else {
+                medusa_timespec_clear(remaining);
         }
         return 0;
 bail:   return -1;
@@ -710,11 +718,22 @@ static int monitor_check_timer (struct medusa_monitor *monitor)
 {
         int rc;
         struct timespec now;
-        rc = medusa_clock_monotonic(&now);
-        if (rc < 0) {
-                goto bail;
+        struct timespec rem;
+        if (monitor->timer.backend->fd == NULL) {
+                rc = monitor->timer.backend->get(monitor->timer.backend, &rem);
+                if (rc < 0) {
+                        goto bail;
+                }
+                if (rem.tv_sec <= 0 ||
+                    rem.tv_nsec <= 0) {
+                        monitor->timer.fired = 1;
+                }
         }
         if (monitor->timer.fired != 0) {
+                rc = medusa_clock_monotonic(&now);
+                if (rc < 0) {
+                        goto bail;
+                }
 #if 0
                 struct medusa_timer *timer;
                 while (1) {
@@ -1444,6 +1463,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
         int rc;
         struct timespec *timespec;
         struct timespec _timespec;
+        struct timespec remaining;
 
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
                 return -EINVAL;
@@ -1467,7 +1487,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
         if (rc < 0) {
                 goto bail;
         }
-        rc = monitor_setup_timer(monitor);
+        rc = monitor_setup_timer(monitor, &remaining);
         if (rc < 0) {
                 goto bail;
         }
@@ -1478,6 +1498,13 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
 
         medusa_monitor_unlock(monitor);
 
+        if (medusa_timespec_isset(&remaining)) {
+                if (timespec == NULL ||
+                    medusa_timespec_compare(&remaining, timespec, <)) {
+                        timespec = &remaining;
+                }
+        }
+
         rc = monitor->poll.backend->run(monitor->poll.backend, timespec);
 
         medusa_monitor_lock(monitor);
@@ -1485,6 +1512,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
         if (rc < 0) {
                 goto bail;
         }
+
         rc = monitor_check_timer(monitor);
         if (rc < 0) {
                 goto bail;
