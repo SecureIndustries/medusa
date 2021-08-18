@@ -18,10 +18,6 @@ medusa-dns-lookup_ldflags-y += \
 	-lpthread \
 	-lm
 
-medusa-dns-lookup_ldflags-y += \
-	-lpthread \
-	-lm
-
 medusa-dns-lookup_ldflags-${MEDUSA_TCPSOCKET_OPENSSL_ENABLE} += \
 	-lssl \
 	-lcrypto

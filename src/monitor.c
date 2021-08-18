@@ -8,7 +8,7 @@
 #include <pthread.h>
 #include <errno.h>
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #include <winsock2.h>
 #else
 #include <sys/types.h>
@@ -135,7 +135,7 @@ static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events,
         (void) param;
         if (events & MEDUSA_IO_EVENT_IN) {
                 while (1) {
-#if defined(WIN32)
+#if defined(_WIN32)
                         rc = recv(io->fd, (void *) &reason, sizeof(reason), 0);
 #else
                         rc = read(io->fd, (void *) &reason, sizeof(reason));
@@ -143,7 +143,7 @@ static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events,
                         if (rc == 0) {
                                 break;
                         } else if (rc < 0) {
-#if defined(WIN32)
+#if defined(_WIN32)
                                 if (rc == SOCKET_ERROR) {
                                         switch (WSAGetLastError()) {
                                                 case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
@@ -220,7 +220,7 @@ static int monitor_signal (struct medusa_monitor *monitor, unsigned int reason)
 {
         int rc;
         if (monitor->wakeup.fired == 0) {
-#if defined(WIN32)
+#if defined(_WIN32)
                 rc = send(monitor->wakeup.fds[1], (void *) &reason, sizeof(reason), 0);
 #else
                 rc = write(monitor->wakeup.fds[1], (void *) &reason, sizeof(reason));

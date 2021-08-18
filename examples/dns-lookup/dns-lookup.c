@@ -8,7 +8,7 @@
 #include <signal.h>
 #include <errno.h>
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #include <winsock2.h>
 #endif
 
@@ -189,7 +189,7 @@ int main (int argc, char *argv[])
         struct medusa_monitor *medusa_monitor;
         struct medusa_monitor_init_options medusa_monitor_init_options;
 
-#if defined(WIN32)
+#if defined(_WIN32)
         WSADATA wsaData;
         WSAStartup(MAKEWORD(2,2), &wsaData);
 #endif

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
-#if defined(WIN32)
+#if defined(_WIN32)
 #include <winsock2.h>
 #include <wspiapi.h>
 #else
@@ -424,7 +424,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                 wlength = send(medusa_io_get_fd_unlocked(io), iovec.iov_base, iovec.iov_len, 0);
                                         }
                                         if (wlength < 0) {
-#if defined(WIN32)
+#if defined(_WIN32)
                                                 if (wlength == SOCKET_ERROR) {
                                                         switch (WSAGetLastError()) {
                                                                 case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
@@ -523,7 +523,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                 int64_t niovecs;
                                 struct medusa_iovec iovec;
                                 n = 4096;
-#if defined(WIN32)
+#if defined(_WIN32)
                                 rc = -ENOTSUP;
 #else
                                 rc = ioctl(medusa_io_get_fd_unlocked(io), FIONREAD, &n);
@@ -1467,7 +1467,7 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 }
                 {
                         int rc;
-#if defined(WIN32)
+#if defined(_WIN32)
                         unsigned long nonblocking = options->nonblocking ? 1 : 0;
                         rc = ioctlsocket(fd, FIONBIO, &nonblocking);
 #else
@@ -1634,7 +1634,7 @@ bind_ipv6:
                 }
                 rc = connect(fd, res->ai_addr, res->ai_addrlen);
                 if (rc != 0) {
-#if defined(WIN32)
+#if defined(_WIN32)
                         if (rc == SOCKET_ERROR) {
                                 switch (WSAGetLastError()) {
                                         case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
@@ -2271,7 +2271,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_nonblocking_un
         }
         if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
                 int rc;
-#if defined(WIN32)
+#if defined(_WIN32)
                 unsigned long nonblocking = enabled ? 1 : 0;
                 rc = ioctlsocket(medusa_io_get_fd_unlocked(tcpsocket->io), FIONBIO, &nonblocking);
 #else

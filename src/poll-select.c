@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #define FD_SETSIZE      1024
 #include <winsock2.h>
 #else
@@ -23,7 +23,7 @@
 
 #if defined(__DARWIN__) && (__DARWIN__ == 1)
 #define SELECT_FD_SETSIZE       __DARWIN_FD_SETSIZE
-#elif defined(WIN32)
+#elif defined(_WIN32)
 #define SELECT_FD_SETSIZE       FD_SETSIZE
 #else
 #define SELECT_FD_SETSIZE       __FD_SETSIZE
@@ -166,7 +166,6 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
         memcpy(&internal->_wfds, &internal->wfds, sizeof(internal->wfds));
         memcpy(&internal->_efds, &internal->efds, sizeof(internal->efds));
         count = select(SELECT_FD_SETSIZE, &internal->_rfds, &internal->_wfds, &internal->_efds, timeval);
-        //fprintf(stderr, "select: %d, %d, %d @ %s %s:%d\n", count, SOCKET_ERROR, WSAGetLastError(), __FUNCTION__, __FILE__, __LINE__);
         if (count == 0) {
                 goto out;
         }

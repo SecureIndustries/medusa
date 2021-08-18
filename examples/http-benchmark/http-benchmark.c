@@ -8,7 +8,7 @@
 #include <time.h>
 #include <fcntl.h>
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #include <winsock2.h>
 #include <wspiapi.h>
 #else
@@ -660,7 +660,7 @@ again:
                 rc = -EIO;
                 goto bail;
         }
-#if defined(WIN32)
+#if defined(_WIN32)
         unsigned long nonblocking = 1;
         rc = ioctlsocket(fd, FIONBIO, &nonblocking);
 #else

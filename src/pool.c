@@ -9,7 +9,7 @@
 #include "queue.h"
 #include "pool.h"
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #define getpagesize()   0x1000
 #endif
 

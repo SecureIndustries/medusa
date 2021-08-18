@@ -1,5 +1,5 @@
 
-MEDUSA_VERSION			?= 1.0.0
+MEDUSA_VERSION			?= 1.1.0
 MEDUSA_SONAME			?= 1
 
 MEDUSA_BUILD_TEST     		?= n
@@ -102,6 +102,7 @@ install: src test
 	install -m 0644 dist/include/medusa/io.h ${DESTDIR}/${prefix}/include/medusa/io.h
 	install -m 0644 dist/include/medusa/monitor.h ${DESTDIR}/${prefix}/include/medusa/monitor.h
 	install -m 0644 dist/include/medusa/pool.h ${DESTDIR}/${prefix}/include/medusa/pool.h
+	install -m 0644 dist/include/medusa/strndup.h ${DESTDIR}/${prefix}/include/medusa/strndup.h
 	install -m 0644 dist/include/medusa/queue.h ${DESTDIR}/${prefix}/include/medusa/queue.h
 	install -m 0644 dist/include/medusa/queue_sys.h ${DESTDIR}/${prefix}/include/medusa/queue_sys.h
 	install -m 0644 dist/include/medusa/signal.h ${DESTDIR}/${prefix}/include/medusa/signal.h

@@ -5,7 +5,7 @@
 #include <stdarg.h>
 #include <getopt.h>
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #include <winsock2.h>
 #endif
 
@@ -151,7 +151,7 @@ int main (int argc, char *argv[])
         struct medusa_httprequest_init_options httprequest_init_options;
         struct medusa_httprequest *httprequest;
 
-#if defined(WIN32)
+#if defined(_WIN32)
         WSADATA wsaData;
         WSAStartup(MAKEWORD(2,2), &wsaData);
 #endif
