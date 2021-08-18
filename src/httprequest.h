@@ -104,8 +104,12 @@ int medusa_httprequest_set_method (struct medusa_httprequest *httprequest, const
 int medusa_httprequest_add_header (struct medusa_httprequest *httprequest, const char *key, const char *value, ...) __attribute__((format(printf, 3, 4)));
 int medusa_httprequest_add_vheader (struct medusa_httprequest *httprequest, const char *key, const char *value, va_list va);
 
+int medusa_httprequest_add_raw_header (struct medusa_httprequest *httprequest, const char *value, ...) __attribute__((format(printf, 2, 3)));
+int medusa_httprequest_add_raw_vheader (struct medusa_httprequest *httprequest, const char *value, va_list va);
+
 int medusa_httprequest_make_post (struct medusa_httprequest *httprequest, const char *url, const void *data, int64_t length);
-int medusa_httprequest_make_post_string (struct medusa_httprequest *httprequest, const char *url, const char *data);
+int medusa_httprequest_make_post_string (struct medusa_httprequest *httprequest, const char *url, const char *data, ...) __attribute__((format(printf, 3, 4)));
+int medusa_httprequest_make_post_vstring (struct medusa_httprequest *httprequest, const char *url, const char *data, va_list va);
 
 int medusa_httprequest_onevent (struct medusa_httprequest *httprequest, unsigned int events, void *param);
 struct medusa_monitor * medusa_httprequest_get_monitor (struct medusa_httprequest *httprequest);

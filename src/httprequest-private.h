@@ -16,6 +16,8 @@ double medusa_httprequest_get_connect_timeout_unlocked (const struct medusa_http
 int medusa_httprequest_set_method_unlocked (struct medusa_httprequest *httprequest, const char *method);
 int medusa_httprequest_add_header_unlocked (struct medusa_httprequest *httprequest, const char *key, const char *value, ...);
 int medusa_httprequest_add_vheader_unlocked (struct medusa_httprequest *httprequest, const char *key, const char *value, va_list va);
+int medusa_httprequest_add_raw_header_unlocked (struct medusa_httprequest *httprequest, const char *value, ...) __attribute__((format(printf, 2, 3)));
+int medusa_httprequest_add_raw_vheader_unlocked (struct medusa_httprequest *httprequest, const char *value, va_list va);
 
 int medusa_httprequest_make_post_unlocked (struct medusa_httprequest *httprequest, const char *url, const void *data, int64_t length);
 

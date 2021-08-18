@@ -1054,6 +1054,70 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_add_vheader (str
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_httprequest_add_raw_header_unlocked (struct medusa_httprequest *httprequest, const char *value, ...)
+{
+        int64_t rc;
+        va_list va;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(value)) {
+                return -EINVAL;
+        }
+        va_start(va, value);
+        rc = medusa_httprequest_add_raw_vheader_unlocked(httprequest, value, va);
+        va_end(va);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_add_raw_header (struct medusa_httprequest *httprequest, const char *value, ...)
+{
+        int64_t rc;
+        va_list va;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(value)) {
+                return -EINVAL;
+        }
+        va_start(va, value);
+        rc = medusa_httprequest_add_raw_vheader(httprequest, value, va);
+        va_end(va);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_add_raw_vheader_unlocked (struct medusa_httprequest *httprequest, const char *value, va_list va)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(value)) {
+                return -EINVAL;
+        }
+        rc  = medusa_buffer_vprintf(httprequest->headers, value, va);
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_buffer_printf(httprequest->headers, "\r\n");
+        if (rc < 0) {
+                return rc;
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_add_raw_vheader (struct medusa_httprequest *httprequest, const char *value, va_list va)
+{
+        int64_t rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httprequest->subject.monitor);
+        rc = medusa_httprequest_add_raw_vheader_unlocked(httprequest, value, va);
+        medusa_monitor_unlock(httprequest->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlocked (struct medusa_httprequest *httprequest, const char *url, const void *data, int64_t length)
 {
         int rc;
@@ -1208,18 +1272,65 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post (struc
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_string (struct medusa_httprequest *httprequest, const char *url, const char *data)
+__attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_string (struct medusa_httprequest *httprequest, const char *url, const char *data, ...)
 {
         int rc;
+        va_list va;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(url)) {
+                return -EINVAL;
+        }
+        va_start(va, data);
+        rc = medusa_httprequest_make_post_vstring(httprequest, url, data, va);
+        va_end(va);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_vstring (struct medusa_httprequest *httprequest, const char *url, const char *data, va_list va)
+{
+        int rc;
+        int length;
+        va_list vs;
+        char *value;
+
+        value = NULL;
+
         if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
                 return -EINVAL;
         }
         if (url == NULL) {
                 return -EINVAL;
         }
+
+        if (data != NULL) {
+                va_copy(vs, va);
+                length = vsnprintf(NULL, 0, data, vs);
+                va_end(vs);
+                if (length < 0) {
+                        return -EIO;
+                }
+                value = malloc(length + 1);
+                if (value == NULL) {
+                        return -ENOMEM;
+                }
+                va_copy(vs, va);
+                rc = vsnprintf(value, length + 1, data, vs);
+                va_end(vs);
+                if (rc < 0) {
+                        free(value);
+                        return -EIO;
+                }
+        }
+
         medusa_monitor_lock(httprequest->subject.monitor);
-        rc = medusa_httprequest_make_post_unlocked(httprequest, url, data, (data == NULL) ? 0 : strlen(data));
+        rc = medusa_httprequest_make_post_unlocked(httprequest, url, value, (value == NULL) ? 0 : strlen(value));
         medusa_monitor_unlock(httprequest->subject.monitor);
+
+        if (value != NULL) {
+                free(value);
+        }
         return rc;
 }
 
