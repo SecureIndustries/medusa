@@ -2731,7 +2731,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                         if (tcpsocket->ssl_ctx == NULL) {
                                 return -EIO;
                         }
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) || (OPENSSL_API_COMPAT >= 0x10100000L)
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && (OPENSSL_API_COMPAT >= 0x10100000L)
                         SSL_CTX_set_ecdh_auto(tcpsocket->ssl_ctx, 1);
 #endif
                 }
@@ -2757,7 +2757,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                         if (tcpsocket->ssl == NULL) {
                                 return -EIO;
                         }
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) || (OPENSSL_API_COMPAT >= 0x10100000L)
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && (OPENSSL_API_COMPAT >= 0x10100000L)
                         SSL_set_tlsext_host_name(tcpsocket->ssl, tcpsocket->ssl_hostname);
 #endif
                         rc = SSL_set_fd(tcpsocket->ssl, medusa_tcpsocket_get_fd_unlocked(tcpsocket));

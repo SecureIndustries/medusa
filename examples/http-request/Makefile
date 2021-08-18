@@ -20,13 +20,14 @@ medusa-http-request_ldflags-y += \
 	-lpthread \
 	-lm
 
-medusa-http-request_ldflags-${__WINDOWS__} += \
-	-lws2_32 \
-	-static
-
 medusa-http-request_ldflags-${MEDUSA_TCPSOCKET_OPENSSL_ENABLE} += \
 	-lssl \
 	-lcrypto
+
+medusa-http-request_ldflags-${__WINDOWS__} += \
+	-lws2_32 \
+	-lcrypt32 \
+	-static
 
 medusa-http-request_ldflags-$(__LINUX__) += \
 	-lrt

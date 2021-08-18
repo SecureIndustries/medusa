@@ -22,13 +22,14 @@ medusa-dns-lookup_ldflags-y += \
 	-lpthread \
 	-lm
 
-medusa-dns-lookup_ldflags-${__WINDOWS__} += \
-	-lws2_32 \
-	-static
-
 medusa-dns-lookup_ldflags-${MEDUSA_TCPSOCKET_OPENSSL_ENABLE} += \
 	-lssl \
 	-lcrypto
+
+medusa-dns-lookup_ldflags-${__WINDOWS__} += \
+	-lws2_32 \
+	-lcrypt32 \
+	-static
 
 medusa-dns-lookup_ldflags-$(__LINUX__) += \
 	-lrt

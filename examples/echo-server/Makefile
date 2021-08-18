@@ -18,13 +18,14 @@ medusa-echo-server_ldflags-y += \
 	-lpthread \
 	-lm
 
-medusa-echo-server_ldflags-${__WINDOWS__} += \
-	-lws2_32 \
-	-static
-
 medusa-echo-server_ldflags-${MEDUSA_TCPSOCKET_OPENSSL_ENABLE} += \
 	-lssl \
 	-lcrypto
+
+medusa-echo-server_ldflags-${__WINDOWS__} += \
+	-lws2_32 \
+	-lcrypt32 \
+	-static
 
 medusa-echo-server_ldflags-$(__LINUX__) += \
 	-lrt
