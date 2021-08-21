@@ -6,6 +6,8 @@ struct medusa_monitor;
 struct medusa_httpserver;
 struct medusa_httpserver_client;
 struct medusa_httpserver_client_request;
+struct medusa_httpserver_client_request_option;
+struct medusa_httpserver_client_request_options;
 struct medusa_httpserver_client_request_header;
 struct medusa_httpserver_client_request_headers;
 struct medusa_httpserver_client_request_body;
@@ -180,7 +182,16 @@ double medusa_httpserver_client_get_read_timeout (const struct medusa_httpserver
 const struct medusa_httpserver_client_request * medusa_httprequest_client_get_request (const struct medusa_httpserver_client *httpserver_client);
 
 const char * medusa_httpserver_client_request_get_method (const struct medusa_httpserver_client_request *request);
+const char * medusa_httpserver_client_request_get_url (const struct medusa_httpserver_client_request *request);
 const char * medusa_httpserver_client_request_get_path (const struct medusa_httpserver_client_request *request);
+
+const struct medusa_httpserver_client_request_options * medusa_httpserver_client_request_get_options (const struct medusa_httpserver_client_request *request);
+int64_t medusa_httpserver_client_request_options_get_count (const struct medusa_httpserver_client_request_options *options);
+const struct medusa_httpserver_client_request_option * medusa_httpserver_client_request_options_get_first (const struct medusa_httpserver_client_request_options *options);
+
+const char * medusa_httpserver_client_request_option_get_key (const struct medusa_httpserver_client_request_option *option);
+const char * medusa_httpserver_client_request_option_get_value (const struct medusa_httpserver_client_request_option *option);
+const struct medusa_httpserver_client_request_option * medusa_httpserver_client_request_option_get_next (const struct medusa_httpserver_client_request_option *option);
 
 const struct medusa_httpserver_client_request_headers * medusa_httpserver_client_request_get_headers (const struct medusa_httpserver_client_request *request);
 int64_t medusa_httpserver_client_request_headers_get_count (const struct medusa_httpserver_client_request_headers *headers);
