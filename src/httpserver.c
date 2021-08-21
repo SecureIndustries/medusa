@@ -868,6 +868,18 @@ static inline int httpserver_client_set_state (struct medusa_httpserver_client *
         return 0;
 }
 
+TAILQ_HEAD(medusa_httpserver_client_request_options_list, medusa_httpserver_client_request_option);
+struct medusa_httpserver_client_request_option {
+        TAILQ_ENTRY(medusa_httpserver_client_request_option) list;
+        char *key;
+        char *value;
+};
+
+struct medusa_httpserver_client_request_options {
+        int64_t count;
+        struct medusa_httpserver_client_request_options_list list;
+};
+
 TAILQ_HEAD(medusa_httpserver_client_request_headers_list, medusa_httpserver_client_request_header);
 struct medusa_httpserver_client_request_header {
         TAILQ_ENTRY(medusa_httpserver_client_request_header) list;
@@ -888,6 +900,8 @@ struct medusa_httpserver_client_request_body {
 struct medusa_httpserver_client_request {
         char *method;
         char *url;
+        char *path;
+        struct medusa_httpserver_client_request_options options;
         struct medusa_httpserver_client_request_headers headers;
         struct medusa_httpserver_client_request_body body;
 };
@@ -926,6 +940,43 @@ static int medusa_httpserver_client_request_header_set_value (struct medusa_http
                 return -ENOMEM;
         }
         return 0;
+}
+
+static void medusa_httpserver_client_request_option_destroy (struct medusa_httpserver_client_request_option *option)
+{
+        if (option == NULL) {
+                return;
+        }
+        if (option->key != NULL) {
+                free(option->key);
+        }
+        if (option->value != NULL) {
+                free(option->value);
+        }
+        free(option);
+}
+
+static struct medusa_httpserver_client_request_option * medusa_httpserver_client_request_option_create (const char *key, char *value)
+{
+        struct medusa_httpserver_client_request_option *option;
+        option = malloc(sizeof(struct medusa_httpserver_client_request_option));
+        if (option == NULL) {
+                return MEDUSA_ERR_PTR(-ENOMEM);
+        }
+        memset(option, 0, sizeof(struct medusa_httpserver_client_request_option));
+        if (key != NULL) {
+                option->key = strdup(key);
+                if (option->key == NULL) {
+                        return MEDUSA_ERR_PTR(-ENOMEM);
+                }
+        }
+        if (value != NULL) {
+                option->value = strdup(value);
+                if (option->value == NULL) {
+                        return MEDUSA_ERR_PTR(-ENOMEM);
+                }
+        }
+        return option;
 }
 
 static void medusa_httpserver_client_request_header_destroy (struct medusa_httpserver_client_request_header *header)
@@ -985,6 +1036,24 @@ static void medusa_httpserver_client_request_headers_init (struct medusa_httpser
         TAILQ_INIT(&headers->list);
 }
 
+static void medusa_httpserver_client_request_options_uninit (struct medusa_httpserver_client_request_options *options)
+{
+        struct medusa_httpserver_client_request_option *option;
+        struct medusa_httpserver_client_request_option *noption;
+        TAILQ_FOREACH_SAFE(option, &options->list, list, noption) {
+                TAILQ_REMOVE(&options->list, option, list);
+                medusa_httpserver_client_request_option_destroy(option);
+        }
+        options->count = 0;
+}
+
+static void medusa_httpserver_client_request_options_init (struct medusa_httpserver_client_request_options *options)
+{
+        memset(options, 0, sizeof(struct medusa_httpserver_client_request_options));
+        options->count = 0;
+        TAILQ_INIT(&options->list);
+}
+
 static int medusa_httpserver_client_request_set_method (struct medusa_httpserver_client_request *request, const char *method)
 {
         if (request == NULL) {
@@ -1008,15 +1077,30 @@ static int medusa_httpserver_client_request_set_url (struct medusa_httpserver_cl
         if (request == NULL) {
                 return -EINVAL;
         }
-        if (request->url != NULL) {
-                free(request->url);
-                request->url = NULL;
+        if (length < 0) {
+                return -EINVAL;
         }
-        if (length > 0) {
+        if (length == 0) {
+                return 0;
+        }
+        if (request->url == NULL) {
                 request->url = strndup(url, length);
                 if (request->url == NULL) {
                         return -ENOMEM;
                 }
+        } else {
+                char *tmp;
+                tmp = realloc(request->url, strlen(request->url) + length + 1);
+                if (tmp == NULL) {
+                        tmp = malloc(strlen(request->url) + length + 1);
+                        if (tmp == NULL) {
+                                return -ENOMEM;
+                        }
+                        memcpy(tmp, request->url, strlen(request->url) + 1);
+                        free(request->url);
+                }
+                request->url = tmp;
+                strncat(request->url, url, length);
         }
         return 0;
 }
@@ -1032,8 +1116,12 @@ static void medusa_httpserver_client_request_destroy (struct medusa_httpserver_c
         if (request->url != NULL) {
                 free(request->url);
         }
+        if (request->path != NULL) {
+                free(request->path);
+        }
         medusa_httpserver_client_request_body_uninit(&request->body);
         medusa_httpserver_client_request_headers_uninit(&request->headers);
+        medusa_httpserver_client_request_options_uninit(&request->options);
         free(request);
 }
 
@@ -1045,6 +1133,7 @@ static struct medusa_httpserver_client_request * medusa_httpserver_client_reques
                 return MEDUSA_ERR_PTR(-ENOMEM);
         }
         memset(request, 0, sizeof(struct medusa_httpserver_client_request));
+        medusa_httpserver_client_request_options_init(&request->options);
         medusa_httpserver_client_request_headers_init(&request->headers);
         medusa_httpserver_client_request_body_init(&request->body);
         return request;
@@ -1160,6 +1249,67 @@ static int httpserver_client_httpparser_on_message_complete (http_parser *http_p
         rc = httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVED);
         if (rc < 0) {
                 return rc;
+        }
+        if (httpserver_client->request->url != NULL) {
+                char *s;
+                char *e;
+                char *o;
+                char *k;
+                char *v;
+                struct medusa_httpserver_client_request_option *httpserver_client_request_option;
+                s = httpserver_client->request->url;
+                e = strchr(s, '?');
+                if (e == NULL) {
+                        httpserver_client->request->path = strdup(httpserver_client->request->url);
+                        if (httpserver_client->request->path == NULL) {
+                                return -ENOMEM;
+                        }
+                } else {
+                        fprintf(stderr, "s: %s\n", s);
+                        fprintf(stderr, "e: %s\n", e);
+                        httpserver_client->request->path = strndup(s, e - s);
+                        if (httpserver_client->request->path == NULL) {
+                                return -ENOMEM;
+                        }
+                        o = strdup(e + 1);
+                        if (o == NULL) {
+                                return -ENOMEM;
+                        }
+                        s = o;
+                        while (s && *s) {
+                                fprintf(stderr, "- s: %s\n", s);
+                                e = strchr(s, '&');
+                                if (e != NULL) {
+                                        *e = '\0';
+                                }
+
+                                k = s;
+                                v = strchr(s, '=');
+                                if (e != NULL && v != NULL && v >= e) {
+                                        v = NULL;
+                                }
+                                if (v != NULL) {
+                                        *v++ = '\0';
+                                }
+                                fprintf(stderr, "  k: %s\n", k);
+                                if (v != NULL) {
+                                        fprintf(stderr, "  v: %s\n", v);
+                                }
+                                httpserver_client_request_option = medusa_httpserver_client_request_option_create(k, v);
+                                if (MEDUSA_IS_ERR_OR_NULL(httpserver_client_request_option)) {
+                                        free(o);
+                                        return MEDUSA_PTR_ERR(httpserver_client_request_option);
+                                }
+                                TAILQ_INSERT_TAIL(&httpserver_client->request->options.list, httpserver_client_request_option, list);
+                                httpserver_client->request->options.count += 1;
+
+                                if (e == NULL) {
+                                        break;
+                                }
+                                s = e + 1;
+                        }
+                        free(o);
+                }
         }
         httpserver_client_event_request_received.request = httpserver_client->request;
         rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED, &httpserver_client_event_request_received);
@@ -1607,12 +1757,68 @@ __attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_r
         return request->method;
 }
 
-__attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_request_get_path (const struct medusa_httpserver_client_request *request)
+__attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_request_get_url (const struct medusa_httpserver_client_request *request)
 {
         if (MEDUSA_IS_ERR_OR_NULL(request)) {
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
         return request->url;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_request_get_path (const struct medusa_httpserver_client_request *request)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return request->path;
+}
+
+__attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_request_options * medusa_httpserver_client_request_get_options (const struct medusa_httpserver_client_request *request)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return &request->options;
+}
+
+__attribute__ ((visibility ("default"))) int64_t medusa_httpserver_client_request_options_get_count (const struct medusa_httpserver_client_request_options *options)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return -EINVAL;
+        }
+        return options->count;
+}
+
+__attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_request_option * medusa_httpserver_client_request_options_get_first (const struct medusa_httpserver_client_request_options *options)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(options)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return TAILQ_FIRST(&options->list);
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_request_option_get_key (const struct medusa_httpserver_client_request_option *option)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(option)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return option->key;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_request_option_get_value (const struct medusa_httpserver_client_request_option *option)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(option)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return option->value;
+}
+
+__attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_request_option * medusa_httpserver_client_request_option_get_next (const struct medusa_httpserver_client_request_option *option)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(option)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return TAILQ_NEXT(option, list);
 }
 
 __attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_request_headers * medusa_httpserver_client_request_get_headers (const struct medusa_httpserver_client_request *request)

@@ -61,6 +61,8 @@ static int httpserver_client_onevent (struct medusa_httpserver_client *httpserve
                 struct medusa_httpserver_client_event_request_received *httpserver_client_event_request_received = (struct medusa_httpserver_client_event_request_received *) param;
 
                 const struct medusa_httpserver_client_request *httpserver_client_request;
+                const struct medusa_httpserver_client_request_option *httpserver_client_request_option;
+                const struct medusa_httpserver_client_request_options *httpserver_client_request_options;
                 const struct medusa_httpserver_client_request_header *httpserver_client_request_header;
                 const struct medusa_httpserver_client_request_headers *httpserver_client_request_headers;
                 const struct medusa_httpserver_client_request_body *httpserver_client_request_body;
@@ -72,7 +74,23 @@ static int httpserver_client_onevent (struct medusa_httpserver_client *httpserve
                 }
 
                 fprintf(stderr, "method : %s\n", medusa_httpserver_client_request_get_method(httpserver_client_request));
-                fprintf(stderr, "url    : %s\n", medusa_httpserver_client_request_get_path(httpserver_client_request));
+                fprintf(stderr, "url    : %s\n", medusa_httpserver_client_request_get_url(httpserver_client_request));
+
+                fprintf(stderr, "path   : %s\n", medusa_httpserver_client_request_get_path(httpserver_client_request));
+                httpserver_client_request_options = medusa_httpserver_client_request_get_options(httpserver_client_request);
+                if (MEDUSA_IS_ERR_OR_NULL(httpserver_client_request_options)) {
+                        fprintf(stderr, "hettprequest reply options is invalid\n");
+                        goto bail;
+                }
+                fprintf(stderr, "options\n");
+                fprintf(stderr, "  count: %ld\n", medusa_httpserver_client_request_options_get_count(httpserver_client_request_options));
+                for (httpserver_client_request_option = medusa_httpserver_client_request_options_get_first(httpserver_client_request_options);
+                     httpserver_client_request_option;
+                     httpserver_client_request_option = medusa_httpserver_client_request_option_get_next(httpserver_client_request_option)) {
+                        fprintf(stderr, "  %s = %s\n",
+                                medusa_httpserver_client_request_option_get_key(httpserver_client_request_option),
+                                medusa_httpserver_client_request_option_get_value(httpserver_client_request_option));
+                }
 
                 httpserver_client_request_headers = medusa_httpserver_client_request_get_headers(httpserver_client_request);
                 if (MEDUSA_IS_ERR_OR_NULL(httpserver_client_request_headers)) {
