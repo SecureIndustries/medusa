@@ -1265,8 +1265,6 @@ static int httpserver_client_httpparser_on_message_complete (http_parser *http_p
                                 return -ENOMEM;
                         }
                 } else {
-                        fprintf(stderr, "s: %s\n", s);
-                        fprintf(stderr, "e: %s\n", e);
                         httpserver_client->request->path = strndup(s, e - s);
                         if (httpserver_client->request->path == NULL) {
                                 return -ENOMEM;
@@ -1277,7 +1275,6 @@ static int httpserver_client_httpparser_on_message_complete (http_parser *http_p
                         }
                         s = o;
                         while (s && *s) {
-                                fprintf(stderr, "- s: %s\n", s);
                                 e = strchr(s, '&');
                                 if (e != NULL) {
                                         *e = '\0';
@@ -1290,10 +1287,6 @@ static int httpserver_client_httpparser_on_message_complete (http_parser *http_p
                                 }
                                 if (v != NULL) {
                                         *v++ = '\0';
-                                }
-                                fprintf(stderr, "  k: %s\n", k);
-                                if (v != NULL) {
-                                        fprintf(stderr, "  v: %s\n", v);
                                 }
                                 httpserver_client_request_option = medusa_httpserver_client_request_option_create(k, v);
                                 if (MEDUSA_IS_ERR_OR_NULL(httpserver_client_request_option)) {
