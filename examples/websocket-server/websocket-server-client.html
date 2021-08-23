@@ -1,0 +1,54 @@
+
+<html>
+        <head>
+                <meta charset="utf-8">
+                <script>
+                        function init () {
+                                let url = new URL(window.location.href);
+                                let urlSearchParams = new URLSearchParams(url.search);
+
+                                let optionsBase64 = urlSearchParams.get("options");
+                                let optionsString = atob(optionsBase64);
+                                let optionsObject = JSON.parse(optionsString);
+
+                                console.log("optionsBase64: ", optionsBase64);
+                                console.log("optionsString: ", optionsString);
+                                console.log("optionsObject: ", optionsObject);
+
+                                if (optionsObject.websocketserver.protocol == null) {
+                                        console.error("options websocketserver.protocol is invalid");
+                                        return;
+                                }
+                                if (optionsObject.websocketserver.address == null) {
+                                        console.error("options websocketserver.address is invalid");
+                                        return;
+                                }
+                                if (optionsObject.websocketserver.port == null) {
+                                        console.error("options websocketserver.port is invalid");
+                                        return;
+                                }
+
+                                let address = optionsObject.websocketserver.protocol + "://" + optionsObject.websocketserver.address + ":" + optionsObject.websocketserver.port;
+                                console.log("connecting to: ", address);
+
+                                let socket = new WebSocket(address, "protocol");
+                                socket.binaryType = "blob";
+
+                                socket.onerror = function (event) {
+                                        console.error("socket error occured: ", event);
+                                }
+
+                                socket.onopen = function (event) {
+                                        console.log("connected, sending urgent message");
+                                        socket.send("Here's some text that the server is urgently awaiting!");
+
+                                        console.log("will close window in 5 seconds");
+                                        setTimeout(function () { window.close(); }, 5000);
+                                }
+                        }
+                </script>
+        </head>
+
+        <body onload="init()">
+        </body>
+</html>
