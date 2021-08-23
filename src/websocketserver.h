@@ -2,6 +2,8 @@
 #if !defined(MEDUSA_WEBSOCKETSERVER_H)
 #define MEDUSA_WEBSOCKETSERVER_H
 
+struct sockaddr_storage;
+
 struct medusa_monitor;
 struct medusa_websocketserver;
 struct medusa_websocketserver_client;
