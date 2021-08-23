@@ -194,7 +194,7 @@ int main (int argc, char *argv[])
 
         websocketserver = medusa_websocketserver_create_with_options(&websocketserver_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(websocketserver)) {
-                fprintf(stderr, "can not create websocketserver errno: %d, %s\n", MEDUSA_PTR_ERR(websocketserver), strerror(MEDUSA_PTR_ERR(websocketserver)));
+                fprintf(stderr, "can not create websocketserver errno: %ld, %s\n", MEDUSA_PTR_ERR(websocketserver), strerror(MEDUSA_PTR_ERR(websocketserver)));
                 goto bail;
         }
         rc = medusa_websocketserver_set_enabled(websocketserver, 1);
