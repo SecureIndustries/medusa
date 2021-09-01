@@ -93,7 +93,7 @@ static int test_poll (unsigned int poll)
                         fprintf(stderr, "medusa_tcpsocket_bind failed\n");
                         goto bail;
                 }
-                if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+                if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_ERROR) {
                         fprintf(stderr, "medusa_tcpsocket_bind error: %d, %s\n", medusa_tcpsocket_get_error(tcpsocket), strerror(medusa_tcpsocket_get_error(tcpsocket)));
                         medusa_tcpsocket_destroy(tcpsocket);
                 } else {
@@ -130,7 +130,8 @@ static int test_poll (unsigned int poll)
         if (tevents != (MEDUSA_TCPSOCKET_EVENT_BINDING |
                         MEDUSA_TCPSOCKET_EVENT_BOUND |
                         MEDUSA_TCPSOCKET_EVENT_LISTENING |
-                        MEDUSA_TCPSOCKET_EVENT_DESTROY)) {
+                        MEDUSA_TCPSOCKET_EVENT_DESTROY |
+                        MEDUSA_TCPSOCKET_EVENT_STATE_CHANGED)) {
                 fprintf(stderr, "tevents: 0x%08x is invalid\n", tevents);
                 goto bail;
         }

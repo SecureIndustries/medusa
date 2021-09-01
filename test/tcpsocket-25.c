@@ -312,7 +312,7 @@ static struct server * server_create (struct medusa_monitor *monitor, const char
                         fprintf(stderr, "medusa_tcpsocket_bind_with_options failed\n");
                         goto bail;
                 }
-                if (medusa_tcpsocket_get_state(server->tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+                if (medusa_tcpsocket_get_state(server->tcpsocket) == MEDUSA_TCPSOCKET_STATE_ERROR) {
                         fprintf(stderr, "medusa_tcpsocket_bind_with_options error: %d, %s\n", medusa_tcpsocket_get_error(server->tcpsocket), strerror(medusa_tcpsocket_get_error(server->tcpsocket)));
                         medusa_tcpsocket_destroy(server->tcpsocket);
                 } else {

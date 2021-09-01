@@ -34,7 +34,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         (void) events;
         (void) context;
         (void) param;
-        fprintf(stderr, "connect events: 0x%08x\n", events);
+        fprintf(stderr, "connect events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 unsigned int *connected = context;
                 *connected = *connected | 1;
@@ -51,7 +51,7 @@ static int tcpsocket_server_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         (void) events;
         (void) context;
         (void) param;
-        fprintf(stderr, "server  events: 0x%08x\n", events);
+        fprintf(stderr, "server  events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 unsigned int *connected = context;
                 *connected = *connected | 2;
@@ -71,7 +71,7 @@ static int tcpsocket_listener_onevent (struct medusa_tcpsocket *tcpsocket, unsig
         (void) events;
         (void) context;
         (void) param;
-        fprintf(stderr, "bind    events: 0x%08x\n", events);
+        fprintf(stderr, "bind    events: 0x%08x, %s\n", events, medusa_tcpsocket_event_string(events));
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
                 accepted = medusa_tcpsocket_accept(tcpsocket, tcpsocket_server_onevent, context);
                 if (MEDUSA_IS_ERR_OR_NULL(accepted)) {
@@ -147,7 +147,7 @@ static int test_poll (unsigned int poll)
                         fprintf(stderr, "medusa_tcpsocket_bind_with_options failed\n");
                         goto bail;
                 }
-                if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+                if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_ERROR) {
                         fprintf(stderr, "medusa_tcpsocket_bind_with_options error: %d, %s\n", medusa_tcpsocket_get_error(tcpsocket), strerror(medusa_tcpsocket_get_error(tcpsocket)));
                         medusa_tcpsocket_destroy(tcpsocket);
                 } else {
@@ -199,7 +199,7 @@ static int test_poll (unsigned int poll)
                 fprintf(stderr, "medusa_tcpsocket_connect_with_options failed\n");
                 goto bail;
         }
-        if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+        if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_ERROR) {
                 fprintf(stderr, "medusa_tcpsocket_connect_with_options error: %d, %s\n", medusa_tcpsocket_get_error(tcpsocket), strerror(medusa_tcpsocket_get_error(tcpsocket)));
                 goto bail;
         }

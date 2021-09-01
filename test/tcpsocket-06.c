@@ -37,7 +37,7 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
         unsigned int *cevents;
         (void) param;
         cevents = (unsigned int *) context;
-        fprintf(stderr, "client   events: 0x%08x (%s) / 0x%08x, state: %d\n", events, medusa_tcpsocket_event_string(events), *cevents, medusa_tcpsocket_get_state(tcpsocket));
+        fprintf(stderr, "client   events: 0x%08x (%s) / 0x%08x, state: %d, %s\n", events, medusa_tcpsocket_event_string(events), *cevents, medusa_tcpsocket_get_state(tcpsocket), medusa_tcpsocket_state_string(medusa_tcpsocket_get_state(tcpsocket)));
         if (events & MEDUSA_TCPSOCKET_EVENT_RESOLVING) {
                 if (*cevents & MEDUSA_TCPSOCKET_EVENT_RESOLVING) {
                         fprintf(stderr, "invalid events\n");
@@ -143,6 +143,9 @@ static int tcpsocket_client_onevent (struct medusa_tcpsocket *tcpsocket, unsigne
                 if (c != 'e') {
                         return -1;
                 }
+                return medusa_monitor_break(medusa_tcpsocket_get_monitor(tcpsocket));
+        }
+        if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
                 return medusa_monitor_break(medusa_tcpsocket_get_monitor(tcpsocket));
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
@@ -365,7 +368,7 @@ static int test_poll (unsigned int poll)
                         fprintf(stderr, "medusa_tcpsocket_bind_with_options failed\n");
                         goto bail;
                 }
-                if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+                if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_ERROR) {
                         fprintf(stderr, "medusa_tcpsocket_bind_with_options error: %d, %s\n", medusa_tcpsocket_get_error(tcpsocket), strerror(medusa_tcpsocket_get_error(tcpsocket)));
                         medusa_tcpsocket_destroy(tcpsocket);
                 } else {
@@ -419,7 +422,7 @@ static int test_poll (unsigned int poll)
                 fprintf(stderr, "medusa_tcpsocket_connect_with_options failed\n");
                 goto bail;
         }
-        if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_DISCONNECTED) {
+        if (medusa_tcpsocket_get_state(tcpsocket) == MEDUSA_TCPSOCKET_STATE_ERROR) {
                 fprintf(stderr, "medusa_tcpsocket_connect_with_options error: %d, %s\n", medusa_tcpsocket_get_error(tcpsocket), strerror(medusa_tcpsocket_get_error(tcpsocket)));
                 goto bail;
         }
@@ -460,7 +463,13 @@ static int test_poll (unsigned int poll)
                                   MEDUSA_TCPSOCKET_EVENT_CONNECTING |
                                   MEDUSA_TCPSOCKET_EVENT_CONNECTED |
                                   MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
-                fprintf(stderr, "client   events: 0x%08x invalid\n", cevents);
+                fprintf(stderr, "client   events: 0x%08x / 0x%08x invalid\n",
+                                        cevents,
+                                        MEDUSA_TCPSOCKET_EVENT_RESOLVING |
+                                        MEDUSA_TCPSOCKET_EVENT_RESOLVED |
+                                        MEDUSA_TCPSOCKET_EVENT_CONNECTING |
+                                        MEDUSA_TCPSOCKET_EVENT_CONNECTED |
+                                        MEDUSA_TCPSOCKET_EVENT_DISCONNECTED);
                 goto bail;
         }
 
