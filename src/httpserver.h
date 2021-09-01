@@ -2,6 +2,8 @@
 #if !defined(MEDUSA_HTTPSERVER_H)
 #define MEDUSA_HTTPSERVER_H
 
+struct sockaddr_storage;
+
 struct medusa_monitor;
 struct medusa_httpserver;
 struct medusa_httpserver_client;
@@ -130,7 +132,10 @@ struct medusa_httpserver * medusa_httpserver_create (struct medusa_monitor *moni
 struct medusa_httpserver * medusa_httpserver_create_with_options (const struct medusa_httpserver_init_options *options);
 void medusa_httpserver_destroy (struct medusa_httpserver *httpserver);
 
-unsigned int medusa_httpserver_get_state (const struct medusa_httpserver *httpserver);
+int medusa_httpserver_get_state (const struct medusa_httpserver *httpserver);
+int medusa_httpserver_get_error (const struct medusa_httpserver *httpserver);
+
+int medusa_httpserver_get_sockname (const struct medusa_httpserver *httpserver, struct sockaddr_storage *sockaddr);
 
 int medusa_httpserver_set_enabled (struct medusa_httpserver *httpserver, int enabled);
 int medusa_httpserver_get_enabled (const struct medusa_httpserver *httpserver);

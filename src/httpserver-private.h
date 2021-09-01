@@ -10,7 +10,10 @@ struct medusa_httpserver * medusa_httpserver_create_with_options_unlocked (const
 
 void medusa_httpserver_destroy_unlocked (struct medusa_httpserver *httpserver);
 
-unsigned int medusa_httpserver_get_state_unlocked (const struct medusa_httpserver *httpserver);
+int medusa_httpserver_get_state_unlocked (const struct medusa_httpserver *httpserver);
+int medusa_httpserver_get_error_unlocked (const struct medusa_httpserver *httpserver);
+
+int medusa_httpserver_get_sockname_unlocked (const struct medusa_httpserver *httpserver, struct sockaddr_storage *sockaddr);
 
 int medusa_httpserver_set_enabled_unlocked (struct medusa_httpserver *httpserver, int enabled);
 int medusa_httpserver_get_enabled_unlocked (const struct medusa_httpserver *httpserver);

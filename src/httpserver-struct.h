@@ -7,7 +7,7 @@ struct medusa_httpserver_client {
         struct medusa_subject subject;
         unsigned int state;
         unsigned int flags;
-        int error;
+        unsigned int error;
         int (*onevent) (struct medusa_httpserver_client *httpserver_client, unsigned int events, void *context, void *param);
         void *context;
         void *userdata;
@@ -23,6 +23,7 @@ struct medusa_httpserver {
         struct medusa_subject subject;
         unsigned int state;
         unsigned int flags;
+        unsigned int error;
         int (*onevent) (struct medusa_httpserver *httpserver, unsigned int events, void *context, void *param);
         void *context;
         void *userdata;

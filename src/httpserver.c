@@ -175,10 +175,11 @@ static int httpserver_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, uns
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
+                httpserver->error = medusa_tcpsocket_get_error_unlocked(httpserver->tcpsocket);
                 medusa_tcpsocket_destroy_unlocked(httpserver->tcpsocket);
                 httpserver->tcpsocket = NULL;
-                medusa_httpserver_onevent_unlocked(httpserver, MEDUSA_HTTPSERVER_EVENT_ERROR, NULL);
                 httpserver_set_state(httpserver, MEDUSA_HTTPSERVER_STATE_ERROR);
+                medusa_httpserver_onevent_unlocked(httpserver, MEDUSA_HTTPSERVER_EVENT_ERROR, NULL);
         }
 
         medusa_monitor_unlock(monitor);
@@ -371,7 +372,7 @@ __attribute__ ((visibility ("default"))) void medusa_httpserver_destroy (struct 
         medusa_monitor_unlock(httpserver->subject.monitor);
 }
 
-__attribute__ ((visibility ("default"))) unsigned int medusa_httpserver_get_state_unlocked (const struct medusa_httpserver *httpserver)
+__attribute__ ((visibility ("default"))) int medusa_httpserver_get_state_unlocked (const struct medusa_httpserver *httpserver)
 {
         if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
                 return MEDUSA_HTTPSERVER_STATE_UNKNOWN;
@@ -379,7 +380,7 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_httpserver_get_stat
         return httpserver->state;
 }
 
-__attribute__ ((visibility ("default"))) unsigned int medusa_httpserver_get_state (const struct medusa_httpserver *httpserver)
+__attribute__ ((visibility ("default"))) int medusa_httpserver_get_state (const struct medusa_httpserver *httpserver)
 {
         unsigned int rc;
         if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
@@ -387,6 +388,46 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_httpserver_get_stat
         }
         medusa_monitor_lock(httpserver->subject.monitor);
         rc = medusa_httpserver_get_state_unlocked(httpserver);
+        medusa_monitor_unlock(httpserver->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_get_error_unlocked (const struct medusa_httpserver *httpserver)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return MEDUSA_HTTPSERVER_STATE_UNKNOWN;
+        }
+        return httpserver->error;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_get_error (const struct medusa_httpserver *httpserver)
+{
+        unsigned int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return MEDUSA_HTTPSERVER_STATE_UNKNOWN;
+        }
+        medusa_monitor_lock(httpserver->subject.monitor);
+        rc = medusa_httpserver_get_error_unlocked(httpserver);
+        medusa_monitor_unlock(httpserver->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_get_sockname_unlocked (const struct medusa_httpserver *httpserver, struct sockaddr_storage *sockaddr)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return MEDUSA_HTTPSERVER_STATE_UNKNOWN;
+        }
+        return medusa_tcpsocket_get_sockname_unlocked(httpserver->tcpsocket, sockaddr);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_get_sockname (const struct medusa_httpserver *httpserver, struct sockaddr_storage *sockaddr)
+{
+        unsigned int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return MEDUSA_HTTPSERVER_STATE_UNKNOWN;
+        }
+        medusa_monitor_lock(httpserver->subject.monitor);
+        rc = medusa_httpserver_get_sockname_unlocked(httpserver, sockaddr);
         medusa_monitor_unlock(httpserver->subject.monitor);
         return rc;
 }
