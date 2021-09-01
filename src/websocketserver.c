@@ -1389,6 +1389,20 @@ short_buffer:
                         error = rc;
                         goto bail;
                 }
+        } else if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
+                struct medusa_tcpsocket_event_error *medusa_tcpsocket_event_error = (struct medusa_tcpsocket_event_error *) param;
+                rc = websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ERROR);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
+                websocketserver_client->error = medusa_tcpsocket_event_error->error;
+                rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR, NULL);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
+                medusa_websocketserver_client_destroy_unlocked(websocketserver_client);
         } else if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
                 rc = websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED);
                 if (rc < 0) {
@@ -1401,7 +1415,6 @@ short_buffer:
                         goto bail;
                 }
                 medusa_websocketserver_client_destroy_unlocked(websocketserver_client);
-        } else if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
         } else {
                 error = -EIO;
                 goto bail;

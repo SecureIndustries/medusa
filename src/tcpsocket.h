@@ -43,7 +43,8 @@ enum {
         MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED  = (1 << 18), /* 0x00040000 */
         MEDUSA_TCPSOCKET_EVENT_DISCONNECTED             = (1 << 19), /* 0x00080000 */
         MEDUSA_TCPSOCKET_EVENT_ERROR                    = (1 << 20), /* 0x00100000 */
-        MEDUSA_TCPSOCKET_EVENT_DESTROY                  = (1 << 21)  /* 0x00200000 */
+        MEDUSA_TCPSOCKET_EVENT_STATE_CHANGED            = (1 << 21), /* 0x00200000 */
+        MEDUSA_TCPSOCKET_EVENT_DESTROY                  = (1 << 22)  /* 0x00400000 */
 #define MEDUSA_TCPSOCKET_EVENT_BINDING                  MEDUSA_TCPSOCKET_EVENT_BINDING
 #define MEDUSA_TCPSOCKET_EVENT_BOUND                    MEDUSA_TCPSOCKET_EVENT_BOUND
 #define MEDUSA_TCPSOCKET_EVENT_LISTENING                MEDUSA_TCPSOCKET_EVENT_LISTENING
@@ -65,6 +66,7 @@ enum {
 #define MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED  MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED
 #define MEDUSA_TCPSOCKET_EVENT_DISCONNECTED             MEDUSA_TCPSOCKET_EVENT_DISCONNECTED
 #define MEDUSA_TCPSOCKET_EVENT_ERROR                    MEDUSA_TCPSOCKET_EVENT_ERROR
+#define MEDUSA_TCPSOCKET_EVENT_STATE_CHANGED            MEDUSA_TCPSOCKET_EVENT_STATE_CHANGED
 #define MEDUSA_TCPSOCKET_EVENT_DESTROY                  MEDUSA_TCPSOCKET_EVENT_DESTROY
 };
 
@@ -78,6 +80,7 @@ enum {
         MEDUSA_TCPSOCKET_STATE_RESOLVED                 = 6,
         MEDUSA_TCPSOCKET_STATE_CONNECTING               = 7,
         MEDUSA_TCPSOCKET_STATE_CONNECTED                = 8,
+        MEDUSA_TCPSOCKET_STATE_ERROR                    = 9
 #define MEDUSA_TCPSOCKET_STATE_UNKNOWN                  MEDUSA_TCPSOCKET_STATE_UNKNOWN
 #define MEDUSA_TCPSOCKET_STATE_BINDING                  MEDUSA_TCPSOCKET_STATE_BINDING
 #define MEDUSA_TCPSOCKET_STATE_BOUND                    MEDUSA_TCPSOCKET_STATE_BOUND
@@ -87,6 +90,7 @@ enum {
 #define MEDUSA_TCPSOCKET_STATE_RESOLVED                 MEDUSA_TCPSOCKET_STATE_RESOLVED
 #define MEDUSA_TCPSOCKET_STATE_CONNECTING               MEDUSA_TCPSOCKET_STATE_CONNECTING
 #define MEDUSA_TCPSOCKET_STATE_CONNECTED                MEDUSA_TCPSOCKET_STATE_CONNECTED
+#define MEDUSA_TCPSOCKET_STATE_ERROR                    MEDUSA_TCPSOCKET_STATE_ERROR
 };
 
 struct medusa_tcpsocket_bind_options {
@@ -155,6 +159,17 @@ struct medusa_tcpsocket_attach_options {
 struct medusa_tcpsocket_event_buffered_write {
         int64_t length;
         int64_t remaining;
+};
+
+struct medusa_tcpsocket_event_error {
+        unsigned int state;
+        unsigned int error;
+};
+
+struct medusa_tcpsocket_event_state_changed {
+        unsigned int pstate;
+        unsigned int state;
+        unsigned int error;
 };
 
 #ifdef __cplusplus
