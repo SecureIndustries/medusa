@@ -853,6 +853,12 @@ static inline int websocketserver_client_has_flag (const struct medusa_websocket
 static inline int websocketserver_client_set_state (struct medusa_websocketserver_client *websocketserver_client, unsigned int state)
 {
         websocketserver_client->error = 0;
+        if (state == MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ERROR) {
+                if (!MEDUSA_IS_ERR_OR_NULL(websocketserver_client->tcpsocket)) {
+                        medusa_tcpsocket_destroy_unlocked(websocketserver_client->tcpsocket);
+                        websocketserver_client->tcpsocket = NULL;
+                }
+        }
         if (state == MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED) {
                 if (!MEDUSA_IS_ERR_OR_NULL(websocketserver_client->tcpsocket)) {
                         medusa_tcpsocket_destroy_unlocked(websocketserver_client->tcpsocket);
