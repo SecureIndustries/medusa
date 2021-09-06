@@ -8,6 +8,7 @@ struct medusa_httprequest {
         int (*onevent) (struct medusa_httprequest *httprequest, unsigned int events, void *context, void *param);
         void *context;
         char *method;
+        char *url;
         struct medusa_buffer *headers;
         struct medusa_tcpsocket *tcpsocket;
         double connect_timeout;

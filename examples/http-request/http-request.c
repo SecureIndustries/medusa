@@ -229,6 +229,11 @@ int main (int argc, char *argv[])
                 fprintf(stderr, "can not set httprequest method\n");
                 goto bail;
         }
+        rc = medusa_httprequest_set_url(httprequest, option_url);
+        if (rc != 0) {
+                fprintf(stderr, "can not set httprequest url\n");
+                goto bail;
+        }
 
         optind = 0;
         for (_argc = 0; _argc < argc; _argc++) {
@@ -242,7 +247,7 @@ int main (int argc, char *argv[])
                 }
         }
 
-        rc = medusa_httprequest_make_post(httprequest, option_url, option_data, (option_data) ? (strlen(option_data) + 1) : 0);
+        rc = medusa_httprequest_make_post(httprequest, option_data, (option_data) ? (strlen(option_data) + 1) : 0);
         if (rc < 0) {
                 fprintf(stderr, "can not make post\n");
                 goto bail;
