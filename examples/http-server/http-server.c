@@ -87,7 +87,7 @@ static int httpserver_client_onevent (struct medusa_httpserver_client *httpserve
                         goto bail;
                 }
                 fprintf(stderr, "options\n");
-                fprintf(stderr, "  count: %ld\n", medusa_httpserver_client_request_options_get_count(httpserver_client_request_options));
+                fprintf(stderr, "  count: %d\n", (int) medusa_httpserver_client_request_options_get_count(httpserver_client_request_options));
                 for (httpserver_client_request_option = medusa_httpserver_client_request_options_get_first(httpserver_client_request_options);
                      httpserver_client_request_option;
                      httpserver_client_request_option = medusa_httpserver_client_request_option_get_next(httpserver_client_request_option)) {

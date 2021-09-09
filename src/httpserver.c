@@ -1323,7 +1323,7 @@ static int httpserver_client_httpparser_on_message_complete (http_parser *http_p
                                 return -ENOMEM;
                         }
                 } else {
-                        httpserver_client->request->path = strndup(s, e - s);
+                        httpserver_client->request->path = medusa_strndup(s, e - s);
                         if (httpserver_client->request->path == NULL) {
                                 return -ENOMEM;
                         }
