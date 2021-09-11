@@ -1442,6 +1442,13 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 hints.ai_family = AF_UNSPEC;
                 hints.ai_socktype = SOCK_STREAM;
         }
+
+        if (strcmp(address, "localhost") == 0) {
+                address = "127.0.0.1";
+        } else if (strcmp(address, "loopback") == 0) {
+                address = "127.0.0.1";
+        }
+
         rc = getaddrinfo(address, NULL, &hints, &result);
         if (rc != 0) {
                 ret = -EIO;
