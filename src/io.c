@@ -61,12 +61,6 @@ static inline unsigned int io_get_events (const struct medusa_io *io)
         return (io->flags >> MEDUSA_IO_EVENT_SHIFT) & MEDUSA_IO_EVENT_MASK;
 }
 
-static inline void io_set_flag (struct medusa_io *io, unsigned int flag)
-{
-        io->flags = (io->flags & ~(MEDUSA_IO_FLAG_MASK << MEDUSA_IO_FLAG_SHIFT)) |
-                           ((flag & MEDUSA_IO_FLAG_MASK) << MEDUSA_IO_FLAG_SHIFT);
-}
-
 static inline void io_add_flag (struct medusa_io *io, unsigned int flag)
 {
         io->flags |= ((flag & MEDUSA_IO_FLAG_MASK) << MEDUSA_IO_FLAG_SHIFT);

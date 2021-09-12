@@ -229,7 +229,7 @@ int main (int argc, char *argv[])
                 fprintf(stderr, "can not set httprequest method\n");
                 goto bail;
         }
-        rc = medusa_httprequest_set_url(httprequest, option_url);
+        rc = medusa_httprequest_set_url(httprequest, "%s", option_url);
         if (rc != 0) {
                 fprintf(stderr, "can not set httprequest url\n");
                 goto bail;

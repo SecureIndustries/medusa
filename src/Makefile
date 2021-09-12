@@ -1,5 +1,6 @@
 
 ifneq ($(__LINUX__), y)
+override MEDUSA_EXEC_ENABLE		= n
 override MEDUSA_POLL_EPOLL_ENABLE   	= n
 override MEDUSA_SIGNAL_SIGNALFD_ENABLE	= n
 override MEDUSA_TIMER_TIMERFD_ENABLE  	= n
@@ -115,6 +116,8 @@ libmedusa.a_files-y += \
 	../3rdparty/SPCDNS/src/mappings.c \
 	../3rdparty/SPCDNS/src/output.c
 
+ifneq ($(__DARWIN__), y)
+
 libmedusa.a_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
 	-Wno-error=unused-but-set-variable \
 	-Wno-unused-but-set-variable
@@ -126,6 +129,8 @@ libmedusa.o_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
 libmedusa.so.${MEDUSA_SONAME}_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
 	-Wno-error=unused-but-set-variable \
 	-Wno-unused-but-set-variable
+
+endif
 
 libmedusa.a_files-y += \
 	httpserver.c \

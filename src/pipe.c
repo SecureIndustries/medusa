@@ -144,6 +144,27 @@ __attribute__ ((visibility ("default"))) int medusa_pipe (int pipefd[2])
         return pipe(pipefd);
 }
 
+#if defined(__DARWIN__)
+
+__attribute__ ((visibility ("default"))) int medusa_pipe2 (int pipefd[2], unsigned int flags)
+{
+	int ret;
+	if (!flags) {
+		return pipe(pipefd);
+	}
+	ret = pipe(pipefd);
+	if (ret) {
+		return ret;
+	}
+	if (flags & MEDUSA_PIPE_FLAG_NONBLOCK) {
+		fcntl(pipefd[0], F_SETFL, O_NONBLOCK);
+		fcntl(pipefd[1], F_SETFL, O_NONBLOCK);
+	}
+	return 0;
+}
+
+#else
+
 __attribute__ ((visibility ("default"))) int medusa_pipe2 (int pipefd[2], unsigned int flags)
 {
         unsigned int options;
@@ -153,5 +174,7 @@ __attribute__ ((visibility ("default"))) int medusa_pipe2 (int pipefd[2], unsign
         }
         return pipe2(pipefd, options);
 }
+
+#endif
 
 #endif

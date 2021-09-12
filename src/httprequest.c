@@ -739,7 +739,7 @@ static int httprequest_init_with_options_unlocked (struct medusa_httprequest *ht
                 }
         }
         if (options->url != NULL) {
-                rc = medusa_httprequest_set_url_unlocked(httprequest, options->url);
+                rc = medusa_httprequest_set_url_unlocked(httprequest, "%s", options->url);
                 if (rc < 0) {
                         return rc;
                 }
