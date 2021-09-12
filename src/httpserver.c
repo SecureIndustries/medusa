@@ -938,6 +938,8 @@ struct medusa_httpserver_client_request_body {
 };
 
 struct medusa_httpserver_client_request {
+        int version_major;
+        int version_minor;
         char *method;
         char *url;
         char *path;
@@ -1112,6 +1114,16 @@ static void medusa_httpserver_client_request_options_init (struct medusa_httpser
         TAILQ_INIT(&options->list);
 }
 
+static int medusa_httpserver_client_request_set_version (struct medusa_httpserver_client_request *request, int major, int minor)
+{
+        if (request == NULL) {
+                return -EINVAL;
+        }
+        request->version_major = major;
+        request->version_minor = minor;
+        return 0;
+}
+
 static int medusa_httpserver_client_request_set_method (struct medusa_httpserver_client_request *request, const char *method)
 {
         if (request == NULL) {
@@ -1215,6 +1227,10 @@ static int httpserver_client_httpparser_on_url (http_parser *http_parser, const 
 {
         int rc;
         struct medusa_httpserver_client *httpserver_client = http_parser->data;
+        rc = medusa_httpserver_client_request_set_version(httpserver_client->request, http_parser->http_major, http_parser->http_minor);
+        if (rc < 0) {
+                return rc;
+        }
         rc = medusa_httpserver_client_request_set_method(httpserver_client->request, http_method_str(http_parser->method));
         if (rc < 0) {
                 return rc;
@@ -1398,7 +1414,8 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
         monitor = medusa_tcpsocket_get_monitor(tcpsocket);
         medusa_monitor_lock(monitor);
 
-        if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
+        if (events & MEDUSA_TCPSOCKET_EVENT_STATE_CHANGED) {
+        } else if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_CONNECTED);
                 rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED, NULL);
                 if (rc < 0) {
@@ -1811,6 +1828,22 @@ __attribute__ ((visibility ("default"))) const struct medusa_httpserver_client_r
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
         return httpserver_client->request;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_request_get_http_major (const struct medusa_httpserver_client_request *request)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
+                return -EINVAL;
+        }
+        return request->version_major;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_request_get_http_minor (const struct medusa_httpserver_client_request *request)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(request)) {
+                return -EINVAL;
+        }
+        return request->version_minor;
 }
 
 __attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_request_get_method (const struct medusa_httpserver_client_request *request)

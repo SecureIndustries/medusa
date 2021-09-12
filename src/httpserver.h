@@ -186,6 +186,8 @@ double medusa_httpserver_client_get_read_timeout (const struct medusa_httpserver
 
 const struct medusa_httpserver_client_request * medusa_httprequest_client_get_request (const struct medusa_httpserver_client *httpserver_client);
 
+int medusa_httpserver_client_request_get_http_major (const struct medusa_httpserver_client_request *request);
+int medusa_httpserver_client_request_get_http_minor (const struct medusa_httpserver_client_request *request);
 const char * medusa_httpserver_client_request_get_method (const struct medusa_httpserver_client_request *request);
 const char * medusa_httpserver_client_request_get_url (const struct medusa_httpserver_client_request *request);
 const char * medusa_httpserver_client_request_get_path (const struct medusa_httpserver_client_request *request);
