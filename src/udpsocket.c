@@ -67,6 +67,36 @@ enum {
 static struct medusa_pool *g_pool;
 #endif
 
+static inline void udpsocket_closesocket (int fd)
+{
+#if defined(_WIN32)
+        closesocket(fd);
+#else
+        close(fd);
+#endif
+}
+
+static inline void udpsocket_io_destroy (struct medusa_udpsocket *udpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
+                return;
+        }
+        medusa_io_set_events_unlocked(udpsocket->io, 0);
+        if (medusa_io_get_clodestroy_unlocked(udpsocket->io) > 0) {
+                int fd;
+                fd = medusa_io_get_fd_unlocked(udpsocket->io);
+                if (fd >= 0) {
+                        udpsocket_closesocket(fd);
+                        medusa_io_set_clodestroy_unlocked(udpsocket->io, 0);
+                }
+        }
+        medusa_io_destroy_unlocked(udpsocket->io);
+        udpsocket->io = NULL;
+}
+
 static inline void udpsocket_set_flag (struct medusa_udpsocket *udpsocket, unsigned int flag)
 {
         udpsocket->flags = flag;
@@ -119,10 +149,7 @@ static inline int udpsocket_set_state (struct medusa_udpsocket *udpsocket, unsig
                                 return rc;
                         }
                 }
-                if (!MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
-                        medusa_io_destroy_unlocked(udpsocket->io);
-                        udpsocket->io = NULL;
-                }
+                udpsocket_io_destroy(udpsocket);
         }
         udpsocket->state = state;
         return 0;
@@ -299,10 +326,7 @@ static void udpsocket_uninit_unlocked (struct medusa_udpsocket *udpsocket)
                 return;
         }
         if (udpsocket->subject.monitor != NULL) {
-                if (!MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
-                        medusa_io_destroy_unlocked(udpsocket->io);
-                        udpsocket->io = NULL;
-                }
+                udpsocket_io_destroy(udpsocket);
                 medusa_monitor_del_unlocked(&udpsocket->subject);
         } else {
                 medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_DESTROY, NULL);
@@ -478,7 +502,7 @@ ipv6:
                 on = !!options->reuseaddr;
                 rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *) &on, sizeof(on));
                 if (rc < 0) {
-                        close(fd);
+                        udpsocket_closesocket(fd);
                         ret = -errno;
                         goto bail;
                 }
@@ -494,21 +518,21 @@ ipv6:
                 rc = 0;
 #endif
                 if (rc < 0) {
-                        close(fd);
+                        udpsocket_closesocket(fd);
                         ret = -errno;
                         goto bail;
                 }
         }
         rc = bind(fd, sockaddr , length);
         if (rc != 0) {
-                close(fd);
+                udpsocket_closesocket(fd);
                 ret = -errno;
                 goto bail;
         }
 
         rc = medusa_io_init_options_default(&io_init_options);
         if (rc < 0) {
-                close(fd);
+                udpsocket_closesocket(fd);
                 ret = rc;
                 goto bail;
         }
@@ -699,7 +723,7 @@ __attribute__ ((visibility ("default"))) struct medusa_udpsocket * medusa_udpsoc
 
         rc = medusa_io_init_options_default(&io_init_options);
         if (rc < 0) {
-                close(fd);
+                udpsocket_closesocket(fd);
                 ret = rc;
                 goto bail;
         }
@@ -968,7 +992,7 @@ __attribute__ ((visibility ("default"))) struct medusa_udpsocket * medusa_udpsoc
 
         rc = medusa_io_init_options_default(&io_init_options);
         if (rc < 0) {
-                close(fd);
+                udpsocket_closesocket(fd);
                 ret = rc;
                 goto bail;
         }
@@ -1116,7 +1140,7 @@ __attribute__ ((visibility ("default"))) struct medusa_udpsocket * medusa_udpsoc
 
         rc = medusa_io_init_options_default(&io_init_options);
         if (rc < 0) {
-                close(fd);
+                udpsocket_closesocket(fd);
                 ret = rc;
                 goto bail;
         }
@@ -1797,10 +1821,7 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_onevent_unlocked (
                         medusa_timer_destroy_unlocked(udpsocket->rtimer);
                         udpsocket->rtimer = NULL;
                 }
-                if (!MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
-                        medusa_io_destroy_unlocked(udpsocket->io);
-                        udpsocket->io = NULL;
-                }
+                udpsocket_io_destroy(udpsocket);
 #if defined(MEDUSA_UDPSOCKET_USE_POOL) && (MEDUSA_UDPSOCKET_USE_POOL == 1)
                 medusa_pool_free(udpsocket);
 #else
