@@ -76,27 +76,6 @@ static inline void udpsocket_closesocket (int fd)
 #endif
 }
 
-static inline void udpsocket_io_destroy (struct medusa_udpsocket *udpsocket)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
-                return;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
-                return;
-        }
-        medusa_io_set_events_unlocked(udpsocket->io, 0);
-        if (medusa_io_get_clodestroy_unlocked(udpsocket->io) > 0) {
-                int fd;
-                fd = medusa_io_get_fd_unlocked(udpsocket->io);
-                if (fd >= 0) {
-                        udpsocket_closesocket(fd);
-                        medusa_io_set_clodestroy_unlocked(udpsocket->io, 0);
-                }
-        }
-        medusa_io_destroy_unlocked(udpsocket->io);
-        udpsocket->io = NULL;
-}
-
 static inline void udpsocket_set_flag (struct medusa_udpsocket *udpsocket, unsigned int flag)
 {
         udpsocket->flags = flag;
@@ -149,7 +128,10 @@ static inline int udpsocket_set_state (struct medusa_udpsocket *udpsocket, unsig
                                 return rc;
                         }
                 }
-                udpsocket_io_destroy(udpsocket);
+                if (!MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
+                        medusa_io_destroy_unlocked(udpsocket->io);
+                        udpsocket->io = NULL;
+                }
         }
         udpsocket->state = state;
         return 0;
@@ -288,6 +270,15 @@ static int udpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                         goto bail;
                 }
         } else if (events & MEDUSA_IO_EVENT_DESTROY) {
+                medusa_io_set_events_unlocked(io, 0);
+                if (medusa_io_get_clodestroy_unlocked(io) > 0) {
+                        int fd;
+                        fd = medusa_io_get_fd_unlocked(io);
+                        if (fd >= 0) {
+                                udpsocket_closesocket(fd);
+                                medusa_io_set_clodestroy_unlocked(io, 0);
+                        }
+                }
         }
         medusa_monitor_unlock(monitor);
         return 0;
@@ -326,7 +317,10 @@ static void udpsocket_uninit_unlocked (struct medusa_udpsocket *udpsocket)
                 return;
         }
         if (udpsocket->subject.monitor != NULL) {
-                udpsocket_io_destroy(udpsocket);
+                if (!MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
+                        medusa_io_destroy_unlocked(udpsocket->io);
+                        udpsocket->io = NULL;
+                }
                 medusa_monitor_del_unlocked(&udpsocket->subject);
         } else {
                 medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_DESTROY, NULL);
@@ -1821,7 +1815,10 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_onevent_unlocked (
                         medusa_timer_destroy_unlocked(udpsocket->rtimer);
                         udpsocket->rtimer = NULL;
                 }
-                udpsocket_io_destroy(udpsocket);
+                if (!MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
+                        medusa_io_destroy_unlocked(udpsocket->io);
+                        udpsocket->io = NULL;
+                }
 #if defined(MEDUSA_UDPSOCKET_USE_POOL) && (MEDUSA_UDPSOCKET_USE_POOL == 1)
                 medusa_pool_free(udpsocket);
 #else

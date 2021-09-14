@@ -104,27 +104,6 @@ static inline void tcpsocket_closesocket (int fd)
 #endif
 }
 
-static inline void tcpsocket_io_destroy (struct medusa_tcpsocket *tcpsocket)
-{
-        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
-                return;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
-                return;
-        }
-        medusa_io_set_events_unlocked(tcpsocket->io, 0);
-        if (medusa_io_get_clodestroy_unlocked(tcpsocket->io) > 0) {
-                int fd;
-                fd = medusa_io_get_fd_unlocked(tcpsocket->io);
-                if (fd >= 0) {
-                        tcpsocket_closesocket(fd);
-                        medusa_io_set_clodestroy_unlocked(tcpsocket->io, 0);
-                }
-        }
-        medusa_io_destroy_unlocked(tcpsocket->io);
-        tcpsocket->io = NULL;
-}
-
 static inline void tcpsocket_set_flag (struct medusa_tcpsocket *tcpsocket, unsigned int flag)
 {
         tcpsocket->flags = flag;
@@ -230,7 +209,10 @@ static inline int tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsig
                                 return rc;
                         }
                 }
-                tcpsocket_io_destroy(tcpsocket);
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
+                        medusa_io_destroy_unlocked(tcpsocket->io);
+                        tcpsocket->io = NULL;
+                }
         } else if (state == MEDUSA_TCPSOCKET_STATE_ERROR) {
                 if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ctimer)) {
                         rc = medusa_timer_set_enabled_unlocked(tcpsocket->ctimer, 0);
@@ -244,7 +226,10 @@ static inline int tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsig
                                 return rc;
                         }
                 }
-                tcpsocket_io_destroy(tcpsocket);
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
+                        medusa_io_destroy_unlocked(tcpsocket->io);
+                        tcpsocket->io = NULL;
+                }
         }
 
         pstate = tcpsocket->state;
@@ -769,6 +754,15 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                         goto bail;
                 }
         } else if (events & MEDUSA_IO_EVENT_DESTROY) {
+                medusa_io_set_events_unlocked(io, 0);
+                if (medusa_io_get_clodestroy_unlocked(io) > 0) {
+                        int fd;
+                        fd = medusa_io_get_fd_unlocked(io);
+                        if (fd >= 0) {
+                                tcpsocket_closesocket(fd);
+                                medusa_io_set_clodestroy_unlocked(io, 0);
+                        }
+                }
         }
         medusa_monitor_unlock(monitor);
         return 0;
@@ -807,7 +801,10 @@ static void tcpsocket_uninit_unlocked (struct medusa_tcpsocket *tcpsocket)
                 return;
         }
         if (tcpsocket->subject.monitor != NULL) {
-                tcpsocket_io_destroy(tcpsocket);
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
+                        medusa_io_destroy_unlocked(tcpsocket->io);
+                        tcpsocket->io = NULL;
+                }
                 medusa_monitor_del_unlocked(&tcpsocket->subject);
         } else {
                 medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_DESTROY, NULL);
@@ -3381,7 +3378,10 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_onevent_unlocked (
                         medusa_timer_destroy_unlocked(tcpsocket->rtimer);
                         tcpsocket->rtimer = NULL;
                 }
-                tcpsocket_io_destroy(tcpsocket);
+                if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
+                        medusa_io_destroy_unlocked(tcpsocket->io);
+                        tcpsocket->io = NULL;
+                }
                 if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->wbuffer)) {
                         medusa_buffer_destroy(tcpsocket->wbuffer);
                         tcpsocket->wbuffer = NULL;
