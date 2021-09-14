@@ -112,6 +112,7 @@ static inline void tcpsocket_io_destroy (struct medusa_tcpsocket *tcpsocket)
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
                 return;
         }
+        medusa_io_set_events_unlocked(tcpsocket->io, 0);
         if (medusa_io_get_clodestroy_unlocked(tcpsocket->io) > 0) {
                 int fd;
                 fd = medusa_io_get_fd_unlocked(tcpsocket->io);
