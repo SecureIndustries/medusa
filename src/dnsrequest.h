@@ -26,7 +26,8 @@ enum {
         MEDUSA_DNSREQUEST_EVENT_CANCELED                = (1 << 11),
         MEDUSA_DNSREQUEST_EVENT_ERROR                   = (1 << 12),
         MEDUSA_DNSREQUEST_EVENT_DISCONNECTED            = (1 << 13),
-        MEDUSA_DNSREQUEST_EVENT_DESTROY                 = (1 << 14)
+        MEDUSA_DNSREQUEST_EVENT_STATE_CHANGED           = (1 << 14),
+        MEDUSA_DNSREQUEST_EVENT_DESTROY                 = (1 << 15)
 #define MEDUSA_DNSREQUEST_EVENT_RESOLVING               MEDUSA_DNSREQUEST_EVENT_RESOLVING
 #define MEDUSA_DNSREQUEST_EVENT_RESOLVE_TIMEOUT         MEDUSA_DNSREQUEST_EVENT_RESOLVE_TIMEOUT
 #define MEDUSA_DNSREQUEST_EVENT_RESOLVED                MEDUSA_DNSREQUEST_EVENT_RESOLVED
@@ -41,6 +42,7 @@ enum {
 #define MEDUSA_DNSREQUEST_EVENT_CANCELED                MEDUSA_DNSREQUEST_EVENT_CANCELED
 #define MEDUSA_DNSREQUEST_EVENT_ERROR                   MEDUSA_DNSREQUEST_EVENT_ERROR
 #define MEDUSA_DNSREQUEST_EVENT_DISCONNECTED            MEDUSA_DNSREQUEST_EVENT_DISCONNECTED
+#define MEDUSA_DNSREQUEST_EVENT_STATE_CHANGED           MEDUSA_DNSREQUEST_EVENT_STATE_CHANGED
 #define MEDUSA_DNSREQUEST_EVENT_DESTROY                 MEDUSA_DNSREQUEST_EVENT_DESTROY
 };
 
@@ -54,7 +56,8 @@ enum {
         MEDUSA_DNSREQUEST_STATE_REQUESTING              = 6,
         MEDUSA_DNSREQUEST_STATE_REQUESTED               = 7,
         MEDUSA_DNSREQUEST_STATE_RECEIVING               = 8,
-        MEDUSA_DNSREQUEST_STATE_RECEIVED                = 9
+        MEDUSA_DNSREQUEST_STATE_RECEIVED                = 9,
+        MEDUSA_DNSREQUEST_STATE_ERROR                   = 10
 #define MEDUSA_DNSREQUEST_STATE_UNKNOWN                 MEDUSA_DNSREQUEST_STATE_UNKNOWN
 #define MEDUSA_DNSREQUEST_STATE_DISCONNECTED            MEDUSA_DNSREQUEST_STATE_DISCONNECTED
 #define MEDUSA_DNSREQUEST_STATE_RESOLVING               MEDUSA_DNSREQUEST_STATE_RESOLVING
@@ -65,6 +68,7 @@ enum {
 #define MEDUSA_DNSREQUEST_STATE_REQUESTED               MEDUSA_DNSREQUEST_STATE_REQUESTED
 #define MEDUSA_DNSREQUEST_STATE_RECEIVING               MEDUSA_DNSREQUEST_STATE_RECEIVING
 #define MEDUSA_DNSREQUEST_STATE_RECEIVED                MEDUSA_DNSREQUEST_STATE_RECEIVED
+#define MEDUSA_DNSREQUEST_STATE_ERROR                   MEDUSA_DNSREQUEST_STATE_ERROR
 };
 
 enum {
@@ -101,6 +105,17 @@ struct medusa_dnsrequest_init_options {
         const char *nameserver;
         unsigned int type;
         const char *name;
+};
+
+struct medusa_dnsrequest_event_error {
+        unsigned int state;
+        unsigned int error;
+};
+
+struct medusa_dnsrequest_event_state_changed {
+        unsigned int pstate;
+        unsigned int state;
+        unsigned int error;
 };
 
 #ifdef __cplusplus

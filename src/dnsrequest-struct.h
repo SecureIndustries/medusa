@@ -5,6 +5,7 @@
 struct medusa_dnsrequest {
         struct medusa_subject subject;
         unsigned int state;
+        unsigned int error;
         int (*onevent) (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *context, void *param);
         void *context;
         double connect_timeout;

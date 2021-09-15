@@ -762,15 +762,37 @@ static inline unsigned int dnsrequest_get_state (const struct medusa_dnsrequest 
         return dnsrequest->state;
 }
 
-static inline int dnsrequest_set_state (struct medusa_dnsrequest *dnsrequest, unsigned int state)
+static inline int dnsrequest_set_state (struct medusa_dnsrequest *dnsrequest, unsigned int state, unsigned int error)
 {
+        int rc;
+        unsigned int pstate;
+        struct medusa_dnsrequest_event_state_changed medusa_dnsrequest_event_state_changed;
+
         if (state == MEDUSA_DNSREQUEST_STATE_DISCONNECTED) {
                 if (!MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
                         medusa_udpsocket_destroy_unlocked(dnsrequest->udpsocket);
                         dnsrequest->udpsocket = NULL;
                 }
         }
+        if (state == MEDUSA_DNSREQUEST_STATE_ERROR) {
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
+                        medusa_udpsocket_destroy_unlocked(dnsrequest->udpsocket);
+                        dnsrequest->udpsocket = NULL;
+                }
+        }
+
+        pstate = dnsrequest->state;
+        dnsrequest->error = error;
         dnsrequest->state = state;
+
+        medusa_dnsrequest_event_state_changed.pstate = pstate;
+        medusa_dnsrequest_event_state_changed.state  = dnsrequest->state;
+        medusa_dnsrequest_event_state_changed.error  = dnsrequest->error;
+        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_STATE_CHANGED, &medusa_dnsrequest_event_state_changed);
+        if (rc < 0) {
+                return rc;
+        }
+
         return 0;
 }
 
@@ -787,21 +809,21 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
         medusa_monitor_lock(monitor);
 
         if (events & MEDUSA_UDPSOCKET_EVENT_RESOLVING) {
-                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RESOLVING);
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RESOLVING, 0);
                 rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RESOLVING, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
         }
         if (events & MEDUSA_UDPSOCKET_EVENT_RESOLVED) {
-                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RESOLVED);
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RESOLVED, 0);
                 rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RESOLVED, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
         }
         if (events & MEDUSA_UDPSOCKET_EVENT_CONNECTING) {
-                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_CONNECTING);
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_CONNECTING, 0);
                 rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_CONNECTING, NULL);
                 if (rc < 0) {
                         goto bail;
@@ -815,13 +837,13 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
                 dns_packet_t   request[DNS_BUFFER_UDP];
                 size_t         reqsize;
 
-                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_CONNECTED);
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_CONNECTED, 0);
                 rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_CONNECTED, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
 
-                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_REQUESTING);
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_REQUESTING, 0);
                 rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_REQUESTING, NULL);
                 if (rc < 0) {
                         goto bail;
@@ -854,8 +876,14 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
                 reqsize = sizeof(request);
                 rc      = dns_encode(request, &reqsize, &query);
                 if (rc != RCODE_OKAY) {
-                        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
-                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                        struct medusa_dnsrequest_event_error medusa_dnsrequest_event_error;
+                        medusa_dnsrequest_event_error.state = dnsrequest->state;
+                        medusa_dnsrequest_event_error.error = -EIO;
+                        rc = dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_ERROR, medusa_dnsrequest_event_error.error);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, &medusa_dnsrequest_event_error);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -863,22 +891,34 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
 
                 fd = medusa_udpsocket_get_fd_unlocked(udpsocket);
                 if (fd < 0) {
-                        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
-                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                        struct medusa_dnsrequest_event_error medusa_dnsrequest_event_error;
+                        medusa_dnsrequest_event_error.state = dnsrequest->state;
+                        medusa_dnsrequest_event_error.error = -EIO;
+                        rc = dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_ERROR, medusa_dnsrequest_event_error.error);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, &medusa_dnsrequest_event_error);
                         if (rc < 0) {
                                 goto bail;
                         }
                 }
                 rc = sendto(fd, (void *) request, reqsize, MSG_NOSIGNAL, NULL, 0);
                 if (rc != (int) reqsize) {
-                        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
-                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                        struct medusa_dnsrequest_event_error medusa_dnsrequest_event_error;
+                        medusa_dnsrequest_event_error.state = dnsrequest->state;
+                        medusa_dnsrequest_event_error.error = -EIO;
+                        rc = dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_ERROR, medusa_dnsrequest_event_error.error);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, &medusa_dnsrequest_event_error);
                         if (rc < 0) {
                                 goto bail;
                         }
                 }
 
-                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_REQUESTED);
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_REQUESTED, 0);
                 rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_REQUESTED, NULL);
                 if (rc < 0) {
                         goto bail;
@@ -895,7 +935,7 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
 
                 replysize = sizeof(reply);
 
-                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RECEIVING);
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RECEIVING, 0);
                 rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RECEIVING, NULL);
                 if (rc < 0) {
                         goto bail;
@@ -903,16 +943,28 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
 
                 fd = medusa_udpsocket_get_fd_unlocked(udpsocket);
                 if (fd < 0) {
-                        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
-                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                        struct medusa_dnsrequest_event_error medusa_dnsrequest_event_error;
+                        medusa_dnsrequest_event_error.state = dnsrequest->state;
+                        medusa_dnsrequest_event_error.error = -EIO;
+                        rc = dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_ERROR, medusa_dnsrequest_event_error.error);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, &medusa_dnsrequest_event_error);
                         if (rc < 0) {
                                 goto bail;
                         }
                 }
                 rc = recvfrom(fd, (void *) reply, replysize, MSG_NOSIGNAL, NULL, 0);
                 if (rc <= 0) {
-                        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
-                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                        struct medusa_dnsrequest_event_error medusa_dnsrequest_event_error;
+                        medusa_dnsrequest_event_error.state = dnsrequest->state;
+                        medusa_dnsrequest_event_error.error = -EIO;
+                        rc = dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_ERROR, medusa_dnsrequest_event_error.error);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, &medusa_dnsrequest_event_error);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -921,8 +973,14 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
                 bufsize = sizeof(bufresult);
                 rc = dns_decode(bufresult, &bufsize, reply, replysize);
                 if (rc != RCODE_OKAY) {
-                        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
-                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                        struct medusa_dnsrequest_event_error medusa_dnsrequest_event_error;
+                        medusa_dnsrequest_event_error.state = dnsrequest->state;
+                        medusa_dnsrequest_event_error.error = -EIO;
+                        rc = dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_ERROR, medusa_dnsrequest_event_error.error);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, &medusa_dnsrequest_event_error);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -932,30 +990,42 @@ static int dnsrequest_udpsocket_onevent (struct medusa_udpsocket *udpsocket, uns
 
                 dnsrequest->reply = medusa_dnsrequest_reply_create((dns_query_t *) bufresult);
                 if (dnsrequest->reply == NULL) {
-                        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
-                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                        struct medusa_dnsrequest_event_error medusa_dnsrequest_event_error;
+                        medusa_dnsrequest_event_error.state = dnsrequest->state;
+                        medusa_dnsrequest_event_error.error = -EIO;
+                        rc = dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_ERROR, medusa_dnsrequest_event_error.error);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                        rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, &medusa_dnsrequest_event_error);
                         if (rc < 0) {
                                 goto bail;
                         }
                 }
 
-                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RECEIVED);
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_RECEIVED, 0);
                 rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RECEIVED, dnsrequest->reply);
                 if (rc < 0) {
                         goto bail;
                 }
-                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED, 0);
         }
         if (events & MEDUSA_UDPSOCKET_EVENT_IN_TIMEOUT) {
-                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
+                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED, 0);
                 rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_RECEIVE_TIMEOUT, NULL);
                 if (rc < 0) {
                         goto bail;
                 }
         }
         if (events & MEDUSA_UDPSOCKET_EVENT_ERROR) {
-                dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
-                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, NULL);
+                struct medusa_dnsrequest_event_error medusa_dnsrequest_event_error;
+                medusa_dnsrequest_event_error.state = dnsrequest->state;
+                medusa_dnsrequest_event_error.error = -EIO;
+                rc = dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_ERROR, medusa_dnsrequest_event_error.error);
+                if (rc < 0) {
+                        goto bail;
+                }
+                rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_ERROR, &medusa_dnsrequest_event_error);
                 if (rc < 0) {
                         goto bail;
                 }
@@ -985,7 +1055,7 @@ static int dnsrequest_init_with_options_unlocked (struct medusa_dnsrequest *dnsr
         memset(dnsrequest, 0, sizeof(struct medusa_dnsrequest));
         medusa_subject_set_type(&dnsrequest->subject, MEDUSA_SUBJECT_TYPE_DNSREQUEST);
         dnsrequest->subject.monitor = NULL;
-        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
+        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED, 0);
         dnsrequest->onevent = options->onevent;
         dnsrequest->context = options->context;
         dnsrequest->connect_timeout = -1;
@@ -1668,7 +1738,7 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_cancel_unlocked (
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
                 return -EALREADY;
         }
-        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED);
+        dnsrequest_set_state(dnsrequest, MEDUSA_DNSREQUEST_STATE_DISCONNECTED, 0);
         rc = medusa_dnsrequest_onevent_unlocked(dnsrequest, MEDUSA_DNSREQUEST_EVENT_CANCELED, NULL);
         if (rc < 0) {
                 return -EIO;
@@ -2262,6 +2332,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_state_st
         if (state == MEDUSA_DNSREQUEST_STATE_REQUESTED)         return "MEDUSA_DNSREQUEST_STATE_REQUESTED";
         if (state == MEDUSA_DNSREQUEST_STATE_RECEIVING)         return "MEDUSA_DNSREQUEST_STATE_RECEIVING";
         if (state == MEDUSA_DNSREQUEST_STATE_RECEIVED)          return "MEDUSA_DNSREQUEST_STATE_RECEIVED";
+        if (state == MEDUSA_DNSREQUEST_STATE_ERROR)             return "MEDUSA_DNSREQUEST_STATE_ERROR";
         return "MEDUSA_DNSREQUEST_STATE_UNKNOWN";
 }
 
