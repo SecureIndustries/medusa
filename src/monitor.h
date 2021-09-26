@@ -112,6 +112,8 @@ int medusa_monitor_get_running (struct medusa_monitor *monitor);
 int medusa_monitor_break (struct medusa_monitor *monitor);
 int medusa_monitor_continue (struct medusa_monitor *monitor);
 
+const char * medusa_monitor_event_string (unsigned int event);
+
 #ifdef __cplusplus
 }
 #endif

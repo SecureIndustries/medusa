@@ -71,6 +71,7 @@ struct medusa_dnsresolver_init_options {
         unsigned int family;
         int retry_count;
         double retry_interval;
+        double resolve_timeout;
         int enabled;
 };
 
@@ -93,6 +94,7 @@ struct medusa_dnsresolver_lookup_options {
         unsigned int family;
         int retry_count;
         double retry_interval;
+        double resolve_timeout;
         int enabled;
 };
 
@@ -118,10 +120,22 @@ struct medusa_dnsresolver * medusa_dnsresolver_create (struct medusa_monitor *mo
 struct medusa_dnsresolver * medusa_dnsresolver_create_with_options (const struct medusa_dnsresolver_init_options *options);
 void medusa_dnsresolver_destroy (struct medusa_dnsresolver *dnsresolver);
 
-unsigned int medusa_dnsresolver_get_state (const struct medusa_dnsresolver *dnsresolver);
+int medusa_dnsresolver_get_state (const struct medusa_dnsresolver *dnsresolver);
 
 int medusa_dnsresolver_set_nameserver (struct medusa_dnsresolver *dnsresolver, const char *nameserver);
 const char * medusa_dnsresolver_get_nameserver (struct medusa_dnsresolver *dnsresolver);
+
+int medusa_dnsresolver_set_family (struct medusa_dnsresolver *dnsresolver, unsigned int family);
+int medusa_dnsresolver_get_family (struct medusa_dnsresolver *dnsresolver);
+
+int medusa_dnsresolver_set_retry_count (struct medusa_dnsresolver *dnsresolver, int retry_count);
+int medusa_dnsresolver_get_retry_count (struct medusa_dnsresolver *dnsresolver);
+
+int medusa_dnsresolver_set_retry_interval (struct medusa_dnsresolver *dnsresolver, double retry_interval);
+double medusa_dnsresolver_get_retry_interval (struct medusa_dnsresolver *dnsresolver);
+
+int medusa_dnsresolver_set_resolve_timeout (struct medusa_dnsresolver *dnsresolver, double resolve_timeout);
+double medusa_dnsresolver_get_resolve_timeout (struct medusa_dnsresolver *dnsresolver);
 
 void * medusa_dnsresolver_get_context (struct medusa_dnsresolver *dnsresolver);
 int medusa_dnsresolver_set_context (struct medusa_dnsresolver *dnsresolver, void *context);
@@ -152,14 +166,26 @@ const char * medusa_dnsresolver_state_string (unsigned int state);
 
 int medusa_dnsresolver_lookup_options_default (struct medusa_dnsresolver_lookup_options *options);
 
-struct medusa_dnsresolver_lookup * meduse_dnsresolver_lookup (struct medusa_dnsresolver *dnsresolver, unsigned int family, const char *name, int (*onevent) (struct medusa_dnsresolver_lookup *dnsresolver_lookup, unsigned int events, void *context, void *param), void *context);
-struct medusa_dnsresolver_lookup * meduse_dnsresolver_lookup_with_options (struct medusa_dnsresolver *dnsresolver, struct medusa_dnsresolver_lookup_options *options);
+struct medusa_dnsresolver_lookup * medusa_dnsresolver_lookup (struct medusa_dnsresolver *dnsresolver, unsigned int family, const char *name, int (*onevent) (struct medusa_dnsresolver_lookup *dnsresolver_lookup, unsigned int events, void *context, void *param), void *context);
+struct medusa_dnsresolver_lookup * medusa_dnsresolver_lookup_with_options (struct medusa_dnsresolver *dnsresolver, const struct medusa_dnsresolver_lookup_options *options);
 void medusa_dnsresolver_lookup_destroy (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
 
-unsigned int medusa_dnsresolver_lookup_get_state (const struct medusa_dnsresolver_lookup *dnsresolver_lookup);
+int medusa_dnsresolver_lookup_get_state (const struct medusa_dnsresolver_lookup *dnsresolver_lookup);
 
 int medusa_dnsresolver_lookup_set_nameserver (struct medusa_dnsresolver_lookup *dnsresolver_lookup, const char *nameserver);
 const char * medusa_dnsresolver_lookup_get_nameserver (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
+
+int medusa_dnsresolver_lookup_set_family (struct medusa_dnsresolver_lookup *dnsresolver_lookup, unsigned int family);
+int medusa_dnsresolver_lookup_get_family (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
+
+int medusa_dnsresolver_lookup_set_retry_count (struct medusa_dnsresolver_lookup *dnsresolver_lookup, int retry_count);
+int medusa_dnsresolver_lookup_get_retry_count (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
+
+int medusa_dnsresolver_lookup_set_retry_interval (struct medusa_dnsresolver_lookup *dnsresolver_lookup, double retry_interval);
+double medusa_dnsresolver_lookup_get_retry_interval (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
+
+int medusa_dnsresolver_lookup_set_resolve_timeout (struct medusa_dnsresolver_lookup *dnsresolver_lookup, double resolve_timeout);
+double medusa_dnsresolver_lookup_get_resolve_timeout (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
 
 void * medusa_dnsresolver_lookup_get_context (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
 int medusa_dnsresolver_lookup_set_context (struct medusa_dnsresolver_lookup *dnsresolver_lookup, void *context);

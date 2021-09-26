@@ -124,6 +124,7 @@ struct medusa_tcpsocket_accept_options {
 
 struct medusa_tcpsocket_connect_options {
         struct medusa_monitor *monitor;
+        struct medusa_dnsresolver *dnsresolver;
         int (*onevent) (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param);
         void *context;
         unsigned int protocol;

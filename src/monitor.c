@@ -503,6 +503,12 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                         if (rc < 0) {
                                 goto bail;
                         }
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSRESOLVER_LOOKUP) {
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        rc = monitor_subject_onevent(monitor, subject, MEDUSA_DNSRESOLVER_LOOKUP_EVENT_DESTROY, NULL);
+                        if (rc < 0) {
+                                goto bail;
+                        }
                 } else {
                         goto bail;
                 }
@@ -677,12 +683,27 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                         TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSRESOLVER_LOOKUP) {
+                        TAILQ_REMOVE(&monitor->changes, subject, list);
+                        TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSRESOLVER) {
                         TAILQ_REMOVE(&monitor->changes, subject, list);
                         TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSREQUEST) {
+                        TAILQ_REMOVE(&monitor->changes, subject, list);
+                        TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPSERVER) {
+                        TAILQ_REMOVE(&monitor->changes, subject, list);
+                        TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPSERVER_CLIENT) {
                         TAILQ_REMOVE(&monitor->changes, subject, list);
                         TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
@@ -1366,6 +1387,12 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                 }
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPREQUEST) {
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        medusa_httprequest_onevent_unlocked((struct medusa_httprequest *) subject, MEDUSA_HTTPREQUEST_EVENT_DESTROY, NULL);
+                }
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSRESOLVER_LOOKUP) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         medusa_dnsresolver_lookup_onevent_unlocked((struct medusa_dnsresolver_lookup *) subject, MEDUSA_DNSRESOLVER_LOOKUP_EVENT_DESTROY, NULL);
@@ -1381,12 +1408,6 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSREQUEST) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         medusa_dnsrequest_onevent_unlocked((struct medusa_dnsrequest *) subject, MEDUSA_DNSREQUEST_EVENT_DESTROY, NULL);
-                }
-        }
-        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
-                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPREQUEST) {
-                        TAILQ_REMOVE(&monitor->deletes, subject, list);
-                        medusa_httprequest_onevent_unlocked((struct medusa_httprequest *) subject, MEDUSA_HTTPREQUEST_EVENT_DESTROY, NULL);
                 }
         }
 #if defined(MEDUSA_EXEC_ENABLE) && (MEDUSA_EXEC_ENABLE == 1)
@@ -1593,4 +1614,11 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run (struct medusa_m
         }
 
         return 0;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_monitor_event_string (unsigned int event)
+{
+        if (event == MEDUSA_MONITOR_EVENT_ERROR)        return "MEDUSA_MONITOR_EVENT_ERROR";
+        if (event == MEDUSA_MONITOR_EVENT_DESTROY)      return "MEDUSA_MONITOR_EVENT_DESTROY";
+        return "MEDUSA_MONITOR_EVENT_UNKNOWN";
 }

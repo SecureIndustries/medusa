@@ -598,6 +598,13 @@ __attribute__ ((visibility ("default"))) int medusa_signal_is_valid_unlocked (co
         return 1;
 }
 
+__attribute__ ((visibility ("default"))) const char * medusa_signal_event_string (unsigned int event)
+{
+        if (event == MEDUSA_SIGNAL_EVENT_FIRED)        return "MEDUSA_SIGNAL_EVENT_FIRED";
+        if (event == MEDUSA_SIGNAL_EVENT_DESTROY)      return "MEDUSA_SIGNAL_EVENT_DESTROY";
+        return "MEDUSA_SIGNAL_EVENT_UNKNOWN";
+}
+
 __attribute__ ((constructor)) static void signal_constructor (void)
 {
 #if defined(MEDUSA_SIGNAL_USE_POOL) && (MEDUSA_SIGNAL_USE_POOL == 1)

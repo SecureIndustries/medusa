@@ -11,8 +11,16 @@ struct medusa_dnsresolver_lookup {
         int (*onevent) (struct medusa_dnsresolver_lookup *dnsresolver_lookup, unsigned int events, void *context, void *param);
         void *context;
         char *nameserver;
+        unsigned int family;
+        int retry_count;
+        double retry_interval;
+        double resolve_timeout;
         void *userdata;
+        struct medusa_timer *retry_interval_timer;
+        struct medusa_timer *resolve_timeout_timer;
+        struct medusa_dnsrequest *dnsrequest;
         TAILQ_ENTRY(medusa_dnsresolver_lookup) tailq;
+        struct medusa_dnsresolver *dnsresolver;
 };
 
 struct medusa_dnsresolver {
@@ -23,6 +31,10 @@ struct medusa_dnsresolver {
         int (*onevent) (struct medusa_dnsresolver *dnsresolver, unsigned int events, void *context, void *param);
         void *context;
         char *nameserver;
+        unsigned int family;
+        int retry_count;
+        double retry_interval;
+        double resolve_timeout;
         void *userdata;
         struct medusa_dnsresolver_lookups lookups;
 };

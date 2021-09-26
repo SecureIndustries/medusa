@@ -185,6 +185,7 @@ dist.include-y = \
 	httprequest.h \
 	httpserver.h \
 	dnsrequest.h \
+	dnsresolver.h \
 	websocketserver.h \
 	exec.h \
 	queue.h \

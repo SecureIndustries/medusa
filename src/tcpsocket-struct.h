@@ -11,6 +11,8 @@ struct medusa_tcpsocket {
         unsigned int error;
         int backlog;
         struct medusa_io *io;
+        struct medusa_tcpsocket_connect_options *coptions;
+        struct medusa_dnsresolver_lookup *clookup;
         struct medusa_timer *ctimer;
         struct medusa_timer *rtimer;
         struct medusa_buffer *wbuffer;

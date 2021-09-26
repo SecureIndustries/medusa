@@ -31,7 +31,7 @@
 #define MIN(a, b)                               (((a) < (b)) ? (a) : (b))
 #endif
 
-#define MEDUSA_HTTPREQUEST_USE_POOL             1
+#define MEDUSA_HTTPREQUEST_USE_POOL             0
 
 #if defined(MEDUSA_HTTPREQUEST_USE_POOL) && (MEDUSA_HTTPREQUEST_USE_POOL == 1)
 static struct medusa_pool *g_pool;
@@ -713,6 +713,7 @@ static int httprequest_init_with_options_unlocked (struct medusa_httprequest *ht
         httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
         httprequest->onevent = options->onevent;
         httprequest->context = options->context;
+        httprequest->dnsresolver     = options->dnsresolver;
         httprequest->connect_timeout = -1;
         httprequest->read_timeout    = -1;
         httprequest->method          = NULL;
@@ -1285,6 +1286,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 goto bail;
         }
         medusa_tcpsocket_connect_options.monitor     = httprequest->subject.monitor;
+        medusa_tcpsocket_connect_options.dnsresolver = httprequest->dnsresolver;
         medusa_tcpsocket_connect_options.onevent     = httprequest_tcpsocket_onevent;
         medusa_tcpsocket_connect_options.context     = httprequest;
         medusa_tcpsocket_connect_options.protocol    = MEDUSA_TCPSOCKET_PROTOCOL_ANY;

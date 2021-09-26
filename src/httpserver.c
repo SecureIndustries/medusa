@@ -38,29 +38,6 @@ static struct medusa_pool *g_pool_httpserver;
 static struct medusa_pool *g_pool_httpserver_client;
 #endif
 
-#define WS_FRAGMENT_FIN                 0x80
-
-#define WS_NONBLOCK                     0x02
-
-#define WS_OPCODE_CONTINUE              0x00
-#define WS_OPCODE_TEXT                  0x01
-#define WS_OPCODE_BINARY                0x02
-#define WS_OPCODE_CLOSE                 0x08
-#define WS_OPCODE_PING                  0x09
-#define WS_OPCODE_PONG                  0x0a
-
-#define WS_CLOSE_NORMAL                 1000
-#define WS_CLOSE_GOING_AWAY             1001
-#define WS_CLOSE_PROTOCOL_ERROR         1002
-#define WS_CLOSE_NOT_ALLOWED            1003
-#define WS_CLOSE_RESERVED               1004
-#define WS_CLOSE_NO_CODE                1005
-#define WS_CLOSE_DIRTY                  1006
-#define WS_CLOSE_WRONG_TYPE             1007
-#define WS_CLOSE_POLICY_VIOLATION       1008
-#define WS_CLOSE_MESSAGE_TOO_BIG        1009
-#define WS_CLOSE_UNEXPECTED_ERROR       1011
-
 enum {
         MEDUSA_HTTPSERVER_FLAG_NONE                = (1 << 0),
         MEDUSA_HTTPSERVER_FLAG_ENABLED             = (1 << 1)

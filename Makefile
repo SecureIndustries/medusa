@@ -111,6 +111,7 @@ install: src test
 	install -m 0644 dist/include/medusa/udpsocket.h ${DESTDIR}/${prefix}/include/medusa/udpsocket.h
 	install -m 0644 dist/include/medusa/timer.h ${DESTDIR}/${prefix}/include/medusa/timer.h
 	install -m 0644 dist/include/medusa/dnsrequest.h ${DESTDIR}/${prefix}/include/medusa/dnsrequest.h
+	install -m 0644 dist/include/medusa/dnsresolver.h ${DESTDIR}/${prefix}/include/medusa/dnsresolver.h
 	install -m 0644 dist/include/medusa/websocketserver.h ${DESTDIR}/${prefix}/include/medusa/websocketserver.h
 
 ifeq (${MEDUSA_LIBMEDUSA_TARGET_SO}, y)
