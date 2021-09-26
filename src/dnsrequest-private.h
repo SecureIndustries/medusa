@@ -10,7 +10,10 @@ struct medusa_dnsrequest * medusa_dnsrequest_create_unlocked (struct medusa_moni
 struct medusa_dnsrequest * medusa_dnsrequest_create_with_options_unlocked (const struct medusa_dnsrequest_init_options *options);
 void medusa_dnsrequest_destroy_unlocked (struct medusa_dnsrequest *dnsrequest);
 
-unsigned int medusa_dnsrequest_get_state_unlocked (const struct medusa_dnsrequest *dnsrequest);
+int medusa_dnsrequest_get_state_unlocked (const struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_set_resolve_timeout_unlocked (struct medusa_dnsrequest *dnsrequest, double timeout);
+double medusa_dnsrequest_get_resolve_timeout_unlocked (const struct medusa_dnsrequest *dnsrequest);
 
 int medusa_dnsrequest_set_connect_timeout_unlocked (struct medusa_dnsrequest *dnsrequest, double timeout);
 double medusa_dnsrequest_get_connect_timeout_unlocked (const struct medusa_dnsrequest *dnsrequest);

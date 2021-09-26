@@ -105,6 +105,10 @@ struct medusa_dnsrequest_init_options {
         const char *nameserver;
         unsigned int type;
         const char *name;
+        double resolve_timeout;
+        double connect_timeout;
+        double receive_timeout;
+        int enabled;
 };
 
 struct medusa_dnsrequest_event_error {
@@ -131,7 +135,10 @@ struct medusa_dnsrequest * medusa_dnsrequest_create (struct medusa_monitor *moni
 struct medusa_dnsrequest * medusa_dnsrequest_create_with_options (const struct medusa_dnsrequest_init_options *options);
 void medusa_dnsrequest_destroy (struct medusa_dnsrequest *dnsrequest);
 
-unsigned int medusa_dnsrequest_get_state (const struct medusa_dnsrequest *dnsrequest);
+int medusa_dnsrequest_get_state (const struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_set_resolve_timeout (struct medusa_dnsrequest *dnsrequest, double timeout);
+double medusa_dnsrequest_get_resolve_timeout (const struct medusa_dnsrequest *dnsrequest);
 
 int medusa_dnsrequest_set_connect_timeout (struct medusa_dnsrequest *dnsrequest, double timeout);
 double medusa_dnsrequest_get_connect_timeout (const struct medusa_dnsrequest *dnsrequest);

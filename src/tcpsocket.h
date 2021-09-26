@@ -133,7 +133,9 @@ struct medusa_tcpsocket_connect_options {
         unsigned int sprotocol;
         const char *saddress;
         unsigned short sport;
-        double timeout;
+        double resolve_timeout;
+        double connect_timeout;
+        double read_timeout;
         int fd;
         int clodestroy;
         int reuseaddr;
@@ -225,6 +227,9 @@ int medusa_tcpsocket_get_reuseport (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_backlog (struct medusa_tcpsocket *tcpsocket, int backlog);
 int medusa_tcpsocket_get_backlog (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_resolve_timeout (struct medusa_tcpsocket *tcpsocket, double timeout);
+double medusa_tcpsocket_get_resolve_timeout (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_connect_timeout (struct medusa_tcpsocket *tcpsocket, double timeout);
 double medusa_tcpsocket_get_connect_timeout (const struct medusa_tcpsocket *tcpsocket);

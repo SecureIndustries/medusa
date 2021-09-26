@@ -314,7 +314,6 @@ static int exec_init_with_options_unlocked (struct medusa_exec *exec, const stru
         }
         rc = medusa_exec_set_enabled_unlocked(exec, !!options->enabled);
         if (rc < 0) {
-                fprintf(stderr, "rc: %d\n", rc);
                 if (rc != -EALREADY) {
                         ret = rc;
                         goto bail;

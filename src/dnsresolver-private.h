@@ -61,6 +61,9 @@ const char * medusa_dnsresolver_lookup_get_nameserver_unlocked (struct medusa_dn
 int medusa_dnsresolver_lookup_set_family_unlocked (struct medusa_dnsresolver_lookup *dnsresolver_lookup, unsigned int family);
 int medusa_dnsresolver_lookup_get_family_unlocked (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
 
+int medusa_dnsresolver_lookup_set_name_unlocked (struct medusa_dnsresolver_lookup *dnsresolver_lookup, const char *name);
+const char * medusa_dnsresolver_lookup_get_name_unlocked (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
+
 int medusa_dnsresolver_lookup_set_retry_count_unlocked (struct medusa_dnsresolver_lookup *dnsresolver_lookup, int retry_count);
 int medusa_dnsresolver_lookup_get_retry_count_unlocked (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
 

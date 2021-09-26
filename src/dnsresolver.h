@@ -42,11 +42,15 @@ enum {
 enum {
         MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STARTED         = (1 << 0),
         MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STOPPED         = (1 << 1),
-        MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ERROR           = (1 << 2),
-        MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STATE_CHANGED   = (1 << 3),
-        MEDUSA_DNSRESOLVER_LOOKUP_EVENT_DESTROY         = (1 << 4)
+        MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ENTRY           = (1 << 2),
+        MEDUSA_DNSRESOLVER_LOOKUP_EVENT_FINISHED        = (1 << 3),
+        MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ERROR           = (1 << 4),
+        MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STATE_CHANGED   = (1 << 5),
+        MEDUSA_DNSRESOLVER_LOOKUP_EVENT_DESTROY         = (1 << 6)
 #define MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STARTED         MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STARTED
 #define MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STOPPED         MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STOPPED
+#define MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ENTRY           MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ENTRY
+#define MEDUSA_DNSRESOLVER_LOOKUP_EVENT_FINISHED        MEDUSA_DNSRESOLVER_LOOKUP_EVENT_FINISHED
 #define MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ERROR           MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ERROR
 #define MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STATE_CHANGED   MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STATE_CHANGED
 #define MEDUSA_DNSRESOLVER_LOOKUP_EVENT_DESTROY         MEDUSA_DNSRESOLVER_LOOKUP_EVENT_DESTROY
@@ -56,10 +60,12 @@ enum {
         MEDUSA_DNSRESOLVER_LOOKUP_STATE_UNKNOWN         = 0,
         MEDUSA_DNSRESOLVER_LOOKUP_STATE_STARTED         = 1,
         MEDUSA_DNSRESOLVER_LOOKUP_STATE_STOPPED         = 2,
-        MEDUSA_DNSRESOLVER_LOOKUP_STATE_ERROR           = 3
+        MEDUSA_DNSRESOLVER_LOOKUP_STATE_FINISHED        = 3,
+        MEDUSA_DNSRESOLVER_LOOKUP_STATE_ERROR           = 4
 #define MEDUSA_DNSRESOLVER_LOOKUP_STATE_UNKNOWN         MEDUSA_DNSRESOLVER_LOOKUP_STATE_UNKNOWN
 #define MEDUSA_DNSRESOLVER_LOOKUP_STATE_STARTED         MEDUSA_DNSRESOLVER_LOOKUP_STATE_STARTED
 #define MEDUSA_DNSRESOLVER_LOOKUP_STATE_STOPPED         MEDUSA_DNSRESOLVER_LOOKUP_STATE_STOPPED
+#define MEDUSA_DNSRESOLVER_LOOKUP_STATE_FINISHED        MEDUSA_DNSRESOLVER_LOOKUP_STATE_FINISHED
 #define MEDUSA_DNSRESOLVER_LOOKUP_STATE_ERROR           MEDUSA_DNSRESOLVER_LOOKUP_STATE_ERROR
 };
 
@@ -96,6 +102,11 @@ struct medusa_dnsresolver_lookup_options {
         double retry_interval;
         double resolve_timeout;
         int enabled;
+};
+
+struct medusa_dnsresolver_lookup_event_entry {
+        unsigned int family;
+        const char *addreess;
 };
 
 struct medusa_dnsresolver_lookup_event_error {
@@ -177,6 +188,9 @@ const char * medusa_dnsresolver_lookup_get_nameserver (struct medusa_dnsresolver
 
 int medusa_dnsresolver_lookup_set_family (struct medusa_dnsresolver_lookup *dnsresolver_lookup, unsigned int family);
 int medusa_dnsresolver_lookup_get_family (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
+
+int medusa_dnsresolver_lookup_set_name (struct medusa_dnsresolver_lookup *dnsresolver_lookup, const char *name);
+const char * medusa_dnsresolver_lookup_get_name (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
 
 int medusa_dnsresolver_lookup_set_retry_count (struct medusa_dnsresolver_lookup *dnsresolver_lookup, int retry_count);
 int medusa_dnsresolver_lookup_get_retry_count (struct medusa_dnsresolver_lookup *dnsresolver_lookup);

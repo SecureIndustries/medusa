@@ -509,6 +509,12 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                         if (rc < 0) {
                                 goto bail;
                         }
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSREQUEST) {
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        rc = monitor_subject_onevent(monitor, subject, MEDUSA_DNSREQUEST_EVENT_DESTROY, NULL);
+                        if (rc < 0) {
+                                goto bail;
+                        }
                 } else {
                         goto bail;
                 }

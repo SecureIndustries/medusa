@@ -11,6 +11,7 @@ struct medusa_dnsresolver_lookup {
         int (*onevent) (struct medusa_dnsresolver_lookup *dnsresolver_lookup, unsigned int events, void *context, void *param);
         void *context;
         char *nameserver;
+        char *name;
         unsigned int family;
         int retry_count;
         double retry_interval;

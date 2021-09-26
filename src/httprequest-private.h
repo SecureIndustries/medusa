@@ -10,6 +10,9 @@ void medusa_httprequest_destroy_unlocked (struct medusa_httprequest *httprequest
 
 unsigned int medusa_httprequest_get_state_unlocked (const struct medusa_httprequest *httprequest);
 
+int medusa_httprequest_set_resolve_timeout_unlocked (struct medusa_httprequest *httprequest, double timeout);
+double medusa_httprequest_get_resolve_timeout_unlocked (const struct medusa_httprequest *httprequest);
+
 int medusa_httprequest_set_connect_timeout_unlocked (struct medusa_httprequest *httprequest, double timeout);
 double medusa_httprequest_get_connect_timeout_unlocked (const struct medusa_httprequest *httprequest);
 

@@ -8,6 +8,7 @@ struct medusa_dnsrequest {
         unsigned int error;
         int (*onevent) (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *context, void *param);
         void *context;
+        double resolve_timeout;
         double connect_timeout;
         double receive_timeout;
         char *nameserver;

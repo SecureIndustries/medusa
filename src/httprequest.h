@@ -77,6 +77,7 @@ enum {
 struct medusa_httprequest_init_options {
         struct medusa_monitor *monitor;
         struct medusa_dnsresolver *dnsresolver;
+        double resolve_timeout;
         double connect_timeout;
         double read_timeout;
         const char *method;
@@ -97,6 +98,9 @@ struct medusa_httprequest * medusa_httprequest_create_with_options (const struct
 void medusa_httprequest_destroy (struct medusa_httprequest *httprequest);
 
 unsigned int medusa_httprequest_get_state (const struct medusa_httprequest *httprequest);
+
+int medusa_httprequest_set_resolve_timeout (struct medusa_httprequest *httprequest, double timeout);
+double medusa_httprequest_get_resolve_timeout (const struct medusa_httprequest *httprequest);
 
 int medusa_httprequest_set_connect_timeout (struct medusa_httprequest *httprequest, double timeout);
 double medusa_httprequest_get_connect_timeout (const struct medusa_httprequest *httprequest);

@@ -43,6 +43,9 @@ int medusa_tcpsocket_get_reuseport_unlocked (const struct medusa_tcpsocket *tcps
 int medusa_tcpsocket_set_backlog_unlocked (struct medusa_tcpsocket *tcpsocket, int backlog);
 int medusa_tcpsocket_get_backlog_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_set_resolve_timeout_unlocked (struct medusa_tcpsocket *tcpsocket, double timeout);
+double medusa_tcpsocket_get_resolve_timeout_unlocked (const struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_set_connect_timeout_unlocked (struct medusa_tcpsocket *tcpsocket, double timeout);
 double medusa_tcpsocket_get_connect_timeout_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
