@@ -33,12 +33,14 @@
 #include "tcpsocket-private.h"
 #include "udpsocket.h"
 #include "udpsocket-private.h"
+#include "exec.h"
+#include "exec-private.h"
 #include "httprequest.h"
 #include "httprequest-private.h"
 #include "dnsrequest.h"
 #include "dnsrequest-private.h"
-#include "exec.h"
-#include "exec-private.h"
+#include "dnsresolver.h"
+#include "dnsresolver-private.h"
 #include "websocketserver.h"
 #include "websocketserver-private.h"
 #include "httpserver.h"
@@ -288,6 +290,13 @@ static int monitor_subject_onevent (struct medusa_monitor *monitor, struct medus
                 case MEDUSA_SUBJECT_TYPE_UDPSOCKET:
                         rc = medusa_udpsocket_onevent_unlocked((struct medusa_udpsocket *) subject, events, param);
                         break;
+                case MEDUSA_SUBJECT_TYPE_EXEC:
+#if defined(MEDUSA_EXEC_ENABLE) && (MEDUSA_EXEC_ENABLE == 1)
+                        rc = medusa_exec_onevent_unlocked((struct medusa_exec *) subject, events, param);
+#else
+                        rc = -ENOTSUP;
+#endif
+                        break;
                 case MEDUSA_SUBJECT_TYPE_HTTPREQUEST:
                         rc = medusa_httprequest_onevent_unlocked((struct medusa_httprequest *) subject, events, param);
                         break;
@@ -297,12 +306,8 @@ static int monitor_subject_onevent (struct medusa_monitor *monitor, struct medus
                 case MEDUSA_SUBJECT_TYPE_DNSRESOLVER:
                         rc = medusa_dnsresolver_onevent_unlocked((struct medusa_dnsresolver *) subject, events, param);
                         break;
-                case MEDUSA_SUBJECT_TYPE_EXEC:
-#if defined(MEDUSA_EXEC_ENABLE) && (MEDUSA_EXEC_ENABLE == 1)
-                        rc = medusa_exec_onevent_unlocked((struct medusa_exec *) subject, events, param);
-#else
-                        rc = -ENOTSUP;
-#endif
+                case MEDUSA_SUBJECT_TYPE_DNSRESOLVER_LOOKUP:
+                        rc = medusa_dnsresolver_lookup_onevent_unlocked((struct medusa_dnsresolver_lookup *) subject, events, param);
                         break;
                 case MEDUSA_SUBJECT_TYPE_WEBSOCKETSERVER:
                         rc = medusa_websocketserver_onevent_unlocked((struct medusa_websocketserver *) subject, events, param);
@@ -379,6 +384,15 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_WEBSOCKETSERVER) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         rc = monitor_subject_onevent(monitor, subject, MEDUSA_WEBSOCKETSERVER_EVENT_DESTROY, NULL);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                }
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSRESOLVER_LOOKUP) {
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        rc = monitor_subject_onevent(monitor, subject, MEDUSA_DNSRESOLVER_LOOKUP_EVENT_DESTROY, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -1349,6 +1363,12 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_WEBSOCKETSERVER) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         medusa_websocketserver_onevent_unlocked((struct medusa_websocketserver *) subject, MEDUSA_WEBSOCKETSERVER_EVENT_DESTROY, NULL);
+                }
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSRESOLVER_LOOKUP) {
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        medusa_dnsresolver_lookup_onevent_unlocked((struct medusa_dnsresolver_lookup *) subject, MEDUSA_DNSRESOLVER_LOOKUP_EVENT_DESTROY, NULL);
                 }
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
