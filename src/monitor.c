@@ -294,6 +294,9 @@ static int monitor_subject_onevent (struct medusa_monitor *monitor, struct medus
                 case MEDUSA_SUBJECT_TYPE_DNSREQUEST:
                         rc = medusa_dnsrequest_onevent_unlocked((struct medusa_dnsrequest *) subject, events, param);
                         break;
+                case MEDUSA_SUBJECT_TYPE_DNSRESOLVER:
+                        rc = medusa_dnsresolver_onevent_unlocked((struct medusa_dnsresolver *) subject, events, param);
+                        break;
                 case MEDUSA_SUBJECT_TYPE_EXEC:
 #if defined(MEDUSA_EXEC_ENABLE) && (MEDUSA_EXEC_ENABLE == 1)
                         rc = medusa_exec_onevent_unlocked((struct medusa_exec *) subject, events, param);
@@ -382,9 +385,9 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                 }
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
-                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_EXEC) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSRESOLVER) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
-                        rc = monitor_subject_onevent(monitor, subject, MEDUSA_EXEC_EVENT_DESTROY, NULL);
+                        rc = monitor_subject_onevent(monitor, subject, MEDUSA_DNSRESOLVER_EVENT_DESTROY, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -403,6 +406,15 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPREQUEST) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         rc = monitor_subject_onevent(monitor, subject, MEDUSA_HTTPREQUEST_EVENT_DESTROY, NULL);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                }
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_EXEC) {
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        rc = monitor_subject_onevent(monitor, subject, MEDUSA_EXEC_EVENT_DESTROY, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -641,17 +653,22 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                         TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_EXEC) {
+                        TAILQ_REMOVE(&monitor->changes, subject, list);
+                        TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPREQUEST) {
                         TAILQ_REMOVE(&monitor->changes, subject, list);
                         TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
-                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSREQUEST) {
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSRESOLVER) {
                         TAILQ_REMOVE(&monitor->changes, subject, list);
                         TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
-                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_EXEC) {
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSREQUEST) {
                         TAILQ_REMOVE(&monitor->changes, subject, list);
                         TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
@@ -1334,14 +1351,12 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                         medusa_websocketserver_onevent_unlocked((struct medusa_websocketserver *) subject, MEDUSA_WEBSOCKETSERVER_EVENT_DESTROY, NULL);
                 }
         }
-#if defined(MEDUSA_EXEC_ENABLE) && (MEDUSA_EXEC_ENABLE == 1)
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
-                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_EXEC) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSRESOLVER) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
-                        medusa_exec_onevent_unlocked((struct medusa_exec *) subject, MEDUSA_EXEC_EVENT_DESTROY, NULL);
+                        medusa_dnsresolver_onevent_unlocked((struct medusa_dnsresolver *) subject, MEDUSA_DNSRESOLVER_EVENT_DESTROY, NULL);
                 }
         }
-#endif
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_DNSREQUEST) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
@@ -1354,6 +1369,14 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                         medusa_httprequest_onevent_unlocked((struct medusa_httprequest *) subject, MEDUSA_HTTPREQUEST_EVENT_DESTROY, NULL);
                 }
         }
+#if defined(MEDUSA_EXEC_ENABLE) && (MEDUSA_EXEC_ENABLE == 1)
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_EXEC) {
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        medusa_exec_onevent_unlocked((struct medusa_exec *) subject, MEDUSA_EXEC_EVENT_DESTROY, NULL);
+                }
+        }
+#endif
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_TCPSOCKET) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);

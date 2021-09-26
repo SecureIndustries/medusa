@@ -111,6 +111,7 @@ libmedusa.a_files-y += \
 	../3rdparty/http-parser/http_parser.c
 
 libmedusa.a_files-y += \
+	dnsresolver.c \
 	dnsrequest.c \
 	../3rdparty/SPCDNS/src/codec.c \
 	../3rdparty/SPCDNS/src/mappings.c \
