@@ -6,7 +6,7 @@
 #include <errno.h>
 
 #if defined(_WIN32)
-#define FD_SETSIZE      1024
+#define FD_SETSIZE      8192
 #include <winsock2.h>
 #else
 #include <sys/select.h>
