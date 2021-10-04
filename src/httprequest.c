@@ -1155,6 +1155,26 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl (struct
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) const char * medusa_httprequest_get_url_unlocked (const struct medusa_httprequest *httprequest)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return httprequest->url;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_httprequest_get_url (const struct medusa_httprequest *httprequest)
+{
+        const char *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(httprequest->subject.monitor);
+        rc = medusa_httprequest_get_url_unlocked(httprequest);
+        medusa_monitor_unlock(httprequest->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_httprequest_add_header_unlocked (struct medusa_httprequest *httprequest, const char *key, const char *value, ...)
 {
         int64_t rc;

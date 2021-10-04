@@ -23,6 +23,7 @@ int medusa_httprequest_set_method_unlocked (struct medusa_httprequest *httpreque
 
 int medusa_httprequest_set_url_unlocked (struct medusa_httprequest *httprequest, const char *url, ...) __attribute__((format(printf, 2, 3)));
 int medusa_httprequest_set_vurl_unlocked (struct medusa_httprequest *httprequest, const char *url, va_list va);
+const char * medusa_httprequest_get_url_unlocked (const struct medusa_httprequest *httprequest);
 
 int medusa_httprequest_add_header_unlocked (struct medusa_httprequest *httprequest, const char *key, const char *value, ...);
 int medusa_httprequest_add_headerv_unlocked (struct medusa_httprequest *httprequest, const char *key, const char *value, va_list va);

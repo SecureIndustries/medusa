@@ -2185,16 +2185,14 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
         int rc;
         int ret;
 
+        int resolve;
         unsigned int protocol;
         const char *address;
 
-        struct addrinfo hints;
-        struct addrinfo *result;
         struct tcpsocket_addrinfo *tcpsocket_addrinfo;
 
         struct medusa_tcpsocket *tcpsocket;
 
-        result    = NULL;
         tcpsocket = NULL;
         tcpsocket_addrinfo = NULL;
 
@@ -2283,24 +2281,6 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 goto bail;
         }
 
-        memset(&hints, 0, sizeof(struct addrinfo));
-        if (protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV4) {
-                hints.ai_family = AF_INET;
-                hints.ai_socktype = SOCK_STREAM;
-        } else if (protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV6) {
-                hints.ai_family = AF_INET6;
-                hints.ai_socktype = SOCK_STREAM;
-        } else {
-                hints.ai_family = AF_UNSPEC;
-                hints.ai_socktype = SOCK_STREAM;
-        }
-
-        if (strcmp(address, "localhost") == 0) {
-                address = "127.0.0.1";
-        } else if (strcmp(address, "loopback") == 0) {
-                address = "127.0.0.1";
-        }
-
 #if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
         tcpsocket->ssl_hostname = strdup(address);
         if (tcpsocket->ssl_hostname == NULL) {
@@ -2309,7 +2289,80 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
         }
 #endif
 
-        if (MEDUSA_IS_ERR_OR_NULL(options->dnsresolver)) {
+        resolve = 1;
+        if (protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV4) {
+                struct sockaddr_in sockaddr_in;
+ipv4:
+                memset(&sockaddr_in, 0, sizeof(sockaddr_in));
+                sockaddr_in.sin_family = AF_INET;
+                if (address == NULL) {
+                        address = "0.0.0.0";
+                } else if (strcmp(address, "localhost") == 0) {
+                        address = "127.0.0.1";
+                } else if (strcmp(address, "loopback") == 0) {
+                        address = "127.0.0.1";
+                }
+                rc = inet_pton(AF_INET, address, &sockaddr_in.sin_addr);
+                if (rc == 1) {
+                        resolve = 0;
+                }
+        } else if (protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV6) {
+                struct sockaddr_in6 sockaddr_in6;
+ipv6:
+                memset(&sockaddr_in6, 0, sizeof(sockaddr_in6));
+                sockaddr_in6.sin6_family = AF_INET6;
+                if (address == NULL) {
+                        address = "0.0.0.0";
+                } else if (strcmp(address, "localhost") == 0) {
+                        address = "::1";
+                } else if (strcmp(address, "loopback") == 0) {
+                        address = "::1";
+                }
+                rc = inet_pton(AF_INET6, address, &sockaddr_in6.sin6_addr);
+                if (rc == 1) {
+                        resolve = 0;
+                }
+        } else if (address == NULL) {
+                address = "0.0.0.0";
+                goto ipv4;
+        } else if (strcmp(address, "localhost") == 0) {
+                address = "127.0.0.1";
+                goto ipv4;
+        } else if (strcmp(address, "loopback") == 0) {
+                address = "127.0.0.1";
+                goto ipv4;
+        } else {
+                struct sockaddr_in sockaddr_in;
+                struct sockaddr_in6 sockaddr_in6;
+                rc = inet_pton(AF_INET, address, &sockaddr_in.sin_addr);
+                if (rc == 1) {
+                        goto ipv4;
+                }
+                rc = inet_pton(AF_INET6, address, &sockaddr_in6.sin6_addr);
+                if (rc == 1) {
+                        goto ipv6;
+                }
+        }
+
+        if (resolve == 0 ||
+            MEDUSA_IS_ERR_OR_NULL(options->dnsresolver)) {
+                struct addrinfo hints;
+                struct addrinfo *result;
+
+                result = NULL;
+
+                memset(&hints, 0, sizeof(struct addrinfo));
+                if (protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV4) {
+                        hints.ai_family = AF_INET;
+                        hints.ai_socktype = SOCK_STREAM;
+                } else if (protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV6) {
+                        hints.ai_family = AF_INET6;
+                        hints.ai_socktype = SOCK_STREAM;
+                } else {
+                        hints.ai_family = AF_UNSPEC;
+                        hints.ai_socktype = SOCK_STREAM;
+                }
+
                 rc = getaddrinfo(address, NULL, &hints, &result);
                 if (rc != 0) {
                         ret = -EIO;
@@ -2318,13 +2371,16 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 tcpsocket_addrinfo = tcpsocket_addrinfo_create_from_addrinfo(result);
                 if (tcpsocket_addrinfo == NULL) {
                         ret = -ENOMEM;
+                        freeaddrinfo(result);
                         goto bail;
                 }
                 rc = medusa_tcpsocket_connect_resolved(tcpsocket, options, tcpsocket_addrinfo);
                 if (rc < 0) {
                         ret = rc;
+                        freeaddrinfo(result);
                         goto bail;
                 }
+                freeaddrinfo(result);
         } else {
                 struct medusa_dnsresolver_lookup_options dnsresolver_lookup_options;
                 tcpsocket->coptions = medusa_tcpsocket_connect_options_duplicate(options);
@@ -2355,17 +2411,11 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 }
         }
 
-        if (result != NULL) {
-                freeaddrinfo(result);
-        }
         if (tcpsocket_addrinfo != NULL) {
                 tcpsocket_addrinfo_destroy(tcpsocket_addrinfo);
         }
         return tcpsocket;
-bail:   if (result != NULL) {
-                freeaddrinfo(result);
-        }
-        if (tcpsocket_addrinfo != NULL) {
+bail:   if (tcpsocket_addrinfo != NULL) {
                 tcpsocket_addrinfo_destroy(tcpsocket_addrinfo);
         }
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
