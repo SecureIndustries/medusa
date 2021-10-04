@@ -51,7 +51,7 @@
 #define MIN(a, b)                               (((a) < (b)) ? (a) : (b))
 #define MAX(a, b)                               (((a) > (b)) ? (a) : (b))
 
-#define MEDUSA_TCPSOCKET_USE_POOL               0
+#define MEDUSA_TCPSOCKET_USE_POOL               1
 
 #define MEDUSA_TCPSOCKET_DEFAULT_BACKLOG        128
 #define MEDUSA_TCPSOCKET_DEFAULT_IOVECS         4

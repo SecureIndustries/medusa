@@ -31,7 +31,7 @@
 #define MIN(a, b)                               (((a) < (b)) ? (a) : (b))
 #endif
 
-#define MEDUSA_HTTPREQUEST_USE_POOL             0
+#define MEDUSA_HTTPREQUEST_USE_POOL             1
 
 #if defined(MEDUSA_HTTPREQUEST_USE_POOL) && (MEDUSA_HTTPREQUEST_USE_POOL == 1)
 static struct medusa_pool *g_pool;

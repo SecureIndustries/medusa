@@ -25,7 +25,7 @@
 #define MSG_NOSIGNAL                            0
 #endif
 
-#define MEDUSA_DNSREQUEST_USE_POOL              0
+#define MEDUSA_DNSREQUEST_USE_POOL              1
 
 #if defined(MEDUSA_DNSREQUEST_USE_POOL) && (MEDUSA_DNSREQUEST_USE_POOL == 1)
 static struct medusa_pool *g_pool;

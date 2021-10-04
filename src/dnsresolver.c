@@ -17,7 +17,7 @@
 #include "dnsresolver-struct.h"
 #include "monitor-private.h"
 
-#define MEDUSA_DNSRESOLVER_USE_POOL             0
+#define MEDUSA_DNSRESOLVER_USE_POOL             1
 
 #if defined(MEDUSA_DNSRESOLVER_USE_POOL) && (MEDUSA_DNSRESOLVER_USE_POOL == 1)
 static struct medusa_pool *g_pool_dnsresolver;
