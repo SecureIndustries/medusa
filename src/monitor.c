@@ -325,10 +325,13 @@ static int monitor_subject_onevent (struct medusa_monitor *monitor, struct medus
                         rc = -ENOENT;
         }
         if (rc < 0) {
+                struct medusa_monitor_event_error medusa_monitor_event_error;
                 if (monitor->onevent.callback == NULL) {
                         goto bail;
                 }
-                rc = monitor->onevent.callback(monitor, MEDUSA_MONITOR_EVENT_ERROR, monitor->onevent.context, NULL);
+                medusa_monitor_event_error.type = MEDUSA_MONITOR_ERROR_TYPE_SUBJECT_ONEVENT;
+                medusa_monitor_event_error.u.subject_onevent.subject_type = medusa_subject_get_type(subject);
+                rc = monitor->onevent.callback(monitor, MEDUSA_MONITOR_EVENT_ERROR, monitor->onevent.context, &medusa_monitor_event_error);
                 if (rc < 0) {
                         goto bail;
                 }

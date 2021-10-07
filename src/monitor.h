@@ -92,6 +92,24 @@ struct medusa_monitor_init_options {
         } onevent;
 };
 
+enum {
+        MEDUSA_MONITOR_ERROR_TYPE_UNKNOWN               = 0,
+        MEDUSA_MONITOR_ERROR_TYPE_SUBJECT_ONEVENT       = 1
+#define MEDUSA_MONITOR_ERROR_TYPE_UNKNOWN               MEDUSA_MONITOR_ERROR_TYPE_UNKNOWN
+#define MEDUSA_MONITOR_ERROR_TYPE_SUBJECT_ONEVENT       MEDUSA_MONITOR_ERROR_TYPE_SUBJECT_ONEVENT
+};
+
+struct medusa_monitor_event_error_subject_onevent {
+        unsigned int subject_type;
+};
+
+struct medusa_monitor_event_error {
+        unsigned int type;
+        union {
+                struct medusa_monitor_event_error_subject_onevent subject_onevent;
+        } u;
+};
+
 #ifdef __cplusplus
 extern "C"
 {
