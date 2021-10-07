@@ -1799,6 +1799,8 @@ static int tcpsocket_dnsresolver_onevent (struct medusa_dnsresolver_lookup *dnsr
                         }
                 }
         }
+        if (events & MEDUSA_DNSRESOLVER_LOOKUP_EVENT_TIMEDOUT) {
+        }
         if (events & MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ERROR) {
                 goto error;
         }

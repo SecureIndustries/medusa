@@ -17,6 +17,7 @@ struct medusa_dnsresolver_lookup {
         double retry_interval;
         double resolve_timeout;
         void *userdata;
+        int retried_count;
         struct medusa_timer *retry_interval_timer;
         struct medusa_timer *resolve_timeout_timer;
         struct medusa_dnsrequest *dnsrequest;

@@ -10,6 +10,8 @@
 #include "pool.h"
 #include "queue.h"
 #include "subject-struct.h"
+#include "timer.h"
+#include "timer-private.h"
 #include "dnsrequest.h"
 #include "dnsrequest-private.h"
 #include "dnsresolver.h"
@@ -847,6 +849,88 @@ bail:   medusa_monitor_unlock(monitor);
         return -1;
 }
 
+static int retry_interval_timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
+{
+        struct medusa_dnsresolver_lookup *dnsresolver_lookup = context;
+        struct medusa_monitor *monitor = medusa_dnsresolver_lookup_get_monitor(dnsresolver_lookup);
+
+        (void) timer;
+        (void) param;
+
+        medusa_monitor_lock(monitor);
+
+        if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
+                if (dnsresolver_lookup->retried_count < dnsresolver_lookup->retry_count) {
+                        int rc;
+                        struct medusa_dnsrequest_init_options dnsrequest_init_options;
+                        if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->dnsrequest)) {
+                                medusa_dnsrequest_set_context_unlocked(dnsresolver_lookup->dnsrequest, NULL);
+                                medusa_dnsrequest_destroy_unlocked(dnsresolver_lookup->dnsrequest);
+                                dnsresolver_lookup->dnsrequest = NULL;
+                        }
+                        rc = medusa_dnsrequest_init_options_default(&dnsrequest_init_options);
+                        if (rc < 0) {
+                                goto error;
+                        }
+                        dnsrequest_init_options.monitor         = dnsresolver_lookup->subject.monitor;
+                        dnsrequest_init_options.onevent         = dnsrequest_onevent;
+                        dnsrequest_init_options.context         = dnsresolver_lookup;
+                        dnsrequest_init_options.nameserver      = medusa_dnsresolver_lookup_get_nameserver_unlocked(dnsresolver_lookup);
+                        dnsrequest_init_options.type            = MEDUSA_DNSREQUEST_RECORD_TYPE_A;
+                        dnsrequest_init_options.name            = medusa_dnsresolver_lookup_get_name_unlocked(dnsresolver_lookup);
+                        dnsrequest_init_options.resolve_timeout = -1;
+                        dnsrequest_init_options.connect_timeout = -1;
+                        dnsrequest_init_options.receive_timeout = -1;
+                        dnsrequest_init_options.enabled         = 1;
+                        dnsresolver_lookup->dnsrequest = medusa_dnsrequest_create_with_options_unlocked(&dnsrequest_init_options);
+                        if (MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->dnsrequest)) {
+                                goto error;
+                        }
+                        dnsresolver_lookup->retried_count += 1;
+                }
+        }
+        if (events & MEDUSA_TIMER_EVENT_DESTROY) {
+                if (dnsresolver_lookup != NULL) {
+                        dnsresolver_lookup->retry_interval_timer = NULL;
+                }
+        }
+
+        medusa_monitor_unlock(monitor);
+        return 0;
+error:  dnsresolver_lookup_set_state(dnsresolver_lookup, MEDUSA_DNSRESOLVER_LOOKUP_STATE_ERROR, -EIO);
+        medusa_monitor_unlock(monitor);
+        return 0;
+}
+
+static int resolve_timeout_timer_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
+{
+        struct medusa_dnsresolver_lookup *dnsresolver_lookup = context;
+        struct medusa_monitor *monitor = medusa_dnsresolver_lookup_get_monitor(dnsresolver_lookup);
+
+        (void) timer;
+        (void) param;
+
+        medusa_monitor_lock(monitor);
+
+        if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
+                int rc;
+                rc = dnsresolver_lookup_set_state(dnsresolver_lookup, MEDUSA_DNSRESOLVER_LOOKUP_STATE_TIMEDOUT, 0);
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
+        if (events & MEDUSA_TIMER_EVENT_DESTROY) {
+                if (dnsresolver_lookup != NULL) {
+                        dnsresolver_lookup->resolve_timeout_timer = NULL;
+                }
+        }
+
+        medusa_monitor_unlock(monitor);
+        return 0;
+bail:   medusa_monitor_unlock(monitor);
+        return -1;
+}
+
 static inline unsigned int dnsresolver_lookup_get_state (const struct medusa_dnsresolver_lookup *dnsresolver_lookup)
 {
         return dnsresolver_lookup->state;
@@ -878,22 +962,126 @@ static inline int dnsresolver_lookup_set_state (struct medusa_dnsresolver_lookup
                 if (MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->dnsrequest)) {
                         return MEDUSA_PTR_ERR(dnsresolver_lookup->dnsrequest);
                 }
+                if (dnsresolver_lookup->retry_interval >= 0) {
+                        struct medusa_timer_init_options timer_init_options;
+                        rc = medusa_timer_init_options_default(&timer_init_options);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                        timer_init_options.monitor      = dnsresolver_lookup->subject.monitor;
+                        timer_init_options.onevent      = retry_interval_timer_onevent;
+                        timer_init_options.context      = dnsresolver_lookup;
+                        timer_init_options.initial      = 0;
+                        timer_init_options.interval     = dnsresolver_lookup->retry_interval;
+                        timer_init_options.resolution   = MEDUSA_TIMER_RESOLUTION_DEFAULT;
+                        timer_init_options.singleshot   = 0;
+                        timer_init_options.enabled      = 1;
+                        dnsresolver_lookup->retry_interval_timer = medusa_timer_create_with_options_unlocked(&timer_init_options);
+                        if (MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->retry_interval_timer)) {
+                                return MEDUSA_PTR_ERR(dnsresolver_lookup->retry_interval_timer);
+                        }
+                }
+                if (dnsresolver_lookup->resolve_timeout >= 0) {
+                        struct medusa_timer_init_options timer_init_options;
+                        rc = medusa_timer_init_options_default(&timer_init_options);
+                        if (rc < 0) {
+                                return rc;
+                        }
+                        timer_init_options.monitor      = dnsresolver_lookup->subject.monitor;
+                        timer_init_options.onevent      = resolve_timeout_timer_onevent;
+                        timer_init_options.context      = dnsresolver_lookup;
+                        timer_init_options.initial      = 0;
+                        timer_init_options.interval     = dnsresolver_lookup->resolve_timeout;
+                        timer_init_options.resolution   = MEDUSA_TIMER_RESOLUTION_DEFAULT;
+                        timer_init_options.singleshot   = 0;
+                        timer_init_options.enabled      = 1;
+                        dnsresolver_lookup->resolve_timeout_timer = medusa_timer_create_with_options_unlocked(&timer_init_options);
+                        if (MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->resolve_timeout_timer)) {
+                                return MEDUSA_PTR_ERR(dnsresolver_lookup->resolve_timeout_timer);
+                        }
+                }
+                dnsresolver_lookup->retried_count = 0;
                 rc = medusa_dnsresolver_lookup_onevent_unlocked(dnsresolver_lookup, MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STARTED, NULL);
                 if (rc < 0) {
                         return rc;
                 }
         } else if (state == MEDUSA_DNSRESOLVER_LOOKUP_STATE_STOPPED) {
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->resolve_timeout_timer)) {
+                        medusa_timer_set_context_unlocked(dnsresolver_lookup->resolve_timeout_timer, NULL);
+                        medusa_timer_destroy_unlocked(dnsresolver_lookup->resolve_timeout_timer);
+                        dnsresolver_lookup->resolve_timeout_timer = NULL;
+                }
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->retry_interval_timer)) {
+                        medusa_timer_set_context_unlocked(dnsresolver_lookup->retry_interval_timer, NULL);
+                        medusa_timer_destroy_unlocked(dnsresolver_lookup->retry_interval_timer);
+                        dnsresolver_lookup->retry_interval_timer = NULL;
+                }
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->dnsrequest)) {
+                        medusa_dnsrequest_set_context_unlocked(dnsresolver_lookup->dnsrequest, NULL);
+                        medusa_dnsrequest_destroy_unlocked(dnsresolver_lookup->dnsrequest);
+                        dnsresolver_lookup->dnsrequest = NULL;
+                }
                 rc = medusa_dnsresolver_lookup_onevent_unlocked(dnsresolver_lookup, MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STOPPED, NULL);
                 if (rc < 0) {
                         return rc;
                 }
         } else if (state == MEDUSA_DNSRESOLVER_LOOKUP_STATE_FINISHED) {
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->resolve_timeout_timer)) {
+                        medusa_timer_set_context_unlocked(dnsresolver_lookup->resolve_timeout_timer, NULL);
+                        medusa_timer_destroy_unlocked(dnsresolver_lookup->resolve_timeout_timer);
+                        dnsresolver_lookup->resolve_timeout_timer = NULL;
+                }
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->retry_interval_timer)) {
+                        medusa_timer_set_context_unlocked(dnsresolver_lookup->retry_interval_timer, NULL);
+                        medusa_timer_destroy_unlocked(dnsresolver_lookup->retry_interval_timer);
+                        dnsresolver_lookup->retry_interval_timer = NULL;
+                }
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->dnsrequest)) {
+                        medusa_dnsrequest_set_context_unlocked(dnsresolver_lookup->dnsrequest, NULL);
+                        medusa_dnsrequest_destroy_unlocked(dnsresolver_lookup->dnsrequest);
+                        dnsresolver_lookup->dnsrequest = NULL;
+                }
                 rc = medusa_dnsresolver_lookup_onevent_unlocked(dnsresolver_lookup, MEDUSA_DNSRESOLVER_LOOKUP_EVENT_FINISHED, NULL);
+                if (rc < 0) {
+                        return rc;
+                }
+        } else if (state == MEDUSA_DNSRESOLVER_LOOKUP_STATE_TIMEDOUT) {
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->resolve_timeout_timer)) {
+                        medusa_timer_set_context_unlocked(dnsresolver_lookup->resolve_timeout_timer, NULL);
+                        medusa_timer_destroy_unlocked(dnsresolver_lookup->resolve_timeout_timer);
+                        dnsresolver_lookup->resolve_timeout_timer = NULL;
+                }
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->retry_interval_timer)) {
+                        medusa_timer_set_context_unlocked(dnsresolver_lookup->retry_interval_timer, NULL);
+                        medusa_timer_destroy_unlocked(dnsresolver_lookup->retry_interval_timer);
+                        dnsresolver_lookup->retry_interval_timer = NULL;
+                }
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->dnsrequest)) {
+                        medusa_dnsrequest_set_context_unlocked(dnsresolver_lookup->dnsrequest, NULL);
+                        medusa_dnsrequest_destroy_unlocked(dnsresolver_lookup->dnsrequest);
+                        dnsresolver_lookup->dnsrequest = NULL;
+                }
+                rc = medusa_dnsresolver_lookup_onevent_unlocked(dnsresolver_lookup, MEDUSA_DNSRESOLVER_LOOKUP_EVENT_TIMEDOUT, NULL);
                 if (rc < 0) {
                         return rc;
                 }
         } else if (state == MEDUSA_DNSRESOLVER_LOOKUP_STATE_ERROR) {
                 struct medusa_dnsresolver_event_error medusa_dnsresolver_event_error;
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->resolve_timeout_timer)) {
+                        medusa_timer_set_context_unlocked(dnsresolver_lookup->resolve_timeout_timer, NULL);
+                        medusa_timer_destroy_unlocked(dnsresolver_lookup->resolve_timeout_timer);
+                        dnsresolver_lookup->resolve_timeout_timer = NULL;
+                }
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->retry_interval_timer)) {
+                        medusa_timer_set_context_unlocked(dnsresolver_lookup->retry_interval_timer, NULL);
+                        medusa_timer_destroy_unlocked(dnsresolver_lookup->retry_interval_timer);
+                        dnsresolver_lookup->retry_interval_timer = NULL;
+                }
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->dnsrequest)) {
+                        medusa_dnsrequest_set_context_unlocked(dnsresolver_lookup->dnsrequest, NULL);
+                        medusa_dnsrequest_destroy_unlocked(dnsresolver_lookup->dnsrequest);
+                        dnsresolver_lookup->dnsrequest = NULL;
+                }
                 medusa_dnsresolver_event_error.state = dnsresolver_lookup->state;
                 medusa_dnsresolver_event_error.error = error;
                 rc = medusa_dnsresolver_lookup_onevent_unlocked(dnsresolver_lookup, MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ERROR, &medusa_dnsresolver_event_error);
@@ -1545,6 +1733,16 @@ __attribute__ ((visibility ("default"))) int medusa_dnsresolver_lookup_onevent_u
                         free(dnsresolver_lookup->name);
                         dnsresolver_lookup->name = NULL;
                 }
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->resolve_timeout_timer)) {
+                        medusa_timer_set_context_unlocked(dnsresolver_lookup->resolve_timeout_timer, NULL);
+                        medusa_timer_destroy_unlocked(dnsresolver_lookup->resolve_timeout_timer);
+                        dnsresolver_lookup->resolve_timeout_timer = NULL;
+                }
+                if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->retry_interval_timer)) {
+                        medusa_timer_set_context_unlocked(dnsresolver_lookup->retry_interval_timer, NULL);
+                        medusa_timer_destroy_unlocked(dnsresolver_lookup->retry_interval_timer);
+                        dnsresolver_lookup->retry_interval_timer = NULL;
+                }
                 if (!MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup->dnsrequest)) {
                         medusa_dnsrequest_set_context_unlocked(dnsresolver_lookup->dnsrequest, NULL);
                         medusa_dnsrequest_destroy_unlocked(dnsresolver_lookup->dnsrequest);
@@ -1662,6 +1860,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_dnsresolver_lookup_
         if (events == MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STOPPED)          return "MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STOPPED";
         if (events == MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ENTRY)            return "MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ENTRY";
         if (events == MEDUSA_DNSRESOLVER_LOOKUP_EVENT_FINISHED)         return "MEDUSA_DNSRESOLVER_LOOKUP_EVENT_FINISHED";
+        if (events == MEDUSA_DNSRESOLVER_LOOKUP_EVENT_TIMEDOUT)         return "MEDUSA_DNSRESOLVER_LOOKUP_EVENT_TIMEDOUT";
         if (events == MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ERROR)            return "MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ERROR";
         if (events == MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STATE_CHANGED)    return "MEDUSA_DNSRESOLVER_LOOKUP_EVENT_STATE_CHANGED";
         if (events == MEDUSA_DNSRESOLVER_LOOKUP_EVENT_DESTROY)          return "MEDUSA_DNSRESOLVER_LOOKUP_EVENT_DESTROY";
