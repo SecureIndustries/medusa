@@ -1577,6 +1577,148 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_onevent (struct 
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_context_unlocked (struct medusa_httprequest *httprequest, void *context)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        httprequest->context = context;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_context (struct medusa_httprequest *httprequest, void *context)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httprequest->subject.monitor);
+        rc = medusa_httprequest_set_context_unlocked(httprequest, context);
+        medusa_monitor_unlock(httprequest->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_httprequest_get_context_unlocked (struct medusa_httprequest *httprequest)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return httprequest->context;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_httprequest_get_context (struct medusa_httprequest *httprequest)
+{
+        void *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(httprequest->subject.monitor);
+        rc = medusa_httprequest_get_context_unlocked(httprequest);
+        medusa_monitor_unlock(httprequest->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_userdata_unlocked (struct medusa_httprequest *httprequest, void *userdata)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        httprequest->userdata = userdata;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_userdata (struct medusa_httprequest *httprequest, void *userdata)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httprequest->subject.monitor);
+        rc = medusa_httprequest_set_userdata_unlocked(httprequest, userdata);
+        medusa_monitor_unlock(httprequest->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_httprequest_get_userdata_unlocked (struct medusa_httprequest *httprequest)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return httprequest->userdata;
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_httprequest_get_userdata (struct medusa_httprequest *httprequest)
+{
+        void *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(httprequest->subject.monitor);
+        rc = medusa_httprequest_get_userdata_unlocked(httprequest);
+        medusa_monitor_unlock(httprequest->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_userdata_ptr_unlocked (struct medusa_httprequest *httprequest, void *userdata)
+{
+        return medusa_httprequest_set_userdata_unlocked(httprequest, userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_userdata_ptr (struct medusa_httprequest *httprequest, void *userdata)
+{
+        return medusa_httprequest_set_userdata(httprequest, userdata);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_httprequest_get_userdata_ptr_unlocked (struct medusa_httprequest *httprequest)
+{
+        return medusa_httprequest_get_userdata_unlocked(httprequest);
+}
+
+__attribute__ ((visibility ("default"))) void * medusa_httprequest_get_userdata_ptr (struct medusa_httprequest *httprequest)
+{
+        return medusa_httprequest_get_userdata(httprequest);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_userdata_int_unlocked (struct medusa_httprequest *httprequest, int userdata)
+{
+        return medusa_httprequest_set_userdata_unlocked(httprequest, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_userdata_int (struct medusa_httprequest *httprequest, int userdata)
+{
+        return medusa_httprequest_set_userdata(httprequest, (void *) (intptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_get_userdata_int_unlocked (struct medusa_httprequest *httprequest)
+{
+        return (int) (intptr_t) medusa_httprequest_get_userdata_unlocked(httprequest);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_get_userdata_int (struct medusa_httprequest *httprequest)
+{
+        return (int) (intptr_t) medusa_httprequest_get_userdata(httprequest);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_userdata_uint_unlocked (struct medusa_httprequest *httprequest, unsigned int userdata)
+{
+        return medusa_httprequest_set_userdata_unlocked(httprequest, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_userdata_uint (struct medusa_httprequest *httprequest, unsigned int userdata)
+{
+        return medusa_httprequest_set_userdata(httprequest, (void *) (uintptr_t) userdata);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_httprequest_get_userdata_uint_unlocked (struct medusa_httprequest *httprequest)
+{
+        return (unsigned int) (intptr_t) medusa_httprequest_get_userdata_unlocked(httprequest);
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_httprequest_get_userdata_uint (struct medusa_httprequest *httprequest)
+{
+        return (unsigned int) (uintptr_t) medusa_httprequest_get_userdata(httprequest);
+}
+
 __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_httprequest_get_monitor_unlocked (struct medusa_httprequest *httprequest)
 {
         if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {

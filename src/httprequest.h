@@ -125,6 +125,22 @@ int medusa_httprequest_make_postf (struct medusa_httprequest *httprequest, const
 int medusa_httprequest_make_postv (struct medusa_httprequest *httprequest, const char *data, va_list va);
 
 int medusa_httprequest_onevent (struct medusa_httprequest *httprequest, unsigned int events, void *param);
+
+int medusa_httprequest_set_context (struct medusa_httprequest *httprequest, void *context);
+void * medusa_httprequest_get_context (struct medusa_httprequest *httprequest);
+
+int medusa_httprequest_set_userdata (struct medusa_httprequest *httprequest, void *userdata);
+void * medusa_httprequest_get_userdata (struct medusa_httprequest *httprequest);
+
+int medusa_httprequest_set_userdata_ptr (struct medusa_httprequest *httprequest, void *userdata);
+void * medusa_httprequest_get_userdata_ptr (struct medusa_httprequest *httprequest);
+
+int medusa_httprequest_set_userdata_int (struct medusa_httprequest *httprequest, int userdara);
+int medusa_httprequest_get_userdata_int (struct medusa_httprequest *httprequest);
+
+int medusa_httprequest_set_userdata_uint (struct medusa_httprequest *httprequest, unsigned int userdata);
+unsigned int medusa_httprequest_get_userdata_uint (struct medusa_httprequest *httprequest);
+
 struct medusa_monitor * medusa_httprequest_get_monitor (struct medusa_httprequest *httprequest);
 
 const struct medusa_httprequest_reply * medusa_httprequest_get_reply (const struct medusa_httprequest *httprequest);
