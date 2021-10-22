@@ -3474,7 +3474,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                                 return -EIO;
                         }
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L) || (OPENSSL_API_COMPAT >= 0x10100000L)
-                        SSL_CTX_set_ecdh_auto(tcpsocket->ssl_ctx, 1);
+                        (void) SSL_CTX_set_ecdh_auto(tcpsocket->ssl_ctx, 1);
 #endif
                 }
                 if (!tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_BIND)) {
