@@ -120,14 +120,17 @@ libmedusa.a_files-y += \
 ifneq ($(__DARWIN__), y)
 
 libmedusa.a_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
+	-DNDEBUG \
 	-Wno-error=unused-but-set-variable \
 	-Wno-unused-but-set-variable
 
 libmedusa.o_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
+	-DNDEBUG \
 	-Wno-error=unused-but-set-variable \
 	-Wno-unused-but-set-variable
 
 libmedusa.so.${MEDUSA_SONAME}_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
+	-DNDEBUG \
 	-Wno-error=unused-but-set-variable \
 	-Wno-unused-but-set-variable
 
