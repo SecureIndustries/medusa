@@ -37,26 +37,6 @@ static inline int dnsresolver_set_state (struct medusa_dnsresolver *dnsresolver,
         unsigned int pstate;
         struct medusa_dnsresolver_event_state_changed medusa_dnsresolver_event_state_changed;
 
-        if (state == MEDUSA_DNSRESOLVER_STATE_STARTED) {
-                rc = medusa_dnsresolver_onevent_unlocked(dnsresolver, MEDUSA_DNSRESOLVER_EVENT_STARTED, NULL);
-                if (rc < 0) {
-                        return rc;
-                }
-        } else if (state == MEDUSA_DNSRESOLVER_STATE_STOPPED) {
-                rc = medusa_dnsresolver_onevent_unlocked(dnsresolver, MEDUSA_DNSRESOLVER_EVENT_STOPPED, NULL);
-                if (rc < 0) {
-                        return rc;
-                }
-        } else if (state == MEDUSA_DNSRESOLVER_STATE_ERROR) {
-                struct medusa_dnsresolver_event_error medusa_dnsresolver_event_error;
-                medusa_dnsresolver_event_error.state = dnsresolver->state;
-                medusa_dnsresolver_event_error.error = -EIO;
-                rc = medusa_dnsresolver_onevent_unlocked(dnsresolver, MEDUSA_DNSRESOLVER_EVENT_ERROR, &medusa_dnsresolver_event_error);
-                if (rc < 0) {
-                        return rc;
-                }
-        }
-
         pstate = dnsresolver->state;
         dnsresolver->error = error;
         dnsresolver->state = state;
@@ -67,6 +47,31 @@ static inline int dnsresolver_set_state (struct medusa_dnsresolver *dnsresolver,
         rc = medusa_dnsresolver_onevent_unlocked(dnsresolver, MEDUSA_DNSRESOLVER_EVENT_STATE_CHANGED, &medusa_dnsresolver_event_state_changed);
         if (rc < 0) {
                 return rc;
+        }
+
+        if (state == MEDUSA_DNSRESOLVER_STATE_STARTED) {
+                rc = medusa_dnsresolver_onevent_unlocked(dnsresolver, MEDUSA_DNSRESOLVER_EVENT_STARTED, NULL);
+                if (rc < 0) {
+                        return rc;
+                }
+        } else if (state == MEDUSA_DNSRESOLVER_STATE_STOPPED) {
+                struct medusa_dnsresolver_lookup *dnsresolver_lookup;
+                struct medusa_dnsresolver_lookup *ndnsresolver_lookup;
+                rc = medusa_dnsresolver_onevent_unlocked(dnsresolver, MEDUSA_DNSRESOLVER_EVENT_STOPPED, NULL);
+                if (rc < 0) {
+                        return rc;
+                }
+                TAILQ_FOREACH_SAFE(dnsresolver_lookup, &dnsresolver->lookups, tailq, ndnsresolver_lookup) {
+                        medusa_dnsresolver_lookup_set_enabled_unlocked(dnsresolver_lookup, 0);
+                }
+        } else if (state == MEDUSA_DNSRESOLVER_STATE_ERROR) {
+                struct medusa_dnsresolver_event_error medusa_dnsresolver_event_error;
+                medusa_dnsresolver_event_error.state = pstate;
+                medusa_dnsresolver_event_error.error = -EIO;
+                rc = medusa_dnsresolver_onevent_unlocked(dnsresolver, MEDUSA_DNSRESOLVER_EVENT_ERROR, &medusa_dnsresolver_event_error);
+                if (rc < 0) {
+                        return rc;
+                }
         }
 
         return 0;
@@ -1130,6 +1135,8 @@ static int dnsresolver_lookup_init_with_options_unlocked (struct medusa_dnsresol
         if (rc < 0) {
                 return rc;
         }
+        dnsresolver_lookup->dnsresolver = dnsresolver;
+        TAILQ_INSERT_TAIL(&dnsresolver->lookups, dnsresolver_lookup, tailq);
         rc = medusa_dnsresolver_lookup_set_nameserver_unlocked(dnsresolver_lookup, (options->nameserver == NULL) ? medusa_dnsresolver_get_nameserver_unlocked(dnsresolver) : options->nameserver);
         if (rc != 0) {
                 return rc;
@@ -1158,8 +1165,6 @@ static int dnsresolver_lookup_init_with_options_unlocked (struct medusa_dnsresol
         if (rc != 0) {
                 return rc;
         }
-        dnsresolver_lookup->dnsresolver = dnsresolver;
-        TAILQ_INSERT_TAIL(&dnsresolver->lookups, dnsresolver_lookup, tailq);
         return 0;
 }
 
@@ -1765,6 +1770,11 @@ __attribute__ ((visibility ("default"))) int medusa_dnsresolver_lookup_set_enabl
 {
         if (MEDUSA_IS_ERR_OR_NULL(dnsresolver_lookup)) {
                 return -EINVAL;
+        }
+        if (enabled) {
+                if (medusa_dnsresolver_get_state_unlocked(dnsresolver_lookup->dnsresolver) != MEDUSA_DNSRESOLVER_STATE_STARTED) {
+                        return -EINVAL;
+                }
         }
         dnsresolver_lookup->enabled = !!enabled;
         return dnsresolver_lookup_set_state(dnsresolver_lookup, (dnsresolver_lookup->enabled) ? MEDUSA_DNSRESOLVER_LOOKUP_STATE_STARTED : MEDUSA_DNSRESOLVER_LOOKUP_STATE_STOPPED, 0);
