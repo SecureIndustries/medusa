@@ -27,6 +27,15 @@ int medusa_httpserver_get_started_unlocked (const struct medusa_httpserver *http
 int medusa_httpserver_start_unlocked (struct medusa_httpserver *httpserver);
 int medusa_httpserver_stop_unlocked (struct medusa_httpserver *httpserver);
 
+int medusa_httpserver_set_ssl_unlocked (struct medusa_httpserver *httpserver, int enable);
+int medusa_httpserver_get_ssl_unlocked (const struct medusa_httpserver *httpserver);
+
+int medusa_httpserver_set_ssl_certificate_unlocked (struct medusa_httpserver *httpserver, const char *certificate);
+const char * medusa_httpserver_get_ssl_certificate_unlocked (const struct medusa_httpserver *httpserver);
+
+int medusa_httpserver_set_ssl_privatekey_unlocked (struct medusa_httpserver *httpserver, const char *privatekey);
+const char * medusa_httpserver_get_ssl_privatekey_unlocked (const struct medusa_httpserver *httpserver);
+
 int medusa_httpserver_set_context_unlocked (struct medusa_httpserver *httpserver, void *context);
 void * medusa_httpserver_get_context_unlocked (struct medusa_httpserver *httpserver);
 

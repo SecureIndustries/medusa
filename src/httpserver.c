@@ -597,6 +597,144 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_stop (struct medu
         return medusa_httpserver_set_started(httpserver, 0);
 }
 
+__attribute__ ((visibility ("default"))) int medusa_httpserver_set_ssl_unlocked (struct medusa_httpserver *httpserver, int enabled)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver->tcpsocket)) {
+                return -EINVAL;
+        }
+        return medusa_tcpsocket_set_ssl_unlocked(httpserver->tcpsocket, enabled);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_set_ssl (struct medusa_httpserver *httpserver, int enabled)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httpserver->subject.monitor);
+        rc = medusa_httpserver_set_ssl_unlocked(httpserver, enabled);
+        medusa_monitor_unlock(httpserver->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_get_ssl_unlocked (const struct medusa_httpserver *httpserver)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver->tcpsocket)) {
+                return -EINVAL;
+        }
+        return medusa_tcpsocket_get_ssl_unlocked(httpserver->tcpsocket);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_get_ssl (const struct medusa_httpserver *httpserver)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httpserver->subject.monitor);
+        rc = medusa_httpserver_get_ssl_unlocked(httpserver);
+        medusa_monitor_unlock(httpserver->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_set_ssl_certificate_unlocked (struct medusa_httpserver *httpserver, const char *certificate)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver->tcpsocket)) {
+                return -EINVAL;
+        }
+        return medusa_tcpsocket_set_ssl_certificate_unlocked(httpserver->tcpsocket, certificate);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_set_ssl_certificate (struct medusa_httpserver *httpserver, const char *certificate)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httpserver->subject.monitor);
+        rc = medusa_httpserver_set_ssl_certificate_unlocked(httpserver, certificate);
+        medusa_monitor_unlock(httpserver->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_httpserver_get_ssl_certificate_unlocked (const struct medusa_httpserver *httpserver)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver->tcpsocket)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return medusa_tcpsocket_get_ssl_certificate_unlocked(httpserver->tcpsocket);
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_httpserver_get_ssl_certificate (const struct medusa_httpserver *httpserver)
+{
+        const char *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(httpserver->subject.monitor);
+        rc = medusa_httpserver_get_ssl_certificate_unlocked(httpserver);
+        medusa_monitor_unlock(httpserver->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_set_ssl_privatekey_unlocked (struct medusa_httpserver *httpserver, const char *privatekey)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver->tcpsocket)) {
+                return -EINVAL;
+        }
+        return medusa_tcpsocket_set_ssl_privatekey_unlocked(httpserver->tcpsocket, privatekey);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_set_ssl_privatekey (struct medusa_httpserver *httpserver, const char *privatekey)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httpserver->subject.monitor);
+        rc = medusa_httpserver_set_ssl_privatekey_unlocked(httpserver, privatekey);
+        medusa_monitor_unlock(httpserver->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_httpserver_get_ssl_privatekey_unlocked (const struct medusa_httpserver *httpserver)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver->tcpsocket)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return medusa_tcpsocket_get_ssl_privatekey_unlocked(httpserver->tcpsocket);
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_httpserver_get_ssl_privatekey (const struct medusa_httpserver *httpserver)
+{
+        const char *rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        medusa_monitor_lock(httpserver->subject.monitor);
+        rc = medusa_httpserver_get_ssl_privatekey_unlocked(httpserver);
+        medusa_monitor_unlock(httpserver->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_httpserver_set_context_unlocked (struct medusa_httpserver *httpserver, void *context)
 {
         if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
@@ -1412,6 +1550,12 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
                 httpserver_client->http_parser_settings.on_chunk_complete     = httpserver_client_httpparser_on_chunk_complete;
                 http_parser_init(&httpserver_client->http_parser, HTTP_REQUEST);
                 httpserver_client->http_parser.data = httpserver_client;
+        } else if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED_SSL) {
+                rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED_SSL, NULL);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
         } else if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ) {
                 if (httpserver_client->state == MEDUSA_HTTPSERVER_CLIENT_STATE_CONNECTED) {
                         rc = httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVING);
@@ -2461,6 +2605,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_e
 {
         if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR)                        return "MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR";
         if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED)                    return "MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED";
+        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED_SSL)                return "MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED_SSL";
         if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING)            return "MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING";
         if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED)             return "MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED";
         if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVE_TIMEOUT)      return "MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVE_TIMEOUT";
