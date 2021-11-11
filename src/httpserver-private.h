@@ -64,8 +64,8 @@ int medusa_httpserver_client_set_enabled_unlocked (struct medusa_httpserver_clie
 int medusa_httpserver_client_get_enabled_unlocked (const struct medusa_httpserver_client *httpserver_client);
 
 int medusa_httpserver_client_reply_send_start_unlocked (struct medusa_httpserver_client *httpserver_client);
-int medusa_httpserver_client_reply_send_status_unlocked (struct medusa_httpserver_client *httpserver_client, int code, const char *reason, ...) __attribute__((format(printf, 3, 4)));
-int medusa_httpserver_client_reply_send_vstatus_unlocked (struct medusa_httpserver_client *httpserver_client, int code, const char *reason, va_list va);
+int medusa_httpserver_client_reply_send_status_unlocked (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason, ...) __attribute__((format(printf, 4, 5)));
+int medusa_httpserver_client_reply_send_vstatus_unlocked (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason, va_list va);
 int medusa_httpserver_client_reply_send_header_unlocked (struct medusa_httpserver_client *httpserver_client, const char *key, const char *value, ...) __attribute__((format(printf, 3, 4)));
 int medusa_httpserver_client_reply_send_vheader_unlocked (struct medusa_httpserver_client *httpserver_client, const char *key, const char *value, va_list va);
 int medusa_httpserver_client_reply_send_body_unlocked (struct medusa_httpserver_client *httpserver_client, const void *body, int length);

@@ -2135,17 +2135,17 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send_status_unlocked (struct medusa_httpserver_client *httpserver_client, int code, const char *reason, ...)
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send_status_unlocked (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason, ...)
 {
         int rc;
         va_list va;
         va_start(va, reason);
-        rc = medusa_httpserver_client_reply_send_vstatus_unlocked(httpserver_client, code, reason, va);
+        rc = medusa_httpserver_client_reply_send_vstatus_unlocked(httpserver_client, version, code, reason, va);
         va_end(va);
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send_status (struct medusa_httpserver_client *httpserver_client, int code, const char *reason, ...)
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send_status (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason, ...)
 {
         int rc;
         va_list va;
@@ -2153,12 +2153,12 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send
                 return -EINVAL;
         }
         va_start(va, reason);
-        rc = medusa_httpserver_client_reply_send_vstatus(httpserver_client, code, reason, va);
+        rc = medusa_httpserver_client_reply_send_vstatus(httpserver_client, version, code, reason, va);
         va_end(va);
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send_vstatus_unlocked (struct medusa_httpserver_client *httpserver_client, int code, const char *reason, va_list va)
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send_vstatus_unlocked (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason, va_list va)
 {
         int rc;
         struct medusa_buffer *buffer;
@@ -2169,7 +2169,7 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
-        rc  = medusa_buffer_printf(buffer, "HTTP/1.0 %d ", code);
+        rc  = medusa_buffer_printf(buffer, "HTTP/%s %d ", (version) ? version : "1.0", code);
         if (rc < 0) {
                 return rc;
         }
@@ -2191,14 +2191,14 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send_vstatus (struct medusa_httpserver_client *httpserver_client, int code, const char *reason, va_list va)
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send_vstatus (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason, va_list va)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
                 return -EINVAL;
         }
         medusa_monitor_lock(httpserver_client->subject.monitor);
-        rc = medusa_httpserver_client_reply_send_vstatus_unlocked(httpserver_client, code, reason, va);
+        rc = medusa_httpserver_client_reply_send_vstatus_unlocked(httpserver_client, version, code, reason, va);
         medusa_monitor_unlock(httpserver_client->subject.monitor);
         return rc;
 }

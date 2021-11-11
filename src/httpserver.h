@@ -224,8 +224,8 @@ int64_t medusa_httpserver_client_request_body_get_length (const struct medusa_ht
 const void * medusa_httpserver_client_request_body_get_value (const struct medusa_httpserver_client_request_body *body);
 
 int medusa_httpserver_client_reply_send_start (struct medusa_httpserver_client *httpserver_client);
-int medusa_httpserver_client_reply_send_status (struct medusa_httpserver_client *httpserver_client, int code, const char *reason, ...) __attribute__((format(printf, 3, 4)));
-int medusa_httpserver_client_reply_send_vstatus (struct medusa_httpserver_client *httpserver_client, int code, const char *reason, va_list va);
+int medusa_httpserver_client_reply_send_status (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason, ...) __attribute__((format(printf, 4, 5)));
+int medusa_httpserver_client_reply_send_vstatus (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason, va_list va);
 int medusa_httpserver_client_reply_send_header (struct medusa_httpserver_client *httpserver_client, const char *key, const char *value, ...) __attribute__((format(printf, 3, 4)));
 int medusa_httpserver_client_reply_send_vheader (struct medusa_httpserver_client *httpserver_client, const char *key, const char *value, va_list va);
 int medusa_httpserver_client_reply_send_body (struct medusa_httpserver_client *httpserver_client, const void *body, int length);
