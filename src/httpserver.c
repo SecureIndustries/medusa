@@ -1098,7 +1098,7 @@ static int medusa_httpserver_client_request_header_set_value (struct medusa_http
         if (value == NULL) {
                 return -EINVAL;
         }
-        if (length <= 0) {
+        if (length < 0) {
                 return -EINVAL;
         }
         if (header->value != NULL) {
@@ -1368,7 +1368,7 @@ static int httpserver_client_httpparser_on_status (http_parser *http_parser, con
 
 static int httpserver_client_httpparser_on_header_field (http_parser *http_parser, const char *at, size_t length)
 {
-         int rc;
+        int rc;
         struct medusa_httpserver_client_request_header *header;
         struct medusa_httpserver_client *httpserver_client = http_parser->data;
         header = medusa_httpserver_client_request_header_create();
@@ -1528,6 +1528,10 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
 
         monitor = medusa_tcpsocket_get_monitor(tcpsocket);
         medusa_monitor_lock(monitor);
+
+        if (httpserver_client->tcpsocket == NULL) {
+                httpserver_client->tcpsocket = tcpsocket;
+        }
 
         if (events & MEDUSA_TCPSOCKET_EVENT_STATE_CHANGED) {
         } else if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
@@ -2387,6 +2391,58 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send
         }
         medusa_monitor_lock(httpserver_client->subject.monitor);
         rc = medusa_httpserver_client_reply_send_finish_unlocked(httpserver_client);
+        medusa_monitor_unlock(httpserver_client->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_get_sockname_unlocked (struct medusa_httpserver_client *httpserver_client, struct sockaddr_storage *sockaddr)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        if (sockaddr == NULL) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client->tcpsocket)) {
+                return -EINVAL;
+        }
+        return medusa_tcpsocket_get_sockname_unlocked(httpserver_client->tcpsocket, sockaddr);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_get_sockname (struct medusa_httpserver_client *httpserver_client, struct sockaddr_storage *sockaddr)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httpserver_client->subject.monitor);
+        rc = medusa_httpserver_client_get_sockname_unlocked(httpserver_client, sockaddr);
+        medusa_monitor_unlock(httpserver_client->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_get_peername_unlocked (struct medusa_httpserver_client *httpserver_client, struct sockaddr_storage *sockaddr)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        if (sockaddr == NULL) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client->tcpsocket)) {
+                return -EINVAL;
+        }
+        return medusa_tcpsocket_get_peername_unlocked(httpserver_client->tcpsocket, sockaddr);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_get_peername (struct medusa_httpserver_client *httpserver_client, struct sockaddr_storage *sockaddr)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httpserver_client->subject.monitor);
+        rc = medusa_httpserver_client_get_peername_unlocked(httpserver_client, sockaddr);
         medusa_monitor_unlock(httpserver_client->subject.monitor);
         return rc;
 }

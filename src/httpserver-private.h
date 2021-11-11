@@ -73,6 +73,9 @@ int medusa_httpserver_client_reply_send_bodyf_unlocked (struct medusa_httpserver
 int medusa_httpserver_client_reply_send_vbody_unlocked (struct medusa_httpserver_client *httpserver_client, const char *body, va_list va);
 int medusa_httpserver_client_reply_send_finish_unlocked (struct medusa_httpserver_client *httpserver_client);
 
+int medusa_httpserver_client_get_sockname_unlocked (struct medusa_httpserver_client *httpserver_client, struct sockaddr_storage *sockaddr);
+int medusa_httpserver_client_get_peername_unlocked (struct medusa_httpserver_client *httpserver_client, struct sockaddr_storage *sockaddr);
+
 int medusa_httpserver_client_set_context_unlocked (struct medusa_httpserver_client *httpserver_client, void *context);
 void * medusa_httpserver_client_get_context_unlocked (struct medusa_httpserver_client *httpserver_client);
 
