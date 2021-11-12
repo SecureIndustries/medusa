@@ -326,12 +326,12 @@ static struct server * server_create (struct medusa_monitor *monitor, const char
         server->port = port;
 
 #if defined(MEDUSA_TEST_TCPSOCKET_SSL) && (MEDUSA_TEST_TCPSOCKET_SSL == 1)
-        rc = medusa_tcpsocket_set_ssl_certificate(server->tcpsocket, "tcpsocket-ssl.crt");
+        rc = medusa_tcpsocket_set_ssl_certificate_file(server->tcpsocket, "tcpsocket-ssl.crt");
         if (rc < 0) {
                 fprintf(stderr, "medusa_tcpsocket_set_ssl_certificate failed\n");
                 goto bail;
         }
-        rc = medusa_tcpsocket_set_ssl_privatekey(server->tcpsocket, "tcpsocket-ssl.key");
+        rc = medusa_tcpsocket_set_ssl_privatekey_file(server->tcpsocket, "tcpsocket-ssl.key");
         if (rc < 0) {
                 fprintf(stderr, "medusa_tcpsocket_set_ssl_privatekey failed\n");
                 goto bail;

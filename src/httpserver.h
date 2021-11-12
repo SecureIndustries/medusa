@@ -158,10 +158,12 @@ int medusa_httpserver_stop (struct medusa_httpserver *httpserver);
 int medusa_httpserver_set_ssl (struct medusa_httpserver *httpserver, int enable);
 int medusa_httpserver_get_ssl (const struct medusa_httpserver *httpserver);
 
-int medusa_httpserver_set_ssl_certificate (struct medusa_httpserver *httpserver, const char *certificate);
+int medusa_httpserver_set_ssl_certificate (struct medusa_httpserver *httpserver, const char *certificate, int length);
+int medusa_httpserver_set_ssl_certificate_file (struct medusa_httpserver *httpserver, const char *certificate);
 const char * medusa_httpserver_get_ssl_certificate (const struct medusa_httpserver *httpserver);
 
-int medusa_httpserver_set_ssl_privatekey (struct medusa_httpserver *httpserver, const char *privatekey);
+int medusa_httpserver_set_ssl_privatekey (struct medusa_httpserver *httpserver, const char *privatekey, int length);
+int medusa_httpserver_set_ssl_privatekey_file (struct medusa_httpserver *httpserver, const char *privatekey);
 const char * medusa_httpserver_get_ssl_privatekey (const struct medusa_httpserver *httpserver);
 
 int medusa_httpserver_set_context (struct medusa_httpserver *httpserver, void *context);

@@ -1561,12 +1561,12 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 goto bail;
         }
 
-        rc = medusa_tcpsocket_set_ssl_certificate_unlocked(accepted, medusa_tcpsocket_get_ssl_certificate_unlocked(tcpsocket));
+        rc = medusa_tcpsocket_set_ssl_certificate_unlocked(accepted, medusa_tcpsocket_get_ssl_certificate_unlocked(tcpsocket), -1);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
         }
-        rc = medusa_tcpsocket_set_ssl_privatekey_unlocked(accepted, medusa_tcpsocket_get_ssl_privatekey_unlocked(tcpsocket));
+        rc = medusa_tcpsocket_set_ssl_privatekey_unlocked(accepted, medusa_tcpsocket_get_ssl_privatekey_unlocked(tcpsocket), -1);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
@@ -3480,16 +3480,46 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                 if (!tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_BIND)) {
                         int rc;
                         if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_certificate)) {
-                                rc = SSL_CTX_use_certificate_file(tcpsocket->ssl_ctx, tcpsocket->ssl_certificate, SSL_FILETYPE_PEM);
-                                if (rc <= 0) {
+                                BIO *bio;
+                                X509 *x509;
+                                bio = BIO_new_mem_buf(tcpsocket->ssl_certificate, -1);
+                                if (bio == NULL) {
                                         return -EIO;
                                 }
+                                x509 = PEM_read_bio_X509(bio, NULL, 0, NULL);
+                                if (x509 == NULL) {
+                                        BIO_free(bio);
+                                        return -EIO;
+                                }
+                                rc = SSL_CTX_use_certificate(tcpsocket->ssl_ctx, x509);
+                                if (rc <= 0) {
+                                        X509_free(x509);
+                                        BIO_free(bio);
+                                        return -EIO;
+                                }
+                                X509_free(x509);
+                                BIO_free(bio);
                         }
                         if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl_privatekey)) {
-                                rc = SSL_CTX_use_PrivateKey_file(tcpsocket->ssl_ctx, tcpsocket->ssl_privatekey, SSL_FILETYPE_PEM);
-                                if (rc <= 0) {
+                                BIO *bio;
+                                RSA *rsa;
+                                bio = BIO_new_mem_buf(tcpsocket->ssl_privatekey, -1);
+                                if (bio == NULL) {
                                         return -EIO;
                                 }
+                                rsa = PEM_read_bio_RSAPrivateKey(bio, NULL, 0, NULL);
+                                if (rsa == NULL) {
+                                        BIO_free(bio);
+                                        return -EIO;
+                                }
+                                rc = SSL_CTX_use_RSAPrivateKey(tcpsocket->ssl_ctx, rsa);
+                                if (rc <= 0) {
+                                        RSA_free(rsa);
+                                        BIO_free(bio);
+                                        return -EIO;
+                                }
+                                RSA_free(rsa);
+                                BIO_free(bio);
                         }
                 }
                 if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl) &&
@@ -3581,7 +3611,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_ssl (const str
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_certificate_unlocked (struct medusa_tcpsocket *tcpsocket, const char *certificate)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_certificate_unlocked (struct medusa_tcpsocket *tcpsocket, const char *certificate, int length)
 {
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
@@ -3592,9 +3622,18 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_certificat
                 tcpsocket->ssl_certificate = NULL;
         }
         if (certificate != NULL) {
-                tcpsocket->ssl_certificate = strdup(certificate);
-                if (tcpsocket->ssl_certificate == NULL) {
-                        return -ENOMEM;
+                if (length < 0) {
+                        tcpsocket->ssl_certificate = strdup(certificate);
+                        if (tcpsocket->ssl_certificate == NULL) {
+                                return -ENOMEM;
+                        }
+                } else {
+                        tcpsocket->ssl_certificate = malloc(length + 1);
+                        if (tcpsocket->ssl_certificate == NULL) {
+                                return -ENOMEM;
+                        }
+                        memcpy(tcpsocket->ssl_certificate, certificate, length);
+                        tcpsocket->ssl_certificate[length] = '\0';
                 }
         }
 #else
@@ -3603,14 +3642,80 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_certificat
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_certificate (struct medusa_tcpsocket *tcpsocket, const char *certificate)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_certificate (struct medusa_tcpsocket *tcpsocket, const char *certificate, int length)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
         medusa_monitor_lock(tcpsocket->subject.monitor);
-        rc = medusa_tcpsocket_set_ssl_certificate_unlocked(tcpsocket, certificate);
+        rc = medusa_tcpsocket_set_ssl_certificate_unlocked(tcpsocket, certificate, length);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_certificate_file_unlocked (struct medusa_tcpsocket *tcpsocket, const char *certificate)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
+        if (tcpsocket->ssl_certificate != NULL) {
+                free(tcpsocket->ssl_certificate);
+                tcpsocket->ssl_certificate = NULL;
+        }
+        if (certificate != NULL) {
+                int rc;
+                int len;
+                FILE *fp;
+                fp = fopen(certificate, "rb");
+                if (fp == NULL) {
+                        return -EACCES;
+                }
+                rc = fseek(fp, 0, SEEK_END);
+                if (rc != 0) {
+                        fclose(fp);
+                        return -EIO;
+                }
+                len = ftell(fp);
+                if (len < 0) {
+                        fclose(fp);
+                        return -EIO;
+                }
+                rc = fseek(fp, 0, SEEK_SET);
+                if (rc != 0) {
+                        fclose(fp);
+                        return -EIO;
+                }
+                tcpsocket->ssl_certificate = malloc(len + 1);
+                if (tcpsocket->ssl_certificate == NULL) {
+                        fclose(fp);
+                        return -ENOMEM;
+                }
+                rc = fread(tcpsocket->ssl_certificate, 1, len, fp);
+                if (rc != len) {
+                        free(tcpsocket->ssl_certificate);
+                        tcpsocket->ssl_certificate = NULL;
+                        fclose(fp);
+                        return -EIO;
+                }
+                tcpsocket->ssl_certificate[len] = '\0';
+                fclose(fp);
+        }
+#else
+        (void) certificate;
+#endif
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_certificate_file (struct medusa_tcpsocket *tcpsocket, const char *certificate)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_set_ssl_certificate_file_unlocked(tcpsocket, certificate);
         medusa_monitor_unlock(tcpsocket->subject.monitor);
         return rc;
 }
@@ -3639,7 +3744,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_tcpsocket_get_ssl_c
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_privatekey_unlocked (struct medusa_tcpsocket *tcpsocket, const char *privatekey)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_privatekey_unlocked (struct medusa_tcpsocket *tcpsocket, const char *privatekey, int length)
 {
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
@@ -3650,9 +3755,18 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_privatekey
                 tcpsocket->ssl_privatekey = NULL;
         }
         if (privatekey != NULL) {
-                tcpsocket->ssl_privatekey = strdup(privatekey);
-                if (tcpsocket->ssl_privatekey == NULL) {
-                        return -ENOMEM;
+                if (length < 0) {
+                        tcpsocket->ssl_privatekey = strdup(privatekey);
+                        if (tcpsocket->ssl_privatekey == NULL) {
+                                return -ENOMEM;
+                        }
+                } else {
+                        tcpsocket->ssl_privatekey = malloc(length + 1);
+                        if (tcpsocket->ssl_privatekey == NULL) {
+                                return -ENOMEM;
+                        }
+                        memcpy(tcpsocket->ssl_privatekey, privatekey, length);
+                        tcpsocket->ssl_privatekey[length] = '\0';
                 }
         }
 #else
@@ -3661,14 +3775,74 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_privatekey
         return 0;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_privatekey (struct medusa_tcpsocket *tcpsocket, const char *privatekey)
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_privatekey (struct medusa_tcpsocket *tcpsocket, const char *privatekey, int length)
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 return -EINVAL;
         }
         medusa_monitor_lock(tcpsocket->subject.monitor);
-        rc = medusa_tcpsocket_set_ssl_privatekey_unlocked(tcpsocket, privatekey);
+        rc = medusa_tcpsocket_set_ssl_privatekey_unlocked(tcpsocket, privatekey, length);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_privatekey_file_unlocked (struct medusa_tcpsocket *tcpsocket, const char *privatekey)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+#if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
+                int rc;
+                int len;
+                FILE *fp;
+                fp = fopen(privatekey, "rb");
+                if (fp == NULL) {
+                        return -EACCES;
+                }
+                rc = fseek(fp, 0, SEEK_END);
+                if (rc != 0) {
+                        fclose(fp);
+                        return -EIO;
+                }
+                len = ftell(fp);
+                if (len < 0) {
+                        fclose(fp);
+                        return -EIO;
+                }
+                rc = fseek(fp, 0, SEEK_SET);
+                if (rc != 0) {
+                        fclose(fp);
+                        return -EIO;
+                }
+                tcpsocket->ssl_privatekey = malloc(len + 1);
+                if (tcpsocket->ssl_privatekey == NULL) {
+                        fclose(fp);
+                        return -ENOMEM;
+                }
+                rc = fread(tcpsocket->ssl_privatekey, 1, len, fp);
+                if (rc != len) {
+                        free(tcpsocket->ssl_privatekey);
+                        tcpsocket->ssl_privatekey = NULL;
+                        fclose(fp);
+                        return -EIO;
+                }
+                tcpsocket->ssl_privatekey[len] = '\0';
+                fclose(fp);
+#else
+        (void) privatekey;
+#endif
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_privatekey_file (struct medusa_tcpsocket *tcpsocket, const char *privatekey)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_set_ssl_privatekey_file_unlocked(tcpsocket, privatekey);
         medusa_monitor_unlock(tcpsocket->subject.monitor);
         return rc;
 }

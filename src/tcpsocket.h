@@ -240,10 +240,12 @@ double medusa_tcpsocket_get_read_timeout (const struct medusa_tcpsocket *tcpsock
 int medusa_tcpsocket_set_ssl (struct medusa_tcpsocket *tcpsocket, int enable);
 int medusa_tcpsocket_get_ssl (const struct medusa_tcpsocket *tcpsocket);
 
-int medusa_tcpsocket_set_ssl_certificate (struct medusa_tcpsocket *tcpsocket, const char *certificate);
+int medusa_tcpsocket_set_ssl_certificate (struct medusa_tcpsocket *tcpsocket, const char *certificate, int length);
+int medusa_tcpsocket_set_ssl_certificate_file (struct medusa_tcpsocket *tcpsocket, const char *certificate);
 const char * medusa_tcpsocket_get_ssl_certificate (const struct medusa_tcpsocket *tcpsocket);
 
-int medusa_tcpsocket_set_ssl_privatekey (struct medusa_tcpsocket *tcpsocket, const char *privatekey);
+int medusa_tcpsocket_set_ssl_privatekey (struct medusa_tcpsocket *tcpsocket, const char *privatekey, int length);
+int medusa_tcpsocket_set_ssl_privatekey_file (struct medusa_tcpsocket *tcpsocket, const char *privatekey);
 const char * medusa_tcpsocket_get_ssl_privatekey (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_ssl_set_SSL (struct medusa_tcpsocket *tcpsocket, struct ssl_st *ssl);

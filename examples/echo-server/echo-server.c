@@ -267,12 +267,12 @@ int main (int argc, char *argv[])
                 goto out;
         }
 
-        rc = medusa_tcpsocket_set_ssl_certificate(medusa_tcpsocket, option_ssl_certificate);
+        rc = medusa_tcpsocket_set_ssl_certificate_file(medusa_tcpsocket, option_ssl_certificate);
         if (rc < 0) {
                 err = rc;
                 goto out;
         }
-        rc = medusa_tcpsocket_set_ssl_privatekey(medusa_tcpsocket, option_ssl_privatekey);
+        rc = medusa_tcpsocket_set_ssl_privatekey_file(medusa_tcpsocket, option_ssl_privatekey);
         if (rc < 0) {
                 err = rc;
                 goto out;
