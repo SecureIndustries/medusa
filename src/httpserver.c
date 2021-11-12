@@ -973,10 +973,12 @@ __attribute__ ((visibility ("default"))) const char * medusa_httpserver_state_st
 }
 
 enum {
-        MEDUSA_HTTPSERVER_CLIENT_FLAG_NONE         = (1 <<  0),
-        MEDUSA_HTTPSERVER_CLIENT_FLAG_ENABLED      = (1 <<  1)
-#define MEDUSA_HTTPSERVER_CLIENT_FLAG_NONE         MEDUSA_HTTPSERVER_CLIENT_FLAG_NONE
-#define MEDUSA_HTTPSERVER_CLIENT_FLAG_ENABLED      MEDUSA_HTTPSERVER_CLIENT_FLAG_ENABLED
+        MEDUSA_HTTPSERVER_CLIENT_FLAG_NONE              = (1 <<  0),
+        MEDUSA_HTTPSERVER_CLIENT_FLAG_ENABLED           = (1 <<  1),
+        MEDUSA_HTTPSERVER_CLIENT_FLAG_SEND_FINISHED     = (1 <<  2),
+#define MEDUSA_HTTPSERVER_CLIENT_FLAG_NONE              MEDUSA_HTTPSERVER_CLIENT_FLAG_NONE
+#define MEDUSA_HTTPSERVER_CLIENT_FLAG_ENABLED           MEDUSA_HTTPSERVER_CLIENT_FLAG_ENABLED
+#define MEDUSA_HTTPSERVER_CLIENT_FLAG_SEND_FINISHED     MEDUSA_HTTPSERVER_CLIENT_FLAG_SEND_FINISHED
 };
 
 enum {
@@ -1561,7 +1563,8 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
                         goto bail;
                 }
         } else if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ) {
-                if (httpserver_client->state == MEDUSA_HTTPSERVER_CLIENT_STATE_CONNECTED) {
+                if (httpserver_client->state == MEDUSA_HTTPSERVER_CLIENT_STATE_CONNECTED ||
+                    httpserver_client->state == MEDUSA_HTTPSERVER_CLIENT_STATE_REPLY_SENT) {
                         rc = httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVING);
                         if (rc < 0) {
                                 error = rc;
@@ -1631,6 +1634,19 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
                 if (rc < 0) {
                         error = rc;
                         goto bail;
+                }
+                if (httpserver_client_has_flag(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_FLAG_SEND_FINISHED)) {
+                        rc = httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_REPLY_SENT);
+                        if (rc < 0) {
+                                error = rc;
+                                goto bail;
+                        }
+                        rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_REPLY_SENT, NULL);
+                        if (rc < 0) {
+                                error = rc;
+                                goto bail;
+                        }
+                        httpserver_client_del_flag(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_FLAG_SEND_FINISHED);
                 }
         } else if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
                 struct medusa_tcpsocket_event_error *medusa_tcpsocket_event_error = (struct medusa_tcpsocket_event_error *) param;
@@ -2380,6 +2396,7 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send
         if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
                 return -EINVAL;
         }
+        httpserver_client_add_flag(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_FLAG_SEND_FINISHED);
         return 0;
 }
 
@@ -2659,27 +2676,29 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_httpserv
 
 __attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_event_string (unsigned int events)
 {
-        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR)                        return "MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR";
-        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED)                    return "MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED";
-        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED_SSL)                return "MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED_SSL";
-        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING)            return "MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING";
-        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED)             return "MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED";
-        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVE_TIMEOUT)      return "MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVE_TIMEOUT";
-        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE)               return "MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE";
-        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED)      return "MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED";
-        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED)                 return "MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED";
-        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_DESTROY)                      return "MEDUSA_HTTPSERVER_CLIENT_EVENT_DESTROY";
+        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR)                     return "MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR";
+        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED)                 return "MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED";
+        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED_SSL)             return "MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED_SSL";
+        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING)         return "MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING";
+        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED)          return "MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVED";
+        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVE_TIMEOUT)   return "MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVE_TIMEOUT";
+        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE)            return "MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE";
+        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED)   return "MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED";
+        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_REPLY_SENT)                return "MEDUSA_HTTPSERVER_CLIENT_EVENT_REPLY_SENT";
+        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED)              return "MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED";
+        if (events == MEDUSA_HTTPSERVER_CLIENT_EVENT_DESTROY)                   return "MEDUSA_HTTPSERVER_CLIENT_EVENT_DESTROY";
         return "MEDUSA_HTTPSERVER_CLIENT_EVENT_UNKNOWN";
 }
 
 __attribute__ ((visibility ("default"))) const char * medusa_httpserver_client_state_string (unsigned int state)
 {
-        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_UNKNOWN)               return "MEDUSA_HTTPSERVER_CLIENT_STATE_UNKNOWN";
-        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_CONNECTED)             return "MEDUSA_HTTPSERVER_CLIENT_STATE_CONNECTED";
-        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVING)     return "MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVING";
-        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVED)      return "MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVED";
-        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_DISCONNECTED)          return "MEDUSA_HTTPSERVER_CLIENT_STATE_DISCONNECTED";
-        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_ERROR)                 return "MEDUSA_HTTPSERVER_CLIENT_STATE_ERROR";
+        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_UNKNOWN)            return "MEDUSA_HTTPSERVER_CLIENT_STATE_UNKNOWN";
+        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_CONNECTED)          return "MEDUSA_HTTPSERVER_CLIENT_STATE_CONNECTED";
+        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVING)  return "MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVING";
+        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVED)   return "MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVED";
+        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_REPLY_SENT)         return "MEDUSA_HTTPSERVER_CLIENT_STATE_REPLY_SENT";
+        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_DISCONNECTED)       return "MEDUSA_HTTPSERVER_CLIENT_STATE_DISCONNECTED";
+        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_ERROR)              return "MEDUSA_HTTPSERVER_CLIENT_STATE_ERROR";
         return "MEDUSA_HTTPSERVER_CLIENT_STATE_UNKNOWN";
 }
 
