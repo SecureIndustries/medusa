@@ -2172,10 +2172,6 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send
         if (rc < 0) {
                 return rc;
         }
-        rc = medusa_buffer_printf(buffer, "\r\n");
-        if (rc < 0) {
-                return rc;
-        }
         return 0;
 }
 
