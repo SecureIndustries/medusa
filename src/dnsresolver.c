@@ -26,6 +26,14 @@ static struct medusa_pool *g_pool_dnsresolver;
 static struct medusa_pool *g_pool_dnsresolver_lookup;
 #endif
 
+static void dnsresolver_entry_destroy (struct medusa_dnsresolver_entry *entry)
+{
+        if (entry == NULL) {
+                return;
+        }
+        free(entry);
+}
+
 static inline unsigned int dnsresolver_get_state (const struct medusa_dnsresolver *dnsresolver)
 {
         return dnsresolver->state;
@@ -94,6 +102,7 @@ static int dnsresolver_init_with_options_unlocked (struct medusa_dnsresolver *dn
         }
         memset(dnsresolver, 0, sizeof(struct medusa_dnsresolver));
         TAILQ_INIT(&dnsresolver->lookups);
+        TAILQ_INIT(&dnsresolver->entries);
         medusa_subject_set_type(&dnsresolver->subject, MEDUSA_SUBJECT_TYPE_DNSRESOLVER);
         dnsresolver->subject.monitor = NULL;
         dnsresolver_set_state(dnsresolver, MEDUSA_DNSRESOLVER_EVENT_STOPPED, 0);
@@ -633,8 +642,14 @@ __attribute__ ((visibility ("default"))) int medusa_dnsresolver_onevent_unlocked
                 }
         }
         if (events & MEDUSA_DNSRESOLVER_EVENT_DESTROY) {
+                struct medusa_dnsresolver_entry *dnsresolver_entry;
+                struct medusa_dnsresolver_entry *ndnsresolver_entry;
                 struct medusa_dnsresolver_lookup *dnsresolver_lookup;
                 struct medusa_dnsresolver_lookup *ndnsresolver_lookup;
+                TAILQ_FOREACH_SAFE(dnsresolver_entry, &dnsresolver->entries, tailq, ndnsresolver_entry) {
+                        TAILQ_REMOVE(&dnsresolver->entries, dnsresolver_entry, tailq);
+                        dnsresolver_entry_destroy(dnsresolver_entry);
+                }
                 TAILQ_FOREACH_SAFE(dnsresolver_lookup, &dnsresolver->lookups, tailq, ndnsresolver_lookup) {
                         TAILQ_REMOVE(&dnsresolver->lookups, dnsresolver_lookup, tailq);
                         dnsresolver_lookup->dnsresolver = NULL;
@@ -778,6 +793,8 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
         const struct medusa_dnsrequest_reply_answers *dnsrequest_reply_answers;
         const struct medusa_dnsrequest_reply_answer *dnsrequest_reply_answer;
 
+        struct medusa_dnsrequest_reply_answers *cdnsrequest_reply_answers;
+
         int rc;
         struct medusa_dnsresolver_lookup *dnsresolver_lookup = context;
         struct medusa_monitor *monitor = medusa_dnsresolver_lookup_get_monitor(dnsresolver_lookup);
@@ -807,6 +824,7 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
                                 case MEDUSA_DNSREQUEST_RECORD_TYPE_A:
                                         medusa_dnsresolver_lookup_event_entry.family   = MEDUSA_DNSRESOLVER_FAMILY_IPV4;
                                         medusa_dnsresolver_lookup_event_entry.addreess = medusa_dnsrequest_reply_answer_a_get_address(dnsrequest_reply_answer);
+                                        medusa_dnsresolver_lookup_event_entry.ttl      = medusa_dnsrequest_reply_answer_get_ttl(dnsrequest_reply_answer);
                                         rc = medusa_dnsresolver_lookup_onevent_unlocked(dnsresolver_lookup, MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ENTRY, &medusa_dnsresolver_lookup_event_entry);
                                         if (rc < 0) {
                                                 goto bail;
@@ -815,12 +833,17 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
                                 case MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA:
                                         medusa_dnsresolver_lookup_event_entry.family   = MEDUSA_DNSRESOLVER_FAMILY_IPV6;
                                         medusa_dnsresolver_lookup_event_entry.addreess = medusa_dnsrequest_reply_answer_aaaa_get_address(dnsrequest_reply_answer);
+                                        medusa_dnsresolver_lookup_event_entry.ttl      = medusa_dnsrequest_reply_answer_get_ttl(dnsrequest_reply_answer);
                                         rc = medusa_dnsresolver_lookup_onevent_unlocked(dnsresolver_lookup, MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ENTRY, &medusa_dnsresolver_lookup_event_entry);
                                         if (rc < 0) {
                                                 goto bail;
                                         }
                                         break;
                         }
+                }
+                cdnsrequest_reply_answers = medusa_dnsrequest_reply_answers_copy(dnsrequest_reply_answers);
+                if (cdnsrequest_reply_answers != NULL) {
+                        medusa_dnsrequest_reply_answers_destroy(cdnsrequest_reply_answers);
                 }
                 rc = dnsresolver_lookup_set_state(dnsresolver_lookup, MEDUSA_DNSRESOLVER_LOOKUP_STATE_FINISHED, 0);
                 if (rc < 0) {

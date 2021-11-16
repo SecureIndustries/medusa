@@ -224,6 +224,9 @@ const struct medusa_dnsrequest_reply_header * medusa_dnsrequest_reply_get_header
 const struct medusa_dnsrequest_reply_questions * medusa_dnsrequest_reply_get_questions (const struct medusa_dnsrequest_reply *reply);
 const struct medusa_dnsrequest_reply_answers * medusa_dnsrequest_reply_get_answers (const struct medusa_dnsrequest_reply *reply);
 
+struct medusa_dnsrequest_reply_answers * medusa_dnsrequest_reply_answers_copy (const struct medusa_dnsrequest_reply_answers *ansrers);
+void medusa_dnsrequest_reply_answers_destroy (struct medusa_dnsrequest_reply_answers *answers);
+
 int medusa_dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *param);
 struct medusa_monitor * medusa_dnsrequest_get_monitor (struct medusa_dnsrequest *dnsrequest);
 

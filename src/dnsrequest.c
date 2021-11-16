@@ -202,6 +202,19 @@ static int medusa_dnsrequest_record_a_init (struct medusa_dnsrequest_record_a *a
 bail:   return -1;
 }
 
+static int medusa_dnsrequest_record_a_copy (struct medusa_dnsrequest_record_a *a, const struct medusa_dnsrequest_record_a *src)
+{
+        if (a == NULL) {
+                goto bail;
+        }
+        if (src == NULL) {
+                goto bail;
+        }
+        memcpy(a->address, src->address, sizeof(src->address));
+        return 0;
+bail:   return -1;
+}
+
 static void medusa_dnsrequest_record_ns_uninit (struct medusa_dnsrequest_record_ns *ns)
 {
         if (ns == NULL) {
@@ -223,6 +236,25 @@ static int medusa_dnsrequest_record_ns_init (struct medusa_dnsrequest_record_ns 
         }
         if (dns->nsdname != NULL) {
                 ns->nsdname = strdup(dns->nsdname);
+                if (ns->nsdname == NULL) {
+                        goto bail;
+
+                }
+        }
+        return 0;
+bail:   return -1;
+}
+
+static int medusa_dnsrequest_record_ns_copy (struct medusa_dnsrequest_record_ns *ns, const struct medusa_dnsrequest_record_ns *src)
+{
+        if (ns == NULL) {
+                goto bail;
+        }
+        if (src == NULL) {
+                goto bail;
+        }
+        if (src->nsdname != NULL) {
+                ns->nsdname = strdup(src->nsdname);
                 if (ns->nsdname == NULL) {
                         goto bail;
 
@@ -262,6 +294,25 @@ static int medusa_dnsrequest_record_cname_init (struct medusa_dnsrequest_record_
 bail:   return -1;
 }
 
+static int medusa_dnsrequest_record_cname_copy (struct medusa_dnsrequest_record_cname *cname, const struct medusa_dnsrequest_record_cname *src)
+{
+        if (cname == NULL) {
+                goto bail;
+        }
+        if (src == NULL) {
+                goto bail;
+        }
+        if (src->cname != NULL) {
+                cname->cname = strdup(src->cname);
+                if (cname->cname == NULL) {
+                        goto bail;
+
+                }
+        }
+        return 0;
+bail:   return -1;
+}
+
 static void medusa_dnsrequest_record_ptr_uninit (struct medusa_dnsrequest_record_ptr *ptr)
 {
         if (ptr == NULL) {
@@ -283,6 +334,25 @@ static int medusa_dnsrequest_record_ptr_init (struct medusa_dnsrequest_record_pt
         }
         if (dptr->ptr != NULL) {
                 ptr->ptr = strdup(dptr->ptr);
+                if (ptr->ptr == NULL) {
+                        goto bail;
+
+                }
+        }
+        return 0;
+bail:   return -1;
+}
+
+static int medusa_dnsrequest_record_ptr_copy (struct medusa_dnsrequest_record_ptr *ptr, const struct medusa_dnsrequest_record_ptr *src)
+{
+        if (ptr == NULL) {
+                goto bail;
+        }
+        if (src == NULL) {
+                goto bail;
+        }
+        if (src->ptr != NULL) {
+                ptr->ptr = strdup(src->ptr);
                 if (ptr->ptr == NULL) {
                         goto bail;
 
@@ -324,6 +394,26 @@ static int medusa_dnsrequest_record_mx_init (struct medusa_dnsrequest_record_mx 
 bail:   return -1;
 }
 
+static int medusa_dnsrequest_record_mx_copy (struct medusa_dnsrequest_record_mx *mx, const struct medusa_dnsrequest_record_mx *src)
+{
+        if (mx == NULL) {
+                goto bail;
+        }
+        if (src == NULL) {
+                goto bail;
+        }
+        mx->preference = src->preference;
+        if (src->exchange != NULL) {
+                mx->exchange = strdup(src->exchange);
+                if (mx->exchange == NULL) {
+                        goto bail;
+
+                }
+        }
+        return 0;
+bail:   return -1;
+}
+
 static void medusa_dnsrequest_record_txt_uninit (struct medusa_dnsrequest_record_txt *txt)
 {
         if (txt == NULL) {
@@ -356,6 +446,27 @@ static int medusa_dnsrequest_record_txt_init (struct medusa_dnsrequest_record_tx
 bail:   return -1;
 }
 
+static int medusa_dnsrequest_record_txt_copy (struct medusa_dnsrequest_record_txt *txt, const struct medusa_dnsrequest_record_txt *src)
+{
+        if (txt == NULL) {
+                goto bail;
+        }
+        if (src == NULL) {
+                goto bail;
+        }
+        txt->class    = src->class;
+        txt->ttl      = src->ttl;
+        txt->type     = src->type;
+        if (src->text) {
+                txt->text = strdup(src->text);
+                if (txt->text == NULL) {
+                        goto bail;
+                }
+        }
+        return 0;
+bail:   return -1;
+}
+
 static void medusa_dnsrequest_record_aaaa_uninit (struct medusa_dnsrequest_record_aaaa *aaaa)
 {
         if (aaaa == NULL) {
@@ -373,6 +484,19 @@ static int medusa_dnsrequest_record_aaaa_init (struct medusa_dnsrequest_record_a
                 goto bail;
         }
         inet_ntop(AF_INET6, &daaaa->address, aaaa->address, sizeof(aaaa->address));
+        return 0;
+bail:   return -1;
+}
+
+static int medusa_dnsrequest_record_aaaa_copy (struct medusa_dnsrequest_record_aaaa *aaaa, const struct medusa_dnsrequest_record_aaaa *src)
+{
+        if (aaaa == NULL) {
+                goto bail;
+        }
+        if (src == NULL) {
+                goto bail;
+        }
+        inet_ntop(AF_INET6, &src->address, aaaa->address, sizeof(aaaa->address));
         return 0;
 bail:   return -1;
 }
@@ -404,6 +528,28 @@ static int medusa_dnsrequest_record_srv_init (struct medusa_dnsrequest_record_sr
         srv->port     = dsrv->port;
         if (dsrv->target != NULL) {
                 srv->target = strdup(dsrv->target);
+                if (srv->target == NULL) {
+                        goto bail;
+
+                }
+        }
+        return 0;
+bail:   return -1;
+}
+
+static int medusa_dnsrequest_record_srv_copy (struct medusa_dnsrequest_record_srv *srv, const struct medusa_dnsrequest_record_srv *src)
+{
+        if (srv == NULL) {
+                goto bail;
+        }
+        if (src == NULL) {
+                goto bail;
+        }
+        srv->priority = src->priority;
+        srv->weight   = src->weight;
+        srv->port     = src->port;
+        if (src->target != NULL) {
+                srv->target = strdup(src->target);
                 if (srv->target == NULL) {
                         goto bail;
 
@@ -469,6 +615,47 @@ static int medusa_dnsrequest_record_naptr_init (struct medusa_dnsrequest_record_
         }
         if (dnaptr->replacement) {
                 naptr->replacement = strdup(dnaptr->replacement);
+                if (naptr->replacement == NULL) {
+                        goto bail;
+                }
+        }
+        return 0;
+bail:   return -1;
+}
+
+static int medusa_dnsrequest_record_naptr_copy (struct medusa_dnsrequest_record_naptr *naptr, const struct medusa_dnsrequest_record_naptr *src)
+{
+        if (naptr == NULL) {
+                goto bail;
+        }
+        if (src == NULL) {
+                goto bail;
+        }
+        naptr->class    = src->class;
+        naptr->ttl      = src->ttl;
+        naptr->type     = src->type;
+        naptr->order    = src->order;
+        naptr->preference       = src->preference;
+        if (src->flags) {
+                naptr->flags = strdup(src->flags);
+                if (naptr->flags == NULL) {
+                        goto bail;
+                }
+        }
+        if (src->services) {
+                naptr->services = strdup(src->services);
+                if (naptr->services == NULL) {
+                        goto bail;
+                }
+        }
+        if (src->regexp) {
+                naptr->regexp = strdup(src->regexp);
+                if (naptr->regexp == NULL) {
+                        goto bail;
+                }
+        }
+        if (src->replacement) {
+                naptr->replacement = strdup(src->replacement);
                 if (naptr->replacement == NULL) {
                         goto bail;
                 }
@@ -1863,6 +2050,84 @@ __attribute__ ((visibility ("default"))) const struct medusa_dnsrequest_reply_he
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
         return &reply->header;
+}
+
+__attribute__ ((visibility ("default"))) struct medusa_dnsrequest_reply_answers * medusa_dnsrequest_reply_answers_copy (const struct medusa_dnsrequest_reply_answers *answers)
+{
+        int rs;
+        struct medusa_dnsrequest_reply_answer *acopy;
+        struct medusa_dnsrequest_reply_answers *copy;
+        const struct medusa_dnsrequest_reply_answer *answer;
+
+        rs = -EIO;
+        copy = NULL;
+
+        if (MEDUSA_IS_ERR_OR_NULL(answers)) {
+                rs = -EINVAL;
+                goto bail;
+        }
+
+        copy = malloc(sizeof(struct medusa_dnsrequest_reply_answers));
+        if (copy == NULL) {
+                rs = -ENOMEM;
+                goto bail;
+        }
+        TAILQ_INIT(copy);
+
+        for (answer = medusa_dnsrequest_reply_answers_get_first(answers);
+             answer != NULL;
+             answer = medusa_dnsrequest_reply_answer_get_next(answer)) {
+                acopy = malloc(sizeof(struct medusa_dnsrequest_reply_answer));
+                if (acopy == NULL) {
+                        rs = -ENOMEM;
+                        goto bail;
+                }
+                memset(acopy, 0, sizeof(struct medusa_dnsrequest_reply_answer));
+                TAILQ_INSERT_TAIL(copy, acopy, list);
+
+                if (answer->u.generic.name != NULL) {
+                        acopy->u.generic.name = strdup(answer->u.generic.name);
+                        if (acopy->u.generic.name == NULL) {
+                                rs = -ENOMEM;
+                                goto bail;
+                        }
+                }
+                acopy->u.generic.type  = answer->u.generic.type;
+                acopy->u.generic.class = answer->u.generic.class;
+                acopy->u.generic.ttl   = answer->u.generic.ttl;
+
+                rs = -EIO;
+                switch (answer->u.generic.type) {
+                        case MEDUSA_DNSREQUEST_RECORD_TYPE_A:           rs = medusa_dnsrequest_record_a_copy(&acopy->u.a, &answer->u.a);             break;
+                        case MEDUSA_DNSREQUEST_RECORD_TYPE_NS:          rs = medusa_dnsrequest_record_ns_copy(&acopy->u.ns, &answer->u.ns);          break;
+                        case MEDUSA_DNSREQUEST_RECORD_TYPE_CNAME:       rs = medusa_dnsrequest_record_cname_copy(&acopy->u.cname, &answer->u.cname); break;
+                        case MEDUSA_DNSREQUEST_RECORD_TYPE_PTR:         rs = medusa_dnsrequest_record_ptr_copy(&acopy->u.ptr, &answer->u.ptr);       break;
+                        case MEDUSA_DNSREQUEST_RECORD_TYPE_MX:          rs = medusa_dnsrequest_record_mx_copy(&acopy->u.mx, &answer->u.mx);          break;
+                        case MEDUSA_DNSREQUEST_RECORD_TYPE_TXT:         rs = medusa_dnsrequest_record_txt_copy(&acopy->u.txt, &answer->u.txt);       break;
+                        case MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA:        rs = medusa_dnsrequest_record_aaaa_copy(&acopy->u.aaaa, &answer->u.aaaa);    break;
+                        case MEDUSA_DNSREQUEST_RECORD_TYPE_SRV:         rs = medusa_dnsrequest_record_srv_copy(&acopy->u.srv, &answer->u.srv);       break;
+                        case MEDUSA_DNSREQUEST_RECORD_TYPE_NAPTR:       rs = medusa_dnsrequest_record_naptr_copy(&acopy->u.naptr, &answer->u.naptr); break;
+                }
+                if (rs != 0) {
+                        goto bail;
+                }
+        }
+
+        return copy;
+
+bail:   if (copy != NULL) {
+                medusa_dnsrequest_reply_answers_destroy(copy);
+        }
+        return MEDUSA_ERR_PTR(rs);
+}
+
+__attribute__ ((visibility ("default"))) void medusa_dnsrequest_reply_answers_destroy (struct medusa_dnsrequest_reply_answers *answers)
+{
+        if (answers == NULL) {
+                return;
+        }
+        medusa_dnsrequest_reply_answers_uninit(answers);
+        free(answers);
 }
 
 __attribute__ ((visibility ("default"))) const struct medusa_dnsrequest_reply_answers * medusa_dnsrequest_reply_get_answers (const struct medusa_dnsrequest_reply *reply)

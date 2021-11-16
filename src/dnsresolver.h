@@ -111,6 +111,7 @@ struct medusa_dnsresolver_lookup_options {
 struct medusa_dnsresolver_lookup_event_entry {
         unsigned int family;
         const char *addreess;
+        int ttl;
 };
 
 struct medusa_dnsresolver_lookup_event_error {

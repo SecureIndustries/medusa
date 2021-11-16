@@ -2,6 +2,12 @@
 #if !defined(MEDUSA_DNSRESOLVER_STRUCT_H)
 #define MEDUSA_DNSRESOLVER_STRUCT_H
 
+TAILQ_HEAD(medusa_dnsresolver_entries, medusa_dnsresolver_entry);
+struct medusa_dnsresolver_entry {
+        struct medusa_dnsresolver_lookup_event_entry entry;
+        TAILQ_ENTRY(medusa_dnsresolver_entry) tailq;
+};
+
 TAILQ_HEAD(medusa_dnsresolver_lookups, medusa_dnsresolver_lookup);
 struct medusa_dnsresolver_lookup {
         struct medusa_subject subject;
@@ -39,6 +45,7 @@ struct medusa_dnsresolver {
         double resolve_timeout;
         void *userdata;
         struct medusa_dnsresolver_lookups lookups;
+        struct medusa_dnsresolver_entries entries;
 };
 
 int medusa_dnsresolver_init (struct medusa_dnsresolver *dnsresolver, struct medusa_monitor *monitor, int (*onevent) (struct medusa_dnsresolver *dnsresolver, unsigned int events, void *context, void *param), void *context);
