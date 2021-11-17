@@ -4,7 +4,9 @@
 
 TAILQ_HEAD(medusa_dnsresolver_entries, medusa_dnsresolver_entry);
 struct medusa_dnsresolver_entry {
-        struct medusa_dnsresolver_lookup_event_entry entry;
+        struct timespec then;
+        char *name;
+        struct medusa_dnsrequest_reply_answers *answers;
         TAILQ_ENTRY(medusa_dnsresolver_entry) tailq;
 };
 
