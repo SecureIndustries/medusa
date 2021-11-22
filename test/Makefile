@@ -57,7 +57,7 @@ endef
 $(eval $(foreach T,${tests},$(eval $(call test-defaults,$T))))
 $(eval $(foreach T,${tests_event},$(eval $(call test_event-defaults,$T))))
 
-include ../Makefile.lib
+include ../3rdparty/libmakefile/Makefile.lib
 
 tests: all
 	${Q}echo "running tests";

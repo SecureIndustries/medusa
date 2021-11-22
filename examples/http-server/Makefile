@@ -38,4 +38,4 @@ dist.dir = ../../dist
 dist.bin-y = \
 	medusa-http-server
 
-include ../../Makefile.lib
+include ../../3rdparty/libmakefile/Makefile.lib

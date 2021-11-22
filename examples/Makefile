@@ -8,4 +8,4 @@ subdir-y =			\
 	http-server		\
 	websocket-server
 
-include ../Makefile.lib
+include ../3rdparty/libmakefile/Makefile.lib

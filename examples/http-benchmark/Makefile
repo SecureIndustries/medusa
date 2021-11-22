@@ -40,4 +40,4 @@ dist.dir = ../../dist
 dist.bin-y = \
 	medusa-http-benchmark
 
-include ../../Makefile.lib
+include ../../3rdparty/libmakefile/Makefile.lib

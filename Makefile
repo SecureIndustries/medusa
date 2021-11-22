@@ -86,7 +86,7 @@ examples_makeflags-y = \
 	MEDUSA_TIMER_TIMERFD_ENABLE=${MEDUSA_TIMER_TIMERFD_ENABLE} \
 	MEDUSA_TIMER_MONOTONIC_ENABLE=${MEDUSA_TIMER_MONOTONIC_ENABLE}
 
-include Makefile.lib
+include 3rdparty/libmakefile/Makefile.lib
 
 tests: all
 	${Q}+${MAKE} ${test_makeflags-y} -C test tests

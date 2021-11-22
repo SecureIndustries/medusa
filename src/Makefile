@@ -207,4 +207,4 @@ dist.lib-${MEDUSA_LIBMEDUSA_TARGET_A} += \
 dist.lib-${MEDUSA_LIBMEDUSA_TARGET_SO} += \
 	libmedusa.so.${MEDUSA_SONAME}
 
-include ../Makefile.lib
+include ../3rdparty/libmakefile/Makefile.lib

@@ -38,4 +38,4 @@ dist.dir = ../../dist
 dist.bin-y = \
 	medusa-dns-lookup
 
-include ../../Makefile.lib
+include ../../3rdparty/libmakefile/Makefile.lib

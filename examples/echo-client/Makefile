@@ -37,4 +37,4 @@ dist.dir = ../../dist
 dist.bin-y = \
 	medusa-echo-client
 
-include ../../Makefile.lib
+include ../../3rdparty/libmakefile/Makefile.lib
