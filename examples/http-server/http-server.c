@@ -123,7 +123,7 @@ static int httpserver_client_onevent (struct medusa_httpserver_client *httpserve
                         (char *) medusa_httpserver_client_request_body_get_value(httpserver_client_request_body));
 
                 rc  = medusa_httpserver_client_reply_send_start(httpserver_client);
-                rc |= medusa_httpserver_client_reply_send_status(httpserver_client, 200, "OK");
+                rc |= medusa_httpserver_client_reply_send_status(httpserver_client, "1.1", 200, "OK");
                 rc |= medusa_httpserver_client_reply_send_header(httpserver_client, "key", "value");
                 rc |= medusa_httpserver_client_reply_send_header(httpserver_client, "Content-Length", "%d", (int) strlen("body"));
                 rc |= medusa_httpserver_client_reply_send_header(httpserver_client, NULL, NULL);
