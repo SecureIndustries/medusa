@@ -80,6 +80,7 @@ static int __socketpair (int family, int type, int protocol, int fd[2])
 	if (size != sizeof(struct sockaddr_in)) {
 		goto bail;
         }
+	size = sizeof(struct sockaddr_in);
 	if (getsockname(connector, (struct sockaddr *) &connect_sockaddr, &size) == -1) {
 		goto bail;
         }
@@ -89,20 +90,20 @@ static int __socketpair (int family, int type, int protocol, int fd[2])
             listen_sockaddr.sin_port        != connect_sockaddr.sin_port) {
 		goto bail;
         }
-	close(listener);
+	closesocket(listener);
 	fd[0] = connector;
 	fd[1] = acceptor;
 
 	return 0;
 
  bail:  if (listener != -1) {
-		close(listener);
+		closesocket(listener);
         }
 	if (connector != -1) {
-		close(connector);
+		closesocket(connector);
         }
 	if (acceptor != -1) {
-		close(acceptor);
+		closesocket(acceptor);
         }
 	return -EIO;
 }
@@ -115,11 +116,11 @@ __attribute__ ((visibility ("default"))) int medusa_pipe (int pipefd[2])
 __attribute__ ((visibility ("default"))) int medusa_pipe2 (int pipefd[2], unsigned int flags)
 {
         int rc;
+        unsigned long nonblocking;
         rc = __socketpair(AF_INET, SOCK_STREAM, 0, pipefd);
         if (rc < 0) {
                 return rc;
         }
-        unsigned long nonblocking;
         nonblocking = (flags & MEDUSA_PIPE_FLAG_NONBLOCK) ? 1 : 0;
         rc = ioctlsocket(pipefd[0], FIONBIO, &nonblocking);
         if (rc != 0) {
