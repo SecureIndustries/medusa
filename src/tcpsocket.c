@@ -15,7 +15,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
 #endif
@@ -1293,6 +1292,25 @@ ipv6:
                         goto bail;
                 }
         }
+        {
+                int rc;
+                int on;
+                on = !!options->freebind;
+#if defined(IP_FREEBIND)
+                rc = setsockopt(fd, IPPROTO_IP, IP_FREEBIND, (void *) &on, sizeof(on));
+#else
+                (void) on;
+                rc = 0;
+#endif
+                if (rc < 0) {
+                        if (options->fd < 0 ||
+                            options->clodestroy == 1) {
+                                tcpsocket_closesocket(fd);
+                        }
+                        ret = -errno;
+                        goto bail;
+                }
+        }
         rc = bind(fd, sockaddr , length);
         if (rc != 0) {
                 if (options->fd < 0 ||
@@ -1331,6 +1349,11 @@ ipv6:
                 goto bail;
         }
         rc = medusa_tcpsocket_set_reuseport_unlocked(tcpsocket, options->reuseport);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_freebind_unlocked(tcpsocket, options->freebind);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
@@ -3159,6 +3182,68 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_reuseport (con
         }
         medusa_monitor_lock(tcpsocket->subject.monitor);
         rc = medusa_tcpsocket_get_reuseport_unlocked(tcpsocket);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_freebind_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        if (!tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_BIND)) {
+                return -EINVAL;
+        }
+        if (enabled) {
+                tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_REUSEPORT);
+        } else {
+                tcpsocket_del_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_REUSEPORT);
+        }
+        if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
+                int rc;
+                int on;
+                on = !!enabled;
+#if defined(IP_FREEBIND)
+                rc = setsockopt(medusa_io_get_fd_unlocked(tcpsocket->io), IPPROTO_IP, IP_FREEBIND, (void *) &on, sizeof(on));
+#else
+                (void) on;
+                rc = 0;
+#endif
+                if (rc < 0) {
+                        return -errno;
+                }
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_freebind (struct medusa_tcpsocket *tcpsocket, int enabled)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_set_freebind_unlocked(tcpsocket, enabled);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_freebind_unlocked (const struct medusa_tcpsocket *tcpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        return tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_REUSEPORT);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_freebind (const struct medusa_tcpsocket *tcpsocket)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_get_freebind_unlocked(tcpsocket);
         medusa_monitor_unlock(tcpsocket->subject.monitor);
         return rc;
 }

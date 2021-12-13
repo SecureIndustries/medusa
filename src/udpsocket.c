@@ -517,6 +517,22 @@ ipv6:
                         goto bail;
                 }
         }
+        {
+                int rc;
+                int on;
+                on = !!options->freebind;
+#if defined(IP_FREEBIND)
+                rc = setsockopt(fd, IPPROTO_IP, IP_FREEBIND, (void *) &on, sizeof(on));
+#else
+                (void) on;
+                rc = 0;
+#endif
+                if (rc < 0) {
+                        udpsocket_closesocket(fd);
+                        ret = -errno;
+                        goto bail;
+                }
+        }
         rc = bind(fd, sockaddr , length);
         if (rc != 0) {
                 udpsocket_closesocket(fd);
@@ -549,6 +565,11 @@ ipv6:
                 goto bail;
         }
         rc = medusa_udpsocket_set_reuseport_unlocked(udpsocket, options->reuseport);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
+        rc = medusa_udpsocket_set_freebind_unlocked(udpsocket, options->freebind);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
@@ -1559,6 +1580,65 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_get_reuseport (con
         }
         medusa_monitor_lock(udpsocket->subject.monitor);
         rc = medusa_udpsocket_get_reuseport_unlocked(udpsocket);
+        medusa_monitor_unlock(udpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_set_freebind_unlocked (struct medusa_udpsocket *udpsocket, int enabled)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        if (enabled) {
+                udpsocket_add_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_REUSEPORT);
+        } else {
+                udpsocket_del_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_REUSEPORT);
+        }
+        if (!MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
+                int rc;
+                int on;
+                on = !!enabled;
+#if defined(IP_FREEBIND)
+                rc = setsockopt(medusa_io_get_fd_unlocked(udpsocket->io), IPPROTO_IP, IP_FREEBIND, (void *) &on, sizeof(on));
+#else
+                (void) on;
+                rc = 0;
+#endif
+                if (rc < 0) {
+                        return -errno;
+                }
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_set_freebind (struct medusa_udpsocket *udpsocket, int enabled)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(udpsocket->subject.monitor);
+        rc = medusa_udpsocket_set_freebind_unlocked(udpsocket, enabled);
+        medusa_monitor_unlock(udpsocket->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_get_freebind_unlocked (const struct medusa_udpsocket *udpsocket)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        return udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_REUSEPORT);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_get_freebind (const struct medusa_udpsocket *udpsocket)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(udpsocket->subject.monitor);
+        rc = medusa_udpsocket_get_freebind_unlocked(udpsocket);
         medusa_monitor_unlock(udpsocket->subject.monitor);
         return rc;
 }

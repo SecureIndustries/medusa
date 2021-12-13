@@ -40,6 +40,9 @@ int medusa_tcpsocket_get_reuseaddr_unlocked (const struct medusa_tcpsocket *tcps
 int medusa_tcpsocket_set_reuseport_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_reuseport_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_set_freebind_unlocked (struct medusa_tcpsocket *tcpsocket, int enabled);
+int medusa_tcpsocket_get_freebind_unlocked (const struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_set_backlog_unlocked (struct medusa_tcpsocket *tcpsocket, int backlog);
 int medusa_tcpsocket_get_backlog_unlocked (const struct medusa_tcpsocket *tcpsocket);
 

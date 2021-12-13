@@ -79,6 +79,7 @@ struct medusa_udpsocket_bind_options {
         int nonblocking;
         int reuseaddr;
         int reuseport;
+        int freebind;
         int enabled;
 };
 
@@ -153,6 +154,9 @@ int medusa_udpsocket_get_reuseaddr (const struct medusa_udpsocket *udpsocket);
 
 int medusa_udpsocket_set_reuseport (struct medusa_udpsocket *udpsocket, int enabled);
 int medusa_udpsocket_get_reuseport (const struct medusa_udpsocket *udpsocket);
+
+int medusa_udpsocket_set_freebind (struct medusa_udpsocket *udpsocket, int enabled);
+int medusa_udpsocket_get_freebind (const struct medusa_udpsocket *udpsocket);
 
 int medusa_udpsocket_set_read_timeout (struct medusa_udpsocket *udpsocket, double timeout);
 double medusa_udpsocket_get_read_timeout (const struct medusa_udpsocket *udpsocket);

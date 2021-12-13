@@ -10,6 +10,9 @@
 
 #if defined(_WIN32)
 #include <winsock2.h>
+#else
+#include <sys/types.h>
+#include <sys/socket.h>
 #endif
 
 #if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)

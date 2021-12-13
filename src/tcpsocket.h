@@ -104,6 +104,7 @@ struct medusa_tcpsocket_bind_options {
         int clodestroy;
         int reuseaddr;
         int reuseport;
+        int freebind;
         int nonblocking;
         int nodelay;
         int backlog;
@@ -224,6 +225,9 @@ int medusa_tcpsocket_get_reuseaddr (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_reuseport (struct medusa_tcpsocket *tcpsocket, int enabled);
 int medusa_tcpsocket_get_reuseport (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_freebind (struct medusa_tcpsocket *tcpsocket, int enabled);
+int medusa_tcpsocket_get_freebind (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_backlog (struct medusa_tcpsocket *tcpsocket, int backlog);
 int medusa_tcpsocket_get_backlog (const struct medusa_tcpsocket *tcpsocket);
