@@ -1,3 +1,9 @@
+medusa (1.0.6-2) unstable; urgency=low
+
+  * dnsresolv branch build
+
+ -- Murat Demirten <mdemirten@yh.com.tr>  Tue, 21 Dec 2021 11:05:20 +0300
+
 medusa (1.0.6-1) unstable; urgency=low
 
   * dnsrequests timeout support
