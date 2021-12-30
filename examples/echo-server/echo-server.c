@@ -450,6 +450,7 @@ int main (int argc, char *argv[])
         }
 
         while (g_running == 1) {
+                debugf("loop");
                 rc = medusa_monitor_run_once(medusa_monitor);
                 if (rc < 0) {
                         errorf("medusa_monitor_run_once failed");
