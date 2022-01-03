@@ -24,6 +24,9 @@ double medusa_dnsrequest_get_receive_timeout_unlocked (const struct medusa_dnsre
 int medusa_dnsrequest_set_nameserver_unlocked (struct medusa_dnsrequest *dnsrequest, const char *nameserver);
 const char * medusa_dnsrequest_get_nameserver_unlocked (struct medusa_dnsrequest *dnsrequest);
 
+int medusa_dnsrequest_set_port_unlocked (struct medusa_dnsrequest *dnsrequest, unsigned int port);
+int medusa_dnsrequest_get_port_unlocked (struct medusa_dnsrequest *dnsrequest);
+
 int medusa_dnsrequest_set_type_unlocked (struct medusa_dnsrequest *dnsrequest, unsigned int type);
 int medusa_dnsrequest_get_type_unlocked (struct medusa_dnsrequest *dnsrequest);
 

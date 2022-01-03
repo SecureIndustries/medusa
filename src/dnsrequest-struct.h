@@ -12,6 +12,7 @@ struct medusa_dnsrequest {
         double connect_timeout;
         double receive_timeout;
         char *nameserver;
+        int port;
         unsigned int type;
         char *name;
         void *userdata;
