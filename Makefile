@@ -125,6 +125,7 @@ ifeq (${MEDUSA_LIBMEDUSA_TARGET_A}, y)
 endif
 
 ifeq (${MEDUSA_BUILD_EXAMPLES}, y)
+	install -d ${DESTDIR}/${prefix}/bin
 	install -m 0755 dist/bin/medusa-dns-lookup ${DESTDIR}/${prefix}/bin/medusa-dns-lookup
 	install -m 0755 dist/bin/medusa-echo-client ${DESTDIR}/${prefix}/bin/medusa-echo-client
 	install -m 0755 dist/bin/medusa-echo-server ${DESTDIR}/${prefix}/bin/medusa-echo-server
