@@ -4542,6 +4542,35 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_tcpsocket_get_userd
         return (unsigned int) (uintptr_t) medusa_tcpsocket_get_userdata(tcpsocket);
 }
 
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_protocol_unlocked (struct medusa_tcpsocket *tcpsocket)
+{
+        int rc;
+        struct sockaddr_storage sockaddr;
+        rc = medusa_tcpsocket_get_sockname_unlocked(tcpsocket, &sockaddr);
+        if (rc < 0) {
+                return rc;
+        }
+        if (sockaddr.ss_family == AF_INET) {
+                return MEDUSA_TCPSOCKET_PROTOCOL_IPV4;
+        } else if (sockaddr.ss_family == AF_INET6) {
+                return MEDUSA_TCPSOCKET_PROTOCOL_IPV6;
+        } else {
+                return -EIO;
+        }
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_protocol (struct medusa_tcpsocket *tcpsocket)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_get_protocol_unlocked(tcpsocket);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_sockname_unlocked (struct medusa_tcpsocket *tcpsocket, struct sockaddr_storage *sockaddr)
 {
         int fd;

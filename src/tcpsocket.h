@@ -267,6 +267,7 @@ int medusa_tcpsocket_add_events (struct medusa_tcpsocket *tcpsocket, unsigned in
 int medusa_tcpsocket_del_events (struct medusa_tcpsocket *tcpsocket, unsigned int events);
 unsigned int medusa_tcpsocket_get_events (const struct medusa_tcpsocket *io);
 
+int medusa_tcpsocket_get_protocol (struct medusa_tcpsocket *tcpsocket);
 int medusa_tcpsocket_get_sockname (struct medusa_tcpsocket *tcpsocket, struct sockaddr_storage *sockaddr);
 int medusa_tcpsocket_get_peername (struct medusa_tcpsocket *tcpsocket, struct sockaddr_storage *sockaddr);
 

@@ -389,6 +389,36 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_get_error (const 
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_httpserver_get_protocol_unlocked (struct medusa_httpserver *httpserver)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return MEDUSA_HTTPSERVER_STATE_UNKNOWN;
+        }
+        rc = medusa_tcpsocket_get_protocol_unlocked(httpserver->tcpsocket);
+        if (rc < 0) {
+                return rc;
+        } else if (rc == MEDUSA_TCPSOCKET_PROTOCOL_IPV4) {
+                return MEDUSA_HTTPSERVER_PROTOCOL_IPV4;
+        } else if (rc == MEDUSA_TCPSOCKET_PROTOCOL_IPV6) {
+                return MEDUSA_HTTPSERVER_PROTOCOL_IPV6;
+        } else {
+                return -EIO;
+        }
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_get_protocol (struct medusa_httpserver *httpserver)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httpserver->subject.monitor);
+        rc = medusa_httpserver_get_protocol_unlocked(httpserver);
+        medusa_monitor_unlock(httpserver->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_httpserver_get_sockname_unlocked (const struct medusa_httpserver *httpserver, struct sockaddr_storage *sockaddr)
 {
         if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {

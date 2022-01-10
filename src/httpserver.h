@@ -141,6 +141,7 @@ void medusa_httpserver_destroy (struct medusa_httpserver *httpserver);
 int medusa_httpserver_get_state (const struct medusa_httpserver *httpserver);
 int medusa_httpserver_get_error (const struct medusa_httpserver *httpserver);
 
+int medusa_httpserver_get_protocol (struct medusa_httpserver *httpserver);
 int medusa_httpserver_get_sockname (const struct medusa_httpserver *httpserver, struct sockaddr_storage *sockaddr);
 
 int medusa_httpserver_set_enabled (struct medusa_httpserver *httpserver, int enabled);
