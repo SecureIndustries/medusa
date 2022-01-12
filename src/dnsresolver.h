@@ -78,6 +78,7 @@ struct medusa_dnsresolver_init_options {
         int (*onevent) (struct medusa_dnsresolver *dnsresolver, unsigned int events, void *context, void *param);
         void *context;
         const char *nameserver;
+        int port;
         unsigned int family;
         int retry_count;
         double retry_interval;
@@ -100,6 +101,7 @@ struct medusa_dnsresolver_lookup_options {
         int (*onevent) (struct medusa_dnsresolver_lookup *dnsresolver_lookup, unsigned int events, void *context, void *param);
         void *context;
         const char *nameserver;
+        int port;
         const char *name;
         unsigned int family;
         int retry_count;
@@ -140,6 +142,9 @@ int medusa_dnsresolver_get_state (const struct medusa_dnsresolver *dnsresolver);
 
 int medusa_dnsresolver_set_nameserver (struct medusa_dnsresolver *dnsresolver, const char *nameserver);
 const char * medusa_dnsresolver_get_nameserver (struct medusa_dnsresolver *dnsresolver);
+
+int medusa_dnsresolver_set_port (struct medusa_dnsresolver *dnsresolver, int port);
+int medusa_dnsresolver_get_port (struct medusa_dnsresolver *dnsresolver);
 
 int medusa_dnsresolver_set_family (struct medusa_dnsresolver *dnsresolver, unsigned int family);
 int medusa_dnsresolver_get_family (struct medusa_dnsresolver *dnsresolver);
@@ -190,6 +195,9 @@ int medusa_dnsresolver_lookup_get_state (const struct medusa_dnsresolver_lookup 
 
 int medusa_dnsresolver_lookup_set_nameserver (struct medusa_dnsresolver_lookup *dnsresolver_lookup, const char *nameserver);
 const char * medusa_dnsresolver_lookup_get_nameserver (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
+
+int medusa_dnsresolver_lookup_set_port (struct medusa_dnsresolver_lookup *dnsresolver_lookup, int port);
+int medusa_dnsresolver_lookup_get_port (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
 
 int medusa_dnsresolver_lookup_set_family (struct medusa_dnsresolver_lookup *dnsresolver_lookup, unsigned int family);
 int medusa_dnsresolver_lookup_get_family (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
