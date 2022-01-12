@@ -196,11 +196,19 @@ bail:   if (tcpsocket_addrinfo_entry != NULL) {
 
 static int tcpsocket_addrinfo_add_entry (struct tcpsocket_addrinfo *tcpsocket_addrinfo, struct tcpsocket_addrinfo_entry *tcpsocket_addrinfo_entry)
 {
+        struct tcpsocket_addrinfo_entry *entry;
+        struct tcpsocket_addrinfo_entry *nentry;
         if (tcpsocket_addrinfo == NULL) {
                 return -1;
         }
         if (tcpsocket_addrinfo_entry == NULL) {
                 return -1;
+        }
+        TAILQ_FOREACH_SAFE(entry, tcpsocket_addrinfo, tailq, nentry) {
+                if (tcpsocket_addrinfo_entry->protocol < entry->protocol) {
+                        TAILQ_INSERT_BEFORE(entry, tcpsocket_addrinfo_entry, tailq);
+                        return 0;
+                }
         }
         TAILQ_INSERT_TAIL(tcpsocket_addrinfo, tcpsocket_addrinfo_entry, tailq);
         return 0;
@@ -243,6 +251,7 @@ bail:   if (tcpsocket_addrinfo != NULL) {
 
 static struct tcpsocket_addrinfo * tcpsocket_addrinfo_create_from_addrinfo (struct addrinfo *addrinfo)
 {
+        int rc;
         struct addrinfo *entry;
         struct tcpsocket_addrinfo *tcpsocket_addrinfo;
         struct tcpsocket_addrinfo_entry *tcpsocket_addrinfo_entry;
@@ -259,7 +268,11 @@ static struct tcpsocket_addrinfo * tcpsocket_addrinfo_create_from_addrinfo (stru
                 if (tcpsocket_addrinfo_entry == NULL) {
                         continue;
                 }
-                TAILQ_INSERT_TAIL(tcpsocket_addrinfo, tcpsocket_addrinfo_entry, tailq);
+                rc = tcpsocket_addrinfo_add_entry(tcpsocket_addrinfo, tcpsocket_addrinfo_entry);
+                if (rc < 0) {
+                        tcpsocket_addrinfo_entry_destroy(tcpsocket_addrinfo_entry);
+                        goto bail;
+                }
         }
 
         return tcpsocket_addrinfo;
