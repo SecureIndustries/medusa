@@ -711,6 +711,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                         }
 #if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
                                         if (tcpsocket->ssl != NULL) {
+                                                ERR_clear_error();
                                                 wlength = SSL_write(tcpsocket->ssl, iovec.iov_base, iovec.iov_len);
                                                 if (wlength <= 0) {
                                                         int error;
@@ -915,6 +916,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                         tcpsocket->ssl_wantread  = 0;
                                                         tcpsocket->ssl_wantwrite = 0;
                                                 }
+                                                ERR_clear_error();
                                                 rlength = SSL_read(tcpsocket->ssl, iovec.iov_base, iovec.iov_len);
                                                 if (rlength <= 0) {
                                                         int error;
@@ -960,6 +962,15 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                 rlength = recv(medusa_io_get_fd_unlocked(io), iovec.iov_base, iovec.iov_len, 0);
                                         }
                                         if (rlength < 0) {
+#if defined(_WIN32)
+                                                if (rlength == SOCKET_ERROR) {
+                                                        switch (WSAGetLastError()) {
+                                                                case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
+                                                                case WSATRY_AGAIN:      errno = EAGAIN;         break;
+                                                                case WSAEINTR:          errno = EINTR;          break;
+                                                        }
+                                                }
+#endif
                                                 if (errno != EINTR &&
                                                     errno != EAGAIN &&
                                                     errno != EWOULDBLOCK) {
