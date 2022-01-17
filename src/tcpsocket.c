@@ -408,6 +408,7 @@ static inline int tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsig
                         if (rc <= 0) {
                                 return -EIO;
                         }
+                        ERR_clear_error();
                         if (tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ACCEPT)) {
                                 rc = SSL_accept(tcpsocket->ssl);
                         } else {
@@ -3648,6 +3649,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                         if (rc <= 0) {
                                 return -EIO;
                         }
+                        ERR_clear_error();
                         if (tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ACCEPT)) {
                                 rc = SSL_accept(tcpsocket->ssl);
                         } else {
