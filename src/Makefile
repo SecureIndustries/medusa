@@ -141,6 +141,7 @@ libmedusa.a_files-y += \
 	../3rdparty/http-parser/http_parser.c
 
 libmedusa.a_files-y += \
+	websocketclient.c \
 	websocketserver.c \
 	../3rdparty/http-parser/http_parser.c
 
@@ -189,6 +190,7 @@ dist.include-y = \
 	httpserver.h \
 	dnsrequest.h \
 	dnsresolver.h \
+	websocketclient.h \
 	websocketserver.h \
 	exec.h \
 	queue.h \

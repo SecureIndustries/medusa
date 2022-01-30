@@ -41,6 +41,8 @@
 #include "dnsrequest-private.h"
 #include "dnsresolver.h"
 #include "dnsresolver-private.h"
+#include "websocketclient.h"
+#include "websocketclient-private.h"
 #include "websocketserver.h"
 #include "websocketserver-private.h"
 #include "httpserver.h"
@@ -309,6 +311,9 @@ static int monitor_subject_onevent (struct medusa_monitor *monitor, struct medus
                 case MEDUSA_SUBJECT_TYPE_DNSRESOLVER_LOOKUP:
                         rc = medusa_dnsresolver_lookup_onevent_unlocked((struct medusa_dnsresolver_lookup *) subject, events, param);
                         break;
+                case MEDUSA_SUBJECT_TYPE_WEBSOCKETCLIENT:
+                        rc = medusa_websocketclient_onevent_unlocked((struct medusa_websocketclient *) subject, events, param);
+                        break;
                 case MEDUSA_SUBJECT_TYPE_WEBSOCKETSERVER:
                         rc = medusa_websocketserver_onevent_unlocked((struct medusa_websocketserver *) subject, events, param);
                         break;
@@ -369,6 +374,15 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPSERVER) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         rc = monitor_subject_onevent(monitor, subject, MEDUSA_HTTPSERVER_EVENT_DESTROY, NULL);
+                        if (rc < 0) {
+                                goto bail;
+                        }
+                }
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_WEBSOCKETCLIENT) {
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        rc = monitor_subject_onevent(monitor, subject, MEDUSA_WEBSOCKETCLIENT_EVENT_DESTROY, NULL);
                         if (rc < 0) {
                                 goto bail;
                         }
@@ -717,6 +731,11 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
                         TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
                         subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
+                } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_WEBSOCKETCLIENT) {
+                        TAILQ_REMOVE(&monitor->changes, subject, list);
+                        TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_MOD;
+                        subject->flags &= ~MEDUSA_SUBJECT_FLAG_ROGUE;
                 } else if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_WEBSOCKETSERVER) {
                         TAILQ_REMOVE(&monitor->changes, subject, list);
                         TAILQ_INSERT_TAIL(&monitor->actives, subject, list);
@@ -882,16 +901,20 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_add_unlocked (struct
 {
         int rc;
         if (MEDUSA_IS_ERR_OR_NULL(monitor)) {
+                fprintf(stderr, "here %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                 return -EINVAL;
         }
         if (MEDUSA_IS_ERR_OR_NULL(subject)) {
+                fprintf(stderr, "here %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                 return -EINVAL;
         }
         if (!MEDUSA_IS_ERR_OR_NULL(subject->monitor)) {
+                fprintf(stderr, "here %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                 return -EALREADY;
         }
         if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_SIGNAL) {
                 if (MEDUSA_IS_ERR_OR_NULL(monitor->signal.backend)) {
+                        fprintf(stderr, "here %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                         return -ENOENT;
                 }
         }
@@ -900,6 +923,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_add_unlocked (struct
         subject->flags |= MEDUSA_SUBJECT_FLAG_MOD;
         rc = monitor_signal(monitor, WAKEUP_REASON_SUBJECT_ADD);
         if (rc < 0) {
+                fprintf(stderr, "here %s %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
                 return rc;
         }
         return 0;
@@ -1381,6 +1405,12 @@ __attribute__ ((visibility ("default"))) void medusa_monitor_destroy (struct med
                 if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_HTTPSERVER) {
                         TAILQ_REMOVE(&monitor->deletes, subject, list);
                         medusa_httpserver_onevent_unlocked((struct medusa_httpserver *) subject, MEDUSA_HTTPSERVER_EVENT_DESTROY, NULL);
+                }
+        }
+        TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {
+                if (medusa_subject_get_type(subject) == MEDUSA_SUBJECT_TYPE_WEBSOCKETCLIENT) {
+                        TAILQ_REMOVE(&monitor->deletes, subject, list);
+                        medusa_websocketclient_onevent_unlocked((struct medusa_websocketclient *) subject, MEDUSA_WEBSOCKETCLIENT_EVENT_DESTROY, NULL);
                 }
         }
         TAILQ_FOREACH_SAFE(subject, &monitor->deletes, list, nsubject) {

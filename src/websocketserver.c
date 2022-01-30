@@ -1173,7 +1173,8 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
 			        "Upgrade: websocket\r\n"
 			        "Connection: Upgrade\r\n"
                                 "Sec-WebSocket-Protocol: %s\r\n"
-			        "Sec-WebSocket-Accept: %s\r\n\r\n",
+			        "Sec-WebSocket-Accept: %s\r\n"
+                                "\r\n",
                                 (websocketserver_client->websocketserver->servername) ? websocketserver_client->websocketserver->servername : "medusa-websocketserver",
                                 (websocketserver_client->sec_websocket_protocol) ? websocketserver_client->sec_websocket_protocol : "generic",
 			        base64);
@@ -1421,6 +1422,7 @@ short_buffer:
                         goto bail;
                 }
                 medusa_websocketserver_client_destroy_unlocked(websocketserver_client);
+        } else if (events & MEDUSA_TCPSOCKET_EVENT_STATE_CHANGED) {
         } else {
                 error = -EIO;
                 goto bail;
@@ -1553,7 +1555,6 @@ bail:   if (MEDUSA_IS_ERR_OR_NULL(websocketserver_client)) {
         websocketserver_client->error = -error;
         medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR, NULL);
         return websocketserver_client;
-
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_websocketserver_client * medusa_websocketserver_accept_with_options (struct medusa_websocketserver *websocketserver, struct medusa_websocketserver_accept_options *options)
