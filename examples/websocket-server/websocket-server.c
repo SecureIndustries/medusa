@@ -65,6 +65,7 @@ static int websocketserver_client_onevent (struct medusa_websocketserver_client 
                 fprintf(stderr, "header: '%s': '%s'\n", request_header->field, request_header->value);
         }
         if (events & MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_MESSAGE) {
+                int rc;
                 struct medusa_websocketserver_client_event_message *medusa_websocketserver_client_event_message = (struct medusa_websocketserver_client_event_message *) param;
                 fprintf(stderr, "  final  : %d\n", medusa_websocketserver_client_event_message->final);
                 fprintf(stderr, "  type   : %d, %s\n", medusa_websocketserver_client_event_message->type, medusa_websocketserver_client_frame_type_string(medusa_websocketserver_client_event_message->type));
@@ -72,6 +73,11 @@ static int websocketserver_client_onevent (struct medusa_websocketserver_client 
                 fprintf(stderr, "  payload: %p\n", medusa_websocketserver_client_event_message->payload);
                 if (medusa_websocketserver_client_event_message->type == MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_TEXT) {
                         fprintf(stderr, "    '%.*s'\n", medusa_websocketserver_client_event_message->length, (const char *) medusa_websocketserver_client_event_message->payload);
+                        rc = medusa_websocketserver_client_write(websocketserver_client, 1, MEDUSA_WEBSOCKETSERVER_CLIENT_FRAME_TYPE_TEXT, medusa_websocketserver_client_event_message->payload, medusa_websocketserver_client_event_message->length);
+                        if (rc < 0) {
+                                fprintf(stderr, "can not send message\n");
+                                return -1;
+                        }
                 }
         }
 
