@@ -2048,8 +2048,16 @@ bind_ipv6:
                                 }
                                 bind_sockaddr_in6->sin6_port = htons(sport);
                         } else if (saddress == NULL) {
-                                saddress = "0.0.0.0";
-                                goto bind_ipv4;
+                                if (addrinfo_entry->protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV4) {
+                                        saddress = "0.0.0.0";
+                                        goto bind_ipv4;
+                                } else if (addrinfo_entry->protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV6) {
+                                        saddress = "::";
+                                        goto bind_ipv6;
+                                } else {
+                                        ret = -EINVAL;
+                                        goto bail;
+                                }
                         } else if (strcmp(saddress, "localhost") == 0) {
                                 saddress = "127.0.0.1";
                                 goto bind_ipv4;
