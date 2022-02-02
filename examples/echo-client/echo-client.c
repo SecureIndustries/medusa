@@ -218,11 +218,9 @@ static int sender_medusa_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, 
 static int sender_medusa_udpsocket_onevent (struct medusa_udpsocket *udpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
+        char buffer[1600];
         const char *option_string = context;
 
-        (void) udpsocket;
-        (void) events;
-        (void) context;
         (void) param;
 
         verbosef(1, "udpsocket events: 0x%08x, %s", events, medusa_udpsocket_event_string(events));
@@ -233,6 +231,17 @@ static int sender_medusa_udpsocket_onevent (struct medusa_udpsocket *udpsocket, 
                         fprintf(stderr, "can not send data to udpsocket\n");
                         goto bail;
                 }
+        } else if (events & MEDUSA_UDPSOCKET_EVENT_IN) {
+                rc = recv(medusa_udpsocket_get_fd(udpsocket), buffer, sizeof(buffer), 0);
+                if (rc != (int) (strlen(option_string) + 1)) {
+                        fprintf(stderr, "can not recv data from udpsocket\n");
+                        goto bail;
+                }
+                if (memcmp(option_string, buffer, strlen(option_string) + 1) != 0) {
+                        fprintf(stderr, "can not recv data from udpsocket\n");
+                        return -EIO;
+                }
+                g_running = 0;
         }
 
         return 0;

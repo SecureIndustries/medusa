@@ -196,11 +196,19 @@ bail:   if (tcpsocket_addrinfo_entry != NULL) {
 
 static int tcpsocket_addrinfo_add_entry (struct tcpsocket_addrinfo *tcpsocket_addrinfo, struct tcpsocket_addrinfo_entry *tcpsocket_addrinfo_entry)
 {
+        struct tcpsocket_addrinfo_entry *entry;
+        struct tcpsocket_addrinfo_entry *nentry;
         if (tcpsocket_addrinfo == NULL) {
                 return -1;
         }
         if (tcpsocket_addrinfo_entry == NULL) {
                 return -1;
+        }
+        TAILQ_FOREACH_SAFE(entry, tcpsocket_addrinfo, tailq, nentry) {
+                if (tcpsocket_addrinfo_entry->protocol < entry->protocol) {
+                        TAILQ_INSERT_BEFORE(entry, tcpsocket_addrinfo_entry, tailq);
+                        return 0;
+                }
         }
         TAILQ_INSERT_TAIL(tcpsocket_addrinfo, tcpsocket_addrinfo_entry, tailq);
         return 0;
@@ -243,6 +251,7 @@ bail:   if (tcpsocket_addrinfo != NULL) {
 
 static struct tcpsocket_addrinfo * tcpsocket_addrinfo_create_from_addrinfo (struct addrinfo *addrinfo)
 {
+        int rc;
         struct addrinfo *entry;
         struct tcpsocket_addrinfo *tcpsocket_addrinfo;
         struct tcpsocket_addrinfo_entry *tcpsocket_addrinfo_entry;
@@ -259,7 +268,11 @@ static struct tcpsocket_addrinfo * tcpsocket_addrinfo_create_from_addrinfo (stru
                 if (tcpsocket_addrinfo_entry == NULL) {
                         continue;
                 }
-                TAILQ_INSERT_TAIL(tcpsocket_addrinfo, tcpsocket_addrinfo_entry, tailq);
+                rc = tcpsocket_addrinfo_add_entry(tcpsocket_addrinfo, tcpsocket_addrinfo_entry);
+                if (rc < 0) {
+                        tcpsocket_addrinfo_entry_destroy(tcpsocket_addrinfo_entry);
+                        goto bail;
+                }
         }
 
         return tcpsocket_addrinfo;
@@ -395,6 +408,7 @@ static inline int tcpsocket_set_state (struct medusa_tcpsocket *tcpsocket, unsig
                         if (rc <= 0) {
                                 return -EIO;
                         }
+                        ERR_clear_error();
                         if (tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ACCEPT)) {
                                 rc = SSL_accept(tcpsocket->ssl);
                         } else {
@@ -698,6 +712,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                         }
 #if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
                                         if (tcpsocket->ssl != NULL) {
+                                                ERR_clear_error();
                                                 wlength = SSL_write(tcpsocket->ssl, iovec.iov_base, iovec.iov_len);
                                                 if (wlength <= 0) {
                                                         int error;
@@ -902,6 +917,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                         tcpsocket->ssl_wantread  = 0;
                                                         tcpsocket->ssl_wantwrite = 0;
                                                 }
+                                                ERR_clear_error();
                                                 rlength = SSL_read(tcpsocket->ssl, iovec.iov_base, iovec.iov_len);
                                                 if (rlength <= 0) {
                                                         int error;
@@ -947,6 +963,15 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                 rlength = recv(medusa_io_get_fd_unlocked(io), iovec.iov_base, iovec.iov_len, 0);
                                         }
                                         if (rlength < 0) {
+#if defined(_WIN32)
+                                                if (rlength == SOCKET_ERROR) {
+                                                        switch (WSAGetLastError()) {
+                                                                case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
+                                                                case WSATRY_AGAIN:      errno = EAGAIN;         break;
+                                                                case WSAEINTR:          errno = EINTR;          break;
+                                                        }
+                                                }
+#endif
                                                 if (errno != EINTR &&
                                                     errno != EAGAIN &&
                                                     errno != EWOULDBLOCK) {
@@ -2023,8 +2048,16 @@ bind_ipv6:
                                 }
                                 bind_sockaddr_in6->sin6_port = htons(sport);
                         } else if (saddress == NULL) {
-                                saddress = "0.0.0.0";
-                                goto bind_ipv4;
+                                if (addrinfo_entry->protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV4) {
+                                        saddress = "0.0.0.0";
+                                        goto bind_ipv4;
+                                } else if (addrinfo_entry->protocol == MEDUSA_TCPSOCKET_PROTOCOL_IPV6) {
+                                        saddress = "::";
+                                        goto bind_ipv6;
+                                } else {
+                                        ret = -EINVAL;
+                                        goto bail;
+                                }
                         } else if (strcmp(saddress, "localhost") == 0) {
                                 saddress = "127.0.0.1";
                                 goto bind_ipv4;
@@ -3624,6 +3657,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                         if (rc <= 0) {
                                 return -EIO;
                         }
+                        ERR_clear_error();
                         if (tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_ACCEPT)) {
                                 rc = SSL_accept(tcpsocket->ssl);
                         } else {
@@ -4540,6 +4574,35 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_tcpsocket_get_userd
 __attribute__ ((visibility ("default"))) unsigned int medusa_tcpsocket_get_userdata_uint (struct medusa_tcpsocket *tcpsocket)
 {
         return (unsigned int) (uintptr_t) medusa_tcpsocket_get_userdata(tcpsocket);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_protocol_unlocked (struct medusa_tcpsocket *tcpsocket)
+{
+        int rc;
+        struct sockaddr_storage sockaddr;
+        rc = medusa_tcpsocket_get_sockname_unlocked(tcpsocket, &sockaddr);
+        if (rc < 0) {
+                return rc;
+        }
+        if (sockaddr.ss_family == AF_INET) {
+                return MEDUSA_TCPSOCKET_PROTOCOL_IPV4;
+        } else if (sockaddr.ss_family == AF_INET6) {
+                return MEDUSA_TCPSOCKET_PROTOCOL_IPV6;
+        } else {
+                return -EIO;
+        }
+}
+
+__attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_protocol (struct medusa_tcpsocket *tcpsocket)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(tcpsocket->subject.monitor);
+        rc = medusa_tcpsocket_get_protocol_unlocked(tcpsocket);
+        medusa_monitor_unlock(tcpsocket->subject.monitor);
+        return rc;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_tcpsocket_get_sockname_unlocked (struct medusa_tcpsocket *tcpsocket, struct sockaddr_storage *sockaddr)

@@ -13,6 +13,9 @@ int medusa_dnsresolver_get_state_unlocked (const struct medusa_dnsresolver *dnsr
 int medusa_dnsresolver_set_nameserver_unlocked (struct medusa_dnsresolver *dnsresolver, const char *nameserver);
 const char * medusa_dnsresolver_get_nameserver_unlocked (struct medusa_dnsresolver *dnsresolver);
 
+int medusa_dnsresolver_set_port_unlocked (struct medusa_dnsresolver *dnsresolver, int port);
+int medusa_dnsresolver_get_port_unlocked (struct medusa_dnsresolver *dnsresolver);
+
 int medusa_dnsresolver_set_family_unlocked (struct medusa_dnsresolver *dnsresolver, unsigned int family);
 int medusa_dnsresolver_get_family_unlocked (struct medusa_dnsresolver *dnsresolver);
 
@@ -57,6 +60,9 @@ int medusa_dnsresolver_lookup_get_state_unlocked (const struct medusa_dnsresolve
 
 int medusa_dnsresolver_lookup_set_nameserver_unlocked (struct medusa_dnsresolver_lookup *dnsresolver_lookup, const char *nameserver);
 const char * medusa_dnsresolver_lookup_get_nameserver_unlocked (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
+
+int medusa_dnsresolver_lookup_set_port_unlocked (struct medusa_dnsresolver_lookup *dnsresolver_lookup, int port);
+int medusa_dnsresolver_lookup_get_port_unlocked (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
 
 int medusa_dnsresolver_lookup_set_family_unlocked (struct medusa_dnsresolver_lookup *dnsresolver_lookup, unsigned int family);
 int medusa_dnsresolver_lookup_get_family_unlocked (struct medusa_dnsresolver_lookup *dnsresolver_lookup);

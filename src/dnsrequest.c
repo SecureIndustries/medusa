@@ -1252,6 +1252,10 @@ static int dnsrequest_init_with_options_unlocked (struct medusa_dnsrequest *dnsr
         if (rc < 0) {
                 return rc;
         }
+        rc = medusa_dnsrequest_set_port_unlocked(dnsrequest, (options->port == 0) ? 53 : options->port);
+        if (rc != 0) {
+                return rc;
+        }
         if (options->nameserver != NULL) {
                 rc = medusa_dnsrequest_set_nameserver_unlocked(dnsrequest, options->nameserver);
                 if (rc != 0) {
@@ -1315,6 +1319,7 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_init_options_defa
                 return -EINVAL;
         }
         memset(options, 0, sizeof(struct medusa_dnsrequest_init_options));
+        options->port = 53;
         options->resolve_timeout = -1;
         options->connect_timeout = -1;
         options->receive_timeout = -1;
@@ -1671,6 +1676,50 @@ __attribute__ ((visibility ("default"))) const char * medusa_dnsrequest_get_name
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_port_unlocked (struct medusa_dnsrequest *dnsrequest, unsigned int port)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return -EINVAL;
+        }
+        if (!MEDUSA_IS_ERR_OR_NULL(dnsrequest->udpsocket)) {
+                return -EINPROGRESS;
+        }
+        dnsrequest->port = port;
+        return medusa_monitor_mod_unlocked(&dnsrequest->subject);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_port (struct medusa_dnsrequest *dnsrequest, unsigned int port)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(dnsrequest->subject.monitor);
+        rc = medusa_dnsrequest_set_port_unlocked(dnsrequest, port);
+        medusa_monitor_unlock(dnsrequest->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_get_port_unlocked (struct medusa_dnsrequest *dnsrequest)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return -EINVAL;
+        }
+        return dnsrequest->port;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsrequest_get_port (struct medusa_dnsrequest *dnsrequest)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(dnsrequest->subject.monitor);
+        rc = medusa_dnsrequest_get_port_unlocked(dnsrequest);
+        medusa_monitor_unlock(dnsrequest->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_dnsrequest_set_type_unlocked (struct medusa_dnsrequest *dnsrequest, unsigned int type)
 {
         if (MEDUSA_IS_ERR_OR_NULL(dnsrequest)) {
@@ -1955,7 +2004,7 @@ __attribute__ ((visibility ("default"))) int medusa_dnsrequest_lookup_unlocked (
         medusa_udpsocket_connect_options.onevent     = dnsrequest_udpsocket_onevent;
         medusa_udpsocket_connect_options.context     = dnsrequest;
         medusa_udpsocket_connect_options.address     = dnsrequest->nameserver;
-        medusa_udpsocket_connect_options.port        = 53;
+        medusa_udpsocket_connect_options.port        = dnsrequest->port;
         medusa_udpsocket_connect_options.protocol    = MEDUSA_UDPSOCKET_PROTOCOL_ANY;
         medusa_udpsocket_connect_options.enabled     = 1;
         medusa_udpsocket_connect_options.nonblocking = 1;

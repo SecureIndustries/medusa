@@ -124,10 +124,23 @@ ifeq (${MEDUSA_LIBMEDUSA_TARGET_A}, y)
 	install -m 0644 dist/lib/libmedusa.a ${DESTDIR}/${prefix}/lib/
 endif
 
+ifeq (${MEDUSA_BUILD_EXAMPLES}, y)
+	install -d ${DESTDIR}/${prefix}/bin
+	install -m 0755 dist/bin/medusa-dns-lookup ${DESTDIR}/${prefix}/bin/medusa-dns-lookup
+	install -m 0755 dist/bin/medusa-echo-client ${DESTDIR}/${prefix}/bin/medusa-echo-client
+	install -m 0755 dist/bin/medusa-echo-server ${DESTDIR}/${prefix}/bin/medusa-echo-server
+	install -m 0755 dist/bin/medusa-http-benchmark ${DESTDIR}/${prefix}/bin/medusa-http-benchmark
+	install -m 0755 dist/bin/medusa-http-request ${DESTDIR}/${prefix}/bin/medusa-http-request
+	install -m 0755 dist/bin/medusa-http-server ${DESTDIR}/${prefix}/bin/medusa-http-server
+	install -m 0755 dist/bin/medusa-websocket-server ${DESTDIR}/${prefix}/bin/medusa-websocket-server
+endif
+
 	install -d ${DESTDIR}/${prefix}/lib/pkgconfig
 	sed 's?'prefix=/usr/local'?'prefix=${DESTDIR}/${prefix}'?g' libmedusa.pc > ${DESTDIR}/${prefix}/lib/pkgconfig/libmedusa.pc
 
 uninstall:
+	rm -rf ${DESTDIR}/${prefix}/bin/medusa-*
+
 	rm -rf ${DESTDIR}/${prefix}/include/medusa
 
 	rm -f ${DESTDIR}/${prefix}/lib/libmedusa.so*

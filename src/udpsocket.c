@@ -1908,6 +1908,35 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_onevent_unlocked (
         return ret;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_get_protocol_unlocked (struct medusa_udpsocket *udpsocket)
+{
+        int rc;
+        struct sockaddr_storage sockaddr;
+        rc = medusa_udpsocket_get_sockname_unlocked(udpsocket, &sockaddr);
+        if (rc < 0) {
+                return rc;
+        }
+        if (sockaddr.ss_family == AF_INET) {
+                return MEDUSA_UDPSOCKET_PROTOCOL_IPV4;
+        } else if (sockaddr.ss_family == AF_INET6) {
+                return MEDUSA_UDPSOCKET_PROTOCOL_IPV6;
+        } else {
+                return -EIO;
+        }
+}
+
+__attribute__ ((visibility ("default"))) int medusa_udpsocket_get_protocol (struct medusa_udpsocket *udpsocket)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(udpsocket->subject.monitor);
+        rc = medusa_udpsocket_get_protocol_unlocked(udpsocket);
+        medusa_monitor_unlock(udpsocket->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_udpsocket_get_sockname_unlocked (struct medusa_udpsocket *udpsocket, struct sockaddr_storage *sockaddr)
 {
         int fd;
