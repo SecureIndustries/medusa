@@ -151,6 +151,7 @@ static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events,
                                                 case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
                                                 case WSATRY_AGAIN:      errno = EAGAIN;         break;
                                                 case WSAEINTR:          errno = EINTR;          break;
+                                                case WSAECONNRESET:     errno = ECONNRESET;     break;
                                         }
                                 }
 #endif
