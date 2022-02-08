@@ -664,8 +664,16 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                                 if (rc < 0) {
                                         goto bail;
                                 }
+                                break;
                         }
-
+                        if (httprequest->http_parser.http_errno != HPE_OK) {
+                                httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
+                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_ERROR, NULL);
+                                if (rc < 0) {
+                                        goto bail;
+                                }
+                                goto bail;
+                        }
                         clength = medusa_buffer_choke(medusa_tcpsocket_get_read_buffer_unlocked(httprequest->tcpsocket), 0, iovec.iov_len);
                         if (clength != (int64_t) iovec.iov_len) {
                                 goto bail;
