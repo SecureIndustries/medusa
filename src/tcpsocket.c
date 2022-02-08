@@ -769,6 +769,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                                 case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
                                                                 case WSATRY_AGAIN:      errno = EAGAIN;         break;
                                                                 case WSAEINTR:          errno = EINTR;          break;
+                                                                case WSAECONNRESET:     errno = ECONNRESET;     break;
                                                         }
                                                 }
 #endif
@@ -969,6 +970,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                                 case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
                                                                 case WSATRY_AGAIN:      errno = EAGAIN;         break;
                                                                 case WSAEINTR:          errno = EINTR;          break;
+                                                                case WSAECONNRESET:     errno = ECONNRESET;     break;
                                                         }
                                                 }
 #endif
@@ -1459,7 +1461,8 @@ bail:   if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                 medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR, &medusa_tcpsocket_event_error);
         }
-        return tcpsocket;
+        medusa_tcpsocket_destroy_unlocked(tcpsocket);
+        return MEDUSA_ERR_PTR(ret);
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_bind_with_options (const struct medusa_tcpsocket_bind_options *options)
@@ -1644,10 +1647,11 @@ bail:   if (MEDUSA_IS_ERR_OR_NULL(accepted)) {
                 struct medusa_tcpsocket_event_error medusa_tcpsocket_event_error;
                 medusa_tcpsocket_event_error.state = tcpsocket->state;
                 medusa_tcpsocket_event_error.error = -ret;
-                tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
-                medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR, &medusa_tcpsocket_event_error);
+                tcpsocket_set_state(accepted, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
+                medusa_tcpsocket_onevent_unlocked(accepted, MEDUSA_TCPSOCKET_EVENT_ERROR, &medusa_tcpsocket_event_error);
         }
-        return tcpsocket;
+        medusa_tcpsocket_destroy_unlocked(accepted);
+        return MEDUSA_ERR_PTR(ret);
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_accept_with_options (struct medusa_tcpsocket *tcpsocket, const struct medusa_tcpsocket_accept_options *options)
@@ -2132,6 +2136,7 @@ bind_ipv6:
                                         case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
                                         case WSATRY_AGAIN:      errno = EAGAIN;         break;
                                         case WSAEINTR:          errno = EINTR;          break;
+                                        case WSAECONNRESET:     errno = ECONNRESET;     break;
                                 }
                         }
 #endif
@@ -2486,7 +2491,8 @@ bail:   if (tcpsocket_addrinfo != NULL) {
                 tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                 medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR, &medusa_tcpsocket_event_error);
         }
-        return tcpsocket;
+        medusa_tcpsocket_destroy_unlocked(tcpsocket);
+        return MEDUSA_ERR_PTR(ret);
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_connect_with_options (const struct medusa_tcpsocket_connect_options *options)
@@ -2678,7 +2684,8 @@ bail:   if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                 medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR, &medusa_tcpsocket_event_error);
         }
-        return tcpsocket;
+        medusa_tcpsocket_destroy_unlocked(tcpsocket);
+        return MEDUSA_ERR_PTR(ret);
 }
 
 __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsocket_attach_with_options (const struct medusa_tcpsocket_attach_options *options)
