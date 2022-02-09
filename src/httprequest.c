@@ -1106,6 +1106,8 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_set_url (struct 
 __attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl_unlocked (struct medusa_httprequest *httprequest, const char *url, va_list va)
 {
         int rs;
+        int rc;
+        struct medusa_url medusa_url;
 
         int len;
         va_list vp;
@@ -1142,6 +1144,13 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl_unlocke
                 rs = -EIO;
                 goto bail;
         }
+
+        rc = medusa_url_init(&medusa_url, httprequest->url);
+        if (rc < 0) {
+                rs = -EINVAL;
+                goto bail;
+        }
+        medusa_url_uninit(&medusa_url);
 
         return 0;
 bail:   if (httprequest->url != NULL) {
