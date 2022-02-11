@@ -591,8 +591,7 @@ static int tcpsocket_rtimer_onevent (struct medusa_timer *timer, unsigned int ev
         }
 
         return 0;
-bail:   medusa_monitor_unlock(monitor);
-        return -1;
+bail:   return -1;
 }
 
 static int tcpsocket_wbuffer_commit (struct medusa_tcpsocket *tcpsocket)
