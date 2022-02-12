@@ -664,8 +664,16 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                                 if (rc < 0) {
                                         goto bail;
                                 }
+                                break;
                         }
-
+                        if (httprequest->http_parser.http_errno != HPE_OK) {
+                                httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
+                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_ERROR, NULL);
+                                if (rc < 0) {
+                                        goto bail;
+                                }
+                                goto bail;
+                        }
                         clength = medusa_buffer_choke(medusa_tcpsocket_get_read_buffer_unlocked(httprequest->tcpsocket), 0, iovec.iov_len);
                         if (clength != (int64_t) iovec.iov_len) {
                                 goto bail;
@@ -1098,6 +1106,8 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_set_url (struct 
 __attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl_unlocked (struct medusa_httprequest *httprequest, const char *url, va_list va)
 {
         int rs;
+        int rc;
+        struct medusa_url medusa_url;
 
         int len;
         va_list vp;
@@ -1134,6 +1144,13 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl_unlocke
                 rs = -EIO;
                 goto bail;
         }
+
+        rc = medusa_url_init(&medusa_url, httprequest->url);
+        if (rc < 0) {
+                rs = -EINVAL;
+                goto bail;
+        }
+        medusa_url_uninit(&medusa_url);
 
         return 0;
 bail:   if (httprequest->url != NULL) {

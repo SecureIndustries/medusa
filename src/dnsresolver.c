@@ -877,7 +877,6 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
                      dnsrequest_reply_answer != NULL;
                      dnsrequest_reply_answer = medusa_dnsrequest_reply_answer_get_next(dnsrequest_reply_answer)) {
                         struct medusa_dnsresolver_lookup_event_entry medusa_dnsresolver_lookup_event_entry;
-                        ttl = (ttl < 0) ? medusa_dnsrequest_reply_answer_get_ttl(dnsrequest_reply_answer) : MIN(ttl, medusa_dnsrequest_reply_answer_get_ttl(dnsrequest_reply_answer));
                         switch (medusa_dnsrequest_reply_answer_get_type(dnsrequest_reply_answer)) {
                                 case MEDUSA_DNSREQUEST_RECORD_TYPE_A:
                                         medusa_dnsresolver_lookup_event_entry.family   = MEDUSA_DNSRESOLVER_FAMILY_IPV4;
@@ -887,6 +886,7 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
                                         if (rc < 0) {
                                                 goto bail;
                                         }
+                                        ttl = (ttl < 0) ? medusa_dnsrequest_reply_answer_get_ttl(dnsrequest_reply_answer) : MIN(ttl, medusa_dnsrequest_reply_answer_get_ttl(dnsrequest_reply_answer));
                                         break;
                                 case MEDUSA_DNSREQUEST_RECORD_TYPE_AAAA:
                                         medusa_dnsresolver_lookup_event_entry.family   = MEDUSA_DNSRESOLVER_FAMILY_IPV6;
@@ -896,6 +896,7 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
                                         if (rc < 0) {
                                                 goto bail;
                                         }
+                                        ttl = (ttl < 0) ? medusa_dnsrequest_reply_answer_get_ttl(dnsrequest_reply_answer) : MIN(ttl, medusa_dnsrequest_reply_answer_get_ttl(dnsrequest_reply_answer));
                                         break;
                         }
                 }
