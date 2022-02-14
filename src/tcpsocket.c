@@ -667,6 +667,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                 struct medusa_tcpsocket_event_error medusa_tcpsocket_event_error;
                                 medusa_tcpsocket_event_error.state = tcpsocket->state;
                                 medusa_tcpsocket_event_error.error = valopt;
+                                medusa_tcpsocket_event_error.line  = __LINE__;
                                 rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                                 if (rc < 0) {
                                         goto bail;
@@ -778,6 +779,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                         struct medusa_tcpsocket_event_error medusa_tcpsocket_event_error;
                                                         medusa_tcpsocket_event_error.state = tcpsocket->state;
                                                         medusa_tcpsocket_event_error.error = errno;
+                                                        medusa_tcpsocket_event_error.line  = __LINE__;
                                                         rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                                                         if (rc < 0) {
                                                                 goto bail;
@@ -889,6 +891,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                         struct medusa_tcpsocket_event_error medusa_tcpsocket_event_error;
                                                         medusa_tcpsocket_event_error.state = tcpsocket->state;
                                                         medusa_tcpsocket_event_error.error = EIO;
+                                                        medusa_tcpsocket_event_error.line  = __LINE__;
                                                         rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                                                         if (rc < 0) {
                                                                 goto bail;
@@ -979,6 +982,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                         struct medusa_tcpsocket_event_error medusa_tcpsocket_event_error;
                                                         medusa_tcpsocket_event_error.state = tcpsocket->state;
                                                         medusa_tcpsocket_event_error.error = errno;
+                                                        medusa_tcpsocket_event_error.line  = __LINE__;
                                                         rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                                                         if (rc < 0) {
                                                                 goto bail;
@@ -1037,6 +1041,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                 struct medusa_tcpsocket_event_error medusa_tcpsocket_event_error;
                 medusa_tcpsocket_event_error.state = tcpsocket->state;
                 medusa_tcpsocket_event_error.error = EIO;
+                medusa_tcpsocket_event_error.line  = __LINE__;
                 rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                 if (rc < 0) {
                         goto bail;
@@ -1049,6 +1054,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                 struct medusa_tcpsocket_event_error medusa_tcpsocket_event_error;
                 medusa_tcpsocket_event_error.state = tcpsocket->state;
                 medusa_tcpsocket_event_error.error = ECONNRESET;
+                medusa_tcpsocket_event_error.line  = __LINE__;
                 rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                 if (rc < 0) {
                         goto bail;
@@ -1457,6 +1463,7 @@ bail:   if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 struct medusa_tcpsocket_event_error medusa_tcpsocket_event_error;
                 medusa_tcpsocket_event_error.state = tcpsocket->state;
                 medusa_tcpsocket_event_error.error = -ret;
+                medusa_tcpsocket_event_error.line  = __LINE__;
                 tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                 medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR, &medusa_tcpsocket_event_error);
         }
@@ -1646,6 +1653,7 @@ bail:   if (MEDUSA_IS_ERR_OR_NULL(accepted)) {
                 struct medusa_tcpsocket_event_error medusa_tcpsocket_event_error;
                 medusa_tcpsocket_event_error.state = tcpsocket->state;
                 medusa_tcpsocket_event_error.error = -ret;
+                medusa_tcpsocket_event_error.line  = __LINE__;
                 tcpsocket_set_state(accepted, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                 medusa_tcpsocket_onevent_unlocked(accepted, MEDUSA_TCPSOCKET_EVENT_ERROR, &medusa_tcpsocket_event_error);
         }
@@ -1873,6 +1881,7 @@ error:  {
                 struct medusa_tcpsocket_event_error medusa_tcpsocket_event_error;
                 medusa_tcpsocket_event_error.state = tcpsocket->state;
                 medusa_tcpsocket_event_error.error = -EIO;
+                medusa_tcpsocket_event_error.line  = __LINE__;
                 tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                 medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR, &medusa_tcpsocket_event_error);
         }
@@ -2487,6 +2496,7 @@ bail:   if (tcpsocket_addrinfo != NULL) {
                 struct medusa_tcpsocket_event_error medusa_tcpsocket_event_error;
                 medusa_tcpsocket_event_error.state = tcpsocket->state;
                 medusa_tcpsocket_event_error.error = -ret;
+                medusa_tcpsocket_event_error.line  = __LINE__;
                 tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                 medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR, &medusa_tcpsocket_event_error);
         }
@@ -2680,6 +2690,7 @@ bail:   if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 struct medusa_tcpsocket_event_error medusa_tcpsocket_event_error;
                 medusa_tcpsocket_event_error.state = tcpsocket->state;
                 medusa_tcpsocket_event_error.error = -ret;
+                medusa_tcpsocket_event_error.line  = __LINE__;
                 tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                 medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR, &medusa_tcpsocket_event_error);
         }

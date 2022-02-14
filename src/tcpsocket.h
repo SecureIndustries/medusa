@@ -168,6 +168,7 @@ struct medusa_tcpsocket_event_buffered_write {
 struct medusa_tcpsocket_event_error {
         unsigned int state;
         unsigned int error;
+        unsigned int line;
 };
 
 struct medusa_tcpsocket_event_state_changed {
