@@ -667,8 +667,14 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                                 break;
                         }
                         if (httprequest->http_parser.http_errno != HPE_OK) {
+                                struct medusa_httprequest_event_error medusa_httprequest_event_error;
+                                medusa_httprequest_event_error.state  = httprequest->state;
+                                medusa_httprequest_event_error.error  = EIO;
+                                medusa_httprequest_event_error.line   = __LINE__;
+                                medusa_httprequest_event_error.reason = MEDUSA_HTTPREQUEST_ERROR_REASON_PARSER;
+                                medusa_httprequest_event_error.u.parser.error = httprequest->http_parser.http_errno;
                                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
-                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_ERROR, NULL);
+                                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_ERROR, &medusa_httprequest_event_error);
                                 if (rc < 0) {
                                         goto bail;
                                 }
@@ -687,8 +693,17 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
+                struct medusa_tcpsocket_event_error *medusa_tcpsocket_event_error = (struct medusa_tcpsocket_event_error *) param;
+                struct medusa_httprequest_event_error medusa_httprequest_event_error;
+                medusa_httprequest_event_error.state  = httprequest->state;
+                medusa_httprequest_event_error.error  = EIO;
+                medusa_httprequest_event_error.line   = __LINE__;
+                medusa_httprequest_event_error.reason = MEDUSA_HTTPREQUEST_ERROR_REASON_TCPSOCKET;
+                medusa_httprequest_event_error.u.tcpsocket.state = medusa_tcpsocket_event_error->state;
+                medusa_httprequest_event_error.u.tcpsocket.error = medusa_tcpsocket_event_error->error;
+                medusa_httprequest_event_error.u.tcpsocket.line  = medusa_tcpsocket_event_error->line;
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
-                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_ERROR, NULL);
+                rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_ERROR, &medusa_httprequest_event_error);
                 if (rc < 0) {
                         goto bail;
                 }

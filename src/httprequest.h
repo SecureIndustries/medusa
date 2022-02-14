@@ -86,6 +86,30 @@ struct medusa_httprequest_init_options {
         void *context;
 };
 
+enum {
+        MEDUSA_HTTPREQUEST_ERROR_REASON_PARSER          = 0,
+        MEDUSA_HTTPREQUEST_ERROR_REASON_TCPSOCKET       = 1
+#define MEDUSA_HTTPREQUEST_ERROR_REASON_PARSER          MEDUSA_HTTPREQUEST_ERROR_REASON_PARSER
+#define MEDUSA_HTTPREQUEST_ERROR_REASON_TCPSOCKET       MEDUSA_HTTPREQUEST_ERROR_REASON_TCPSOCKET
+};
+
+struct medusa_httprequest_event_error {
+        unsigned int state;
+        unsigned int error;
+        unsigned int line;
+        unsigned int reason;
+        union {
+                struct {
+                        unsigned int state;
+                        unsigned int error;
+                        unsigned int line;
+                } tcpsocket;
+                struct {
+                        unsigned int error;
+                } parser;
+        } u;
+};
+
 #ifdef __cplusplus
 extern "C"
 {
