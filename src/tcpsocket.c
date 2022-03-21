@@ -729,7 +729,7 @@ static int tcpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                                                 wlength = -1;
                                                                 errno = EAGAIN;
                                                                 tcpsocket->ssl_wantwrite = 1;
-                                                                rc = medusa_io_del_events_unlocked(io, MEDUSA_IO_EVENT_OUT);
+                                                                rc = medusa_io_add_events_unlocked(io, MEDUSA_IO_EVENT_OUT);
                                                                 if (rc < 0) {
                                                                         goto bail;
                                                                 }
