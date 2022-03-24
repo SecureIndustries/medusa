@@ -1449,17 +1449,28 @@ static int httpserver_client_httpparser_on_header_field (http_parser *http_parse
         int rc;
         struct medusa_httpserver_client_request_header *header;
         struct medusa_httpserver_client *httpserver_client = http_parser->data;
-        header = medusa_httpserver_client_request_header_create();
-        if (MEDUSA_IS_ERR_OR_NULL(header)) {
-                return MEDUSA_PTR_ERR(header);
+        header = NULL;
+        if (!TAILQ_EMPTY(&httpserver_client->request->headers.list)) {
+                header = TAILQ_LAST(&httpserver_client->request->headers.list, medusa_httpserver_client_request_headers_list);
+                if (header->value != NULL) {
+                        header = NULL;
+                }
+        }
+        if (header == NULL) {
+                header = medusa_httpserver_client_request_header_create();
+                if (MEDUSA_IS_ERR_OR_NULL(header)) {
+                        return MEDUSA_PTR_ERR(header);
+                }
+                TAILQ_INSERT_TAIL(&httpserver_client->request->headers.list, header, list);
+                httpserver_client->request->headers.count += 1;
         }
         rc = medusa_httpserver_client_request_header_set_key(header, at, length);
         if (rc < 0) {
+                TAILQ_REMOVE(&httpserver_client->request->headers.list, header, list);
+                httpserver_client->request->headers.count -= 1;
                 medusa_httpserver_client_request_header_destroy(header);
                 return rc;
         }
-        TAILQ_INSERT_TAIL(&httpserver_client->request->headers.list, header, list);
-        httpserver_client->request->headers.count += 1;
         return 0;
 }
 
