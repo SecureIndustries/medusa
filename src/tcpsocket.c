@@ -3774,6 +3774,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_certificat
         }
 #else
         (void) certificate;
+        (void) length;
 #endif
         return 0;
 }
@@ -3907,6 +3908,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_privatekey
         }
 #else
         (void) privatekey;
+        (void) length;
 #endif
         return 0;
 }
