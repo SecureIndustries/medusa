@@ -31,7 +31,8 @@ enum {
         MEDUSA_UDPSOCKET_EVENT_OUT                      = (1 << 11), /* 0x00000800 */
         MEDUSA_UDPSOCKET_EVENT_DISCONNECTED             = (1 << 12), /* 0x00001000 */
         MEDUSA_UDPSOCKET_EVENT_ERROR                    = (1 << 13), /* 0x00002000 */
-        MEDUSA_UDPSOCKET_EVENT_DESTROY                  = (1 << 14)  /* 0x00004000 */
+        MEDUSA_UDPSOCKET_EVENT_STATE_CHANGED            = (1 << 14), /* 0x00008000 */
+        MEDUSA_UDPSOCKET_EVENT_DESTROY                  = (1 << 15)  /* 0x00010000 */
 #define MEDUSA_UDPSOCKET_EVENT_BINDING                  MEDUSA_UDPSOCKET_EVENT_BINDING
 #define MEDUSA_UDPSOCKET_EVENT_BOUND                    MEDUSA_UDPSOCKET_EVENT_BOUND
 #define MEDUSA_UDPSOCKET_EVENT_LISTENING                MEDUSA_UDPSOCKET_EVENT_LISTENING
@@ -45,6 +46,7 @@ enum {
 #define MEDUSA_UDPSOCKET_EVENT_OUT                      MEDUSA_UDPSOCKET_EVENT_OUT
 #define MEDUSA_UDPSOCKET_EVENT_DISCONNECTED             MEDUSA_UDPSOCKET_EVENT_DISCONNECTED
 #define MEDUSA_UDPSOCKET_EVENT_ERROR                    MEDUSA_UDPSOCKET_EVENT_ERROR
+#define MEDUSA_UDPSOCKET_EVENT_STATE_CHANGED            MEDUSA_UDPSOCKET_EVENT_STATE_CHANGED
 #define MEDUSA_UDPSOCKET_EVENT_DESTROY                  MEDUSA_UDPSOCKET_EVENT_DESTROY
 };
 
@@ -57,7 +59,8 @@ enum {
         MEDUSA_UDPSOCKET_STATE_RESOLVING                = 5,
         MEDUSA_UDPSOCKET_STATE_RESOLVED                 = 6,
         MEDUSA_UDPSOCKET_STATE_CONNECTING               = 7,
-        MEDUSA_UDPSOCKET_STATE_CONNECTED                = 8
+        MEDUSA_UDPSOCKET_STATE_CONNECTED                = 8,
+        MEDUSA_UDPSOCKET_STATE_ERROR                    = 9
 #define MEDUSA_UDPSOCKET_STATE_UNKNOWN                  MEDUSA_UDPSOCKET_STATE_UNKNOWN
 #define MEDUSA_UDPSOCKET_STATE_BINDING                  MEDUSA_UDPSOCKET_STATE_BINDING
 #define MEDUSA_UDPSOCKET_STATE_BOUND                    MEDUSA_UDPSOCKET_STATE_BOUND
@@ -67,6 +70,7 @@ enum {
 #define MEDUSA_UDPSOCKET_STATE_RESOLVED                 MEDUSA_UDPSOCKET_STATE_RESOLVED
 #define MEDUSA_UDPSOCKET_STATE_CONNECTING               MEDUSA_UDPSOCKET_STATE_CONNECTING
 #define MEDUSA_UDPSOCKET_STATE_CONNECTED                MEDUSA_UDPSOCKET_STATE_CONNECTED
+#define MEDUSA_UDPSOCKET_STATE_ERROR                    MEDUSA_UDPSOCKET_STATE_ERROR
 };
 
 struct medusa_udpsocket_bind_options {
@@ -112,6 +116,18 @@ struct medusa_udpsocket_attach_options {
         int clodestroy;
         int nonblocking;
         int enabled;
+};
+
+struct medusa_udpsocket_event_error {
+        unsigned int state;
+        unsigned int error;
+        unsigned int line;
+};
+
+struct medusa_udpsocket_event_state_changed {
+        unsigned int pstate;
+        unsigned int state;
+        unsigned int error;
 };
 
 #ifdef __cplusplus
