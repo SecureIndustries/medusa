@@ -196,16 +196,15 @@ static int udpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                 goto bail;
                         }
                         if (valopt != 0) {
-                                rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_DISCONNECTED, 0);
+                                struct medusa_udpsocket_event_error medusa_udpsocket_event_error;
+                                medusa_udpsocket_event_error.state = udpsocket->state;
+                                medusa_udpsocket_event_error.error = valopt;
+                                medusa_udpsocket_event_error.line  = __LINE__;
+                                rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_ERROR, medusa_udpsocket_event_error.error);
                                 if (rc < 0) {
                                         goto bail;
                                 }
-                                udpsocket->error = valopt;
-                                rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_ERROR, NULL);
-                                if (rc < 0) {
-                                        goto bail;
-                                }
-                                rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_DISCONNECTED, NULL);
+                                rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_ERROR, &medusa_udpsocket_event_error);
                                 if (rc < 0) {
                                         goto bail;
                                 }
@@ -274,24 +273,28 @@ static int udpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                         goto bail;
                 }
         } else if (events & MEDUSA_IO_EVENT_ERR) {
-                rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_ERROR, NULL);
+                struct medusa_udpsocket_event_error medusa_udpsocket_event_error;
+                medusa_udpsocket_event_error.state = udpsocket->state;
+                medusa_udpsocket_event_error.error = EIO;
+                medusa_udpsocket_event_error.line  = __LINE__;
+                rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_ERROR, medusa_udpsocket_event_error.error);
+                if (rc < 0) {
+                        goto bail;
+                }
+                rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_ERROR, &medusa_udpsocket_event_error);
                 if (rc < 0) {
                         goto bail;
                 }
         } else if (events & MEDUSA_IO_EVENT_HUP) {
-                rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_DISCONNECTED, 0);
+                struct medusa_udpsocket_event_error medusa_udpsocket_event_error;
+                medusa_udpsocket_event_error.state = udpsocket->state;
+                medusa_udpsocket_event_error.error = ECONNRESET;
+                medusa_udpsocket_event_error.line  = __LINE__;
+                rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_ERROR, medusa_udpsocket_event_error.error);
                 if (rc < 0) {
                         goto bail;
                 }
-                udpsocket->error = EIO;
-                if (rc < 0) {
-                        goto bail;
-                }
-                rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_ERROR, NULL);
-                if (rc < 0) {
-                        goto bail;
-                }
-                rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_DISCONNECTED, NULL);
+                rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_ERROR, &medusa_udpsocket_event_error);
                 if (rc < 0) {
                         goto bail;
                 }
