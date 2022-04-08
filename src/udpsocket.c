@@ -717,54 +717,36 @@ __attribute__ ((visibility ("default"))) struct medusa_udpsocket * medusa_udpsoc
         int ret;
 
         unsigned int protocol;
-        unsigned int domain;
+
+        struct addrinfo *result;
 
         struct medusa_io_init_options io_init_options;
         struct medusa_udpsocket *udpsocket;
 
+        result    = NULL;
         udpsocket = NULL;
 
         if (MEDUSA_IS_ERR_OR_NULL(options)) {
                 ret = -EINVAL;
                 goto bail;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(options->monitor)) {
-                ret = -EINVAL;
-                goto bail;
-        }
-        if (MEDUSA_IS_ERR_OR_NULL(options->onevent)) {
-                ret = -EINVAL;
-                goto bail;
-        }
 
         protocol = options->protocol;
-        if (protocol == MEDUSA_UDPSOCKET_PROTOCOL_IPV4) {
-                domain = AF_INET;
-        } else if (protocol == MEDUSA_UDPSOCKET_PROTOCOL_IPV6) {
-                domain = AF_INET6;
-        } else {
-                domain = AF_UNSPEC;
-        }
 
         udpsocket = udpsocket_create_unlocked(options->monitor, options->onevent, options->context);
         if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
                 ret = MEDUSA_PTR_ERR(udpsocket);
                 goto bail;
         }
-        udpsocket_add_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_BIND);
 
-        rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_BINDING, 0);
-        if (rc < 0) {
-                ret = rc;
+        if (protocol == MEDUSA_UDPSOCKET_PROTOCOL_IPV4) {
+                fd = socket(AF_INET, SOCK_DGRAM, 0);
+        } else if (protocol == MEDUSA_UDPSOCKET_PROTOCOL_IPV6) {
+                fd = socket(AF_INET6, SOCK_DGRAM, 0);
+        } else {
+                ret = -EINVAL;
                 goto bail;
         }
-        rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_CONNECTING, NULL);
-        if (rc < 0) {
-                ret = rc;
-                goto bail;
-        }
-
-        fd = socket(domain, SOCK_DGRAM, 0);
         if (fd < 0) {
                 ret = -errno;
                 goto bail;
@@ -799,25 +781,13 @@ __attribute__ ((visibility ("default"))) struct medusa_udpsocket * medusa_udpsoc
                 ret = rc;
                 goto bail;
         }
-        rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_CONNECTED, 0);
-        if (rc < 0) {
-                ret = rc;
-                goto bail;
-        }
-        rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_CONNECTED, NULL);
-        if (rc < 0) {
-                ret = rc;
-                goto bail;
-        }
 
-        rc = medusa_io_set_events_unlocked(udpsocket->io, MEDUSA_IO_EVENT_IN);
-        if (rc < 0) {
-                ret = rc;
-                goto bail;
-        }
-
+        freeaddrinfo(result);
         return udpsocket;
-bail:   if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
+bail:   if (result != NULL) {
+                freeaddrinfo(result);
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
                 return MEDUSA_ERR_PTR(ret);
         }
         {
@@ -2299,6 +2269,7 @@ __attribute__ ((visibility ("default"))) const char * medusa_udpsocket_event_str
         if (events == MEDUSA_UDPSOCKET_EVENT_OUT)                       return "MEDUSA_UDPSOCKET_EVENT_OUT";
         if (events == MEDUSA_UDPSOCKET_EVENT_DISCONNECTED)              return "MEDUSA_UDPSOCKET_EVENT_DISCONNECTED";
         if (events == MEDUSA_UDPSOCKET_EVENT_ERROR)                     return "MEDUSA_UDPSOCKET_EVENT_ERROR";
+        if (events == MEDUSA_UDPSOCKET_EVENT_STATE_CHANGED)             return "MEDUSA_UDPSOCKET_EVENT_STATE_CHANGED";
         if (events == MEDUSA_UDPSOCKET_EVENT_DESTROY)                   return "MEDUSA_UDPSOCKET_EVENT_DESTROY";
         return "MEDUSA_UDPSOCKET_EVENT_UNKNOWN";
 }
