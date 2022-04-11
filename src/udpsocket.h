@@ -206,6 +206,7 @@ unsigned int medusa_udpsocket_get_userdata_uint (struct medusa_udpsocket *udpsoc
 
 struct medusa_monitor * medusa_udpsocket_get_monitor (struct medusa_udpsocket *udpsocket);
 
+const char * medusa_udpsocket_protocol_string (unsigned int protocol);
 const char * medusa_udpsocket_state_string (unsigned int state);
 const char * medusa_udpsocket_event_string (unsigned int events);
 

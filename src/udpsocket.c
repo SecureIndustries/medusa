@@ -457,7 +457,7 @@ ipv6:
                 memset(&sockaddr_in6, 0, sizeof(sockaddr_in6));
                 sockaddr_in6.sin6_family = AF_INET6;
                 if (address == NULL) {
-                        address = "0.0.0.0";
+                        address = "::";
                 } else if (strcmp(address, "localhost") == 0) {
                         address = "::1";
                 } else if (strcmp(address, "loopback") == 0) {
@@ -2237,6 +2237,15 @@ __attribute__ ((visibility ("default"))) struct medusa_monitor * medusa_udpsocke
         rc = medusa_udpsocket_get_monitor_unlocked(udpsocket);
         medusa_monitor_unlock(udpsocket->subject.monitor);
         return rc;
+}
+
+__attribute__ ((visibility ("default"))) const char * medusa_udpsocket_protocol_string (unsigned int protocol)
+{
+        if (protocol == MEDUSA_UDPSOCKET_PROTOCOL_IPV4)         return "MEDUSA_UDPSOCKET_PROTOCOL_IPV4";
+        if (protocol == MEDUSA_UDPSOCKET_PROTOCOL_IPV6)         return "MEDUSA_UDPSOCKET_PROTOCOL_IPV6";
+        if (protocol == MEDUSA_UDPSOCKET_PROTOCOL_ANY)          return "MEDUSA_UDPSOCKET_PROTOCOL_ANY";
+        return "MEDUSA_UDPSOCKET_PROTOCOL_UNKNOWN";
+
 }
 
 __attribute__ ((visibility ("default"))) const char * medusa_udpsocket_state_string (unsigned int state)
