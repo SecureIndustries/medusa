@@ -106,6 +106,7 @@ struct medusa_dnsrequest_init_options {
         int port;
         unsigned int type;
         const char *name;
+        int id;
         double resolve_timeout;
         double connect_timeout;
         double receive_timeout;
@@ -158,6 +159,9 @@ int medusa_dnsrequest_get_type (struct medusa_dnsrequest *dnsrequest);
 
 int medusa_dnsrequest_set_name (struct medusa_dnsrequest *dnsrequest, const char *name);
 const char * medusa_dnsrequest_get_name (struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_set_id (struct medusa_dnsrequest *dnsrequest, int id);
+int medusa_dnsrequest_get_id (struct medusa_dnsrequest *dnsrequest);
 
 void * medusa_dnsrequest_get_context (struct medusa_dnsrequest *dnsrequest);
 int medusa_dnsrequest_set_context (struct medusa_dnsrequest *dnsrequest, void *context);

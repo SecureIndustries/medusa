@@ -103,6 +103,7 @@ struct medusa_dnsresolver_lookup_options {
         const char *nameserver;
         int port;
         const char *name;
+        int id;
         unsigned int family;
         int retry_count;
         double retry_interval;
@@ -204,6 +205,9 @@ int medusa_dnsresolver_lookup_get_family (struct medusa_dnsresolver_lookup *dnsr
 
 int medusa_dnsresolver_lookup_set_name (struct medusa_dnsresolver_lookup *dnsresolver_lookup, const char *name);
 const char * medusa_dnsresolver_lookup_get_name (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
+
+int medusa_dnsresolver_lookup_set_id (struct medusa_dnsresolver_lookup *dnsresolver_lookup, int id);
+int medusa_dnsresolver_lookup_get_id (struct medusa_dnsresolver_lookup *dnsresolver_lookup);
 
 int medusa_dnsresolver_lookup_set_retry_count (struct medusa_dnsresolver_lookup *dnsresolver_lookup, int retry_count);
 int medusa_dnsresolver_lookup_get_retry_count (struct medusa_dnsresolver_lookup *dnsresolver_lookup);

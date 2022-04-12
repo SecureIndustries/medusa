@@ -15,6 +15,7 @@ struct medusa_dnsrequest {
         int port;
         unsigned int type;
         char *name;
+        int id;
         void *userdata;
         struct medusa_udpsocket *udpsocket;
         struct medusa_dnsrequest_reply *reply;
