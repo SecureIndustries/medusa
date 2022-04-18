@@ -2255,6 +2255,7 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
 {
         int rc;
         int ret;
+        int line;
 
         int resolve;
         unsigned int protocol;
@@ -2264,11 +2265,15 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
 
         struct medusa_tcpsocket *tcpsocket;
 
+        ret = -EIO;
+        line = __LINE__;
+
         tcpsocket = NULL;
         tcpsocket_addrinfo = NULL;
 
         if (MEDUSA_IS_ERR_OR_NULL(options)) {
                 ret = -EINVAL;
+                line = __LINE__;
                 goto bail;
         }
 
@@ -2276,16 +2281,19 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
         address  = options->address;
         if (address == NULL) {
                 ret = -EINVAL;
+                line = __LINE__;
                 goto bail;
         }
         if (options->port == 0) {
                 ret = -EINVAL;
+                line = __LINE__;
                 goto bail;
         }
 
         tcpsocket = tcpsocket_create_unlocked(options->monitor, options->onevent, options->context);
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket)) {
                 ret = MEDUSA_PTR_ERR(tcpsocket);
+                line = __LINE__;
                 goto bail;
         }
         tcpsocket_add_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_CONNECT);
@@ -2296,26 +2304,31 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
         rc = medusa_tcpsocket_set_nonblocking_unlocked(tcpsocket, options->nonblocking);
         if (rc < 0) {
                 ret = rc;
+                line = __LINE__;
                 goto bail;
         }
         rc = medusa_tcpsocket_set_nodelay_unlocked(tcpsocket, options->nodelay);
         if (rc < 0) {
                 ret = rc;
+                line = __LINE__;
                 goto bail;
         }
         rc = medusa_tcpsocket_set_buffered_unlocked(tcpsocket, options->buffered);
         if (rc < 0) {
                 ret = rc;
+                line = __LINE__;
                 goto bail;
         }
         rc = medusa_tcpsocket_set_clodestroy_unlocked(tcpsocket, options->clodestroy);
         if (rc < 0) {
                 ret = rc;
+                line = __LINE__;
                 goto bail;
         }
         rc = medusa_tcpsocket_set_enabled_unlocked(tcpsocket, options->enabled);
         if (rc < 0) {
                 ret = rc;
+                line = __LINE__;
                 goto bail;
         }
 
@@ -2323,6 +2336,7 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 rc = medusa_tcpsocket_set_resolve_timeout_unlocked(tcpsocket, options->resolve_timeout);
                 if (rc < 0) {
                         ret = rc;
+                        line = __LINE__;
                         goto bail;
                 }
         }
@@ -2330,6 +2344,7 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 rc = medusa_tcpsocket_set_connect_timeout_unlocked(tcpsocket, options->connect_timeout);
                 if (rc < 0) {
                         ret = rc;
+                        line = __LINE__;
                         goto bail;
                 }
         }
@@ -2337,6 +2352,7 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 rc = medusa_tcpsocket_set_read_timeout_unlocked(tcpsocket, options->read_timeout);
                 if (rc < 0) {
                         ret = rc;
+                        line = __LINE__;
                         goto bail;
                 }
         }
@@ -2344,11 +2360,13 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
         rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_RESOLVING, 0);
         if (rc < 0) {
                 ret = rc;
+                line = __LINE__;
                 goto bail;
         }
         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_RESOLVING, NULL);
         if (rc < 0) {
                 ret = rc;
+                line = __LINE__;
                 goto bail;
         }
 
@@ -2356,6 +2374,7 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
         tcpsocket->ssl_hostname = strdup(address);
         if (tcpsocket->ssl_hostname == NULL) {
                 ret = -ENOMEM;
+                line = __LINE__;
                 goto bail;
         }
 #endif
@@ -2407,10 +2426,12 @@ ipv6:
                 struct sockaddr_in6 sockaddr_in6;
                 rc = inet_pton(AF_INET, address, &sockaddr_in.sin_addr);
                 if (rc == 1) {
+                        line = __LINE__;
                         goto ipv4;
                 }
                 rc = inet_pton(AF_INET6, address, &sockaddr_in6.sin6_addr);
                 if (rc == 1) {
+                        line = __LINE__;
                         goto ipv6;
                 }
         }
@@ -2437,17 +2458,20 @@ ipv6:
                 rc = getaddrinfo(address, NULL, &hints, &result);
                 if (rc != 0) {
                         ret = -EIO;
+                        line = __LINE__;
                         goto bail;
                 }
                 tcpsocket_addrinfo = tcpsocket_addrinfo_create_from_addrinfo(result);
                 if (tcpsocket_addrinfo == NULL) {
                         ret = -ENOMEM;
+                        line = __LINE__;
                         freeaddrinfo(result);
                         goto bail;
                 }
                 rc = medusa_tcpsocket_connect_resolved(tcpsocket, options, tcpsocket_addrinfo);
                 if (rc < 0) {
                         ret = rc;
+                        line = __LINE__;
                         freeaddrinfo(result);
                         goto bail;
                 }
@@ -2457,11 +2481,13 @@ ipv6:
                 tcpsocket->coptions = medusa_tcpsocket_connect_options_duplicate(options);
                 if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->coptions)) {
                         ret = MEDUSA_PTR_ERR(tcpsocket->coptions);
+                        line = __LINE__;
                         goto bail;
                 }
                 rc = medusa_dnsresolver_lookup_options_default(&dnsresolver_lookup_options);
                 if (rc < 0) {
                         ret = rc;
+                        line = __LINE__;
                         goto bail;
                 }
                 dnsresolver_lookup_options.onevent              = tcpsocket_dnsresolver_onevent;
@@ -2478,6 +2504,7 @@ ipv6:
                 tcpsocket->clookup = medusa_dnsresolver_lookup_with_options_unlocked(options->dnsresolver, &dnsresolver_lookup_options);
                 if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->clookup)) {
                         ret = MEDUSA_PTR_ERR(tcpsocket->clookup);
+                        line = __LINE__;
                         goto bail;
                 }
         }
@@ -2496,7 +2523,7 @@ bail:   if (tcpsocket_addrinfo != NULL) {
                 struct medusa_tcpsocket_event_error medusa_tcpsocket_event_error;
                 medusa_tcpsocket_event_error.state = tcpsocket->state;
                 medusa_tcpsocket_event_error.error = -ret;
-                medusa_tcpsocket_event_error.line  = __LINE__;
+                medusa_tcpsocket_event_error.line  = line;
                 tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_ERROR, medusa_tcpsocket_event_error.error);
                 medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_ERROR, &medusa_tcpsocket_event_error);
         }
