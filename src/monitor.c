@@ -92,6 +92,7 @@ struct medusa_monitor {
                 struct medusa_pqueue_head *pqueue;
                 int fired;
                 int dirty;
+                int valid;
                 struct medusa_io *io;
         } timer;
         struct {
@@ -745,8 +746,9 @@ static int monitor_setup_timer (struct medusa_monitor *monitor, struct timespec 
                         goto bail;
                 }
                 monitor->timer.dirty = 0;
+                monitor->timer.valid = (timer) ? 1 : 0;
         }
-        if (monitor->timer.backend->fd == NULL) {
+        if (monitor->timer.backend->fd == NULL && monitor->timer.valid == 1) {
                 rc = monitor->timer.backend->get(monitor->timer.backend, remaining);
                 if (rc < 0) {
                         goto bail;
@@ -781,7 +783,7 @@ static int monitor_check_timer (struct medusa_monitor *monitor)
         int rc;
         struct timespec now;
         struct timespec rem;
-        if (monitor->timer.backend->fd == NULL) {
+        if (monitor->timer.backend->fd == NULL && monitor->timer.valid == 1) {
                 rc = monitor->timer.backend->get(monitor->timer.backend, &rem);
                 if (rc < 0) {
                         goto bail;
@@ -1569,10 +1571,9 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
         if (rc < 0) {
                 goto bail;
         }
-
         medusa_monitor_unlock(monitor);
 
-        if (medusa_timespec_isset(&remaining)) {
+        if (monitor->timer.valid == 1) {
                 if (timespec == NULL ||
                     medusa_timespec_compare(&remaining, timespec, <)) {
                         timespec = &remaining;
