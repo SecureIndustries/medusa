@@ -47,6 +47,7 @@ static int test_poll (unsigned int poll)
         int rc;
         int count;
 
+        struct medusa_timer *timer;
         struct medusa_monitor_init_options options;
 
         count = 0;
@@ -61,8 +62,8 @@ static int test_poll (unsigned int poll)
                 goto bail;
         }
 
-        rc = medusa_timer_create_singleshot(g_monitor, 0.1, timer_onevent, &count);
-        if (rc < 0) {
+        timer = medusa_timer_create_singleshot(g_monitor, 0.1, timer_onevent, &count);
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
                 fprintf(stderr, "medusa_timer_create_singleshot failed\n");
                 goto bail;
         }
