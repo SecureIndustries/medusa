@@ -29,6 +29,9 @@ int medusa_timer_get_remaining_timespec_unlocked (const struct medusa_timer *tim
 int medusa_timer_set_singleshot_unlocked (struct medusa_timer *timer, int singleshot);
 int medusa_timer_get_singleshot_unlocked (const struct medusa_timer *timer);
 
+int medusa_timer_set_accuracy_unlocked (struct medusa_timer *timer, unsigned int accuracy);
+unsigned int medusa_timer_get_accuracy_unlocked (const struct medusa_timer *timer);
+
 int medusa_timer_set_resolution_unlocked (struct medusa_timer *timer, unsigned int resolution);
 unsigned int medusa_timer_get_resolution_unlocked (const struct medusa_timer *timer);
 

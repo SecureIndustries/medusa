@@ -28,16 +28,20 @@ enum {
         MEDUSA_TIMER_FLAG_ENABLED       = (1 <<  0),
         MEDUSA_TIMER_FLAG_SINGLE_SHOT   = (1 <<  1),
         MEDUSA_TIMER_FLAG_AUTO_DESTROY  = (1 <<  2),
-        MEDUSA_TIMER_FLAG_NANOSECONDS   = (1 <<  3),
-        MEDUSA_TIMER_FLAG_MICROSECONDS  = (1 <<  4),
-        MEDUSA_TIMER_FLAG_MILLISECONDS  = (1 <<  5),
-        MEDUSA_TIMER_FLAG_SECONDS       = (1 <<  6),
-        MEDUSA_TIMER_FLAG_FIRED         = (1 <<  7),
-        MEDUSA_TIMER_FLAG_INITIAL       = (1 <<  8),
-        MEDUSA_TIMER_FLAG_INTERVAL      = (1 <<  9),
+        MEDUSA_TIMER_FLAG_TICK          = (1 <<  3),
+        MEDUSA_TIMER_FLAG_INCREMENTAL   = (1 <<  4),
+        MEDUSA_TIMER_FLAG_NANOSECONDS   = (1 <<  5),
+        MEDUSA_TIMER_FLAG_MICROSECONDS  = (1 <<  6),
+        MEDUSA_TIMER_FLAG_MILLISECONDS  = (1 <<  7),
+        MEDUSA_TIMER_FLAG_SECONDS       = (1 <<  8),
+        MEDUSA_TIMER_FLAG_FIRED         = (1 <<  9),
+        MEDUSA_TIMER_FLAG_INITIAL       = (1 << 10),
+        MEDUSA_TIMER_FLAG_INTERVAL      = (1 << 11),
 #define MEDUSA_TIMER_FLAG_ENABLED       MEDUSA_TIMER_FLAG_ENABLED
 #define MEDUSA_TIMER_FLAG_SINGLE_SHOT   MEDUSA_TIMER_FLAG_SINGLE_SHOT
 #define MEDUSA_TIMER_FLAG_AUTO_DESTROY  MEDUSA_TIMER_FLAG_AUTO_DESTROY
+#define MEDUSA_TIMER_FLAG_TICK          MEDUSA_TIMER_FLAG_TICK
+#define MEDUSA_TIMER_FLAG_INCREMENTAL   MEDUSA_TIMER_FLAG_INCREMENTAL
 #define MEDUSA_TIMER_FLAG_NANOSECONDS   MEDUSA_TIMER_FLAG_NANOSECONDS
 #define MEDUSA_TIMER_FLAG_MICROSECONDS  MEDUSA_TIMER_FLAG_MICROSECONDS
 #define MEDUSA_TIMER_FLAG_MILLISECONDS  MEDUSA_TIMER_FLAG_MILLISECONDS
@@ -139,6 +143,23 @@ static int timer_set_resolution (struct medusa_timer *timer, unsigned int resolu
         return 0;
 }
 
+static int timer_set_accuracy (struct medusa_timer *timer, unsigned int accuracy)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return -EINVAL;
+        }
+        timer->flags &= ~MEDUSA_TIMER_FLAG_TICK;
+        timer->flags &= ~MEDUSA_TIMER_FLAG_INCREMENTAL;
+        if (accuracy == MEDUSA_TIMER_ACCURACY_TICK) {
+                timer->flags |= MEDUSA_TIMER_FLAG_TICK;
+        } else if (accuracy == MEDUSA_TIMER_ACCURACY_INCREMENTAL) {
+                timer->flags |= MEDUSA_TIMER_FLAG_INCREMENTAL;
+        } else {
+                timer->flags |= MEDUSA_TIMER_FLAG_INCREMENTAL;
+        }
+        return 0;
+}
+
 static int timer_set_enabled (struct medusa_timer *timer, int enabled)
 {
         if (MEDUSA_IS_ERR_OR_NULL(timer)) {
@@ -173,6 +194,7 @@ static int timer_init_with_options_unlocked (struct medusa_timer *timer, const s
         timer->context = options->context;
         timer_set_initial(timer, options->initial);
         timer_set_interval(timer, options->interval);
+        timer_set_accuracy(timer, options->accuracy);
         timer_set_resolution(timer, options->resolution);
         timer_set_singleshot(timer, options->singleshot);
         timer_set_enabled(timer, options->enabled);
@@ -199,6 +221,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_init_options_default (
                 return -EINVAL;
         }
         memset(options, 0, sizeof(struct medusa_timer_init_options));
+        options->accuracy   = MEDUSA_TIMER_ACCURACY_DEFAULT;
         options->resolution = MEDUSA_TIMER_RESOLUTION_DEFAULT;
         return 0;
 }
@@ -750,6 +773,60 @@ __attribute__ ((visibility ("default"))) int medusa_timer_get_singleshot (const 
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_timer_set_accuracy_unlocked (struct medusa_timer *timer, unsigned int accuracy)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return -EINVAL;
+        }
+        rc = timer_set_accuracy(timer, accuracy);
+        if (rc < 0) {
+                return rc;
+        }
+        return medusa_monitor_mod_unlocked(&timer->subject);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_set_accuracy (struct medusa_timer *timer, unsigned int accuracy)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(timer->subject.monitor);
+        rc = medusa_timer_set_accuracy_unlocked(timer, accuracy);
+        medusa_monitor_unlock(timer->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_timer_get_accuracy_unlocked (const struct medusa_timer *timer)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return -EINVAL;
+        }
+        if (timer->flags & MEDUSA_TIMER_FLAG_NANOSECONDS) {
+                return MEDUSA_TIMER_RESOLUTION_NANOSECOMDS;
+        } else if (timer->flags & MEDUSA_TIMER_FLAG_MICROSECONDS) {
+                return MEDUSA_TIMER_RESOLUTION_MICROSECONDS;
+        } else if (timer->flags & MEDUSA_TIMER_FLAG_MILLISECONDS) {
+                return MEDUSA_TIMER_RESOLUTION_MILLISECONDS;
+        } else if (timer->flags & MEDUSA_TIMER_FLAG_SECONDS) {
+                return MEDUSA_TIMER_RESOLUTION_SECONDS;
+        }
+        return MEDUSA_TIMER_RESOLUTION_DEFAULT;
+}
+
+__attribute__ ((visibility ("default"))) unsigned int medusa_timer_get_accuracy (const struct medusa_timer *timer)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(timer)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(timer->subject.monitor);
+        rc = medusa_timer_get_accuracy(timer);
+        medusa_monitor_unlock(timer->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_timer_set_resolution_unlocked (struct medusa_timer *timer, unsigned int resolution)
 {
         int rc;
@@ -877,15 +954,19 @@ __attribute__ ((visibility ("default"))) int medusa_timer_update_timespec_unlock
         unsigned int resolution;
         if (timer->flags & MEDUSA_TIMER_FLAG_FIRED) {
                 if (timer->flags & MEDUSA_TIMER_FLAG_INTERVAL) {
-                        medusa_timespec_add(&timer->interval, now, &timer->_timespec);
-                } else {
+                        medusa_timespec_add(now, &timer->interval, &timer->_timespec);
+                } else if (timer->flags & MEDUSA_TIMER_FLAG_TICK) {
                         medusa_timespec_add(&timer->_timespec, &timer->interval, &timer->_timespec);
+                } else if (timer->flags & MEDUSA_TIMER_FLAG_INCREMENTAL) {
+                        medusa_timespec_add(now, &timer->interval, &timer->_timespec);
+                } else {
+                        medusa_timespec_add(now, &timer->interval, &timer->_timespec);
                 }
         } else {
                 if (medusa_timespec_isset(&timer->initial)) {
-                        medusa_timespec_add(&timer->initial, now, &timer->_timespec);
+                        medusa_timespec_add(now, &timer->initial, &timer->_timespec);
                 } else {
-                        medusa_timespec_add(&timer->interval, now, &timer->_timespec);
+                        medusa_timespec_add(now, &timer->interval, &timer->_timespec);
                 }
         }
         timer->flags &= ~MEDUSA_TIMER_FLAG_INITIAL;

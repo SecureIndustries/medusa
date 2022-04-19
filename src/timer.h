@@ -6,16 +6,25 @@
 #define MEDUSA_TIMER_INTERVAL_ASAP      1e-9
 
 enum {
+        MEDUSA_TIMER_ACCURACY_TICK              = 1,
+        MEDUSA_TIMER_ACCURACY_INCREMENTAL       = 2,
+        MEDUSA_TIMER_ACCURACY_DEFAULT           = MEDUSA_TIMER_ACCURACY_INCREMENTAL
+#define MEDUSA_TIMER_ACCURACY_TICK              MEDUSA_TIMER_ACCURACY_TICK
+#define MEDUSA_TIMER_ACCURACY_INCREMENTAL       MEDUSA_TIMER_ACCURACY_INCREMENTAL
+#define MEDUSA_TIMER_ACCURACY_DEFAULT           MEDUSA_TIMER_ACCURACY_DEFAULT
+};
+
+enum {
         MEDUSA_TIMER_RESOLUTION_NANOSECOMDS     = 1,
         MEDUSA_TIMER_RESOLUTION_MICROSECONDS    = 2,
         MEDUSA_TIMER_RESOLUTION_MILLISECONDS    = 3,
         MEDUSA_TIMER_RESOLUTION_SECONDS         = 4,
         MEDUSA_TIMER_RESOLUTION_DEFAULT         = MEDUSA_TIMER_RESOLUTION_MILLISECONDS
-#define MEDUSA_TIMER_RESOLUTION_DEFAULT         MEDUSA_TIMER_RESOLUTION_DEFAULT
 #define MEDUSA_TIMER_RESOLUTION_NANOSECOMDS     MEDUSA_TIMER_RESOLUTION_NANOSECOMDS
 #define MEDUSA_TIMER_RESOLUTION_MICROSECONDS    MEDUSA_TIMER_RESOLUTION_MICROSECONDS
 #define MEDUSA_TIMER_RESOLUTION_MILLISECONDS    MEDUSA_TIMER_RESOLUTION_MILLISECONDS
 #define MEDUSA_TIMER_RESOLUTION_SECONDS         MEDUSA_TIMER_RESOLUTION_SECONDS
+#define MEDUSA_TIMER_RESOLUTION_DEFAULT         MEDUSA_TIMER_RESOLUTION_DEFAULT
 };
 
 enum {
@@ -37,6 +46,7 @@ struct medusa_timer_init_options {
         double initial;
         double interval;
         int singleshot;
+        unsigned int accuracy;
         unsigned int resolution;
         int enabled;
 };
@@ -72,6 +82,9 @@ int medusa_timer_get_remaining_timespec (const struct medusa_timer *timer, struc
 
 int medusa_timer_set_singleshot (struct medusa_timer *timer, int singleshot);
 int medusa_timer_get_singleshot (const struct medusa_timer *timer);
+
+int medusa_timer_set_accuracy (struct medusa_timer *timer, unsigned int accuracy);
+unsigned int medusa_timer_get_accuracy (const struct medusa_timer *timer);
 
 int medusa_timer_set_resolution (struct medusa_timer *timer, unsigned int resolution);
 unsigned int medusa_timer_get_resolution (const struct medusa_timer *timer);
