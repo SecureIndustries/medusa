@@ -903,7 +903,7 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
                 if (ttl > 0) {
                         struct timespec now;
                         struct medusa_dnsresolver_entry *entry;
-                        medusa_clock_monotonic_raw(&now);
+                        medusa_clock_monotonic_coarse(&now);
                         entry = malloc(sizeof(struct medusa_dnsresolver_entry));
                         if (entry == NULL) {
                                 goto bail;
@@ -1058,7 +1058,7 @@ static inline int dnsresolver_lookup_set_state (struct medusa_dnsresolver_lookup
                 struct medusa_dnsresolver_entry *nentry;
                 struct medusa_dnsrequest_init_options dnsrequest_init_options;
 
-                medusa_clock_monotonic_raw(&now);
+                medusa_clock_monotonic_coarse(&now);
                 TAILQ_FOREACH_SAFE(entry, &dnsresolver_lookup->dnsresolver->entries, tailq, nentry) {
                         const struct medusa_dnsrequest_reply_answer *dnsrequest_reply_answer;
                         if (medusa_timespec_compare(&now, &entry->then, >=)) {

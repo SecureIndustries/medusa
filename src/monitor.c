@@ -539,7 +539,7 @@ static int monitor_process_changes (struct medusa_monitor *monitor)
         struct timespec now;
         struct medusa_subject *subject;
         struct medusa_subject *nsubject;
-        rc = medusa_clock_monotonic_raw(&now);
+        rc = medusa_clock_monotonic(&now);
         if (rc < 0) {
                 goto bail;
         }
@@ -792,7 +792,7 @@ static int monitor_check_timer (struct medusa_monitor *monitor)
                 }
         }
         if (monitor->timer.fired != 0) {
-                rc = medusa_clock_monotonic_raw(&now);
+                rc = medusa_clock_monotonic(&now);
                 if (rc < 0) {
                         goto bail;
                 }

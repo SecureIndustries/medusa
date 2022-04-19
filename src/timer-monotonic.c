@@ -45,7 +45,7 @@ static int internal_get (struct medusa_timer_backend *backend, struct timespec *
                 goto bail;
         }
         if (medusa_timespec_isset(&internal->timespec)) {
-                rc = medusa_clock_monotonic_raw(&now);
+                rc = medusa_clock_monotonic(&now);
                 if (rc < 0) {
                         goto bail;
                 }

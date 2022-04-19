@@ -679,7 +679,7 @@ __attribute__ ((visibility ("default"))) int medusa_timer_get_remaining_timespec
         if (!medusa_timer_get_enabled_unlocked(timer)) {
                 return -EAGAIN;
         }
-        rc = medusa_clock_monotonic_raw(&now);
+        rc = medusa_clock_monotonic(&now);
         if (rc < 0) {
                 return rc;
         }
