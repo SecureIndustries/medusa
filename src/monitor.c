@@ -1579,6 +1579,13 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
                 }
         }
 
+        if (timespec) {
+                if (timespec->tv_sec < 0 || timespec->tv_nsec < 0) {
+                        timespec->tv_sec = 0;
+                        timespec->tv_nsec = 0;
+                }
+        }
+
         rc = monitor->poll.backend->run(monitor->poll.backend, timespec);
 
         medusa_monitor_lock(monitor);
