@@ -2495,6 +2495,29 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_get_fd_unlocked (struct medusa_httpserver_client *httpserver_client)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client->tcpsocket)) {
+                return -EINVAL;
+        }
+        return medusa_tcpsocket_get_fd_unlocked(httpserver_client->tcpsocket);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_get_fd (struct medusa_httpserver_client *httpserver_client)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httpserver_client->subject.monitor);
+        rc = medusa_httpserver_client_get_fd_unlocked(httpserver_client);
+        medusa_monitor_unlock(httpserver_client->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_httpserver_client_get_sockname_unlocked (struct medusa_httpserver_client *httpserver_client, struct sockaddr_storage *sockaddr)
 {
         if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {

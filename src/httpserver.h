@@ -240,6 +240,7 @@ int medusa_httpserver_client_reply_send_bodyf (struct medusa_httpserver_client *
 int medusa_httpserver_client_reply_send_vbody (struct medusa_httpserver_client *httpserver_client, const char *body, va_list va);
 int medusa_httpserver_client_reply_send_finish (struct medusa_httpserver_client *httpserver_client);
 
+int medusa_httpserver_client_get_fd (struct medusa_httpserver_client *httpserver_client);
 int medusa_httpserver_client_get_sockname (struct medusa_httpserver_client *httpserver_client, struct sockaddr_storage *sockaddr);
 int medusa_httpserver_client_get_peername (struct medusa_httpserver_client *httpserver_client, struct sockaddr_storage *sockaddr);
 
