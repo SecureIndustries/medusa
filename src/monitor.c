@@ -1573,7 +1573,7 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
         }
         medusa_monitor_unlock(monitor);
 
-        if (monitor->timer.valid == 1) {
+        if (monitor->timer.backend->fd == NULL && monitor->timer.valid == 1) {
                 if (timespec == NULL ||
                     medusa_timespec_compare(&remaining, timespec, <)) {
                         timespec = &remaining;
