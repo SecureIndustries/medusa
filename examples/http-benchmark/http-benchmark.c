@@ -1305,6 +1305,7 @@ int main (int argc, char *argv[])
 out:    TAILQ_FOREACH_SAFE(client, &clients, clients, nclient) {
                 TAILQ_REMOVE(&clients, client, clients);
                 client_destroy(client);
+                nclients = nclients - 1;
         }
         TAILQ_FOREACH_SAFE(port, &ports, ports, nport) {
                 TAILQ_REMOVE(&ports, port, ports);
