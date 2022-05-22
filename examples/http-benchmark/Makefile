@@ -13,10 +13,6 @@ medusa-http-benchmark_files-y = \
 	../../3rdparty/http-parser/http_parser.c \
 	http-benchmark.c
 
-medusa-http-benchmark_cflags-y = \
-	-Wno-error=unused-but-set-variable \
-	-Wno-unused-but-set-variable
-
 medusa-http-benchmark_ldflags-y = \
 	../../dist/lib/libmedusa.a
 
