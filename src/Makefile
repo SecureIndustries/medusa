@@ -117,8 +117,6 @@ libmedusa.a_files-y += \
 	../3rdparty/SPCDNS/src/mappings.c \
 	../3rdparty/SPCDNS/src/output.c
 
-ifneq ($(__DARWIN__), y)
-
 libmedusa.a_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
 	-DNDEBUG \
 	-Wno-error=unused-but-set-variable \
@@ -134,7 +132,6 @@ libmedusa.so.${MEDUSA_SONAME}_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
 	-Wno-error=unused-but-set-variable \
 	-Wno-unused-but-set-variable
 
-endif
 
 libmedusa.a_files-y += \
 	httpserver.c \
