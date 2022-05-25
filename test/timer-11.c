@@ -93,7 +93,7 @@ bail:   if (g_monitor != NULL) {
         return -1;
 }
 
-#if !defined(_WIN32)
+#if !defined(__WINDOWS__)
 
 static void alarm_handler (int sig)
 {

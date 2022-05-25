@@ -6,7 +6,7 @@
 #include <getopt.h>
 #include <signal.h>
 
-#if defined(_WIN32)
+#if defined(__WINDOWS__)
 #include <winsock2.h>
 #endif
 
@@ -201,7 +201,7 @@ int main (int argc, char *argv[])
         struct medusa_httpserver_init_options httpserver_init_options;
         struct medusa_httpserver *httpserver;
 
-#if defined(_WIN32)
+#if defined(__WINDOWS__)
         WSADATA wsaData;
         WSAStartup(MAKEWORD(2,2), &wsaData);
 #endif

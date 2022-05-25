@@ -2,7 +2,7 @@
 #include <errno.h>
 #include <time.h>
 
-#if defined(_WIN32)
+#if defined(__WINDOWS__)
 #include <profileapi.h>
 #endif
 
@@ -64,7 +64,7 @@ __attribute__ ((visibility ("default"))) int medusa_clock_monotonic_raw (struct 
         if (MEDUSA_IS_ERR_OR_NULL(timespec)) {
                 return -EINVAL;
         }
-#if defined(_WIN32)
+#if defined(__WINDOWS__)
         LARGE_INTEGER performanceCount;
         static LARGE_INTEGER performanceFrequency = { 0 };
         if (performanceFrequency.QuadPart == 0) {

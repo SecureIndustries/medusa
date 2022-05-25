@@ -5,7 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
-#if defined(_WIN32)
+#if defined(__WINDOWS__)
 #include <winsock2.h>
 #include <wspiapi.h>
 #else
@@ -69,7 +69,7 @@ static struct medusa_pool *g_pool;
 
 static inline void udpsocket_closesocket (int fd)
 {
-#if defined(_WIN32)
+#if defined(__WINDOWS__)
         closesocket(fd);
 #else
         close(fd);
@@ -982,7 +982,7 @@ __attribute__ ((visibility ("default"))) struct medusa_udpsocket * medusa_udpsoc
                 }
                 {
                         int rc;
-#if defined(_WIN32)
+#if defined(__WINDOWS__)
                         unsigned long nonblocking = options->nonblocking ? 1 : 0;
                         rc = ioctlsocket(fd, FIONBIO, &nonblocking);
 #else
@@ -1439,7 +1439,7 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_set_nonblocking_un
         }
         if (!MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
                 int rc;
-#if defined(_WIN32)
+#if defined(__WINDOWS__)
                 unsigned long nonblocking = enabled ? 1 : 0;
                 rc = ioctlsocket(medusa_io_get_fd_unlocked(udpsocket->io), FIONBIO, &nonblocking);
 #else

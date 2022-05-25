@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#if defined(_WIN32)
+#if defined(__WINDOWS__)
 #define FD_SETSIZE      8192
 #include <winsock2.h>
 #else
@@ -23,7 +23,7 @@
 
 #if defined(__DARWIN__) && (__DARWIN__ == 1)
 #define SELECT_FD_SETSIZE       __DARWIN_FD_SETSIZE
-#elif defined(_WIN32)
+#elif defined(__WINDOWS__)
 #define SELECT_FD_SETSIZE       FD_SETSIZE
 #else
 #define SELECT_FD_SETSIZE       __FD_SETSIZE
