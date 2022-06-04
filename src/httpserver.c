@@ -1737,13 +1737,21 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
                 }
         } else if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
                 struct medusa_tcpsocket_event_error *medusa_tcpsocket_event_error = (struct medusa_tcpsocket_event_error *) param;
+                struct medusa_httpserver_client_event_error medusa_httpserver_client_event_error;
+                medusa_httpserver_client_event_error.state  = httpserver_client->state;
+                medusa_httpserver_client_event_error.error  = EIO;
+                medusa_httpserver_client_event_error.line   = __LINE__;
+                medusa_httpserver_client_event_error.reason = MEDUSA_HTTPSERVER_CLIENT_ERROR_REASON_TCPSOCKET;
+                medusa_httpserver_client_event_error.u.tcpsocket.state = medusa_tcpsocket_event_error->state;
+                medusa_httpserver_client_event_error.u.tcpsocket.error = medusa_tcpsocket_event_error->error;
+                medusa_httpserver_client_event_error.u.tcpsocket.line  = medusa_tcpsocket_event_error->line;
                 rc = httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_ERROR);
                 if (rc < 0) {
                         error = rc;
                         goto bail;
                 }
                 httpserver_client->error = medusa_tcpsocket_event_error->error;
-                rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR, NULL);
+                rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR, &medusa_httpserver_client_event_error);
                 if (rc < 0) {
                         error = rc;
                         goto bail;

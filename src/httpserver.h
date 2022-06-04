@@ -127,6 +127,27 @@ struct medusa_httpserver_client_event_buffered_write {
         int64_t remaining;
 };
 
+enum {
+        MEDUSA_HTTPSERVER_CLIENT_ERROR_REASON_UNKNOWN   = 0,
+        MEDUSA_HTTPSERVER_CLIENT_ERROR_REASON_TCPSOCKET = 1
+#define MEDUSA_HTTPSERVER_CLIENT_ERROR_REASON_UNKNOWN   MEDUSA_HTTPSERVER_CLIENT_ERROR_REASON_UNKNOWN
+#define MEDUSA_HTTPSERVER_CLIENT_ERROR_REASON_TCPSOCKET MEDUSA_HTTPSERVER_CLIENT_ERROR_REASON_TCPSOCKET
+};
+
+struct medusa_httpserver_client_event_error {
+        unsigned int state;
+        unsigned int error;
+        unsigned int line;
+        unsigned int reason;
+        union {
+                struct {
+                        unsigned int state;
+                        unsigned int error;
+                        unsigned int line;
+                } tcpsocket;
+        } u;
+};
+
 #ifdef __cplusplus
 extern "C"
 {
