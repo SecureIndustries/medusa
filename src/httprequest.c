@@ -57,15 +57,6 @@ static void url_uninit (struct url *url)
         memset(url, 0, sizeof(struct url));
 }
 
-static int url_init (struct url *url)
-{
-        if (url == NULL) {
-                return -EINVAL;
-        }
-        memset(url, 0, sizeof(struct url));
-        return 0;
-}
-
 static int url_parse (struct url *url, const char *uri)
 {
         char *i;
@@ -1147,7 +1138,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_set_url (struct 
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl_unlocked (struct medusa_httprequest *httprequest, const char *url, va_list va)
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl_unlocked (struct medusa_httprequest *httprequest, const char *fmt, va_list va)
 {
         int rs;
         int rc;
@@ -1159,7 +1150,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl_unlocke
         if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(url)) {
+        if (MEDUSA_IS_ERR_OR_NULL(fmt)) {
                 return -EINVAL;
         }
 
@@ -1171,7 +1162,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl_unlocke
         }
 
         va_copy(vp, va);
-        len = vsnprintf(NULL, 0, url, vp);
+        len = vsnprintf(NULL, 0, fmt, vp);
         va_end(vp);
         if (len < 0) {
                 goto bail;
@@ -1182,14 +1173,14 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl_unlocke
                 goto bail;
         }
         va_copy(vp, va);
-        len = vsnprintf(httprequest->url, len + 1, url, vp);
+        len = vsnprintf(httprequest->url, len + 1, fmt, vp);
         va_end(vp);
         if (len < 0) {
                 rs = -EIO;
                 goto bail;
         }
 
-        rc = url_init(&url, httprequest->url);
+        rc = url_parse(&url, httprequest->url);
         if (rc < 0) {
                 rs = -EINVAL;
                 goto bail;
@@ -1410,7 +1401,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 return -EINVAL;
         }
 
-        rc = url_init(&url, httprequest->url);
+        rc = url_parse(&url, httprequest->url);
         if (rc < 0) {
                 return rc;
         }
