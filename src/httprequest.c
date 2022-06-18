@@ -37,15 +37,16 @@
 static struct medusa_pool *g_pool;
 #endif
 
-struct medusa_url {
+struct url {
         char *base;
+        char *scheme;
         char *host;
         unsigned short port;
         char *path;
         int ssl;
 };
 
-static void medusa_url_uninit (struct medusa_url *url)
+static void url_uninit (struct url *url)
 {
         if (url == NULL) {
                 return;
@@ -53,20 +54,27 @@ static void medusa_url_uninit (struct medusa_url *url)
         if (url->base != NULL) {
                 free(url->base);
         }
-        memset(url, 0, sizeof(struct medusa_url));
+        memset(url, 0, sizeof(struct url));
 }
 
-static int medusa_url_init (struct medusa_url *url, const char *uri)
+static int url_parse (struct url *url, const char *uri)
 {
         char *i;
+        char *s;
         char *p;
         char *e;
         char *t;
-        memset(url, 0, sizeof(struct medusa_url));
+
+        if (uri == NULL) {
+                return -EINVAL;
+        }
+        memset(url, 0, sizeof(struct url));
+
         url->base = strdup(uri);
         if (url->base == NULL) {
                 return -ENOMEM;
         }
+
         if (url->base[0] == '<') {
                 memmove(url->base, url->base + 1, strlen(url->base) - 1);
                 t = strchr(url->base, '>');
@@ -74,16 +82,26 @@ static int medusa_url_init (struct medusa_url *url, const char *uri)
                         *t = '\0';
                 }
         }
-        if (strncasecmp(url->base, "http://", 7) == 0) {
-                i = url->base + 7;
-                url->port = 80;
-        } else if (strncasecmp(url->base, "https://", 8) == 0) {
-                i = url->base + 8;
-                url->port = 443;
-                url->ssl  = 1;
+
+        i = url->base;
+
+        s = strstr(url->base, "://");
+        e = strchr(i, '/');
+        if (s == NULL || e < s) {
+                url->scheme = NULL;
         } else {
-                i = url->base;
+                url->scheme = i;
+                *(e - 1) = '\0';
+                i = s + 3;
+
+                if (strcasecmp(url->scheme, "http") == 0) {
+                        url->port = 80;
+                } else if (strcasecmp(url->scheme, "https") == 0) {
+                        url->port = 443;
+                        url->ssl  = 1;
+                }
         }
+
         p = strchr(i, ':');
         e = strchr(i, '/');
         if (p == NULL || e < p) {
@@ -99,17 +117,19 @@ static int medusa_url_init (struct medusa_url *url, const char *uri)
                         *e = '\0';
                 }
         }
+
         if (e != NULL) {
                 do {
                         e++;
                 } while (*e == '/');
                 url->path = e;
         }
-        if (url->host == NULL ||
-            url->port == 0) {
-                medusa_url_uninit(url);
+
+        if (url->host == NULL) {
+                url_uninit(url);
                 return -EINVAL;
         }
+
         return 0;
 }
 
@@ -1118,11 +1138,11 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_set_url (struct 
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl_unlocked (struct medusa_httprequest *httprequest, const char *url, va_list va)
+__attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl_unlocked (struct medusa_httprequest *httprequest, const char *fmt, va_list va)
 {
         int rs;
         int rc;
-        struct medusa_url medusa_url;
+        struct url url;
 
         int len;
         va_list vp;
@@ -1130,7 +1150,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl_unlocke
         if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(url)) {
+        if (MEDUSA_IS_ERR_OR_NULL(fmt)) {
                 return -EINVAL;
         }
 
@@ -1142,7 +1162,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl_unlocke
         }
 
         va_copy(vp, va);
-        len = vsnprintf(NULL, 0, url, vp);
+        len = vsnprintf(NULL, 0, fmt, vp);
         va_end(vp);
         if (len < 0) {
                 goto bail;
@@ -1153,19 +1173,19 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_set_vurl_unlocke
                 goto bail;
         }
         va_copy(vp, va);
-        len = vsnprintf(httprequest->url, len + 1, url, vp);
+        len = vsnprintf(httprequest->url, len + 1, fmt, vp);
         va_end(vp);
         if (len < 0) {
                 rs = -EIO;
                 goto bail;
         }
 
-        rc = medusa_url_init(&medusa_url, httprequest->url);
+        rc = url_parse(&url, httprequest->url);
         if (rc < 0) {
                 rs = -EINVAL;
                 goto bail;
         }
-        medusa_url_uninit(&medusa_url);
+        url_uninit(&url);
 
         return 0;
 bail:   if (httprequest->url != NULL) {
@@ -1352,7 +1372,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
 {
         int rc;
         int ret;
-        struct medusa_url medusa_url;
+        struct url url;
         struct medusa_tcpsocket_connect_options medusa_tcpsocket_connect_options;
 
         int64_t i;
@@ -1381,7 +1401,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 return -EINVAL;
         }
 
-        rc = medusa_url_init(&medusa_url, httprequest->url);
+        rc = url_parse(&url, httprequest->url);
         if (rc < 0) {
                 return rc;
         }
@@ -1398,8 +1418,8 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
         medusa_tcpsocket_connect_options.onevent         = httprequest_tcpsocket_onevent;
         medusa_tcpsocket_connect_options.context         = httprequest;
         medusa_tcpsocket_connect_options.protocol        = MEDUSA_TCPSOCKET_PROTOCOL_ANY;
-        medusa_tcpsocket_connect_options.address         = medusa_url.host;
-        medusa_tcpsocket_connect_options.port            = medusa_url.port;
+        medusa_tcpsocket_connect_options.address         = url.host;
+        medusa_tcpsocket_connect_options.port            = url.port;
         medusa_tcpsocket_connect_options.resolve_timeout = httprequest->resolve_timeout;
         medusa_tcpsocket_connect_options.connect_timeout = httprequest->connect_timeout;
         medusa_tcpsocket_connect_options.read_timeout    = httprequest->read_timeout;
@@ -1411,18 +1431,18 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 ret = MEDUSA_PTR_ERR(httprequest->tcpsocket);
                 goto bail;
         }
-        rc = medusa_tcpsocket_set_ssl_unlocked(httprequest->tcpsocket, medusa_url.ssl);
+        rc = medusa_tcpsocket_set_ssl_unlocked(httprequest->tcpsocket, url.ssl);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
         }
 
-        rc = medusa_tcpsocket_printf_unlocked(httprequest->tcpsocket, "%s /%s HTTP/1.1\r\n", (httprequest->method) ? httprequest->method : "GET", medusa_url.path);
+        rc = medusa_tcpsocket_printf_unlocked(httprequest->tcpsocket, "%s /%s HTTP/1.1\r\n", (httprequest->method) ? httprequest->method : "GET", url.path);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
         }
-        rc = medusa_tcpsocket_printf_unlocked(httprequest->tcpsocket, "Host: %s\r\n", medusa_url.host);
+        rc = medusa_tcpsocket_printf_unlocked(httprequest->tcpsocket, "Host: %s\r\n", url.host);
         if (rc < 0) {
                 ret = rc;
                 goto bail;
@@ -1469,9 +1489,9 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_post_unlock
                 }
         }
 
-        medusa_url_uninit(&medusa_url);
+        url_uninit(&url);
         return 0;
-bail:   medusa_url_uninit(&medusa_url);
+bail:   url_uninit(&url);
         httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
         medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED, NULL);
         return ret;
