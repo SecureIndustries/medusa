@@ -67,7 +67,7 @@ static int test_poll (unsigned int poll)
         if (rc < 0) {
                 goto bail;
         }
-        rc = medusa_timer_set_interval(timer, 0.1);
+        rc = medusa_timer_set_interval(timer, 0.0);
         if (rc < 0) {
                 goto bail;
         }
@@ -140,5 +140,6 @@ int main (int argc, char *argv[])
                         return -1;
                 }
         }
+        fprintf(stderr, "success\n");
         return 0;
 }
