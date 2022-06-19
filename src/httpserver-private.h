@@ -66,6 +66,12 @@ unsigned int medusa_httpserver_client_get_state_unlocked (const struct medusa_ht
 int medusa_httpserver_client_set_enabled_unlocked (struct medusa_httpserver_client *httpserver_client, int enabled);
 int medusa_httpserver_client_get_enabled_unlocked (const struct medusa_httpserver_client *httpserver_client);
 
+int medusa_httpserver_client_set_read_timeout_unlocked (struct medusa_httpserver_client *httpserver_client, double timeout);
+double medusa_httpserver_client_get_read_timeout_unlocked (const struct medusa_httpserver_client *httpserver_client);
+
+int medusa_httpserver_client_set_write_timeout_unlocked (struct medusa_httpserver_client *httpserver_client, double timeout);
+double medusa_httpserver_client_get_write_timeout_unlocked (const struct medusa_httpserver_client *httpserver_client);
+
 int medusa_httpserver_client_reply_send_start_unlocked (struct medusa_httpserver_client *httpserver_client);
 int medusa_httpserver_client_reply_send_status_unlocked (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason, ...) __attribute__((format(printf, 4, 5)));
 int medusa_httpserver_client_reply_send_vstatus_unlocked (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason, va_list va);

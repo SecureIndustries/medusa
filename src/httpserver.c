@@ -18,6 +18,8 @@
 #include "subject-struct.h"
 #include "iovec.h"
 #include "buffer.h"
+#include "timer.h"
+#include "timer-private.h"
 #include "tcpsocket.h"
 #include "tcpsocket-private.h"
 #include "httpserver.h"
@@ -1090,7 +1092,38 @@ static inline int httpserver_client_has_flag (const struct medusa_httpserver_cli
 
 static inline int httpserver_client_set_state (struct medusa_httpserver_client *httpserver_client, unsigned int state)
 {
+        int rc;
         httpserver_client->error = 0;
+        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_CONNECTED) {
+                rc = medusa_tcpsocket_set_read_timeout_unlocked(httpserver_client->tcpsocket, httpserver_client->read_timeout);
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
+        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVING) {
+                rc = medusa_tcpsocket_set_read_timeout_unlocked(httpserver_client->tcpsocket, httpserver_client->read_timeout);
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
+        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVED) {
+                rc = medusa_tcpsocket_set_read_timeout_unlocked(httpserver_client->tcpsocket, -1);
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
+        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_REPLY_SENT) {
+                rc = medusa_tcpsocket_set_read_timeout_unlocked(httpserver_client->tcpsocket, httpserver_client->read_timeout);
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
+        if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_ERROR) {
+                rc = medusa_tcpsocket_set_read_timeout_unlocked(httpserver_client->tcpsocket, -1);
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
         if (state == MEDUSA_HTTPSERVER_CLIENT_STATE_DISCONNECTED) {
                 if (!MEDUSA_IS_ERR_OR_NULL(httpserver_client->tcpsocket)) {
                         medusa_tcpsocket_destroy_unlocked(httpserver_client->tcpsocket);
@@ -1099,6 +1132,7 @@ static inline int httpserver_client_set_state (struct medusa_httpserver_client *
         }
         httpserver_client->state = state;
         return 0;
+bail:   return -1;
 }
 
 TAILQ_HEAD(medusa_httpserver_client_request_options_list, medusa_httpserver_client_request_option);
@@ -1624,7 +1658,11 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
 
         if (events & MEDUSA_TCPSOCKET_EVENT_STATE_CHANGED) {
         } else if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
-                httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_CONNECTED);
+                rc = httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_CONNECTED);
+                if (rc < 0) {
+                        error = rc;
+                        goto bail;
+                }
                 rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED, NULL);
                 if (rc < 0) {
                         error = rc;
@@ -1783,12 +1821,42 @@ bail:   httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_
         return 0;
 }
 
+static int httpserver_client_wtimer_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
+{
+        int rc;
+        struct medusa_monitor *monitor;
+        struct medusa_httpserver_client *httpserver_client = (struct medusa_httpserver_client *) context;
+
+        (void) timer;
+        (void) param;
+
+        monitor = medusa_timer_get_monitor(timer);
+        medusa_monitor_lock(monitor);
+
+        if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
+                rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_TIMEOUT, NULL);
+                if (rc < 0) {
+                        goto bail;
+                }
+        }
+
+        medusa_monitor_unlock(monitor);
+        return 0;
+bail:   httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_ERROR);
+        httpserver_client->error = -EIO;
+        medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR, NULL);
+        medusa_monitor_unlock(monitor);
+        return 0;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_httpserver_accept_options_default (struct medusa_httpserver_accept_options *options)
 {
         if (options == NULL) {
                 return -EINVAL;
         }
         memset(options, 0, sizeof(struct medusa_httpserver_accept_options));
+        options->read_timeout = -1;
+        options->write_timeout = -1;
         return 0;
 }
 
@@ -1866,6 +1934,16 @@ __attribute__ ((visibility ("default"))) struct medusa_httpserver_client * medus
         }
 
         rc = medusa_httpserver_client_set_enabled_unlocked(httpserver_client, options->enabled);
+        if (rc < 0) {
+                error = rc;
+                goto bail;
+        }
+        rc = medusa_httpserver_client_set_read_timeout_unlocked(httpserver_client, options->read_timeout);
+        if (rc < 0) {
+                error = rc;
+                goto bail;
+        }
+        rc = medusa_httpserver_client_set_write_timeout_unlocked(httpserver_client, options->write_timeout);
         if (rc < 0) {
                 error = rc;
                 goto bail;
@@ -2017,10 +2095,16 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_set_read_t
         if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
                 return -EINVAL;
         }
-        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client->tcpsocket)) {
-                return -EIO;
+        httpserver_client->read_timeout = timeout;
+        if (httpserver_client->state == MEDUSA_HTTPSERVER_CLIENT_STATE_CONNECTED ||
+            httpserver_client->state == MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVING ||
+            httpserver_client->state == MEDUSA_HTTPSERVER_CLIENT_STATE_REPLY_SENT) {
+                if (MEDUSA_IS_ERR_OR_NULL(httpserver_client->tcpsocket)) {
+                        return -EIO;
+                }
+                return medusa_tcpsocket_set_read_timeout_unlocked(httpserver_client->tcpsocket, httpserver_client->read_timeout);
         }
-        return medusa_tcpsocket_set_read_timeout_unlocked(httpserver_client->tcpsocket, timeout);
+        return 0;
 }
 
 __attribute__ ((visibility ("default"))) int medusa_httpserver_client_set_read_timeout (struct medusa_httpserver_client *httpserver_client, double timeout)
@@ -2043,7 +2127,7 @@ __attribute__ ((visibility ("default"))) double medusa_httpserver_client_get_rea
         if (MEDUSA_IS_ERR_OR_NULL(httpserver_client->tcpsocket)) {
                 return -EIO;
         }
-        return medusa_tcpsocket_get_read_timeout_unlocked(httpserver_client->tcpsocket);
+        return httpserver_client->read_timeout;
 }
 
 __attribute__ ((visibility ("default"))) double medusa_httpserver_client_get_read_timeout (const struct medusa_httpserver_client *httpserver_client)
@@ -2054,6 +2138,50 @@ __attribute__ ((visibility ("default"))) double medusa_httpserver_client_get_rea
         }
         medusa_monitor_lock(httpserver_client->subject.monitor);
         rc = medusa_httpserver_client_get_read_timeout_unlocked(httpserver_client);
+        medusa_monitor_unlock(httpserver_client->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_set_write_timeout_unlocked (struct medusa_httpserver_client *httpserver_client, double timeout)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        httpserver_client->write_timeout = timeout;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httpserver_client_set_write_timeout (struct medusa_httpserver_client *httpserver_client, double timeout)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httpserver_client->subject.monitor);
+        rc = medusa_httpserver_client_set_write_timeout_unlocked(httpserver_client, timeout);
+        medusa_monitor_unlock(httpserver_client->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) double medusa_httpserver_client_get_write_timeout_unlocked (const struct medusa_httpserver_client *httpserver_client)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client->tcpsocket)) {
+                return -EIO;
+        }
+        return httpserver_client->write_timeout;
+}
+
+__attribute__ ((visibility ("default"))) double medusa_httpserver_client_get_write_timeout (const struct medusa_httpserver_client *httpserver_client)
+{
+        double rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httpserver_client->subject.monitor);
+        rc = medusa_httpserver_client_get_write_timeout_unlocked(httpserver_client);
         medusa_monitor_unlock(httpserver_client->subject.monitor);
         return rc;
 }
@@ -2228,8 +2356,32 @@ __attribute__ ((visibility ("default"))) const void * medusa_httpserver_client_r
 
 __attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send_start_unlocked (struct medusa_httpserver_client *httpserver_client)
 {
+        int rc;
+        struct medusa_timer_init_options timer_init_options;
         if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
                 return -EINVAL;
+        }
+        if (!MEDUSA_IS_ERR_OR_NULL(httpserver_client->wtimer)) {
+                medusa_timer_destroy(httpserver_client->wtimer);
+                httpserver_client->wtimer = NULL;
+        }
+        if (httpserver_client->write_timeout >= 0) {
+                rc = medusa_timer_init_options_default(&timer_init_options);
+                if (rc < 0) {
+                        return rc;
+                }
+                timer_init_options.monitor    = medusa_tcpsocket_get_monitor(httpserver_client->tcpsocket);
+                timer_init_options.onevent    = httpserver_client_wtimer_onevent;
+                timer_init_options.context    = httpserver_client;
+                timer_init_options.initial    = 0;
+                timer_init_options.interval   = httpserver_client->write_timeout;
+                timer_init_options.singleshot = 1;
+                timer_init_options.resolution = MEDUSA_TIMER_RESOLUTION_DEFAULT;
+                timer_init_options.enabled    = 1;
+                httpserver_client->wtimer = medusa_timer_create_with_options_unlocked(&timer_init_options);
+                if (MEDUSA_IS_ERR_OR_NULL(httpserver_client->wtimer)) {
+                        return MEDUSA_PTR_ERR(httpserver_client->wtimer);
+                }
         }
         return 0;
 }
@@ -2487,6 +2639,10 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_reply_send
         if (MEDUSA_IS_ERR_OR_NULL(httpserver_client)) {
                 return -EINVAL;
         }
+        if (!MEDUSA_IS_ERR_OR_NULL(httpserver_client->wtimer)) {
+                medusa_timer_destroy(httpserver_client->wtimer);
+                httpserver_client->wtimer = NULL;
+        }
         httpserver_client_add_flag(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_FLAG_SEND_FINISHED);
         return 0;
 }
@@ -2735,6 +2891,10 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_client_onevent_un
                 }
         }
         if (events & MEDUSA_HTTPSERVER_CLIENT_EVENT_DESTROY) {
+                if (!MEDUSA_IS_ERR_OR_NULL(httpserver_client->wtimer)) {
+                        medusa_timer_destroy(httpserver_client->wtimer);
+                        httpserver_client->wtimer = NULL;
+                }
                 if (httpserver_client->request != NULL) {
                         medusa_httpserver_client_request_destroy(httpserver_client->request);
                         httpserver_client->request = NULL;
