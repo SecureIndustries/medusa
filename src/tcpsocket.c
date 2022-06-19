@@ -3388,7 +3388,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_read_timeout_u
         }
         if (timeout < 0) {
                 if (!MEDUSA_IS_ERR_OR_NULL(tcpsocket->rtimer)) {
-                        medusa_timer_destroy(tcpsocket->rtimer);
+                        medusa_timer_destroy_unlocked(tcpsocket->rtimer);
                         tcpsocket->rtimer = NULL;
                 }
         } else {
