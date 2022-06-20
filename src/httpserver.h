@@ -108,6 +108,7 @@ struct medusa_httpserver_init_options {
         unsigned int protocol;
         const char *address;
         unsigned short port;
+        int reuseport;
         int enabled;
         int started;
         int (*onevent) (struct medusa_httpserver *httpserver, unsigned int events, void *context, void *param);

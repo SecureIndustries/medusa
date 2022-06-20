@@ -41,10 +41,12 @@ static struct medusa_pool *g_pool_httpserver_client;
 #endif
 
 enum {
-        MEDUSA_HTTPSERVER_FLAG_NONE                = (1 << 0),
-        MEDUSA_HTTPSERVER_FLAG_ENABLED             = (1 << 1)
-#define MEDUSA_HTTPSERVER_FLAG_NONE                MEDUSA_HTTPSERVER_FLAG_NONE
-#define MEDUSA_HTTPSERVER_FLAG_ENABLED             MEDUSA_HTTPSERVER_FLAG_ENABLED
+        MEDUSA_HTTPSERVER_FLAG_NONE             = (1 << 0),
+        MEDUSA_HTTPSERVER_FLAG_ENABLED          = (1 << 1),
+        MEDUSA_HTTPSERVER_FLAG_REUSEPORT        = (1 << 2)
+#define MEDUSA_HTTPSERVER_FLAG_NONE             MEDUSA_HTTPSERVER_FLAG_NONE
+#define MEDUSA_HTTPSERVER_FLAG_ENABLED          MEDUSA_HTTPSERVER_FLAG_ENABLED
+#define MEDUSA_HTTPSERVER_FLAG_REUSEPORT        MEDUSA_HTTPSERVER_FLAG_REUSEPORT
 };
 
 static inline void httpserver_set_flag (struct medusa_httpserver *httpserver, unsigned int flag)
@@ -188,6 +190,9 @@ static int httpserver_init_with_options_unlocked (struct medusa_httpserver *http
         httpserver->subject.monitor = NULL;
         httpserver_set_state(httpserver, MEDUSA_HTTPSERVER_STATE_STOPPED);
         httpserver_set_flag(httpserver, MEDUSA_HTTPSERVER_FLAG_NONE);
+        if (options->reuseport) {
+                httpserver_add_flag(httpserver, MEDUSA_HTTPSERVER_FLAG_REUSEPORT);
+        }
         httpserver->onevent = options->onevent;
         httpserver->context = options->context;
         rc = medusa_monitor_add_unlocked(options->monitor, &httpserver->subject);
@@ -547,7 +552,7 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_set_started_unloc
                 medusa_tcpsocket_bind_options.nodelay     = 1;
                 medusa_tcpsocket_bind_options.nonblocking = 1;
                 medusa_tcpsocket_bind_options.reuseaddr   = 1;
-                medusa_tcpsocket_bind_options.reuseport   = 0;
+                medusa_tcpsocket_bind_options.reuseport   = httpserver_has_flag(httpserver, MEDUSA_HTTPSERVER_FLAG_REUSEPORT);
                 medusa_tcpsocket_bind_options.enabled     = 1;
                 medusa_tcpsocket_bind_options.monitor     = httpserver->subject.monitor;
                 medusa_tcpsocket_bind_options.context     = httpserver;
