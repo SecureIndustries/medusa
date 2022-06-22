@@ -223,6 +223,8 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_init_options_defa
         options->protocol   = MEDUSA_HTTPSERVER_PROTOCOL_ANY;
         options->address    = NULL;
         options->port       = 0;
+        options->reuseport  = 0;
+        options->backlog    = 128;
         return 0;
 }
 
@@ -301,6 +303,7 @@ __attribute__ ((visibility ("default"))) struct medusa_httpserver * medusa_https
         }
         httpserver->port     = options->port;
         httpserver->protocol = options->protocol;
+        httpserver->backlog  = options->backlog;
         if (options->enabled != 0) {
                 rc = medusa_httpserver_set_enabled_unlocked(httpserver, options->enabled);
                 if (rc < 0) {
@@ -549,6 +552,7 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_set_started_unloc
                 medusa_tcpsocket_bind_options.address     = httpserver->address;
                 medusa_tcpsocket_bind_options.port        = httpserver->port;
                 medusa_tcpsocket_bind_options.buffered    = 1;
+                medusa_tcpsocket_bind_options.backlog     = httpserver->backlog;
                 medusa_tcpsocket_bind_options.nodelay     = 1;
                 medusa_tcpsocket_bind_options.nonblocking = 1;
                 medusa_tcpsocket_bind_options.reuseaddr   = 1;

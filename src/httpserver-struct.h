@@ -33,7 +33,7 @@ struct medusa_httpserver {
         unsigned int protocol;
         char *address;
         unsigned short port;
-        int buffered;
+        int backlog;
         struct medusa_tcpsocket *tcpsocket;
         struct medusa_httpserver_clients clients;
 };
