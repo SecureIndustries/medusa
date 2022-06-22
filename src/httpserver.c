@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <errno.h>
 
 #include "../3rdparty/http-parser/http_parser.h"
@@ -1445,6 +1446,73 @@ static struct medusa_httpserver_client_request * medusa_httpserver_client_reques
         return request;
 }
 
+static int httpserver_client_httpparser_replace_escaped (char *in, int index, size_t *max)
+{
+	int tempInt = 0;
+	char tempChar = 0;
+	size_t i = 0;
+	size_t j = 0;
+
+	if (in[index] && in[index + 1] && in[index + 2]) {
+		if (in[index] == '%' && in[index + 1] == '2' && in[index + 2] == 'M') {
+			tempChar = ',';
+			for (i = index + 3, j = index; j < (*max); i++, j++) {
+				in[j] = tempChar;
+				if (i < (*max)) {
+					tempChar = in[i];
+				} else {
+					tempChar = 0;
+				}
+			}
+			(*max) -= 2;
+			return 1;
+		} else if (in[index] == '%' && in[index + 1] == '2' && in[index + 2] == 'N') {
+			tempChar = '-';
+			for (i = index + 3, j = index; j < (*max); i++, j++) {
+				in[j] = tempChar;
+				if (i < (*max)) {
+					tempChar = in[i];
+				} else {
+					tempChar = 0;
+				}
+			}
+			(*max) -= 2;
+			return 1;
+		}
+	}
+	if ((in[index] == '%') && (isxdigit(in[index + 1])) && isxdigit(in[index + 2])) {
+		if (sscanf(&in[index + 1], "%2x", &tempInt) != 1) {
+			return 0;
+		}
+		tempChar = (char) tempInt;
+		for (i = index + 3, j = index; j < (*max); i++, j++) {
+			in[j] = tempChar;
+			if (i < (*max)) {
+				tempChar = in[i];
+			} else {
+				tempChar = 0;
+			}
+		}
+		(*max) -= 2;
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+static int httpserver_client_httpparser_remove_escaped_chars (char *in)
+{
+	size_t i = 0;
+	size_t size;
+	size = strlen(in);
+	for( i = 0; i < size; i++ ) {
+		if (httpserver_client_httpparser_replace_escaped(in, i, &size) != 0) {
+			i--;
+		}
+	}
+	return 0;
+}
+
 static int httpserver_client_httpparser_on_message_begin (http_parser *http_parser)
 {
         struct medusa_httpserver_client *httpserver_client = http_parser->data;
@@ -1594,6 +1662,7 @@ static int httpserver_client_httpparser_on_message_complete (http_parser *http_p
                         if (o == NULL) {
                                 return -ENOMEM;
                         }
+                        httpserver_client_httpparser_remove_escaped_chars(o);
                         s = o;
                         while (s && *s) {
                                 e = strchr(s, '&');
@@ -1650,8 +1719,10 @@ static int httpserver_client_httpparser_on_chunk_complete (http_parser *http_par
 static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, unsigned int events, void *context, void *param)
 {
         int rc;
+        int line;
         int error;
         struct medusa_monitor *monitor;
+        struct medusa_httpserver_client_event_error medusa_httpserver_client_event_error;
         struct medusa_httpserver_client *httpserver_client = (struct medusa_httpserver_client *) context;
 
         if (events & MEDUSA_TCPSOCKET_EVENT_DESTROY) {
@@ -1674,6 +1745,7 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
                 }
                 rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED, NULL);
                 if (rc < 0) {
+                        line = __LINE__;
                         error = rc;
                         goto bail;
                 }
@@ -1693,6 +1765,7 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
         } else if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED_SSL) {
                 rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_CONNECTED_SSL, NULL);
                 if (rc < 0) {
+                        line = __LINE__;
                         error = rc;
                         goto bail;
                 }
@@ -1701,11 +1774,13 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
                     httpserver_client->state == MEDUSA_HTTPSERVER_CLIENT_STATE_REPLY_SENT) {
                         rc = httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_REQUEST_RECEIVING);
                         if (rc < 0) {
+                                line = __LINE__;
                                 error = rc;
                                 goto bail;
                         }
                         rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVING, NULL);
                         if (rc < 0) {
+                                line = __LINE__;
                                 error = rc;
                                 goto bail;
                         }
@@ -1723,6 +1798,7 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
                         siovecs = sizeof(iovecs) / sizeof(iovecs[0]);
                         niovecs = medusa_buffer_peekv(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, -1, iovecs, siovecs);
                         if (niovecs < 0) {
+                                line = __LINE__;
                                 error = niovecs;
                                 goto bail;
                         }
@@ -1731,6 +1807,7 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
                         for (iiovecs = 0; iiovecs < niovecs; iiovecs++) {
                                 nparsed = http_parser_execute(&httpserver_client->http_parser, &httpserver_client->http_parser_settings, iovecs[iiovecs].iov_base, iovecs[iiovecs].iov_len);
                                 if (httpserver_client->http_parser.http_errno != 0) {
+                                        line = __LINE__;
                                         error = -EIO;
                                         goto bail;
                                 }
@@ -1741,6 +1818,7 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
                         }
                         clength = medusa_buffer_choke(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, tparsed);
                         if (clength != (int64_t) tparsed) {
+                                line = __LINE__;
                                 error = -EIO;
                                 goto bail;
                         }
@@ -1750,6 +1828,7 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
         } else if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_READ_TIMEOUT) {
                 rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_REQUEST_RECEIVE_TIMEOUT, NULL);
                 if (rc < 0) {
+                        line = __LINE__;
                         error = rc;
                         goto bail;
                 }
@@ -1760,23 +1839,27 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
                 medusa_httpserver_client_event_buffered_write.remaining = medusa_tcpsocket_event_buffered_write->remaining;
                 rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE, &medusa_httpserver_client_event_buffered_write);
                 if (rc < 0) {
+                        line = __LINE__;
                         error = rc;
                         goto bail;
                 }
         } else if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED) {
                 rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED, NULL);
                 if (rc < 0) {
+                        line = __LINE__;
                         error = rc;
                         goto bail;
                 }
                 if (httpserver_client_has_flag(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_FLAG_SEND_FINISHED)) {
                         rc = httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_REPLY_SENT);
                         if (rc < 0) {
+                                line = __LINE__;
                                 error = rc;
                                 goto bail;
                         }
                         rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_REPLY_SENT, NULL);
                         if (rc < 0) {
+                                line = __LINE__;
                                 error = rc;
                                 goto bail;
                         }
@@ -1784,7 +1867,7 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
                 }
         } else if (events & MEDUSA_TCPSOCKET_EVENT_ERROR) {
                 struct medusa_tcpsocket_event_error *medusa_tcpsocket_event_error = (struct medusa_tcpsocket_event_error *) param;
-                struct medusa_httpserver_client_event_error medusa_httpserver_client_event_error;
+                memset(&medusa_httpserver_client_event_error, 0, sizeof(medusa_httpserver_client_event_error));
                 medusa_httpserver_client_event_error.state  = httpserver_client->state;
                 medusa_httpserver_client_event_error.error  = EIO;
                 medusa_httpserver_client_event_error.line   = __LINE__;
@@ -1794,12 +1877,14 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
                 medusa_httpserver_client_event_error.u.tcpsocket.line  = medusa_tcpsocket_event_error->line;
                 rc = httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_ERROR);
                 if (rc < 0) {
+                        line = __LINE__;
                         error = rc;
                         goto bail;
                 }
                 httpserver_client->error = medusa_tcpsocket_event_error->error;
                 rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR, &medusa_httpserver_client_event_error);
                 if (rc < 0) {
+                        line = __LINE__;
                         error = rc;
                         goto bail;
                 }
@@ -1807,25 +1892,33 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
         } else if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
                 rc = httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_DISCONNECTED);
                 if (rc < 0) {
+                        line = __LINE__;
                         error = rc;
                         goto bail;
                 }
                 rc = medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_DISCONNECTED, NULL);
                 if (rc < 0) {
+                        line = __LINE__;
                         error = rc;
                         goto bail;
                 }
                 medusa_httpserver_client_destroy_unlocked(httpserver_client);
         } else {
+                line = __LINE__;
                 error = -EIO;
                 goto bail;
         }
 
         medusa_monitor_unlock(monitor);
         return 0;
-bail:   httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_ERROR);
+bail:   memset(&medusa_httpserver_client_event_error, 0, sizeof(medusa_httpserver_client_event_error));
+        medusa_httpserver_client_event_error.state  = httpserver_client->state;
+        medusa_httpserver_client_event_error.error  = error;
+        medusa_httpserver_client_event_error.line   = line;
+        medusa_httpserver_client_event_error.reason = MEDUSA_HTTPSERVER_CLIENT_ERROR_REASON_UNKNOWN;
+        httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_ERROR);
         httpserver_client->error = -error;
-        medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR, NULL);
+        medusa_httpserver_client_onevent_unlocked(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_EVENT_ERROR, &medusa_httpserver_client_event_error);
         medusa_monitor_unlock(monitor);
         return 0;
 }
