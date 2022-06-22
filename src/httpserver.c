@@ -1740,6 +1740,7 @@ static int httpserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tcpsock
         } else if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTED) {
                 rc = httpserver_client_set_state(httpserver_client, MEDUSA_HTTPSERVER_CLIENT_STATE_CONNECTED);
                 if (rc < 0) {
+                        line = __LINE__;
                         error = rc;
                         goto bail;
                 }
