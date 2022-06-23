@@ -1604,7 +1604,12 @@ static int httpserver_client_httpparser_on_header_value (http_parser *http_parse
 static int httpserver_client_httpparser_on_headers_complete (http_parser *http_parser)
 {
         struct medusa_httpserver_client *httpserver_client = http_parser->data;
+        int rc;
         (void) httpserver_client;
+        rc = medusa_httpserver_client_request_set_version(httpserver_client->request, http_parser->http_major, http_parser->http_minor);
+        if (rc < 0) {
+                return rc;
+        }
         return 0;
 }
 
