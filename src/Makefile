@@ -46,6 +46,7 @@ libmedusa.a_files-y = \
 	io.c \
 	signal.c \
 	timer.c \
+	url.c \
 	monitor.c \
 	version.c
 
@@ -183,6 +184,7 @@ dist.include-y = \
 	exec.h \
 	queue.h \
 	queue_sys.h \
+	url.h \
 	sha1.h \
 	base64.h \
 	strndup.h \
