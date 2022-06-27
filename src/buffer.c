@@ -742,6 +742,7 @@ int medusa_buffer_strncmp (const struct medusa_buffer *buffer, int64_t offset, c
         int64_t niovecs;
         struct medusa_iovec *iovecs;
         struct medusa_iovec _iovecs[16];
+        ret = -1;
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
@@ -869,6 +870,7 @@ int medusa_buffer_strncasecmp (const struct medusa_buffer *buffer, int64_t offse
         int64_t niovecs;
         struct medusa_iovec *iovecs;
         struct medusa_iovec _iovecs[16];
+        ret = -1;
         if (MEDUSA_IS_ERR_OR_NULL(buffer)) {
                 return -EINVAL;
         }
