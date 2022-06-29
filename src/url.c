@@ -127,7 +127,7 @@ void medusa_url_destroy (struct medusa_url *url)
 const char * medusa_url_get_scheme (struct medusa_url *url)
 {
         if (url == NULL) {
-                return NULL;
+                return MEDUSA_ERR_PTR(-EINVAL);
         }
         return url->scheme;
 }
@@ -135,7 +135,7 @@ const char * medusa_url_get_scheme (struct medusa_url *url)
 const char * medusa_url_get_host (struct medusa_url *url)
 {
         if (url == NULL) {
-                return NULL;
+                return MEDUSA_ERR_PTR(-EINVAL);
         }
         return url->host;
 }
@@ -143,7 +143,7 @@ const char * medusa_url_get_host (struct medusa_url *url)
 int medusa_url_get_port (struct medusa_url *url)
 {
         if (url == NULL) {
-                return 0;
+                return -EINVAL;
         }
         return url->port;
 }
@@ -151,7 +151,7 @@ int medusa_url_get_port (struct medusa_url *url)
 const char * medusa_url_get_path (struct medusa_url *url)
 {
         if (url == NULL) {
-                return NULL;
+                return MEDUSA_ERR_PTR(-EINVAL);
         }
         return url->path;
 }
@@ -159,7 +159,7 @@ const char * medusa_url_get_path (struct medusa_url *url)
 int medusa_url_get_ssl (struct medusa_url *url)
 {
         if (url == NULL) {
-                return 0;
+                return -EINVAL;
         }
         return url->ssl;
 }
