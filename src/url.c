@@ -77,19 +77,11 @@ struct medusa_url * medusa_url_parse (const char *uri)
 
         p = strchr(i, ':');
         e = strchr(i, '/');
-        if (p == NULL || e < p) {
-                if (e != NULL) {
-                        url->host = i;
-                } else if (p != NULL) {
-                        url->port = atoi(p + 1);
-                        url->host = i;
-                        *p = '\0';
-                }
-        } else if (p != NULL) {
+        if (p != NULL && e < p) {
                 url->port = atoi(p + 1);
-                url->host = i;
                 *p = '\0';
         }
+        url->host = i;
         if (e != NULL) {
                 *e = '\0';
         }
