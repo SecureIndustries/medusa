@@ -23,6 +23,7 @@ struct medusa_tcpsocket {
         SSL_CTX *ssl_ctx;
         char *ssl_certificate;
         char *ssl_privatekey;
+        char *ssl_ca_certificate;
         int ssl_wantread;
         int ssl_wantwrite;
         char *ssl_hostname;
