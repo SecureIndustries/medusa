@@ -109,6 +109,9 @@ struct medusa_tcpsocket_bind_options {
         int nodelay;
         int backlog;
         int buffered;
+        int ssl;
+        const char *ssl_certificate;
+        const char *ssl_privatekey;
         int enabled;
 };
 
@@ -144,6 +147,7 @@ struct medusa_tcpsocket_connect_options {
         int nonblocking;
         int nodelay;
         int buffered;
+        int ssl;
         int enabled;
 };
 

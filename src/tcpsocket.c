@@ -1415,6 +1415,21 @@ ipv6:
                 ret = rc;
                 goto bail;
         }
+        rc = medusa_tcpsocket_set_ssl_certificate_unlocked(tcpsocket, options->ssl_certificate, -1);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_ssl_privatekey_unlocked(tcpsocket, options->ssl_privatekey, -1);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_ssl_unlocked(tcpsocket, options->ssl);
+        if (rc < 0) {
+                ret = rc;
+                goto bail;
+        }
         rc = medusa_tcpsocket_set_enabled_unlocked(tcpsocket, options->enabled);
         if (rc < 0) {
                 ret = rc;
@@ -2320,6 +2335,12 @@ __attribute__ ((visibility ("default"))) struct medusa_tcpsocket * medusa_tcpsoc
                 goto bail;
         }
         rc = medusa_tcpsocket_set_clodestroy_unlocked(tcpsocket, options->clodestroy);
+        if (rc < 0) {
+                ret = rc;
+                line = __LINE__;
+                goto bail;
+        }
+        rc = medusa_tcpsocket_set_ssl_unlocked(tcpsocket, options->ssl);
         if (rc < 0) {
                 ret = rc;
                 line = __LINE__;
@@ -3865,6 +3886,8 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_certificat
                 }
                 tcpsocket->ssl_certificate[len] = '\0';
                 fclose(fp);
+        } else {
+                return medusa_tcpsocket_set_ssl_certificate_unlocked(tcpsocket, NULL, 0);
         }
 #else
         (void) certificate;
@@ -3958,6 +3981,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_privatekey
                 return -EINVAL;
         }
 #if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
+        if (privatekey != NULL) {
                 int rc;
                 int len;
                 FILE *fp;
@@ -3994,6 +4018,9 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_privatekey
                 }
                 tcpsocket->ssl_privatekey[len] = '\0';
                 fclose(fp);
+        } else {
+                return medusa_tcpsocket_set_ssl_privatekey_unlocked(tcpsocket, NULL, 0);
+        }
 #else
         (void) privatekey;
 #endif
