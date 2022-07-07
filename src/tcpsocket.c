@@ -3774,7 +3774,7 @@ __attribute__ ((visibility ("default"))) int medusa_tcpsocket_set_ssl_unlocked (
                                         BIO_free(bio);
                                 }
                         }
-                        SSL_CTX_set_verify(tcpsocket->ssl_ctx, tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL_VERIFY) ? SSL_VERIFY_PEER : SSL_VERIFY_NONE, NULL);
+                        SSL_CTX_set_verify(tcpsocket->ssl_ctx, tcpsocket_has_flag(tcpsocket, MEDUSA_TCPSOCKET_FLAG_SSL_VERIFY) ? (SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT) : (SSL_VERIFY_NONE), NULL);
                 }
 
                 if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->ssl) &&
