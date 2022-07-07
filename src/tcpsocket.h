@@ -150,6 +150,10 @@ struct medusa_tcpsocket_connect_options {
         int nodelay;
         int buffered;
         int ssl;
+        const char *ssl_certificate;
+        const char *ssl_privatekey;
+        const char *ssl_ca_certificate;
+        int ssl_verify;
         int enabled;
 };
 
@@ -181,6 +185,7 @@ struct medusa_tcpsocket_event_state_changed {
         unsigned int pstate;
         unsigned int state;
         unsigned int error;
+        unsigned int line;
 };
 
 #ifdef __cplusplus
@@ -250,6 +255,9 @@ double medusa_tcpsocket_get_read_timeout (const struct medusa_tcpsocket *tcpsock
 
 int medusa_tcpsocket_set_ssl (struct medusa_tcpsocket *tcpsocket, int enable);
 int medusa_tcpsocket_get_ssl (const struct medusa_tcpsocket *tcpsocket);
+
+int medusa_tcpsocket_set_ssl_verify (struct medusa_tcpsocket *tcpsocket, int enable);
+int medusa_tcpsocket_get_ssl_verify (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_set_ssl_certificate (struct medusa_tcpsocket *tcpsocket, const char *certificate, int length);
 int medusa_tcpsocket_set_ssl_certificate_file (struct medusa_tcpsocket *tcpsocket, const char *certificate);
