@@ -939,6 +939,20 @@ __attribute__ ((visibility ("default"))) int medusa_timer_disable (struct medusa
         return medusa_timer_set_enabled(timer, 0);
 }
 
+__attribute__ ((visibility ("default"))) int medusa_timer_restart (struct medusa_timer *timer)
+{
+        int rc;
+        rc = medusa_timer_set_enabled(timer, 0);
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_timer_set_enabled(timer, 1);
+        if (rc < 0) {
+                return rc;
+        }
+        return 0;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_timer_start (struct medusa_timer *timer)
 {
         return medusa_timer_set_enabled(timer, 1);
@@ -947,6 +961,40 @@ __attribute__ ((visibility ("default"))) int medusa_timer_start (struct medusa_t
 __attribute__ ((visibility ("default"))) int medusa_timer_stop (struct medusa_timer *timer)
 {
         return medusa_timer_set_enabled(timer, 0);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_enable_unlocked (struct medusa_timer *timer)
+{
+        return medusa_timer_set_enabled_unlocked(timer, 1);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_disable_unlocked (struct medusa_timer *timer)
+{
+        return medusa_timer_set_enabled_unlocked(timer, 0);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_restart_unlocked (struct medusa_timer *timer)
+{
+        int rc;
+        rc = medusa_timer_set_enabled_unlocked(timer, 0);
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_timer_set_enabled_unlocked(timer, 1);
+        if (rc < 0) {
+                return rc;
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_start_unlocked (struct medusa_timer *timer)
+{
+        return medusa_timer_set_enabled_unlocked(timer, 1);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_timer_stop_unlocked (struct medusa_timer *timer)
+{
+        return medusa_timer_set_enabled_unlocked(timer, 0);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_timer_update_timespec_unlocked (struct medusa_timer *timer, struct timespec *now)

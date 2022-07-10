@@ -38,6 +38,13 @@ unsigned int medusa_timer_get_resolution_unlocked (const struct medusa_timer *ti
 int medusa_timer_set_enabled_unlocked (struct medusa_timer *timer, int enabled);
 int medusa_timer_get_enabled_unlocked (const struct medusa_timer *timer);
 
+int medusa_timer_enable_unlocked  (struct medusa_timer *timer);
+int medusa_timer_disable_unlocked  (struct medusa_timer *timer);
+
+int medusa_timer_restart_unlocked  (struct medusa_timer *timer);
+int medusa_timer_start_unlocked  (struct medusa_timer *timer);
+int medusa_timer_stop_unlocked  (struct medusa_timer *timer);
+
 int medusa_timer_update_timespec_unlocked (struct medusa_timer *timer, struct timespec *now);
 
 int medusa_timer_set_context_unlocked (struct medusa_timer *timer, void *context);
