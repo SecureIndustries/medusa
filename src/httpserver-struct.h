@@ -13,7 +13,6 @@ struct medusa_httpserver_client {
         int (*onevent) (struct medusa_httpserver_client *httpserver_client, unsigned int events, void *context, void *param);
         void *context;
         void *userdata;
-        struct medusa_timer *wtimer;
         struct medusa_tcpsocket *tcpsocket;
         http_parser http_parser;
         http_parser_settings http_parser_settings;
