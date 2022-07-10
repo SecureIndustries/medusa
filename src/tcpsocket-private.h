@@ -55,6 +55,9 @@ double medusa_tcpsocket_get_connect_timeout_unlocked (const struct medusa_tcpsoc
 int medusa_tcpsocket_set_read_timeout_unlocked (struct medusa_tcpsocket *tcpsocket, double timeout);
 double medusa_tcpsocket_get_read_timeout_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
+int medusa_tcpsocket_set_write_timeout_unlocked (struct medusa_tcpsocket *tcpsocket, double timeout);
+double medusa_tcpsocket_get_write_timeout_unlocked (const struct medusa_tcpsocket *tcpsocket);
+
 int medusa_tcpsocket_set_ssl_unlocked (struct medusa_tcpsocket *tcpsocket, int enable);
 int medusa_tcpsocket_get_ssl_unlocked (const struct medusa_tcpsocket *tcpsocket);
 

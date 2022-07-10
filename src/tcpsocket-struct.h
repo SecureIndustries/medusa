@@ -16,6 +16,7 @@ struct medusa_tcpsocket {
         struct medusa_timer *ltimer;
         struct medusa_timer *ctimer;
         struct medusa_timer *rtimer;
+        struct medusa_timer *wtimer;
         struct medusa_buffer *wbuffer;
         struct medusa_buffer *rbuffer;
 #if defined(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) && (MEDUSA_TCPSOCKET_OPENSSL_ENABLE == 1)
