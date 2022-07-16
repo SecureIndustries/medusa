@@ -1105,38 +1105,43 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
                         }
                 }
                 if (websocketserver_client->state == MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_REQUEST_RECEIVING) {
-                        int64_t siovecs;
-                        int64_t niovecs;
-                        int64_t iiovecs;
-                        struct medusa_iovec iovecs[1];
+                        while (1) {
+                                int64_t siovecs;
+                                int64_t niovecs;
+                                int64_t iiovecs;
+                                struct medusa_iovec iovecs[1];
 
-                        size_t nparsed;
-                        size_t tparsed;
-                        int64_t clength;
+                                size_t nparsed;
+                                size_t tparsed;
+                                int64_t clength;
 
-                        siovecs = sizeof(iovecs) / sizeof(iovecs[0]);
-                        niovecs = medusa_buffer_peekv(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, -1, iovecs, siovecs);
-                        if (niovecs < 0) {
-                                error = niovecs;
-                                goto bail;
-                        }
+                                siovecs = sizeof(iovecs) / sizeof(iovecs[0]);
+                                niovecs = medusa_buffer_peekv(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, -1, iovecs, siovecs);
+                                if (niovecs < 0) {
+                                        error = niovecs;
+                                        goto bail;
+                                }
+                                if (niovecs == 0) {
+                                        break;
+                                }
 
-                        tparsed = 0;
-                        for (iiovecs = 0; iiovecs < niovecs; iiovecs++) {
-                                nparsed = http_parser_execute(&websocketserver_client->http_parser, &websocketserver_client->http_parser_settings, iovecs[iiovecs].iov_base, iovecs[iiovecs].iov_len);
-                                if (websocketserver_client->http_parser.http_errno != 0) {
+                                tparsed = 0;
+                                for (iiovecs = 0; iiovecs < niovecs; iiovecs++) {
+                                        nparsed = http_parser_execute(&websocketserver_client->http_parser, &websocketserver_client->http_parser_settings, iovecs[iiovecs].iov_base, iovecs[iiovecs].iov_len);
+                                        if (websocketserver_client->http_parser.http_errno != 0) {
+                                                error = -EIO;
+                                                goto bail;
+                                        }
+                                        tparsed += nparsed;
+                                        if (nparsed != iovecs[iiovecs].iov_len) {
+                                                break;
+                                        }
+                                }
+                                clength = medusa_buffer_choke(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, tparsed);
+                                if (clength != (int64_t) tparsed) {
                                         error = -EIO;
                                         goto bail;
                                 }
-                                tparsed += nparsed;
-                                if (nparsed != iovecs[iiovecs].iov_len) {
-                                        break;
-                                }
-                        }
-                        clength = medusa_buffer_choke(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, tparsed);
-                        if (clength != (int64_t) tparsed) {
-                                error = -EIO;
-                                goto bail;
                         }
                 }
                 if (websocketserver_client->state == MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_REQUEST_RECEIVED) {
