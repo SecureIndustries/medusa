@@ -520,8 +520,6 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                         if (rc < 0) {
                                 goto bail;
                         }
-                } else {
-                        goto bail;
                 }
         }
         if (!TAILQ_EMPTY(&monitor->deletes)) {
