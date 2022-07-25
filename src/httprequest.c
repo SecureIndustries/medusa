@@ -1227,7 +1227,49 @@ __attribute__ ((visibility ("default"))) const char * medusa_httprequest_get_url
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_add_header_unlocked (struct medusa_httprequest *httprequest, const char *key, const char *value, ...)
+__attribute__ ((visibility ("default"))) int medusa_httprequest_add_header_unlocked (struct medusa_httprequest *httprequest, const char *key, const char *value)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(key)) {
+                return -EINVAL;
+        }
+        rc  = medusa_buffer_printf(httprequest->headers, "%s", key);
+        if (rc < 0) {
+                return rc;
+        }
+        if (value != NULL) {
+                rc = medusa_buffer_printf(httprequest->headers, ": ");
+                if (rc < 0) {
+                        return rc;
+                }
+                rc = medusa_buffer_printf(httprequest->headers, "%s", value);
+                if (rc < 0) {
+                        return rc;
+                }
+        }
+        rc = medusa_buffer_printf(httprequest->headers, "\r\n");
+        if (rc < 0) {
+                return rc;
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_add_header (struct medusa_httprequest *httprequest, const char *key, const char *value)
+{
+        int64_t rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httprequest->subject.monitor);
+        rc = medusa_httprequest_add_header_unlocked(httprequest, key, value);
+        medusa_monitor_unlock(httprequest->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_add_headerf_unlocked (struct medusa_httprequest *httprequest, const char *key, const char *value, ...)
 {
         int64_t rc;
         va_list va;
@@ -1246,7 +1288,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_add_header_unloc
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_add_header (struct medusa_httprequest *httprequest, const char *key, const char *value, ...)
+__attribute__ ((visibility ("default"))) int medusa_httprequest_add_headerf (struct medusa_httprequest *httprequest, const char *key, const char *value, ...)
 {
         int64_t rc;
         va_list va;
@@ -1304,7 +1346,39 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_add_headerv (str
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_add_raw_header_unlocked (struct medusa_httprequest *httprequest, const char *value, ...)
+__attribute__ ((visibility ("default"))) int medusa_httprequest_add_raw_header_unlocked (struct medusa_httprequest *httprequest, const char *value)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        if (MEDUSA_IS_ERR_OR_NULL(value)) {
+                return -EINVAL;
+        }
+        rc  = medusa_buffer_printf(httprequest->headers, "%s", value);
+        if (rc < 0) {
+                return rc;
+        }
+        rc = medusa_buffer_printf(httprequest->headers, "\r\n");
+        if (rc < 0) {
+                return rc;
+        }
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_add_raw_header (struct medusa_httprequest *httprequest, const char *value)
+{
+        int64_t rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httprequest->subject.monitor);
+        rc = medusa_httprequest_add_raw_header_unlocked(httprequest, value);
+        medusa_monitor_unlock(httprequest->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_add_raw_headerf_unlocked (struct medusa_httprequest *httprequest, const char *value, ...)
 {
         int64_t rc;
         va_list va;
@@ -1320,7 +1394,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_add_raw_header_u
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_add_raw_header (struct medusa_httprequest *httprequest, const char *value, ...)
+__attribute__ ((visibility ("default"))) int medusa_httprequest_add_raw_headerf (struct medusa_httprequest *httprequest, const char *value, ...)
 {
         int64_t rc;
         va_list va;

@@ -138,10 +138,12 @@ int medusa_httprequest_set_url (struct medusa_httprequest *httprequest, const ch
 int medusa_httprequest_set_vurl (struct medusa_httprequest *httprequest, const char *url, va_list va);
 const char * medusa_httprequest_get_url (const struct medusa_httprequest *httprequest);
 
-int medusa_httprequest_add_header (struct medusa_httprequest *httprequest, const char *key, const char *value, ...) __attribute__((format(printf, 3, 4)));
+int medusa_httprequest_add_header (struct medusa_httprequest *httprequest, const char *key, const char *value);
+int medusa_httprequest_add_headerf (struct medusa_httprequest *httprequest, const char *key, const char *value, ...) __attribute__((format(printf, 3, 4)));
 int medusa_httprequest_add_headerv (struct medusa_httprequest *httprequest, const char *key, const char *value, va_list va);
 
-int medusa_httprequest_add_raw_header (struct medusa_httprequest *httprequest, const char *value, ...) __attribute__((format(printf, 2, 3)));
+int medusa_httprequest_add_raw_header (struct medusa_httprequest *httprequest, const char *value);
+int medusa_httprequest_add_raw_headerf (struct medusa_httprequest *httprequest, const char *value, ...) __attribute__((format(printf, 2, 3)));
 int medusa_httprequest_add_raw_headerv (struct medusa_httprequest *httprequest, const char *value, va_list va);
 
 int medusa_httprequest_make_post (struct medusa_httprequest *httprequest, const void *data, int64_t length);
