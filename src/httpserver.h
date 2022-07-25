@@ -265,13 +265,15 @@ int64_t medusa_httpserver_client_request_body_get_length (const struct medusa_ht
 const void * medusa_httpserver_client_request_body_get_value (const struct medusa_httpserver_client_request_body *body);
 
 int medusa_httpserver_client_reply_send_start (struct medusa_httpserver_client *httpserver_client);
-int medusa_httpserver_client_reply_send_status (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason, ...) __attribute__((format(printf, 4, 5)));
-int medusa_httpserver_client_reply_send_vstatus (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason, va_list va);
-int medusa_httpserver_client_reply_send_header (struct medusa_httpserver_client *httpserver_client, const char *key, const char *value, ...) __attribute__((format(printf, 3, 4)));
-int medusa_httpserver_client_reply_send_vheader (struct medusa_httpserver_client *httpserver_client, const char *key, const char *value, va_list va);
+int medusa_httpserver_client_reply_send_status (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason);
+int medusa_httpserver_client_reply_send_statusf (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason, ...) __attribute__((format(printf, 4, 5)));
+int medusa_httpserver_client_reply_send_statusv (struct medusa_httpserver_client *httpserver_client, const char *version, int code, const char *reason, va_list va);
+int medusa_httpserver_client_reply_send_header (struct medusa_httpserver_client *httpserver_client, const char *key, const char *value);
+int medusa_httpserver_client_reply_send_headerf (struct medusa_httpserver_client *httpserver_client, const char *key, const char *value, ...) __attribute__((format(printf, 3, 4)));
+int medusa_httpserver_client_reply_send_headerv (struct medusa_httpserver_client *httpserver_client, const char *key, const char *value, va_list va);
 int medusa_httpserver_client_reply_send_body (struct medusa_httpserver_client *httpserver_client, const void *body, int length);
 int medusa_httpserver_client_reply_send_bodyf (struct medusa_httpserver_client *httpserver_client, const char *body, ...) __attribute__((format(printf, 2, 3)));
-int medusa_httpserver_client_reply_send_vbody (struct medusa_httpserver_client *httpserver_client, const char *body, va_list va);
+int medusa_httpserver_client_reply_send_bodyv (struct medusa_httpserver_client *httpserver_client, const char *body, va_list va);
 int medusa_httpserver_client_reply_send_finish (struct medusa_httpserver_client *httpserver_client);
 
 int medusa_httpserver_client_get_fd (struct medusa_httpserver_client *httpserver_client);
