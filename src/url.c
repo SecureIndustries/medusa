@@ -13,7 +13,40 @@ struct medusa_url {
         char *host;
         unsigned short port;
         char *path;
-        int ssl;
+};
+
+static const struct {
+        const char *scheme;
+        unsigned short port;
+} g_services[] = {
+	{ "acap",      674 },
+	{ "cap",       1026 },
+	{ "dict",      2628 },
+	{ "ftp",       21 },
+	{ "gopher",    70 },
+	{ "http",      80 },
+	{ "https",     443 },
+	{ "iax",       4569 },
+	{ "icap",      1344 },
+	{ "imap",      143 },
+	{ "ipp",       631 },
+	{ "ldap",      389 },
+	{ "mtqp",      1038 },
+	{ "mupdate",   3905 },
+	{ "news",      2009 },
+	{ "nfs",       2049 },
+	{ "nntp",      119 },
+	{ "rtsp",      554 },
+	{ "sip",       5060 },
+	{ "snmp",      161 },
+	{ "telnet",    23 },
+	{ "tftp",      69 },
+	{ "vemmi",     575 },
+	{ "afs",       1483 },
+	{ "jms",       5673 },
+	{ "rsync",     873 },
+	{ "prospero",  191 },
+	{ "videotex",  51 },
 };
 
 struct medusa_url * medusa_url_parse (const char *uri)
@@ -25,6 +58,7 @@ struct medusa_url * medusa_url_parse (const char *uri)
         char *t;
 
         int rs;
+        unsigned int j;
         struct medusa_url *url;
 
         rs = -EIO;
@@ -67,17 +101,16 @@ struct medusa_url * medusa_url_parse (const char *uri)
                 *(e - 1) = '\0';
                 i = s + 3;
 
-                if (strcasecmp(url->scheme, "http") == 0) {
-                        url->port = 80;
-                } else if (strcasecmp(url->scheme, "https") == 0) {
-                        url->port = 443;
-                        url->ssl  = 1;
+                for (j = 0; j < sizeof(g_services) / sizeof(g_services[0]); j++) {
+                        if (strcasecmp(g_services[j].scheme, url->scheme) == 0) {
+                                url->port = g_services[j].port;
+                        }
                 }
         }
 
         p = strchr(i, ':');
         e = strchr(i, '/');
-        if (p != NULL && e < p) {
+        if (p != NULL && (e == NULL || e > p)) {
                 url->port = atoi(p + 1);
                 *p = '\0';
         }
@@ -146,12 +179,4 @@ const char * medusa_url_get_path (struct medusa_url *url)
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
         return url->path;
-}
-
-int medusa_url_get_ssl (struct medusa_url *url)
-{
-        if (url == NULL) {
-                return -EINVAL;
-        }
-        return url->ssl;
 }
