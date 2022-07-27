@@ -92,7 +92,7 @@ struct medusa_url * medusa_url_parse (const char *uri)
 
         i = url->base;
 
-        s = strstr(url->base, "://");
+        s = strstr(i, "://");
         e = strchr(i, '/');
         if (s == NULL || e < s) {
                 url->scheme = NULL;
