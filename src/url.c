@@ -55,7 +55,6 @@ struct medusa_url * medusa_url_parse (const char *uri)
         char *s;
         char *p;
         char *e;
-        char *t;
 
         int rs;
         unsigned int j;
@@ -82,12 +81,11 @@ struct medusa_url * medusa_url_parse (const char *uri)
                 goto bail;
         }
 
-        if (url->base[0] == '<') {
-                memmove(url->base, url->base + 1, strlen(url->base) - 1);
-                t = strchr(url->base, '>');
-                if (t != NULL) {
-                        *t = '\0';
-                }
+        if (strlen(url->base) > 0 &&
+            url->base[0] == '<' &&
+            url->base[strlen(url->base) - 1] == '>') {
+                memmove(url->base, url->base + 1, strlen(url->base));
+                url->base[strlen(url->base) - 1] = '\0';
         }
 
         i = url->base;
