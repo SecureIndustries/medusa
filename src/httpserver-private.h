@@ -14,6 +14,7 @@ int medusa_httpserver_get_state_unlocked (const struct medusa_httpserver *httpse
 int medusa_httpserver_get_error_unlocked (const struct medusa_httpserver *httpserver);
 
 int medusa_httpserver_get_protocol_unlocked (struct medusa_httpserver *httpserver);
+int medusa_httpserver_get_sockport_unlocked (const struct medusa_httpserver *httpserver);
 int medusa_httpserver_get_sockname_unlocked (const struct medusa_httpserver *httpserver, struct sockaddr_storage *sockaddr);
 
 int medusa_httpserver_set_enabled_unlocked (struct medusa_httpserver *httpserver, int enabled);
