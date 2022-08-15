@@ -8,8 +8,6 @@
 #include <ctype.h>
 #include <errno.h>
 
-#include <arpa/inet.h>
-
 #include "../3rdparty/http-parser/http_parser.h"
 
 #include "strndup.h"
@@ -434,28 +432,17 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_get_protocol (str
 
 __attribute__ ((visibility ("default"))) int medusa_httpserver_get_sockport_unlocked (const struct medusa_httpserver *httpserver)
 {
-        int rc;
-        struct sockaddr_storage sockaddr;
-        rc = medusa_httpserver_get_sockname_unlocked(httpserver, &sockaddr);
-        if (rc < 0) {
-                return rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
+                return -EINVAL;
         }
-        if (sockaddr.ss_family == AF_INET) {
-                struct sockaddr_in *sockaddr_in = (struct sockaddr_in *) &sockaddr;
-                return ntohs(sockaddr_in->sin_port);
-        } else if (sockaddr.ss_family == AF_INET6) {
-                struct sockaddr_in6 *sockaddr_in6 = (struct sockaddr_in6 *) &sockaddr;
-                return ntohs(sockaddr_in6->sin6_port);
-        } else {
-                return -EIO;
-        }
+        return medusa_tcpsocket_get_sockport_unlocked(httpserver->tcpsocket);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_httpserver_get_sockport (const struct medusa_httpserver *httpserver)
 {
         unsigned int rc;
         if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
-                return MEDUSA_HTTPSERVER_STATE_UNKNOWN;
+                return -EINVAL;
         }
         medusa_monitor_lock(httpserver->subject.monitor);
         rc = medusa_httpserver_get_sockport_unlocked(httpserver);
@@ -466,7 +453,7 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_get_sockport (con
 __attribute__ ((visibility ("default"))) int medusa_httpserver_get_sockname_unlocked (const struct medusa_httpserver *httpserver, struct sockaddr_storage *sockaddr)
 {
         if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
-                return MEDUSA_HTTPSERVER_STATE_UNKNOWN;
+                return -EINVAL;
         }
         return medusa_tcpsocket_get_sockname_unlocked(httpserver->tcpsocket, sockaddr);
 }
@@ -475,7 +462,7 @@ __attribute__ ((visibility ("default"))) int medusa_httpserver_get_sockname (con
 {
         unsigned int rc;
         if (MEDUSA_IS_ERR_OR_NULL(httpserver)) {
-                return MEDUSA_HTTPSERVER_STATE_UNKNOWN;
+                return -EINVAL;
         }
         medusa_monitor_lock(httpserver->subject.monitor);
         rc = medusa_httpserver_get_sockname_unlocked(httpserver, sockaddr);
