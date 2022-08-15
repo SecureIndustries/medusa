@@ -92,6 +92,7 @@ int medusa_tcpsocket_del_events_unlocked (struct medusa_tcpsocket *tcpsocket, un
 unsigned int medusa_tcpsocket_get_events_unlocked (const struct medusa_tcpsocket *tcpsocket);
 
 int medusa_tcpsocket_get_protocol_unlocked (struct medusa_tcpsocket *tcpsocket);
+int medusa_tcpsocket_get_sockport_unlocked (struct medusa_tcpsocket *tcpsocket);
 int medusa_tcpsocket_get_sockname_unlocked (struct medusa_tcpsocket *tcpsocket, struct sockaddr_storage *sockaddr);
 int medusa_tcpsocket_get_peername_unlocked (struct medusa_tcpsocket *tcpsocket, struct sockaddr_storage *sockaddr);
 
