@@ -114,7 +114,7 @@ int medusa_debug_printf (int level, const char *name, const char *function, cons
         tm = localtime(&timeval.tv_sec);
         strftime(date, sizeof(date), "%x-%H:%M:%S", tm);
 
-        fprintf(stderr, "medusa:%08lx:%s.%03d:%-8s:%-6s: %s (%s %s:%d)\n", pthread_self(), date, milliseconds, name, medusa_debug_level_to_string(level), debug_buffer, function, file, line);
+        fprintf(stderr, "medusa:%s.%03d:%-8s:%-6s: %s (%s %s:%d)\n", date, milliseconds, name, medusa_debug_level_to_string(level), debug_buffer, function, file, line);
         fflush(stderr);
 
         medusa_debug_unlock();
