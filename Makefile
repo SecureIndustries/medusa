@@ -95,6 +95,7 @@ install: src test
 	install -d ${DESTDIR}/${prefix}/include/medusa
 	install -m 0644 dist/include/medusa/buffer.h ${DESTDIR}/${prefix}/include/medusa/buffer.h
 	install -m 0644 dist/include/medusa/clock.h ${DESTDIR}/${prefix}/include/medusa/clock.h
+	install -m 0644 dist/include/medusa/debug.h ${DESTDIR}/${prefix}/include/medusa/debug.h
 	install -m 0644 dist/include/medusa/error.h ${DESTDIR}/${prefix}/include/medusa/error.h
 	install -m 0644 dist/include/medusa/exec.h ${DESTDIR}/${prefix}/include/medusa/exec.h
 	install -m 0644 dist/include/medusa/httprequest.h ${DESTDIR}/${prefix}/include/medusa/httprequest.h

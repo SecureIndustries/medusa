@@ -7,7 +7,10 @@
 #include <time.h>
 #include <errno.h>
 
+#define MEDUSA_DEBUG_NAME       "timer"
+
 #include "clock.h"
+#include "debug.h"
 #include "error.h"
 #include "pool.h"
 #include "queue.h"
@@ -1227,6 +1230,9 @@ __attribute__ ((visibility ("default"))) int medusa_timer_onevent_unlocked (stru
                     (events & MEDUSA_TIMER_EVENT_DESTROY)) {
                         medusa_monitor_unlock(monitor);
                         rc = timer->onevent(timer, events, timer->context, param);
+                        if (rc < 0) {
+                                medusa_errorf("timer->onevent failed, rc: %d", rc);
+                        }
                         medusa_monitor_lock(monitor);
                 }
         }

@@ -12,6 +12,9 @@
 #include <sys/select.h>
 #endif
 
+#define MEDUSA_DEBUG_NAME       "poll-select"
+
+#include "debug.h"
 #include "queue.h"
 #include "subject-struct.h"
 #include "io.h"
@@ -192,6 +195,7 @@ static int internal_run (struct medusa_poll_backend *backend, struct timespec *t
                 io = internal->ios[i];
                 rc = internal->onevent(backend, io, events, internal->context, NULL);
                 if (rc < 0) {
+                        medusa_errorf("internal->onevent failed, rc: %d", rc);
                         goto bail;
                 }
         }

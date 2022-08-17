@@ -33,6 +33,7 @@ libmedusa.a_cflags-y = \
 
 libmedusa.a_files-y = \
 	strndup.c \
+	debug.c \
 	pipe.c \
 	clock.c \
 	base64.c \
@@ -166,6 +167,7 @@ dist.base = medusa
 dist.include-y = \
 	monitor.h \
 	clock.h \
+	debug.h \
 	error.h \
 	pool.h \
 	iovec.h \

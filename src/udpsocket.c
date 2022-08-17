@@ -20,6 +20,9 @@
 #endif
 #include <errno.h>
 
+#define MEDUSA_DEBUG_NAME       "udpsocket"
+
+#include "debug.h"
 #include "error.h"
 #include "pool.h"
 #include "queue.h"
@@ -165,11 +168,17 @@ static inline int udpsocket_set_state (struct medusa_udpsocket *udpsocket, unsig
 
 static int udpsocket_rtimer_onevent (struct medusa_timer *timer, unsigned int events, void *context, void *param)
 {
+        int rc;
         struct medusa_udpsocket *udpsocket = (struct medusa_udpsocket *) context;
         (void) timer;
         (void) param;
         if (events & MEDUSA_TIMER_EVENT_TIMEOUT) {
-                return medusa_udpsocket_onevent(udpsocket, MEDUSA_UDPSOCKET_EVENT_IN_TIMEOUT, NULL);
+                rc = medusa_udpsocket_onevent(udpsocket, MEDUSA_UDPSOCKET_EVENT_IN_TIMEOUT, NULL);
+                if (rc < 0) {
+                        medusa_errorf("medusa_udpsocket_onevent failed, rc: %d", rc);
+                        return -1;
+                }
+                return 0;
         }
         return 0;
 }
@@ -193,6 +202,7 @@ static int udpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                         vallen = sizeof(valopt);
                         rc = getsockopt(medusa_io_get_fd_unlocked(io), SOL_SOCKET, SO_ERROR, (void *) &valopt, &vallen);
                         if (rc < 0) {
+                                medusa_errorf("getsockopt failed, rc: %d", rc);
                                 goto bail;
                         }
                         if (valopt != 0) {
@@ -202,37 +212,45 @@ static int udpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                 medusa_udpsocket_event_error.line  = __LINE__;
                                 rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_ERROR, medusa_udpsocket_event_error.error);
                                 if (rc < 0) {
+                                        medusa_errorf("udpsocket_set_state failed, rc: %d", rc);
                                         goto bail;
                                 }
                                 rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_ERROR, &medusa_udpsocket_event_error);
                                 if (rc < 0) {
+                                        medusa_errorf("medusa_udpsocket_onevent_unlocked failed, rc: %d", rc);
                                         goto bail;
                                 }
                         } else {
                                 rc = medusa_io_del_events_unlocked(io, MEDUSA_IO_EVENT_OUT);
                                 if (rc < 0) {
+                                        medusa_errorf("medusa_io_del_events_unlocked failed, rc: %d", rc);
                                         goto bail;
                                 }
                                 rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_CONNECTED, 0);
                                 if (rc < 0) {
+                                        medusa_errorf("udpsocket_set_state failed, rc: %d", rc);
                                         goto bail;
                                 }
                                 rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_CONNECTED, NULL);
                                 if (rc < 0) {
+                                        medusa_errorf("medusa_udpsocket_onevent_unlocked failed, rc: %d", rc);
                                         goto bail;
                                 }
                         }
                 } else if (udpsocket->state == MEDUSA_UDPSOCKET_STATE_LISTENING) {
                         rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_OUT, NULL);
                         if (rc < 0) {
+                                medusa_errorf("medusa_udpsocket_onevent_unlocked failed, rc: %d", rc);
                                 goto bail;
                         }
                 } else if (udpsocket->state == MEDUSA_UDPSOCKET_STATE_CONNECTED) {
                         rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_OUT, NULL);
                         if (rc < 0) {
+                                medusa_errorf("medusa_udpsocket_onevent_unlocked failed, rc: %d", rc);
                                 goto bail;
                         }
                 } else {
+                        medusa_errorf("state: %d is invalid", udpsocket->state);
                         goto bail;
                 }
         } else if (events & MEDUSA_IO_EVENT_IN) {
@@ -242,15 +260,18 @@ static int udpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                 double interval;
                                 interval = medusa_timer_get_interval_unlocked(udpsocket->rtimer);
                                 if (interval < 0) {
+                                        medusa_errorf("medusa_timer_get_interval_unlocked failed, interval: %d", (int) interval);
                                         goto bail;
                                 }
                                 rc = medusa_timer_set_interval_unlocked(udpsocket->rtimer, interval);
                                 if (rc < 0) {
+                                        medusa_errorf("medusa_timer_set_interval_unlocked failed, rc: %d", rc);
                                         goto bail;
                                 }
                         }
                         rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_IN, NULL);
                         if (rc < 0) {
+                                medusa_errorf("medusa_udpsocket_onevent_unlocked failed, rc: %d", rc);
                                 goto bail;
                         }
                 } else if (udpsocket->state == MEDUSA_UDPSOCKET_STATE_CONNECTED) {
@@ -258,18 +279,22 @@ static int udpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                                 double interval;
                                 interval = medusa_timer_get_interval_unlocked(udpsocket->rtimer);
                                 if (interval < 0) {
+                                        medusa_errorf("medusa_timer_get_interval_unlocked failed, interval: %d", (int) interval);
                                         goto bail;
                                 }
                                 rc = medusa_timer_set_interval_unlocked(udpsocket->rtimer, interval);
                                 if (rc < 0) {
+                                        medusa_errorf("medusa_timer_set_interval_unlocked failed, rc: %d", rc);
                                         goto bail;
                                 }
                         }
                         rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_IN, NULL);
                         if (rc < 0) {
+                                medusa_errorf("medusa_udpsocket_onevent_unlocked failed, rc: %d", rc);
                                 goto bail;
                         }
                 } else {
+                        medusa_errorf("state: %d is invalid", udpsocket->state);
                         goto bail;
                 }
         } else if (events & MEDUSA_IO_EVENT_ERR) {
@@ -279,10 +304,12 @@ static int udpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                 medusa_udpsocket_event_error.line  = __LINE__;
                 rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_ERROR, medusa_udpsocket_event_error.error);
                 if (rc < 0) {
+                        medusa_errorf("udpsocket_set_state failed, rc: %d", rc);
                         goto bail;
                 }
                 rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_ERROR, &medusa_udpsocket_event_error);
                 if (rc < 0) {
+                        medusa_errorf("medusa_timer_set_interval_unlocked failed, rc: %d", rc);
                         goto bail;
                 }
         } else if (events & MEDUSA_IO_EVENT_HUP) {
@@ -292,10 +319,12 @@ static int udpsocket_io_onevent (struct medusa_io *io, unsigned int events, void
                 medusa_udpsocket_event_error.line  = __LINE__;
                 rc = udpsocket_set_state(udpsocket, MEDUSA_UDPSOCKET_STATE_ERROR, medusa_udpsocket_event_error.error);
                 if (rc < 0) {
+                        medusa_errorf("udpsocket_set_state failed, rc: %d", rc);
                         goto bail;
                 }
                 rc = medusa_udpsocket_onevent_unlocked(udpsocket, MEDUSA_UDPSOCKET_EVENT_ERROR, &medusa_udpsocket_event_error);
                 if (rc < 0) {
+                        medusa_errorf("medusa_timer_set_interval_unlocked failed, rc: %d", rc);
                         goto bail;
                 }
         } else if (events & MEDUSA_IO_EVENT_DESTROY) {
@@ -1906,6 +1935,9 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_onevent_unlocked (
                     (events & MEDUSA_UDPSOCKET_EVENT_DESTROY)) {
                         medusa_monitor_unlock(monitor);
                         ret = udpsocket->onevent(udpsocket, events, udpsocket->context, param);
+                        if (ret < 0) {
+                                medusa_errorf("udpsocket->onevent failed, ret: %d", ret);
+                        }
                         medusa_monitor_lock(monitor);
                 }
         }

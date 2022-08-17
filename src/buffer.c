@@ -6,7 +6,10 @@
 #include <stdint.h>
 #include <errno.h>
 
+#define MEDUSA_DEBUG_NAME       "buffer"
+
 #include "endian.h"
+#include "debug.h"
 #include "error.h"
 #include "iovec.h"
 #include "buffer.h"
@@ -174,6 +177,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertv (struct m
         if (ret > 0) {
                 rc = buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_WRITE, NULL);
                 if (rc != 0) {
+                        medusa_errorf("buffer_onevent failed, rc: %d", rc);
                         return rc;
                 }
         }
@@ -261,6 +265,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_insertfv (struct 
         if (ret > 0) {
                 rc = buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_WRITE, NULL);
                 if (rc != 0) {
+                        medusa_errorf("buffer_onevent failed, rc: %d", rc);
                         return rc;
                 }
         }
@@ -526,6 +531,7 @@ __attribute__ ((visibility ("default"))) int64_t medusa_buffer_commitv (struct m
         if (ret > 0) {
                 rc = buffer_onevent(buffer, MEDUSA_BUFFER_EVENT_WRITE, NULL);
                 if (rc != 0) {
+                        medusa_errorf("buffer_onevent failed, rc: %d", rc);
                         return rc;
                 }
         }

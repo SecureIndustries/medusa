@@ -6,9 +6,12 @@
 #include <unistd.h>
 #include <errno.h>
 
+#define MEDUSA_DEBUG_NAME       "websocketserver"
+
 #include "../3rdparty/http-parser/http_parser.h"
 
 #include "strndup.h"
+#include "debug.h"
 #include "error.h"
 #include "pool.h"
 #include "base64.h"
@@ -127,11 +130,13 @@ static int websocketserver_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket
         if (events & MEDUSA_TCPSOCKET_EVENT_BINDING) {
                 rc = websocketserver_set_state(websocketserver, MEDUSA_WEBSOCKETSERVER_STATE_BINDING);
                 if (rc < 0) {
+                        medusa_errorf("websocketserver_set_state failed, rc: %d", rc);
                         error = rc;
                         goto bail;
                 }
                 rc = medusa_websocketserver_onevent_unlocked(websocketserver, MEDUSA_WEBSOCKETSERVER_EVENT_BINDING, NULL);
                 if (rc < 0) {
+                        medusa_errorf("medusa_websocketserver_onevent_unlocked failed, rc: %d", rc);
                         error = rc;
                         goto bail;
                 }
@@ -139,11 +144,13 @@ static int websocketserver_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket
         if (events & MEDUSA_TCPSOCKET_EVENT_BOUND) {
                 rc = websocketserver_set_state(websocketserver, MEDUSA_WEBSOCKETSERVER_STATE_BOUND);
                 if (rc < 0) {
+                        medusa_errorf("websocketserver_set_state failed, rc: %d", rc);
                         error = rc;
                         goto bail;
                 }
                 rc = medusa_websocketserver_onevent_unlocked(websocketserver, MEDUSA_WEBSOCKETSERVER_EVENT_BOUND, NULL);
                 if (rc < 0) {
+                        medusa_errorf("medusa_websocketserver_onevent_unlocked failed, rc: %d", rc);
                         error = rc;
                         goto bail;
                 }
@@ -151,11 +158,13 @@ static int websocketserver_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket
         if (events & MEDUSA_TCPSOCKET_EVENT_LISTENING) {
                 rc = websocketserver_set_state(websocketserver, MEDUSA_WEBSOCKETSERVER_STATE_LISTENING);
                 if (rc < 0) {
+                        medusa_errorf("websocketserver_set_state failed, rc: %d", rc);
                         error = rc;
                         goto bail;
                 }
                 rc = medusa_websocketserver_onevent_unlocked(websocketserver, MEDUSA_WEBSOCKETSERVER_EVENT_LISTENING, NULL);
                 if (rc < 0) {
+                        medusa_errorf("medusa_websocketserver_onevent_unlocked failed, rc: %d", rc);
                         error = rc;
                         goto bail;
                 }
@@ -163,6 +172,7 @@ static int websocketserver_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket
         if (events & MEDUSA_TCPSOCKET_EVENT_CONNECTION) {
                 rc = medusa_websocketserver_onevent_unlocked(websocketserver, MEDUSA_WEBSOCKETSERVER_EVENT_CONNECTION, NULL);
                 if (rc < 0) {
+                        medusa_errorf("medusa_websocketserver_onevent_unlocked failed, rc: %d", rc);
                         error = rc;
                         goto bail;
                 }
@@ -725,6 +735,9 @@ __attribute__ ((visibility ("default"))) int medusa_websocketserver_onevent_unlo
                     (events & MEDUSA_WEBSOCKETSERVER_EVENT_DESTROY)) {
                         medusa_monitor_unlock(monitor);
                         ret = websocketserver->onevent(websocketserver, events, websocketserver->context, param);
+                        if (ret < 0) {
+                                medusa_errorf("websocketserver->onevent failed, ret: %d", ret);
+                        }
                         medusa_monitor_lock(monitor);
                 }
         }
@@ -1075,6 +1088,7 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
                 websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ACCEPTED);
                 rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ACCEPTED, NULL);
                 if (rc < 0) {
+                        medusa_errorf("medusa_websocketserver_client_onevent_unlocked failed, rc: %d", rc);
                         error = rc;
                         goto bail;
                 }
@@ -1095,11 +1109,13 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
                 if (websocketserver_client->state == MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ACCEPTED) {
                         rc = websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_REQUEST_RECEIVING);
                         if (rc < 0) {
+                                medusa_errorf("websocketserver_client_set_state failed, rc: %d", rc);
                                 error = rc;
                                 goto bail;
                         }
                         rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_REQUEST_RECEIVING, NULL);
                         if (rc < 0) {
+                                medusa_errorf("medusa_websocketserver_client_onevent_unlocked failed, rc: %d", rc);
                                 error = rc;
                                 goto bail;
                         }
@@ -1118,6 +1134,7 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
                                 siovecs = sizeof(iovecs) / sizeof(iovecs[0]);
                                 niovecs = medusa_buffer_peekv(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, -1, iovecs, siovecs);
                                 if (niovecs < 0) {
+                                        medusa_errorf("medusa_buffer_peekv failed, niovecs: %d", (int) niovecs);
                                         error = niovecs;
                                         goto bail;
                                 }
@@ -1129,6 +1146,7 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
                                 for (iiovecs = 0; iiovecs < niovecs; iiovecs++) {
                                         nparsed = http_parser_execute(&websocketserver_client->http_parser, &websocketserver_client->http_parser_settings, iovecs[iiovecs].iov_base, iovecs[iiovecs].iov_len);
                                         if (websocketserver_client->http_parser.http_errno != 0) {
+                                                medusa_errorf("http_parser_execute failed, http_errno: %d", websocketserver_client->http_parser.http_errno);
                                                 error = -EIO;
                                                 goto bail;
                                         }
@@ -1139,6 +1157,7 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
                                 }
                                 clength = medusa_buffer_choke(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, tparsed);
                                 if (clength != (int64_t) tparsed) {
+                                        medusa_errorf("medusa_buffer_choke failed, clength: %d, tparsed: %d", (int) clength, (int) tparsed);
                                         error = -EIO;
                                         goto bail;
                                 }
@@ -1152,12 +1171,14 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
                         const char *key = websocketserver_client->sec_websocket_key;
 
                         if (key == NULL) {
+                                medusa_errorf("key is invalid");
                                 error = -EIO;
                                 goto bail;
                         }
 
                         str = malloc(strlen(key) + strlen(gid) + 1);
                         if (str == NULL) {
+                                medusa_errorf("can not allocate memory");
                                 error = -ENOMEM;
                                 goto bail;
                         }
@@ -1167,6 +1188,7 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
                         medusa_sha1(hash, str, strlen(str));
                         base64 = malloc(medusa_base64_encode_length(MEDUSA_SHA1_LENGTH));
                         if (base64 == NULL) {
+                                medusa_errorf("can not allocate memory");
                                 free(str);
                                 error = -ENOMEM;
                                 goto bail;
@@ -1187,11 +1209,13 @@ static int websocketserver_client_tcpsocket_onevent (struct medusa_tcpsocket *tc
 
                         rc = websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_CONNECTED);
                         if (rc < 0) {
+                                medusa_errorf("websocketserver_client_set_state failed, rc: %d", rc);
                                 error = rc;
                                 goto bail;
                         }
                         rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_CONNECTED, NULL);
                         if (rc < 0) {
+                                medusa_errorf("medusa_websocketserver_client_onevent_unlocked failed, rc: %d", rc);
                                 error = rc;
                                 goto bail;
                         }
@@ -1209,6 +1233,7 @@ restart_buffer:
                                         int64_t rlength;
                                         rlength = medusa_buffer_get_length(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket));
                                         if (rlength < 0) {
+                                                medusa_errorf("medusa_buffer_get_length failed, rlength: %d", (int) rlength);
                                                 error = rlength;
                                                 goto bail;
                                         }
@@ -1225,6 +1250,7 @@ restart_buffer:
                                         uint8_t uint8;
                                         rc = medusa_buffer_peek_uint8(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 1, &uint8);
                                         if (rc < 0) {
+                                                medusa_errorf("medusa_buffer_peek_uint8 failed, rc: %d", (int) rc);
                                                 error = rc;
                                                 goto bail;
                                         }
@@ -1234,6 +1260,7 @@ restart_buffer:
                                                         int64_t rlength;
                                                         rlength = medusa_buffer_get_length(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket));
                                                         if (rlength < 0) {
+                                                                medusa_errorf("medusa_buffer_get_length failed, rlength: %d", (int) rlength);
                                                                 error = rlength;
                                                                 goto bail;
                                                         }
@@ -1242,6 +1269,7 @@ restart_buffer:
                                                         }
                                                         rc = medusa_buffer_peek_uint16_be(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 2, &uint16);
                                                         if (rc < 0) {
+                                                                medusa_errorf("medusa_buffer_peek_uint16_be failed, rc: %d", (int) rc);
                                                                 error = rc;
                                                                 goto bail;
                                                         }
@@ -1255,6 +1283,7 @@ restart_buffer:
                                                         int64_t rlength;
                                                         rlength = medusa_buffer_get_length(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket));
                                                         if (rlength < 0) {
+                                                                medusa_errorf("medusa_buffer_get_length failed, rlength: %d", (int) rlength);
                                                                 error = rlength;
                                                                 goto bail;
                                                         }
@@ -1263,6 +1292,7 @@ restart_buffer:
                                                         }
                                                         rc = medusa_buffer_peek_uint64_be(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 2, &uint64);
                                                         if (rc < 0) {
+                                                                medusa_errorf("medusa_buffer_peek_uint64_be failed, rc: %d", (int) rc);
                                                                 error = rc;
                                                                 goto bail;
                                                         }
@@ -1291,6 +1321,7 @@ restart_buffer:
 
                                         rlength = medusa_buffer_get_length(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket));
                                         if (rlength < 0) {
+                                                medusa_errorf("medusa_buffer_get_length failed, rlength: %d", (int) rlength);
                                                 error = rlength;
                                                 goto bail;
                                         }
@@ -1300,6 +1331,7 @@ restart_buffer:
 
                                         payload = medusa_buffer_linearize(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), websocketserver_client->frame_payload_offset, websocketserver_client->frame_payload_length);
                                         if (MEDUSA_IS_ERR_OR_NULL(payload)) {
+                                                medusa_errorf("medusa_buffer_linearize failed, rc: %d", MEDUSA_PTR_ERR(payload));
                                                 error = MEDUSA_PTR_ERR(payload);
                                                 goto bail;
                                         }
@@ -1310,6 +1342,7 @@ restart_buffer:
                                                 rc |= medusa_buffer_peek_uint8(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), websocketserver_client->frame_mask_offset + 2, &mask[2]);
                                                 rc |= medusa_buffer_peek_uint8(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), websocketserver_client->frame_mask_offset + 3, &mask[3]);
                                                 if (rc < 0) {
+                                                        medusa_errorf("medusa_buffer_peek_uint8 failed, rlength: %d", (int) rc);
                                                         error = rc;
                                                         goto bail;
                                                 }
@@ -1330,12 +1363,14 @@ restart_buffer:
 
                                         rc = medusa_buffer_peek_uint8(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, &uint8);
                                         if (rc < 0) {
+                                                medusa_errorf("medusa_buffer_peek_uint8 failed, rc: %d", (int) rc);
                                                 error = rc;
                                                 goto bail;
                                         }
 
                                         payload = medusa_buffer_linearize(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), websocketserver_client->frame_payload_offset, websocketserver_client->frame_payload_length);
                                         if (MEDUSA_IS_ERR_OR_NULL(payload)) {
+                                                medusa_errorf("medusa_buffer_linearize failed, rc: %d", MEDUSA_PTR_ERR(payload));
                                                 error = MEDUSA_PTR_ERR(payload);
                                                 goto bail;
                                         }
@@ -1352,11 +1387,13 @@ restart_buffer:
                                         medusa_websocketserver_client_event_message.payload = payload;
                                         rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_MESSAGE, &medusa_websocketserver_client_event_message);
                                         if (rc < 0) {
+                                                medusa_errorf("medusa_websocketserver_client_onevent_unlocked failed, rc: %d", rc);
                                                 error = rc;
                                                 goto bail;
                                         }
                                         clength = medusa_buffer_choke(medusa_tcpsocket_get_read_buffer_unlocked(tcpsocket), 0, websocketserver_client->frame_payload_offset + websocketserver_client->frame_payload_length);
                                         if (clength != websocketserver_client->frame_payload_offset + websocketserver_client->frame_payload_length) {
+                                                medusa_errorf("medusa_websocketserver_client_onevent_unlocked failed, clength: %d / %d", (int) clength, (int) websocketserver_client->frame_payload_offset + websocketserver_client->frame_payload_length);
                                                 error = -EIO;
                                                 goto bail;
                                         }
@@ -1364,11 +1401,13 @@ restart_buffer:
                                         if (opcode == WS_OPCODE_CLOSE) {
                                                 rc = websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED);
                                                 if (rc < 0) {
+                                                        medusa_errorf("websocketserver_client_set_state failed, rc: %d", rc);
                                                         error = rc;
                                                         goto bail;
                                                 }
                                                 rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DISCONNECTED, NULL);
                                                 if (rc < 0) {
+                                                        medusa_errorf("medusa_websocketserver_client_onevent_unlocked failed, rc: %d", rc);
                                                         error = rc;
                                                         goto bail;
                                                 }
@@ -1391,12 +1430,14 @@ short_buffer:
                 medusa_websocketserver_client_event_buffered_write.remaining = medusa_tcpsocket_event_buffered_write->remaining;
                 rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_BUFFERED_WRITE, &medusa_websocketserver_client_event_buffered_write);
                 if (rc < 0) {
+                        medusa_errorf("medusa_websocketserver_client_onevent_unlocked failed, rc: %d", rc);
                         error = rc;
                         goto bail;
                 }
         } else if (events & MEDUSA_TCPSOCKET_EVENT_BUFFERED_WRITE_FINISHED) {
                 rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_BUFFERED_WRITE_FINISHED, NULL);
                 if (rc < 0) {
+                        medusa_errorf("medusa_websocketserver_client_onevent_unlocked failed, rc: %d", rc);
                         error = rc;
                         goto bail;
                 }
@@ -1404,12 +1445,14 @@ short_buffer:
                 struct medusa_tcpsocket_event_error *medusa_tcpsocket_event_error = (struct medusa_tcpsocket_event_error *) param;
                 rc = websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_ERROR);
                 if (rc < 0) {
+                        medusa_errorf("medusa_websocketserver_client_onevent_unlocked failed, rc: %d", rc);
                         error = rc;
                         goto bail;
                 }
                 websocketserver_client->error = medusa_tcpsocket_event_error->error;
                 rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_ERROR, NULL);
                 if (rc < 0) {
+                        medusa_errorf("medusa_websocketserver_client_onevent_unlocked failed, rc: %d", rc);
                         error = rc;
                         goto bail;
                 }
@@ -1417,16 +1460,19 @@ short_buffer:
         } else if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
                 rc = websocketserver_client_set_state(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_STATE_DISCONNECTED);
                 if (rc < 0) {
+                        medusa_errorf("websocketserver_client_set_state failed, rc: %d", rc);
                         error = rc;
                         goto bail;
                 }
                 rc = medusa_websocketserver_client_onevent_unlocked(websocketserver_client, MEDUSA_WEBSOCKETSERVER_CLIENT_EVENT_DISCONNECTED, NULL);
                 if (rc < 0) {
+                        medusa_errorf("medusa_websocketserver_client_onevent_unlocked failed, rc: %d", rc);
                         error = rc;
                         goto bail;
                 }
                 medusa_websocketserver_client_destroy_unlocked(websocketserver_client);
         } else {
+                medusa_errorf("events: 0x%08x is invalid", events);
                 error = -EIO;
                 goto bail;
         }
