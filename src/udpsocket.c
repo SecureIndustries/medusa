@@ -54,6 +54,7 @@ enum {
         MEDUSA_UDPSOCKET_FLAG_NONBLOCKING       = (1 <<  7),
         MEDUSA_UDPSOCKET_FLAG_REUSEADDR         = (1 <<  8),
         MEDUSA_UDPSOCKET_FLAG_REUSEPORT         = (1 <<  9),
+        MEDUSA_UDPSOCKET_FLAG_FREEBIND          = (1 <<  10),
 #define MEDUSA_UDPSOCKET_FLAG_NONE              MEDUSA_UDPSOCKET_FLAG_NONE
 #define MEDUSA_UDPSOCKET_FLAG_BIND              MEDUSA_UDPSOCKET_FLAG_BIND
 #define MEDUSA_UDPSOCKET_FLAG_OPEN              MEDUSA_UDPSOCKET_FLAG_OPEN
@@ -64,6 +65,7 @@ enum {
 #define MEDUSA_UDPSOCKET_FLAG_NONBLOCKING       MEDUSA_UDPSOCKET_FLAG_NONBLOCKING
 #define MEDUSA_UDPSOCKET_FLAG_REUSEADDR         MEDUSA_UDPSOCKET_FLAG_REUSEADDR
 #define MEDUSA_UDPSOCKET_FLAG_REUSEPORT         MEDUSA_UDPSOCKET_FLAG_REUSEPORT
+#define MEDUSA_UDPSOCKET_FLAG_FREEBIND          MEDUSA_UDPSOCKET_FLAG_FREEBIND
 };
 
 #if defined(MEDUSA_UDPSOCKET_USE_POOL) && (MEDUSA_UDPSOCKET_USE_POOL == 1)
@@ -1638,9 +1640,9 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_set_freebind_unloc
                 return -EINVAL;
         }
         if (enabled) {
-                udpsocket_add_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_REUSEPORT);
+                udpsocket_add_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_FREEBIND);
         } else {
-                udpsocket_del_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_REUSEPORT);
+                udpsocket_del_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_FREEBIND);
         }
         if (!MEDUSA_IS_ERR_OR_NULL(udpsocket->io)) {
                 int rc;
@@ -1676,7 +1678,7 @@ __attribute__ ((visibility ("default"))) int medusa_udpsocket_get_freebind_unloc
         if (MEDUSA_IS_ERR_OR_NULL(udpsocket)) {
                 return -EINVAL;
         }
-        return udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_REUSEPORT);
+        return udpsocket_has_flag(udpsocket, MEDUSA_UDPSOCKET_FLAG_FREEBIND);
 }
 
 __attribute__ ((visibility ("default"))) int medusa_udpsocket_get_freebind (const struct medusa_udpsocket *udpsocket)
