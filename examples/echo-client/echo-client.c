@@ -226,6 +226,7 @@ static int sender_medusa_udpsocket_onevent (struct medusa_udpsocket *udpsocket, 
         verbosef(1, "udpsocket events: 0x%08x, %s", events, medusa_udpsocket_event_string(events));
 
         if (events & MEDUSA_UDPSOCKET_EVENT_CONNECTED) {
+                verbosef(0, "sending: %s", option_string);
                 rc = send(medusa_udpsocket_get_fd(udpsocket), option_string, strlen(option_string) + 1, 0);
                 if (rc != (int) (strlen(option_string) + 1)) {
                         fprintf(stderr, "can not send data to udpsocket\n");
@@ -237,6 +238,7 @@ static int sender_medusa_udpsocket_onevent (struct medusa_udpsocket *udpsocket, 
                         fprintf(stderr, "can not recv data from udpsocket\n");
                         goto bail;
                 }
+                verbosef(0, "received: %s", buffer);
                 if (memcmp(option_string, buffer, strlen(option_string) + 1) != 0) {
                         fprintf(stderr, "can not recv data from udpsocket\n");
                         return -EIO;
