@@ -119,14 +119,23 @@ libmedusa.a_files-y += \
 	../3rdparty/SPCDNS/src/mappings.c \
 	../3rdparty/SPCDNS/src/output.c
 
-libmedusa.a_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
+libmedusa.a_../3rdparty/SPCDNS/src/codec.c_cflags-y += \
 	-DNDEBUG
 
-libmedusa.o_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
+libmedusa.o_../3rdparty/SPCDNS/src/codec.c_cflags-y += \
 	-DNDEBUG
 
-libmedusa.so.${MEDUSA_SONAME}_../3rdparty/SPCDNS/src/codec.c_cflags-y = \
+libmedusa.so.${MEDUSA_SONAME}_../3rdparty/SPCDNS/src/codec.c_cflags-y += \
 	-DNDEBUG
+
+libmedusa.a_tcpsocket.c_cflags-$(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) += \
+	-Wno-deprecated-declarations
+
+libmedusa.o_tcpsocket.c_cflags-$(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) += \
+	-Wno-deprecated-declarations
+
+libmedusa.so.${MEDUSA_SONAME}_tcpsocket.c_cflags-$(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) += \
+	-Wno-deprecated-declarations
 
 libmedusa.a_files-y += \
 	httpserver.c \

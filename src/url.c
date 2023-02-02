@@ -92,7 +92,7 @@ struct medusa_url * medusa_url_parse (const char *uri)
 
         s = strstr(i, "://");
         e = strchr(i, '/');
-        if (s == NULL || e < s) {
+        if ((s == NULL) || (e == NULL && s != NULL) || (e < s)) {
                 url->scheme = NULL;
         } else {
                 url->scheme = i;
@@ -108,25 +108,22 @@ struct medusa_url * medusa_url_parse (const char *uri)
 
         p = strchr(i, ':');
         e = strchr(i, '/');
-        if (p != NULL && (e == NULL || e > p)) {
+        if ((p != NULL) && (e == NULL || e > p)) {
                 url->port = atoi(p + 1);
                 *p = '\0';
         }
-        url->host = i;
         if (e != NULL) {
                 *e = '\0';
         }
 
-        if (e != NULL) {
-                do {
-                        e++;
-                } while (*e == '/');
-                url->path = e;
+        url->host = i;
+        if (url->host != NULL && strlen(url->host) == 0) {
+                url->host = NULL;
         }
 
-        if (url->host == NULL) {
-                rs = -EINVAL;
-                goto bail;
+        if (e != NULL) {
+                e++;
+                url->path = e;
         }
 
         return url;
