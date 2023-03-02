@@ -51,7 +51,7 @@ static void usage (const char *pname)
         fprintf(stdout, "  -e, --header: add header\n");
         fprintf(stdout, "  -d, --data  : request data (default: %s)\n", (OPTIONS_DEFAULT_DATA) ? OPTIONS_DEFAULT_DATA : "(null)");
         fprintf(stdout, "  -c, --connect-timeout: connect timeout (default: %.2f)\n", OPTIONS_DEFAULT_CONNECT_TIMEOUT);
-        fprintf(stdout, "  -c, --read-timeout   : read timeout (default: %.2f)\n", OPTIONS_DEFAULT_READ_TIMEOUT);
+        fprintf(stdout, "  -r, --read-timeout   : read timeout (default: %.2f)\n", OPTIONS_DEFAULT_READ_TIMEOUT);
         fprintf(stdout, "  -h, --help  : this text\n");
         fprintf(stdout, "\n");
         fprintf(stdout, "example:\n");
@@ -67,6 +67,8 @@ static int httprequest_onevent (struct medusa_httprequest *httprequest, unsigned
         (void) context;
         (void) param;
         fprintf(stderr, "httprequest state: %d, %s events: 0x%08x, %s\n", medusa_httprequest_get_state(httprequest), medusa_httprequest_state_string(medusa_httprequest_get_state(httprequest)), events, medusa_httprequest_event_string(events));
+        if (events & MEDUSA_HTTPREQUEST_EVENT_REQUESTED) {
+        }
         if (events & MEDUSA_HTTPREQUEST_EVENT_RECEIVED) {
                 const struct medusa_httprequest_reply *httprequest_reply;
                 const struct medusa_httprequest_reply_status *httprequest_reply_status;
