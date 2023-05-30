@@ -249,7 +249,7 @@ int main (int argc, char *argv[])
                 }
         }
 
-        rc = medusa_httprequest_make_post(httprequest, option_data, (option_data) ? (strlen(option_data) + 1) : 0);
+        rc = medusa_httprequest_make_request(httprequest, option_data, (option_data) ? (strlen(option_data) + 1) : 0);
         if (rc < 0) {
                 fprintf(stderr, "can not make post\n");
                 goto bail;

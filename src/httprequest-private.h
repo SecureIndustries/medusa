@@ -33,6 +33,12 @@ int medusa_httprequest_add_raw_header_unlocked (struct medusa_httprequest *httpr
 int medusa_httprequest_add_raw_headerf_unlocked (struct medusa_httprequest *httprequest, const char *value, ...) __attribute__((format(printf, 2, 3)));
 int medusa_httprequest_add_raw_headerv_unlocked (struct medusa_httprequest *httprequest, const char *value, va_list va);
 
+int medusa_httprequest_make_request_unlocked (struct medusa_httprequest *httprequest, const void *data, int64_t length);
+int medusa_httprequest_make_requestf_unlocked (struct medusa_httprequest *httprequest, const char *data, ...) __attribute__((format(printf, 2, 3)));
+int medusa_httprequest_make_requestv_unlocked (struct medusa_httprequest *httprequest, const char *data, va_list va);
+
+int medusa_httprequest_make_get_unlocked (struct medusa_httprequest *httprequest);
+
 int medusa_httprequest_make_post_unlocked (struct medusa_httprequest *httprequest, const void *data, int64_t length);
 int medusa_httprequest_make_postf_unlocked (struct medusa_httprequest *httprequest, const char *data, ...) __attribute__((format(printf, 2, 3)));
 int medusa_httprequest_make_postv_unlocked (struct medusa_httprequest *httprequest, const char *data, va_list va);
