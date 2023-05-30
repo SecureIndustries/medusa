@@ -1620,6 +1620,19 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_request (st
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_httprequest_make_requestf_unlocked (struct medusa_httprequest *httprequest, const char *data, ...)
+{
+        int rc;
+        va_list va;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        va_start(va, data);
+        rc = medusa_httprequest_make_requestv_unlocked(httprequest, data, va);
+        va_end(va);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_httprequest_make_requestf (struct medusa_httprequest *httprequest, const char *data, ...)
 {
         int rc;
