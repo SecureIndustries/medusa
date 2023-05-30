@@ -1633,7 +1633,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_requestf (s
         return rc;
 }
 
-__attribute__ ((visibility ("default"))) int medusa_httprequest_make_requestv (struct medusa_httprequest *httprequest, const char *data, va_list va)
+__attribute__ ((visibility ("default"))) int medusa_httprequest_make_requestv_unlocked (struct medusa_httprequest *httprequest, const char *data, va_list va)
 {
         int rc;
         int length;
@@ -1666,13 +1666,23 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_requestv (s
                 }
         }
 
-        medusa_monitor_lock(httprequest->subject.monitor);
         rc = medusa_httprequest_make_request_unlocked(httprequest, value, (value == NULL) ? 0 : strlen(value));
-        medusa_monitor_unlock(httprequest->subject.monitor);
 
         if (value != NULL) {
                 free(value);
         }
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_httprequest_make_requestv (struct medusa_httprequest *httprequest, const char *data, va_list va)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(httprequest)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(httprequest->subject.monitor);
+        rc = medusa_httprequest_make_requestv_unlocked(httprequest, data, va);
+        medusa_monitor_unlock(httprequest->subject.monitor);
         return rc;
 }
 
