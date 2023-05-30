@@ -691,6 +691,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                         }
 
                         nparsed = http_parser_execute(&httprequest->http_parser, &httprequest->http_parser_settings, iovec.iov_base, iovec.iov_len);
+#if 0
                         if (nparsed != iovec.iov_len) {
                                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
                                 rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED, NULL);
@@ -700,6 +701,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                                 }
                                 break;
                         }
+#endif
                         if (httprequest->http_parser.http_errno != HPE_OK) {
                                 struct medusa_httprequest_event_error medusa_httprequest_event_error;
                                 medusa_httprequest_event_error.state  = httprequest->state;
@@ -715,9 +717,9 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                                 }
                                 goto bail;
                         }
-                        clength = medusa_buffer_choke(medusa_tcpsocket_get_read_buffer_unlocked(httprequest->tcpsocket), 0, iovec.iov_len);
-                        if (clength != (int64_t) iovec.iov_len) {
-                                medusa_errorf("medusa_buffer_choke failed, clength: %d", (int) clength);
+                        clength = medusa_buffer_choke(medusa_tcpsocket_get_read_buffer_unlocked(httprequest->tcpsocket), 0, nparsed);
+                        if (clength != (int64_t) nparsed) {
+                                medusa_errorf("medusa_buffer_choke failed, clength: %d / %d", (int) clength, (int) nparsed);
                                 goto bail;
                         }
                 }
@@ -747,6 +749,14 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                 }
         }
         if (events & MEDUSA_TCPSOCKET_EVENT_DISCONNECTED) {
+                if (httprequest_get_state(httprequest) == MEDUSA_HTTPREQUEST_STATE_RECEIVING) {
+                        httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_RECEIVED);
+                        rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_RECEIVED, NULL);
+                        if (rc < 0) {
+                                medusa_errorf("medusa_httprequest_onevent_unlocked failed, rc: %d", rc);
+                                goto bail;
+                        }
+                }
                 httprequest_set_state(httprequest, MEDUSA_HTTPREQUEST_STATE_DISCONNECTED);
                 rc = medusa_httprequest_onevent_unlocked(httprequest, MEDUSA_HTTPREQUEST_EVENT_DISCONNECTED, NULL);
                 if (rc < 0) {
