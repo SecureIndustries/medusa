@@ -150,11 +150,17 @@ libmedusa.a_files-y += \
 libmedusa.o_cflags-y = \
 	${libmedusa.a_cflags-y}
 
+libmedusa.o_tcpsocket.c_cflags-$(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) += \
+	-Wno-deprecated-declarations
+
 libmedusa.o_files-y = \
 	${libmedusa.a_files-y}
 
-libmedusa.so.${MEDUSA_SONAME}_cflags-y = \
+libmedusa.so.${MEDUSA_SONAME}_cflags-y += \
 	${libmedusa.a_cflags-y}
+
+libmedusa.so.${MEDUSA_SONAME}_tcpsocket.c_cflags-$(MEDUSA_TCPSOCKET_OPENSSL_ENABLE) += \
+	-Wno-deprecated-declarations
 
 libmedusa.so.${MEDUSA_SONAME}_files-y = \
 	${libmedusa.a_files-y}
