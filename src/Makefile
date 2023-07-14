@@ -102,6 +102,9 @@ libmedusa.a_files-${MEDUSA_SIGNAL_NULL_ENABLE} += \
 libmedusa.a_cflags-${MEDUSA_TCPSOCKET_OPENSSL_ENABLE} += \
 	-DMEDUSA_TCPSOCKET_OPENSSL_ENABLE=1
 
+libmedusa.a_tcpsocket.c_cflags-${MEDUSA_TCPSOCKET_OPENSSL_ENABLE} += \
+	-Wno-error=deprecated-declarations
+
 libmedusa.a_files-y += \
 	tcpsocket.c \
 	udpsocket.c
