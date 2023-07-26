@@ -393,6 +393,7 @@ int main (int argc, char *argv[])
                 medusa_tcpsocket_bind_options.nonblocking = 1;
                 medusa_tcpsocket_bind_options.reuseaddr   = 1;
                 medusa_tcpsocket_bind_options.reuseport   = 1;
+                medusa_tcpsocket_bind_options.buffered    = !!option_ssl;
                 medusa_tcpsocket_bind_options.backlog     = 128;
                 medusa_tcpsocket_bind_options.enabled     = 1;
                 medusa_tcpsocket = medusa_tcpsocket_bind_with_options(&medusa_tcpsocket_bind_options);
