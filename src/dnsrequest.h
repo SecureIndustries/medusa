@@ -72,6 +72,23 @@ enum {
 };
 
 enum {
+        MEDUSA_DNSREQUEST_OPCODE_INVALID                = 0,
+        MEDUSA_DNSREQUEST_OPCODE_QUERY                  = 1,
+        MEDUSA_DNSREQUEST_OPCODE_IQUERY                 = 2,
+        MEDUSA_DNSREQUEST_OPCODE_STATUS                 = 3,
+        MEDUSA_DNSREQUEST_OPCODE_NOTIFY                 = 4,
+        MEDUSA_DNSREQUEST_OPCODE_UPDATE                 = 5,
+        MEDUSA_DNSREQUEST_OPCODE_UNKNOWN                = 6
+#define MEDUSA_DNSREQUEST_OPCODE_INVALID                MEDUSA_DNSREQUEST_OPCODE_INVALID
+#define MEDUSA_DNSREQUEST_OPCODE_QUERY                  MEDUSA_DNSREQUEST_OPCODE_QUERY
+#define MEDUSA_DNSREQUEST_OPCODE_IQUERY                 MEDUSA_DNSREQUEST_OPCODE_IQUERY
+#define MEDUSA_DNSREQUEST_OPCODE_STATUS                 MEDUSA_DNSREQUEST_OPCODE_STATUS
+#define MEDUSA_DNSREQUEST_OPCODE_NOTIFY                 MEDUSA_DNSREQUEST_OPCODE_NOTIFY
+#define MEDUSA_DNSREQUEST_OPCODE_UPDATE                 MEDUSA_DNSREQUEST_OPCODE_UPDATE
+#define MEDUSA_DNSREQUEST_OPCODE_UNKNOWN                MEDUSA_DNSREQUEST_OPCODE_UNKNOWN
+};
+
+enum {
         MEDUSA_DNSREQUEST_RECORD_TYPE_INVALID           = 0,
         MEDUSA_DNSREQUEST_RECORD_TYPE_A                 = 1,
         MEDUSA_DNSREQUEST_RECORD_TYPE_NS                = 2,
@@ -104,6 +121,7 @@ struct medusa_dnsrequest_init_options {
         void *context;
         const char *nameserver;
         int port;
+        unsigned int code;
         unsigned int type;
         const char *name;
         int id;
@@ -153,6 +171,9 @@ const char * medusa_dnsrequest_get_nameserver (struct medusa_dnsrequest *dnsrequ
 
 int medusa_dnsrequest_set_port (struct medusa_dnsrequest *dnsrequest, unsigned int port);
 int medusa_dnsrequest_get_port (struct medusa_dnsrequest *dnsrequest);
+
+int medusa_dnsrequest_set_code (struct medusa_dnsrequest *dnsrequest, unsigned int code);
+int medusa_dnsrequest_get_code (struct medusa_dnsrequest *dnsrequest);
 
 int medusa_dnsrequest_set_type (struct medusa_dnsrequest *dnsrequest, unsigned int type);
 int medusa_dnsrequest_get_type (struct medusa_dnsrequest *dnsrequest);
@@ -237,6 +258,9 @@ void medusa_dnsrequest_reply_answers_destroy (struct medusa_dnsrequest_reply_ans
 
 int medusa_dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned int events, void *param);
 struct medusa_monitor * medusa_dnsrequest_get_monitor (struct medusa_dnsrequest *dnsrequest);
+
+unsigned int medusa_dnsrequest_opcode_value (const char *type);
+const char * medusa_dnsrequest_opcode_string (unsigned int type);
 
 unsigned int medusa_dnsrequest_record_type_value (const char *type);
 const char * medusa_dnsrequest_record_type_string (unsigned int type);
