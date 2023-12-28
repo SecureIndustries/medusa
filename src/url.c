@@ -13,6 +13,8 @@ struct medusa_url {
         char *host;
         unsigned short port;
         char *path;
+        char *username;
+        char *password;
 };
 
 static const struct {
@@ -55,6 +57,8 @@ struct medusa_url * medusa_url_parse (const char *uri)
         char *s;
         char *p;
         char *e;
+        char *a;
+        char *t;
 
         int rs;
         unsigned int j;
@@ -106,9 +110,18 @@ struct medusa_url * medusa_url_parse (const char *uri)
                 }
         }
 
-        p = strchr(i, ':');
+        a = strchr(i, '@');
+        t = i;
+        while (1) {
+                p = strchr(t, ':');
+                if (p == NULL || p > a) {
+                        break;
+                } else {
+                        t = p + 1;
+                }
+        };
         e = strchr(i, '/');
-        if ((p != NULL) && (e == NULL || e > p)) {
+        if ((p != NULL) && (e == NULL || e > p) && (a == NULL || a < p)) {
                 url->port = atoi(p + 1);
                 *p = '\0';
         }
@@ -124,6 +137,32 @@ struct medusa_url * medusa_url_parse (const char *uri)
         if (e != NULL) {
                 e++;
                 url->path = e;
+        }
+
+        if (url->host != NULL) {
+                p = strchr(url->host, '@');
+                if (p != NULL) {
+                        url->username = url->host;
+                        url->host     = p + 1;
+                        *p = '\0';
+                }
+        }
+        if (url->username != NULL) {
+                p = strchr(url->username, ':');
+                if (p != NULL) {
+                        url->password = p + 1;
+                        *p = '\0';
+                }
+        }
+
+        if (url->host != NULL && strlen(url->host) == 0) {
+                url->host = NULL;
+        }
+        if (url->username != NULL && strlen(url->username) == 0) {
+                url->username = NULL;
+        }
+        if (url->password != NULL && strlen(url->password) == 0) {
+                url->password = NULL;
         }
 
         return url;
@@ -174,4 +213,20 @@ const char * medusa_url_get_path (struct medusa_url *url)
                 return MEDUSA_ERR_PTR(-EINVAL);
         }
         return url->path;
+}
+
+const char * medusa_url_get_username (struct medusa_url *url)
+{
+        if (url == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return url->username;
+}
+
+const char * medusa_url_get_password (struct medusa_url *url)
+{
+        if (url == NULL) {
+                return MEDUSA_ERR_PTR(-EINVAL);
+        }
+        return url->password;
 }
