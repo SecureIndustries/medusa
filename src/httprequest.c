@@ -1540,7 +1540,7 @@ __attribute__ ((visibility ("default"))) int medusa_httprequest_make_request_unl
                 goto bail;
         }
 
-        rc = medusa_tcpsocket_printf_unlocked(httprequest->tcpsocket, "%s /%s HTTP/1.1\r\n", (httprequest->method) ? httprequest->method : "GET", url.path);
+        rc = medusa_tcpsocket_printf_unlocked(httprequest->tcpsocket, "%s /%s HTTP/1.1\r\n", (httprequest->method) ? httprequest->method : "GET", url.path ? url.path : "");
         if (rc < 0) {
                 ret = rc;
                 goto bail;
