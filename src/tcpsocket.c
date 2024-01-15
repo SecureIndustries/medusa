@@ -2678,7 +2678,8 @@ ipv6:
         }
 
         if (resolve == 0 ||
-            MEDUSA_IS_ERR_OR_NULL(options->dnsresolver)) {
+            MEDUSA_IS_ERR_OR_NULL(options->dnsresolver) ||
+            medusa_dnsresolver_get_enabled_unlocked(options->dnsresolver) != 1) {
                 struct addrinfo hints;
                 struct addrinfo *result;
 
