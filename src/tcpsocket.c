@@ -2063,7 +2063,6 @@ static int tcpsocket_dnsresolver_onevent (struct medusa_dnsresolver_lookup *dnsr
         if (events & MEDUSA_DNSRESOLVER_LOOKUP_EVENT_FINISHED) {
                 tcpsocket_addrinfo = medusa_dnsresolver_lookup_get_userdata_ptr_unlocked(dnsresolver_lookup);
                 if (tcpsocket_addrinfo == NULL) {
-                        medusa_errorf("can not get userdata ptr");
                         goto error;
                 } else {
                         rc = medusa_tcpsocket_connect_resolved(tcpsocket, tcpsocket->coptions, tcpsocket_addrinfo);
