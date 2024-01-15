@@ -2036,10 +2036,12 @@ static int tcpsocket_dnsresolver_onevent (struct medusa_dnsresolver_lookup *dnsr
                 if (tcpsocket_addrinfo == NULL) {
                         tcpsocket_addrinfo = tcpsocket_addrinfo_create();
                         if (tcpsocket_addrinfo == NULL) {
+                                medusa_errorf("can not create addrinfo");
                                 goto error;
                         }
                         rc = medusa_dnsresolver_lookup_set_userdata_ptr_unlocked(dnsresolver_lookup, tcpsocket_addrinfo);
                         if (rc < 0) {
+                                medusa_errorf("can not set userdata ptr");
                                 tcpsocket_addrinfo_destroy(tcpsocket_addrinfo);
                                 goto error;
                         }
@@ -2047,11 +2049,13 @@ static int tcpsocket_dnsresolver_onevent (struct medusa_dnsresolver_lookup *dnsr
 
                 tcpsocket_addrinfo_entry = tcpsocket_addrinfo_entry_create_from_dnsresolver(medusa_dnsresolver_lookup_event_entry);
                 if (tcpsocket_addrinfo_entry == NULL) {
+                        medusa_errorf("can not create entry from dnsresolver");
                         goto error;
                 }
 
                 rc = tcpsocket_addrinfo_add_entry(tcpsocket_addrinfo, tcpsocket_addrinfo_entry);
                 if (rc < 0) {
+                        medusa_errorf("can not add addrinfo entry");
                         tcpsocket_addrinfo_entry_destroy(tcpsocket_addrinfo_entry);
                         goto error;
                 }
@@ -2059,19 +2063,23 @@ static int tcpsocket_dnsresolver_onevent (struct medusa_dnsresolver_lookup *dnsr
         if (events & MEDUSA_DNSRESOLVER_LOOKUP_EVENT_FINISHED) {
                 tcpsocket_addrinfo = medusa_dnsresolver_lookup_get_userdata_ptr_unlocked(dnsresolver_lookup);
                 if (tcpsocket_addrinfo == NULL) {
+                        medusa_errorf("can not get userdata ptr");
                         goto error;
                 } else {
                         rc = medusa_tcpsocket_connect_resolved(tcpsocket, tcpsocket->coptions, tcpsocket_addrinfo);
                         medusa_dnsresolver_lookup_set_userdata_ptr_unlocked(dnsresolver_lookup, NULL);
                         tcpsocket_addrinfo_destroy(tcpsocket_addrinfo);
                         if (rc < 0) {
+                                medusa_errorf("can not connect to resolved");
                                 goto error;
                         }
                 }
         }
         if (events & MEDUSA_DNSRESOLVER_LOOKUP_EVENT_TIMEDOUT) {
+                medusa_debugf("dnsresolver lookup timeout");
         }
         if (events & MEDUSA_DNSRESOLVER_LOOKUP_EVENT_ERROR) {
+                medusa_errorf("dnsresolver lookup error");
                 goto error;
         }
         if (events & MEDUSA_DNSRESOLVER_LOOKUP_EVENT_DESTROY) {
@@ -2113,22 +2121,26 @@ static int medusa_tcpsocket_connect_resolved (struct medusa_tcpsocket *tcpsocket
 
         rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_RESOLVED, 0, __LINE__);
         if (rc < 0) {
+                medusa_errorf("can not set state to: %d", MEDUSA_TCPSOCKET_STATE_RESOLVED);
                 ret = rc;
                 goto bail;
         }
         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_RESOLVED, NULL);
         if (rc < 0) {
+                medusa_errorf("tcpsocket onevent failed, rc: %d", rc);
                 ret = rc;
                 goto bail;
         }
 
         rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_CONNECTING, 0, __LINE__);
         if (rc < 0) {
+                medusa_errorf("can not set state to: %d", MEDUSA_TCPSOCKET_STATE_CONNECTING);
                 ret = rc;
                 goto bail;
         }
         rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTING, NULL);
         if (rc < 0) {
+                medusa_errorf("tcpsocket onevent failed, rc: %d", rc);
                 ret = rc;
                 goto bail;
         }
@@ -2157,6 +2169,7 @@ static int medusa_tcpsocket_connect_resolved (struct medusa_tcpsocket *tcpsocket
                                 ptr = &sockaddr_in6->sin6_addr;
                                 break;
                         default:
+                                medusa_errorf("unknown addrinfo entry protocol: %d", addrinfo_entry->protocol);
                                 ret = -EIO;
                                 goto bail;
                 }
@@ -2169,6 +2182,7 @@ static int medusa_tcpsocket_connect_resolved (struct medusa_tcpsocket *tcpsocket
                         fd = socket(family, SOCK_STREAM, 0);
                 }
                 if (fd < 0) {
+                        medusa_errorf("can not open socket");
                         ret = -errno;
                         goto bail;
                 }
@@ -2186,6 +2200,7 @@ static int medusa_tcpsocket_connect_resolved (struct medusa_tcpsocket *tcpsocket
                                     options->clodestroy == 1) {
                                         tcpsocket_closesocket(fd);
                                 }
+                                medusa_errorf("fcntl getfl failed");
                                 goto bail;
                         }
                         flags = (options->nonblocking) ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
@@ -2197,6 +2212,7 @@ static int medusa_tcpsocket_connect_resolved (struct medusa_tcpsocket *tcpsocket
                                     options->clodestroy == 1) {
                                         tcpsocket_closesocket(fd);
                                 }
+                                medusa_errorf("fcntl setfl failed");
                                 goto bail;
                         }
                 }
@@ -2231,6 +2247,7 @@ bind_ipv4:
                                             options->clodestroy == 1) {
                                                 tcpsocket_closesocket(fd);
                                         }
+                                        medusa_errorf("source address: %s is invalid", saddress);
                                         goto bail;
                                 } else if (rc < 0) {
                                         ret = -EINVAL;
@@ -2238,6 +2255,7 @@ bind_ipv4:
                                             options->clodestroy == 1) {
                                                 tcpsocket_closesocket(fd);
                                         }
+                                        medusa_errorf("source address: %s is invalid", saddress);
                                         goto bail;
                                 }
                                 bind_sockaddr_in->sin_port = htons(sport);
@@ -2260,6 +2278,7 @@ bind_ipv6:
                                             options->clodestroy == 1) {
                                                 tcpsocket_closesocket(fd);
                                         }
+                                        medusa_errorf("source address: %s is invalid", saddress);
                                         goto bail;
                                 } else if (rc < 0) {
                                         ret = -EINVAL;
@@ -2267,6 +2286,7 @@ bind_ipv6:
                                             options->clodestroy == 1) {
                                                 tcpsocket_closesocket(fd);
                                         }
+                                        medusa_errorf("source address: %s is invalid", saddress);
                                         goto bail;
                                 }
                                 bind_sockaddr_in6->sin6_port = htons(sport);
@@ -2278,6 +2298,7 @@ bind_ipv6:
                                         saddress = "::";
                                         goto bind_ipv6;
                                 } else {
+                                        medusa_errorf("unknown addrinfo entry protocol: %d", addrinfo_entry->protocol);
                                         ret = -EINVAL;
                                         goto bail;
                                 }
@@ -2303,6 +2324,7 @@ bind_ipv6:
                                     options->clodestroy == 1) {
                                         tcpsocket_closesocket(fd);
                                 }
+                                medusa_errorf("source address: %s is invalid", saddress);
                                 goto bail;
                         }
 
@@ -2316,6 +2338,7 @@ bind_ipv6:
                                             options->clodestroy == 1) {
                                                 tcpsocket_closesocket(fd);
                                         }
+                                        medusa_errorf("setsockopt failed");
                                         goto bail;
                                 }
                         }
@@ -2334,6 +2357,7 @@ bind_ipv6:
                                             options->clodestroy == 1) {
                                                 tcpsocket_closesocket(fd);
                                         }
+                                        medusa_errorf("setsockopt failed");
                                         goto bail;
                                 }
                         }
@@ -2344,6 +2368,7 @@ bind_ipv6:
                                     options->clodestroy == 1) {
                                         tcpsocket_closesocket(fd);
                                 }
+                                medusa_errorf("bind failed");
                                 goto bail;
                         }
                 }
@@ -2386,6 +2411,7 @@ bind_ipv6:
                     options->clodestroy == 1) {
                         tcpsocket_closesocket(fd);
                 }
+                medusa_errorf("can not connect to any resolved address");
                 goto bail;
         }
         connected = (rc == 0);
@@ -2405,6 +2431,7 @@ bind_ipv6:
         io_init_options.enabled    = 0;
         tcpsocket->io = medusa_io_create_with_options_unlocked(&io_init_options);
         if (MEDUSA_IS_ERR_OR_NULL(tcpsocket->io)) {
+                medusa_errorf("can not create io for tcpsocket");
                 ret = MEDUSA_PTR_ERR(tcpsocket->io);
                 if (options->fd < 0 ||
                     options->clodestroy == 1) {
@@ -2415,26 +2442,31 @@ bind_ipv6:
 
         rc = medusa_tcpsocket_set_nonblocking_unlocked(tcpsocket, options->nonblocking);
         if (rc < 0) {
+                medusa_errorf("can not set nonblocking option for tcpsocket");
                 ret = rc;
                 goto bail;
         }
         rc = medusa_tcpsocket_set_nodelay_unlocked(tcpsocket, options->nodelay);
         if (rc < 0) {
+                medusa_errorf("can not set nodelay option for tcpsocket");
                 ret = rc;
                 goto bail;
         }
         rc = medusa_tcpsocket_set_buffered_unlocked(tcpsocket, options->buffered);
         if (rc < 0) {
+                medusa_errorf("can not set buffered option for tcpsocket");
                 ret = rc;
                 goto bail;
         }
         rc = medusa_tcpsocket_set_clodestroy_unlocked(tcpsocket, options->clodestroy);
         if (rc < 0) {
+                medusa_errorf("can not set clodestroy option for tcpsocket");
                 ret = rc;
                 goto bail;
         }
         rc = medusa_tcpsocket_set_enabled_unlocked(tcpsocket, options->enabled);
         if (rc < 0) {
+                medusa_errorf("can not set enabled option for tcpsocket");
                 ret = rc;
                 goto bail;
         }
@@ -2442,17 +2474,20 @@ bind_ipv6:
         if (connected) {
                 rc = tcpsocket_set_state(tcpsocket, MEDUSA_TCPSOCKET_STATE_CONNECTED, 0, __LINE__);
                 if (rc < 0) {
+                        medusa_errorf("can not set state to: %d", MEDUSA_TCPSOCKET_STATE_CONNECTED);
                         ret = rc;
                         goto bail;
                 }
                 rc = medusa_tcpsocket_onevent_unlocked(tcpsocket, MEDUSA_TCPSOCKET_EVENT_CONNECTED, NULL);
                 if (rc < 0) {
+                        medusa_errorf("tcpsocket onevent failed, rc: %d", rc);
                         ret = rc;
                         goto bail;
                 }
         } else {
                 rc = medusa_io_add_events_unlocked(tcpsocket->io, MEDUSA_IO_EVENT_OUT);
                 if (rc < 0) {
+                        medusa_errorf("can not add io events");
                         ret = rc;
                         goto bail;
                 }
