@@ -21,6 +21,7 @@ struct medusa_dnsresolver_lookup {
         char *nameserver;
         int port;
         char *name;
+        int id;
         unsigned int family;
         int retry_count;
         double retry_interval;

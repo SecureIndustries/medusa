@@ -8,7 +8,7 @@
 #include <pthread.h>
 #include <errno.h>
 
-#if defined(_WIN32)
+#if defined(__WINDOWS__)
 #include <winsock2.h>
 #else
 #include <sys/types.h>
@@ -94,6 +94,7 @@ struct medusa_monitor {
                 struct medusa_pqueue_head *pqueue;
                 int fired;
                 int dirty;
+                int valid;
                 struct medusa_io *io;
         } timer;
         struct {
@@ -139,7 +140,7 @@ static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events,
         (void) param;
         if (events & MEDUSA_IO_EVENT_IN) {
                 while (1) {
-#if defined(_WIN32)
+#if defined(__WINDOWS__)
                         rc = recv(io->fd, (void *) &reason, sizeof(reason), 0);
 #else
                         rc = read(io->fd, (void *) &reason, sizeof(reason));
@@ -147,12 +148,13 @@ static int monitor_wakeup_io_onevent (struct medusa_io *io, unsigned int events,
                         if (rc == 0) {
                                 break;
                         } else if (rc < 0) {
-#if defined(_WIN32)
+#if defined(__WINDOWS__)
                                 if (rc == SOCKET_ERROR) {
                                         switch (WSAGetLastError()) {
                                                 case WSAEWOULDBLOCK:    errno = EWOULDBLOCK;    break;
                                                 case WSATRY_AGAIN:      errno = EAGAIN;         break;
                                                 case WSAEINTR:          errno = EINTR;          break;
+                                                case WSAECONNRESET:     errno = ECONNRESET;     break;
                                         }
                                 }
 #endif
@@ -224,7 +226,7 @@ static int monitor_signal (struct medusa_monitor *monitor, unsigned int reason)
 {
         int rc;
         if (monitor->wakeup.fired == 0) {
-#if defined(_WIN32)
+#if defined(__WINDOWS__)
                 rc = send(monitor->wakeup.fds[1], (void *) &reason, sizeof(reason), 0);
 #else
                 rc = write(monitor->wakeup.fds[1], (void *) &reason, sizeof(reason));
@@ -532,8 +534,6 @@ static int monitor_process_deletes (struct medusa_monitor *monitor)
                         if (rc < 0) {
                                 goto bail;
                         }
-                } else {
-                        goto bail;
                 }
         }
         if (!TAILQ_EMPTY(&monitor->deletes)) {
@@ -763,8 +763,9 @@ static int monitor_setup_timer (struct medusa_monitor *monitor, struct timespec 
                         goto bail;
                 }
                 monitor->timer.dirty = 0;
+                monitor->timer.valid = (timer) ? 1 : 0;
         }
-        if (monitor->timer.backend->fd == NULL) {
+        if (monitor->timer.backend->fd == NULL && monitor->timer.valid == 1) {
                 rc = monitor->timer.backend->get(monitor->timer.backend, remaining);
                 if (rc < 0) {
                         goto bail;
@@ -799,7 +800,7 @@ static int monitor_check_timer (struct medusa_monitor *monitor)
         int rc;
         struct timespec now;
         struct timespec rem;
-        if (monitor->timer.backend->fd == NULL) {
+        if (monitor->timer.backend->fd == NULL && monitor->timer.valid == 1) {
                 rc = monitor->timer.backend->get(monitor->timer.backend, &rem);
                 if (rc < 0) {
                         goto bail;
@@ -1598,13 +1599,19 @@ __attribute__ ((visibility ("default"))) int medusa_monitor_run_timeout (struct 
         if (rc < 0) {
                 goto bail;
         }
-
         medusa_monitor_unlock(monitor);
 
-        if (medusa_timespec_isset(&remaining)) {
+        if (monitor->timer.backend->fd == NULL && monitor->timer.valid == 1) {
                 if (timespec == NULL ||
                     medusa_timespec_compare(&remaining, timespec, <)) {
                         timespec = &remaining;
+                }
+        }
+
+        if (timespec) {
+                if (timespec->tv_sec < 0 || timespec->tv_nsec < 0) {
+                        timespec->tv_sec = 0;
+                        timespec->tv_nsec = 0;
                 }
         }
 

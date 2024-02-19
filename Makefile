@@ -95,6 +95,7 @@ install: src test
 	install -d ${DESTDIR}/${prefix}/include/medusa
 	install -m 0644 dist/include/medusa/buffer.h ${DESTDIR}/${prefix}/include/medusa/buffer.h
 	install -m 0644 dist/include/medusa/clock.h ${DESTDIR}/${prefix}/include/medusa/clock.h
+	install -m 0644 dist/include/medusa/debug.h ${DESTDIR}/${prefix}/include/medusa/debug.h
 	install -m 0644 dist/include/medusa/error.h ${DESTDIR}/${prefix}/include/medusa/error.h
 	install -m 0644 dist/include/medusa/exec.h ${DESTDIR}/${prefix}/include/medusa/exec.h
 	install -m 0644 dist/include/medusa/httprequest.h ${DESTDIR}/${prefix}/include/medusa/httprequest.h
@@ -115,6 +116,7 @@ install: src test
 	install -m 0644 dist/include/medusa/dnsresolver.h ${DESTDIR}/${prefix}/include/medusa/dnsresolver.h
 	install -m 0644 dist/include/medusa/websocketclient.h ${DESTDIR}/${prefix}/include/medusa/websocketclient.h
 	install -m 0644 dist/include/medusa/websocketserver.h ${DESTDIR}/${prefix}/include/medusa/websocketserver.h
+	install -m 0644 dist/include/medusa/url.h ${DESTDIR}/${prefix}/include/medusa/url.h
 
 ifeq (${MEDUSA_LIBMEDUSA_TARGET_SO}, y)
 	install -d ${DESTDIR}/${prefix}/lib
