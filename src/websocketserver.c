@@ -236,6 +236,8 @@ __attribute__ ((visibility ("default"))) int medusa_websocketserver_init_options
         options->address    = NULL;
         options->port       = 0;
         options->servername = NULL;
+        options->reuseport  = 0;
+        options->backlog    = 128;
         return 0;
 }
 
@@ -319,8 +321,10 @@ __attribute__ ((visibility ("default"))) struct medusa_websocketserver * medusa_
                         goto bail;
                 }
         }
-        websocketserver->port     = options->port;
-        websocketserver->protocol = options->protocol;
+        websocketserver->port      = options->port;
+        websocketserver->protocol  = options->protocol;
+        websocketserver->reuseport = options->reuseport;
+        websocketserver->backlog   = options->backlog;
         if (options->enabled != 0) {
                 rc = medusa_websocketserver_set_enabled_unlocked(websocketserver, options->enabled);
                 if (rc < 0) {
@@ -376,7 +380,7 @@ __attribute__ ((visibility ("default"))) void medusa_websocketserver_destroy (st
         medusa_monitor_unlock(websocketserver->subject.monitor);
 }
 
-__attribute__ ((visibility ("default"))) unsigned int medusa_websocketserver_get_state_unlocked (const struct medusa_websocketserver *websocketserver)
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_get_state_unlocked (const struct medusa_websocketserver *websocketserver)
 {
         if (MEDUSA_IS_ERR_OR_NULL(websocketserver)) {
                 return MEDUSA_WEBSOCKETSERVER_STATE_UNKNOWN;
@@ -384,14 +388,104 @@ __attribute__ ((visibility ("default"))) unsigned int medusa_websocketserver_get
         return websocketserver->state;
 }
 
-__attribute__ ((visibility ("default"))) unsigned int medusa_websocketserver_get_state (const struct medusa_websocketserver *websocketserver)
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_get_state (const struct medusa_websocketserver *websocketserver)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver)) {
+                return MEDUSA_WEBSOCKETSERVER_STATE_UNKNOWN;
+        }
+        medusa_monitor_lock(websocketserver->subject.monitor);
+        rc = medusa_websocketserver_get_state_unlocked(websocketserver);
+        medusa_monitor_unlock(websocketserver->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_get_error_unlocked (const struct medusa_websocketserver *websocketserver)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver)) {
+                return MEDUSA_WEBSOCKETSERVER_STATE_UNKNOWN;
+        }
+        return websocketserver->error;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_get_error (const struct medusa_websocketserver *websocketserver)
 {
         unsigned int rc;
         if (MEDUSA_IS_ERR_OR_NULL(websocketserver)) {
                 return MEDUSA_WEBSOCKETSERVER_STATE_UNKNOWN;
         }
         medusa_monitor_lock(websocketserver->subject.monitor);
-        rc = medusa_websocketserver_get_state_unlocked(websocketserver);
+        rc = medusa_websocketserver_get_error_unlocked(websocketserver);
+        medusa_monitor_unlock(websocketserver->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_get_protocol_unlocked (struct medusa_websocketserver *websocketserver)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver)) {
+                return MEDUSA_WEBSOCKETSERVER_STATE_UNKNOWN;
+        }
+        rc = medusa_tcpsocket_get_protocol_unlocked(websocketserver->tcpsocket);
+        if (rc < 0) {
+                return rc;
+        } else if (rc == MEDUSA_TCPSOCKET_PROTOCOL_IPV4) {
+                return MEDUSA_WEBSOCKETSERVER_PROTOCOL_IPV4;
+        } else if (rc == MEDUSA_TCPSOCKET_PROTOCOL_IPV6) {
+                return MEDUSA_WEBSOCKETSERVER_PROTOCOL_IPV6;
+        } else {
+                return -EIO;
+        }
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_get_protocol (struct medusa_websocketserver *websocketserver)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(websocketserver->subject.monitor);
+        rc = medusa_websocketserver_get_protocol_unlocked(websocketserver);
+        medusa_monitor_unlock(websocketserver->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_get_sockport_unlocked (const struct medusa_websocketserver *websocketserver)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver)) {
+                return -EINVAL;
+        }
+        return medusa_tcpsocket_get_sockport_unlocked(websocketserver->tcpsocket);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_get_sockport (const struct medusa_websocketserver *websocketserver)
+{
+        unsigned int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(websocketserver->subject.monitor);
+        rc = medusa_websocketserver_get_sockport_unlocked(websocketserver);
+        medusa_monitor_unlock(websocketserver->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_get_sockname_unlocked (const struct medusa_websocketserver *websocketserver, struct sockaddr_storage *sockaddr)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver)) {
+                return -EINVAL;
+        }
+        return medusa_tcpsocket_get_sockname_unlocked(websocketserver->tcpsocket, sockaddr);
+}
+
+__attribute__ ((visibility ("default"))) int medusa_websocketserver_get_sockname (const struct medusa_websocketserver *websocketserver, struct sockaddr_storage *sockaddr)
+{
+        unsigned int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(websocketserver)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(websocketserver->subject.monitor);
+        rc = medusa_websocketserver_get_sockname_unlocked(websocketserver, sockaddr);
         medusa_monitor_unlock(websocketserver->subject.monitor);
         return rc;
 }
@@ -502,7 +596,8 @@ __attribute__ ((visibility ("default"))) int medusa_websocketserver_set_started_
                 medusa_tcpsocket_bind_options.nodelay     = 1;
                 medusa_tcpsocket_bind_options.nonblocking = 1;
                 medusa_tcpsocket_bind_options.reuseaddr   = 1;
-                medusa_tcpsocket_bind_options.reuseport   = 0;
+                medusa_tcpsocket_bind_options.reuseport   = websocketserver->reuseport;
+                medusa_tcpsocket_bind_options.backlog     = websocketserver->backlog;
                 medusa_tcpsocket_bind_options.enabled     = 1;
                 medusa_tcpsocket_bind_options.monitor     = websocketserver->subject.monitor;
                 medusa_tcpsocket_bind_options.context     = websocketserver;

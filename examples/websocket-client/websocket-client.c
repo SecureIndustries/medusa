@@ -16,15 +16,18 @@
 
 #define OPTIONS_DEFAULT_ADDRESS                 "127.0.0.1"
 #define OPTIONS_DEFAULT_PORT                    12345
+#define OPTIONS_DEFAULT_MESSAGE                 "hello"
 #define OPTIONS_DEFAULT_CLIENT_READ_TIMEOUT     -1
 
 #define OPTION_HELP                     'h'
 #define OPTION_ADDRESS                  'a'
 #define OPTION_PORT                     'p'
+#define OPTION_MESSAGE                  'm'
 #define OPTION_READ_TIMEOUT             'r'
 
 static const char *g_option_address     = OPTIONS_DEFAULT_ADDRESS;
 static int g_option_port                = OPTIONS_DEFAULT_PORT;
+static const char *g_option_message     = OPTIONS_DEFAULT_MESSAGE;
 
 static int g_running = 0;
 
@@ -32,19 +35,21 @@ static struct option longopts[] = {
         { "help",               no_argument,            NULL,        OPTION_HELP                },
         { "address",            required_argument,      NULL,        OPTION_ADDRESS             },
         { "port",               required_argument,      NULL,        OPTION_PORT                },
+        { "message",            required_argument,      NULL,        OPTION_MESSAGE             },
         { NULL,                 0,                      NULL,        0                          },
 };
 
 static void usage (const char *pname)
 {
-        fprintf(stdout, "medusa http client\n");
+        fprintf(stdout, "medusa websocket client\n");
         fprintf(stdout, "\n");
         fprintf(stdout, "usage:\n");
         fprintf(stdout, "  %s [options]\n", pname);
         fprintf(stdout, "\n");
         fprintf(stdout, "options:\n");
-        fprintf(stdout, "  -a, --address            : address to run on (default: %s)\n", OPTIONS_DEFAULT_ADDRESS);
-        fprintf(stdout, "  -p, --port               : port to run on (default: %d)\n", OPTIONS_DEFAULT_PORT);
+        fprintf(stdout, "  -a, --address            : address to connect (default: %s)\n", OPTIONS_DEFAULT_ADDRESS);
+        fprintf(stdout, "  -p, --port               : port to connect (default: %d)\n", OPTIONS_DEFAULT_PORT);
+        fprintf(stdout, "  -m, --message            : message to send (default: %s)\n", OPTIONS_DEFAULT_MESSAGE);
         fprintf(stdout, "\n");
         fprintf(stdout, "example:\n");
         fprintf(stdout, "  %s -a 127.0.0.1 -p 12345\n", pname);
@@ -73,8 +78,7 @@ static int websocketclient_onevent (struct medusa_websocketclient *websocketclie
         }
         if (events & MEDUSA_WEBSOCKETCLIENT_EVENT_CONNECTED) {
                 int rc;
-                const char *message = "Here's some text that the server is urgently awaiting!";
-                rc = medusa_websocketclient_write(websocketclient, 1, MEDUSA_WEBSOCKETCLIENT_FRAME_TYPE_TEXT, message, strlen(message) + 1);
+                rc = medusa_websocketclient_write(websocketclient, 1, MEDUSA_WEBSOCKETCLIENT_FRAME_TYPE_TEXT, g_option_message, strlen(g_option_message) + 1);
                 if (rc < 0) {
                         fprintf(stderr, "can not send message\n");
                         return -1;
@@ -114,6 +118,7 @@ int main (int argc, char *argv[])
 
         g_option_address             = OPTIONS_DEFAULT_ADDRESS;
         g_option_port                = OPTIONS_DEFAULT_PORT;
+        g_option_message             = OPTIONS_DEFAULT_MESSAGE;
 
         _argv = malloc(sizeof(char *) * (argc + 1));
 
@@ -121,7 +126,7 @@ int main (int argc, char *argv[])
         for (_argc = 0; _argc < argc; _argc++) {
                 _argv[_argc] = argv[_argc];
         }
-        while ((c = getopt_long(_argc, _argv, "ha:p:r:", longopts, NULL)) != -1) {
+        while ((c = getopt_long(_argc, _argv, "ha:p:r:m:", longopts, NULL)) != -1) {
                 switch (c) {
                         case OPTION_HELP:
                                 usage(argv[0]);
@@ -131,6 +136,9 @@ int main (int argc, char *argv[])
                                 break;
                         case OPTION_PORT:
                                 g_option_port = atoi(optarg);
+                                break;
+                        case OPTION_MESSAGE:
+                                g_option_message = optarg;
                                 break;
                         default:
                                 fprintf(stderr, "invalid option: %s\n", argv[optind - 1]);
