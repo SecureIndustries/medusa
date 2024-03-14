@@ -83,6 +83,7 @@ struct medusa_dnsresolver_init_options {
         int retry_count;
         double retry_interval;
         double resolve_timeout;
+        int min_ttl;
         int enabled;
 };
 
@@ -158,6 +159,9 @@ double medusa_dnsresolver_get_retry_interval (struct medusa_dnsresolver *dnsreso
 
 int medusa_dnsresolver_set_resolve_timeout (struct medusa_dnsresolver *dnsresolver, double resolve_timeout);
 double medusa_dnsresolver_get_resolve_timeout (struct medusa_dnsresolver *dnsresolver);
+
+int medusa_dnsresolver_set_min_ttl (struct medusa_dnsresolver *dnsresolver, int min_ttl);
+int medusa_dnsresolver_get_min_ttl (struct medusa_dnsresolver *dnsresolver);
 
 void * medusa_dnsresolver_get_context (struct medusa_dnsresolver *dnsresolver);
 int medusa_dnsresolver_set_context (struct medusa_dnsresolver *dnsresolver, void *context);

@@ -150,6 +150,10 @@ static int dnsresolver_init_with_options_unlocked (struct medusa_dnsresolver *dn
         if (rc != 0) {
                 return rc;
         }
+        rc = medusa_dnsresolver_set_min_ttl_unlocked(dnsresolver, options->min_ttl);
+        if (rc != 0) {
+                return rc;
+        }
         rc = medusa_dnsresolver_set_enabled_unlocked(dnsresolver, options->enabled);
         if (rc != 0) {
                 return rc;
@@ -545,6 +549,47 @@ __attribute__ ((visibility ("default"))) double medusa_dnsresolver_get_resolve_t
         return rc;
 }
 
+__attribute__ ((visibility ("default"))) int medusa_dnsresolver_set_min_ttl_unlocked (struct medusa_dnsresolver *dnsresolver, int min_ttl)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(dnsresolver)) {
+                return -EINVAL;
+        }
+        dnsresolver->min_ttl = min_ttl;
+        return 0;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsresolver_set_min_ttl (struct medusa_dnsresolver *dnsresolver, int min_ttl)
+{
+        int rc;
+        if (MEDUSA_IS_ERR_OR_NULL(dnsresolver)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(dnsresolver->subject.monitor);
+        rc = medusa_dnsresolver_set_min_ttl(dnsresolver, min_ttl);
+        medusa_monitor_unlock(dnsresolver->subject.monitor);
+        return rc;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsresolver_get_min_ttl_unlocked (struct medusa_dnsresolver *dnsresolver)
+{
+        if (MEDUSA_IS_ERR_OR_NULL(dnsresolver)) {
+                return -EINVAL;
+        }
+        return dnsresolver->min_ttl;
+}
+
+__attribute__ ((visibility ("default"))) int medusa_dnsresolver_get_min_ttl (struct medusa_dnsresolver *dnsresolver)
+{
+        double rc;
+        if (MEDUSA_IS_ERR_OR_NULL(dnsresolver)) {
+                return -EINVAL;
+        }
+        medusa_monitor_lock(dnsresolver->subject.monitor);
+        rc = medusa_dnsresolver_get_min_ttl(dnsresolver);
+        medusa_monitor_unlock(dnsresolver->subject.monitor);
+        return rc;
+}
+
 __attribute__ ((visibility ("default"))) int medusa_dnsresolver_set_context_unlocked (struct medusa_dnsresolver *dnsresolver, void *context)
 {
         if (MEDUSA_IS_ERR_OR_NULL(dnsresolver)) {
@@ -907,6 +952,9 @@ static int dnsrequest_onevent (struct medusa_dnsrequest *dnsrequest, unsigned in
                                         ttl = (ttl < 0) ? medusa_dnsrequest_reply_answer_get_ttl(dnsrequest_reply_answer) : MIN(ttl, medusa_dnsrequest_reply_answer_get_ttl(dnsrequest_reply_answer));
                                         break;
                         }
+                }
+                if (medusa_dnsresolver_get_min_ttl_unlocked(dnsresolver_lookup->dnsresolver) >= 0) {
+                        ttl = MIN(ttl, medusa_dnsresolver_get_min_ttl_unlocked(dnsresolver_lookup->dnsresolver));
                 }
                 if (ttl > 0) {
                         struct timespec now;
