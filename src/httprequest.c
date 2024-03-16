@@ -715,7 +715,7 @@ static int httprequest_tcpsocket_onevent (struct medusa_tcpsocket *tcpsocket, un
                                         medusa_errorf("medusa_httprequest_onevent_unlocked failed, rc: %d", rc);
                                         goto bail;
                                 }
-                                goto bail;
+                                break;
                         }
                         clength = medusa_buffer_choke(medusa_tcpsocket_get_read_buffer_unlocked(httprequest->tcpsocket), 0, nparsed);
                         if (clength != (int64_t) nparsed) {
